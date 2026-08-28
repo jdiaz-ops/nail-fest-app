@@ -10,7 +10,7 @@ import { getOrgSettings } from "@/lib/settings";
 // so both call sites stay identical instead of drifting apart.
 export async function sendTicketEmail(params: {
   person: { id: string; email: string; firstName: string | null };
-  event: { name: string; city: string; startsAt: Date };
+  event: { name: string; city: string; startsAt: Date; venueName?: string | null; venueAddress?: string | null };
   qrToken: string;
 }): Promise<{ ok: boolean }> {
   try {
@@ -19,10 +19,12 @@ export async function sendTicketEmail(params: {
     // reasoning in the original /api/register comment: most inboxes drop
     // inline data: images.
     const qrImageUrl = `${process.env.APP_BASE_URL || ""}/api/ticket-qr/${params.qrToken}`;
+    const venue = [params.event.venueName, params.event.venueAddress].filter(Boolean).join(" — ") || undefined;
     const { subject, text, html } = confirmationEmail({
       firstName: params.person.firstName ?? "",
       eventName: params.event.name,
       eventCity: params.event.city,
+      venue,
       startsAt: params.event.startsAt,
       qrImageUrl,
       orgName: orgSettings.name,

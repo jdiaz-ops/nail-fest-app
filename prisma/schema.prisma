@@ -60,20 +60,41 @@ model ProfessionOption {
   order  Int     @default(0)
 }
 
+// Draft = not linkable/registerable yet (see the public event page's own
+// gate) — matches Ticket Tailor's own Draft/Published events. `@default
+// (PUBLISHED)` at the DB level is a migration-safety default, not a
+// product default: it backfills every event that existed before this
+// column did (already-live events people are actively registering for)
+// as still-live, rather than silently yanking them offline. The admin
+// create form (lib/events.ts's createEvent) is what actually defaults a
+// brand-new event to DRAFT, matching Ticket Tailor's real behavior.
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+}
+
 model Event {
-  id        String   @id @default(cuid())
-  slug      String   @unique // used in the landing URL, e.g. /bogota-2026
-  name      String
-  city      String
-  startsAt  DateTime
-  endsAt    DateTime?
-  capacity  Int?
-  createdAt DateTime @default(now())
+  id           String      @id @default(cuid())
+  slug         String      @unique // used in the landing URL, e.g. /bogota-2026
+  name         String
+  city         String
+  // Shown on the public event page and in the confirmation email, not
+  // just admin-internal — attendees need to know where to physically go,
+  // not only which city (see /admin/events' own screenshots comparison).
+  venueName    String?
+  venueAddress String?
+  status       EventStatus @default(PUBLISHED)
+  startsAt     DateTime
+  endsAt       DateTime?
+  capacity     Int?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
   registrations Registration[]
   scans         ScanLog[]
 
   @@index([city])
+  @@index([status])
 }
 
 enum RegistrationStatus {

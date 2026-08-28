@@ -69,6 +69,12 @@ export async function POST(req: NextRequest) {
   if (!event) {
     return NextResponse.json({ error: "event_not_found" }, { status: 404 });
   }
+  // Same gate as the public page (see /[eventSlug]/page.tsx) — belt and
+  // suspenders in case this endpoint is ever hit directly for a Draft
+  // event's slug instead of through the (already-gated) form.
+  if (event.status === "DRAFT") {
+    return NextResponse.json({ error: "event_not_found" }, { status: 404 });
+  }
 
   // Required-ness for phone/city/profession/cedula/every custom question
   // comes from live /admin/settings/checkout-form config, not a fixed zod

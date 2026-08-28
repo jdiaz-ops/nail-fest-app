@@ -4,6 +4,9 @@ export function confirmationEmail(params: {
   firstName: string;
   eventName: string;
   eventCity: string;
+  /** From Event.venueName/.venueAddress (see /admin/events) — omitted from
+   * both text and html when the organizer hasn't set a venue yet. */
+  venue?: string;
   startsAt: Date;
   qrImageUrl: string;
   /** OrgSettings.name (see /admin/settings/basic) — falls back to "Nail Fest". */
@@ -25,6 +28,7 @@ export function confirmationEmail(params: {
     ``,
     `Tu registro para ${params.eventName} (${params.eventCity}) quedó confirmado.`,
     `Fecha: ${when}`,
+    ...(params.venue ? [`Lugar: ${params.venue}`] : []),
     ``,
     `Presenta el código QR adjunto en este correo (o una captura de pantalla) en la entrada. Puedes reingresar las veces que necesites durante el evento con el mismo código.`,
     ``,
@@ -38,6 +42,7 @@ export function confirmationEmail(params: {
         params.eventCity
       )}) quedó confirmado.</p>
       <p><strong>Fecha:</strong> ${escapeHtml(when)}</p>
+      ${params.venue ? `<p><strong>Lugar:</strong> ${escapeHtml(params.venue)}</p>` : ""}
       <p>Presenta este código QR en la entrada. Es válido para todo el evento — puedes reingresar las veces que necesites con el mismo código.</p>
       <img src="${params.qrImageUrl}" alt="Código QR de tu entrada" width="240" height="240" style="display:block;margin:16px 0;" />
       <p style="color:#666; font-size: 13px;">${escapeHtml(orgName)}</p>

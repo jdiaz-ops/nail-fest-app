@@ -14,6 +14,20 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
   const event = await db.event.findUnique({ where: { slug: params.eventSlug } });
   if (!event) notFound();
 
+  // Draft events (/admin/events) aren't live yet — same gate as Ticket
+  // Tailor's own Draft status. A plain 404 here would be confusing for an
+  // admin double-checking a link before publishing (it looks like the
+  // event doesn't exist at all instead of "not published yet"), so this
+  // shows a clear message and no registration form instead of notFound().
+  if (event.status === "DRAFT") {
+    return (
+      <main style={{ maxWidth: 480, margin: "0 auto", padding: "40px 20px", textAlign: "center" }}>
+        <h1>{event.name}</h1>
+        <p style={{ color: "#5b5f6b" }}>Este evento todavía no está publicado.</p>
+      </main>
+    );
+  }
+
   const [professionOptions, metaConnection, orgSettings, checkoutQuestions] = await Promise.all([
     getOrderedProfessionOptions(),
     db.metaConnection.findFirst({ orderBy: { createdAt: "desc" }, select: { pixelId: true } }),
@@ -47,6 +61,9 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
           orgSettings.language
         )}
       </p>
+      {(event.venueName || event.venueAddress) && (
+        <p style={{ color: "#5b5f6b" }}>{[event.venueName, event.venueAddress].filter(Boolean).join(" — ")}</p>
+      )}
       <p>Entrada gratuita. Cupo limitado{event.capacity ? ` a ${event.capacity} personas` : ""}.</p>
 
       <hr style={{ border: "none", borderTop: "1px solid #e3e1dc", margin: "24px 0" }} />
