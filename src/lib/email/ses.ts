@@ -7,7 +7,20 @@ import type { EmailProvider, SendEmailInput } from "./provider";
 // delivers the QR ticket. Create both Configuration Sets in the SES console
 // before going live — see docs/SES_SETUP.md.
 
-const client = new SESv2Client({ region: process.env.AWS_REGION ?? "us-east-1" });
+// Lazy singleton, not a top-level `const client = new SESv2Client(...)`.
+// Building on Vercel calls Next's page-data-collection step for every
+// route, which imports this module even for routes that never send an
+// email at build time — constructing the client eagerly meant a blank
+// AWS_REGION broke the *build*, not just runtime sends. Also: an env var
+// that exists but is left blank in Vercel's UI is `""`, not `undefined`,
+// so `??` doesn't fall back — use `||` for the same reason.
+let _client: SESv2Client | undefined;
+function getClient(): SESv2Client {
+  if (!_client) {
+    _client = new SESv2Client({ region: process.env.AWS_REGION || "us-east-1" });
+  }
+  return _client;
+}
 
 async function send(
   input: SendEmailInput,
@@ -36,7 +49,7 @@ async function send(
     },
   });
 
-  const res = await client.send(command);
+  const res = await getClient().send(command);
   if (!res.MessageId) throw new Error("SES did not return a MessageId");
   return { providerMessageId: res.MessageId };
 }

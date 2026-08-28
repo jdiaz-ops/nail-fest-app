@@ -153,8 +153,8 @@ export async function POST(req: NextRequest) {
         fbp: input.fbp,
       },
       customData: {
-        value: Number(process.env.META_PURCHASE_PLACEHOLDER_VALUE ?? "1"),
-        currency: process.env.DEFAULT_CURRENCY ?? "COP",
+        value: Number(process.env.META_PURCHASE_PLACEHOLDER_VALUE || "1"),
+        currency: process.env.DEFAULT_CURRENCY || "COP",
       },
       registrationId: registration.id,
     });
