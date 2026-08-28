@@ -1,4 +1,5 @@
 import MetaConnectionForm from "@/components/MetaConnectionForm";
+import MetaAudiencesButton from "@/components/MetaAudiencesButton";
 
 export default function MetaSetupPage() {
   return (
@@ -42,6 +43,16 @@ export default function MetaSetupPage() {
         Vercel — así puedes ver los eventos llegar en vivo antes de confiar en ellos con tráfico
         real.
       </p>
+
+      <hr style={{ border: "none", borderTop: "1px solid #e3e1dc", margin: "32px 0 24px" }} />
+
+      <h2 style={{ fontSize: 18 }}>Audiencias semilla</h2>
+      <p style={{ color: "#5b5f6b", fontSize: 14 }}>
+        Crea las tres audiencias base — <strong>Landing visitors (30d)</strong>,{" "}
+        <strong>Checkout started (30d)</strong> y <strong>Purchasers (180d)</strong>. Solo hace
+        falta correrlo una vez (es seguro darle click varias veces, no duplica nada).
+      </p>
+      <MetaAudiencesButton />
     </div>
   );
 }

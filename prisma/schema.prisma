@@ -113,6 +113,11 @@ enum ConsentPurpose {
   LOGISTICS // ticket delivery, event-operational emails
   MARKETING // broadcast emails/newsletters
   ADVERTISING // sharing hashed identifiers with Meta/TikTok/Google for audiences
+  // Separate from MARKETING on purpose — Meta's WhatsApp policy and Ley 1581
+  // both treat WhatsApp opt-in as its own thing, not a checkbox someone
+  // already ticked for email. No form checkbox wired up for this yet — see
+  // docs/WHATCHIMP_SETUP.md; the module is prepared, not activated.
+  WHATSAPP
 }
 
 model Consent {
