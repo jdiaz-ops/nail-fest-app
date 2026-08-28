@@ -36,7 +36,7 @@ export default function BannedEmailsForm({ initialEmails }: { initialEmails: str
         />
       </div>
       <button type="submit" style={saveButtonStyle} disabled={status === "saving"}>
-        {status === "saving" ? "Guardando…" : "Save"}
+        {status === "saving" ? "Guardando…" : "Guardar"}
       </button>
       {status === "saved" && <span style={{ marginLeft: 12, color: "#12966b", fontSize: 14 }}>Guardado ✓</span>}
       {status === "error" && (

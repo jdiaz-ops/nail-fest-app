@@ -17,8 +17,8 @@ export const cardStyle: CSSProperties = {
   background: "#fff",
   border: "1px solid #e3e1dc",
   borderRadius: 12,
-  padding: 24,
-  maxWidth: 640,
+  padding: 32,
+  maxWidth: 900,
 };
 
 export const saveButtonStyle: CSSProperties = {

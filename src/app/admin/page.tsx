@@ -27,7 +27,7 @@ export default async function OverviewPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 24, marginBottom: 4 }}>Overview</h1>
+      <h1 style={{ fontSize: 24, marginBottom: 4 }}>Resumen</h1>
       <p style={{ color: "#5b5f6b", marginTop: 0 }}>Resumen de toda la operación, todos los eventos.</p>
 
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", margin: "24px 0" }}>

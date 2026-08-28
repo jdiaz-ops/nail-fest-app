@@ -36,7 +36,7 @@ export default function ContactPreferencesForm({ initialReplyToEmail }: { initia
         responda, así que usa una bandeja que sí revisen.
       </p>
       <button type="submit" style={saveButtonStyle} disabled={status === "saving"}>
-        {status === "saving" ? "Guardando…" : "Save"}
+        {status === "saving" ? "Guardando…" : "Guardar"}
       </button>
       {status === "saved" && <span style={{ marginLeft: 12, color: "#12966b", fontSize: 14 }}>Guardado ✓</span>}
       {status === "error" && <span style={{ marginLeft: 12, color: "#c2185b", fontSize: 14 }}>Error al guardar</span>}

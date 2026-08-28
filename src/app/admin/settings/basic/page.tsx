@@ -7,7 +7,7 @@ export default async function BasicSettingsPage() {
   const settings = await getOrgSettings();
   return (
     <div>
-      <h2 style={{ fontSize: 18, marginTop: 0 }}>Basic settings</h2>
+      <h2 style={{ fontSize: 18, marginTop: 0 }}>Datos básicos</h2>
       <BasicSettingsForm initialName={settings.name} />
     </div>
   );

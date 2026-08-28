@@ -22,10 +22,10 @@ export default function SelfServeForm({ initialEnabled }: { initialEnabled: bool
     <form onSubmit={handleSubmit} style={cardStyle}>
       <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
         <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
-        <span>Ticket buyers can view, print and resend their ticket codes</span>
+        <span>Cualquiera puede reenviarse su(s) entrada(s) escribiendo su correo</span>
       </label>
       <button type="submit" style={saveButtonStyle} disabled={status === "saving"}>
-        {status === "saving" ? "Guardando…" : "Save"}
+        {status === "saving" ? "Guardando…" : "Guardar"}
       </button>
       {status === "saved" && <span style={{ marginLeft: 12, color: "#12966b", fontSize: 14 }}>Guardado ✓</span>}
       {status === "error" && <span style={{ marginLeft: 12, color: "#c2185b", fontSize: 14 }}>Error al guardar</span>}

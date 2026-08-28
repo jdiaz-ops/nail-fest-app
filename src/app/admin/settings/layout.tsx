@@ -10,12 +10,12 @@ import SettingsNavLink from "./SettingsNavLink";
 const fraunces = Fraunces({ subsets: ["latin"], weight: ["600", "900"] });
 
 const NAV: { href: string; label: string }[] = [
-  { href: "/admin/settings/basic", label: "Basic settings" },
-  { href: "/admin/settings/contact", label: "Contact preferences" },
-  { href: "/admin/settings/privacy", label: "Privacy policy" },
-  { href: "/admin/settings/banned-emails", label: "Banned emails" },
-  { href: "/admin/settings/cookie-consent", label: "Cookie consent" },
-  { href: "/admin/settings/self-serve", label: "Self-serve" },
+  { href: "/admin/settings/basic", label: "Datos básicos" },
+  { href: "/admin/settings/contact", label: "Contacto" },
+  { href: "/admin/settings/privacy", label: "Política de privacidad" },
+  { href: "/admin/settings/banned-emails", label: "Correos bloqueados" },
+  { href: "/admin/settings/cookie-consent", label: "Aviso de cookies" },
+  { href: "/admin/settings/self-serve", label: "Autoservicio" },
 ];
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
@@ -27,7 +27,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
       <div style={{ display: "flex", gap: 32, alignItems: "flex-start" }}>
         <nav style={{ width: 200, flex: "0 0 auto" }}>
           <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: "0.06em", color: "#8a8478", marginBottom: 8 }}>
-            Edit
+            Editar
           </div>
           <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 2 }}>
             {NAV.map((item) => (

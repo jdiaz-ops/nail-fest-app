@@ -22,10 +22,10 @@ export default function CookieConsentForm({ initialEnabled }: { initialEnabled: 
     <form onSubmit={handleSubmit} style={cardStyle}>
       <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
         <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
-        <span>Activate cookie consent</span>
+        <span>Activar el aviso de cookies</span>
       </label>
       <button type="submit" style={saveButtonStyle} disabled={status === "saving"}>
-        {status === "saving" ? "Guardando…" : "Save"}
+        {status === "saving" ? "Guardando…" : "Guardar"}
       </button>
       {status === "saved" && <span style={{ marginLeft: 12, color: "#12966b", fontSize: 14 }}>Guardado ✓</span>}
       {status === "error" && <span style={{ marginLeft: 12, color: "#c2185b", fontSize: 14 }}>Error al guardar</span>}

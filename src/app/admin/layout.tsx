@@ -7,7 +7,7 @@ import AdminNavLink from "./AdminNavLink";
 // internal max-width where it matters (forms, cards), same as Ticket
 // Tailor's own settings panels do inside a full-width shell.
 const NAV: { href: string; label: string }[] = [
-  { href: "/admin", label: "Overview" },
+  { href: "/admin", label: "Resumen" },
   { href: "/admin/registrations", label: "Inscritos" },
   { href: "/admin/scan", label: "Escáner" },
   { href: "/admin/import", label: "Importar" },
