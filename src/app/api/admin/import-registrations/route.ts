@@ -10,10 +10,10 @@ import { db } from "@/lib/db";
 // client-side by lib/import/ticketTailorDoorlist.ts — see /admin/import)
 // into Person/Registration/Consent. Deliberately NOT one Prisma call per
 // person: at ~5,800+ people per city that's 15,000+ round trips, which
-// blows past any serverless function timeout. Instead: one batched raw
-// upsert for Person (ON CONFLICT DO UPDATE, keeps existing ids), then
-// batched createManyAndReturn for Registration, then batched createMany
-// for Consent — a handful of queries total instead of tens of thousands.
+// blows past any serverless function timeout. Instead: batched raw
+// upserts (ON CONFLICT DO UPDATE) for Person and Registration, then
+// batched createMany for Consent — a handful of queries total instead of
+// tens of thousands.
 //
 // No email, no QR, no Meta CAPI event here — this is historical/bulk data,
 // not a live registration. Population into Meta Custom Audiences happens
@@ -30,8 +30,8 @@ const personSchema = z.object({
   profession: z.string().nullable(),
   cedula: z.string().nullable(),
   instagram: z.string().nullable(),
-  checkedIn: z.boolean(),
-  ticketCount: z.number(),
+  ticketCount: z.number().int().min(1),
+  checkedInCount: z.number().int().min(0),
 });
 
 const bodySchema = z.object({
@@ -129,71 +129,82 @@ export async function POST(req: NextRequest) {
     select: { id: true, email: true },
   });
   const personIdByEmail = new Map(personRows.map((p) => [p.email, p.id]));
+  const personIds = [...personIdByEmail.values()];
 
-  // 3. Skip people who already have a registration for this event (safe to
-  // re-run the same file twice — e.g. a corrected export — without
-  // creating duplicate registrations/consents). Person data above still
-  // got refreshed either way.
-  const existingRegs = await db.registration.findMany({
-    where: { eventId: event.id, personId: { in: [...personIdByEmail.values()] } },
+  // 3. Who already had a registration for THIS event, before this call —
+  // needed to know who's genuinely new (gets Consent rows) vs. an update
+  // to an existing registration (re-running a corrected export refreshes
+  // ticketCount/checkedInCount/customFields, but must never insert a
+  // second LOGISTICS/MARKETING/ADVERTISING consent for someone already
+  // recorded).
+  const existingBefore = await db.registration.findMany({
+    where: { eventId: event.id, personId: { in: personIds } },
     select: { personId: true },
   });
-  const alreadyRegisteredIds = new Set(existingRegs.map((r) => r.personId));
+  const alreadyRegisteredIds = new Set(existingBefore.map((r) => r.personId));
 
-  const toRegister = people.filter((p) => {
-    const personId = personIdByEmail.get(p.email);
-    return personId && !alreadyRegisteredIds.has(personId);
-  });
-
-  let created = 0;
-  for (const batch of chunk(toRegister, BATCH_SIZE)) {
-    const registrationsData = batch.map((p) => ({
-      eventId: event.id,
-      personId: personIdByEmail.get(p.email)!,
-      status: "CONFIRMED" as const,
-      confirmedAt: new Date(),
-      checkedIn: p.checkedIn,
-      customFields: {
+  // 4. Upsert Registration by (personId, eventId) — raw SQL, batched. A
+  // second import of the same event updates ticketCount/checkedInCount/
+  // customFields in place instead of being silently skipped, so a
+  // corrected or richer re-export (e.g. one that finally has accurate
+  // check-in data) actually takes effect.
+  for (const batch of chunk(people, BATCH_SIZE)) {
+    const values = batch.map((p) => {
+      const customFields = JSON.stringify({
         cedula: p.cedula,
         instagram: p.instagram,
         importedFrom: "ticket-tailor-doorlist",
-        ticketCount: p.ticketCount,
-      },
-    }));
-
-    const inserted = await db.registration.createManyAndReturn({
-      data: registrationsData,
-      select: { id: true, personId: true },
+      });
+      return Prisma.sql`(${randomUUID()}, ${event.id}, ${personIdByEmail.get(p.email)}, 'CONFIRMED', NOW(), ${p.ticketCount}, ${p.checkedInCount}, ${customFields}::jsonb)`;
     });
-    created += inserted.length;
+    await db.$executeRaw`
+      INSERT INTO "Registration" (id, "eventId", "personId", status, "confirmedAt", "ticketCount", "checkedInCount", "customFields")
+      VALUES ${Prisma.join(values)}
+      ON CONFLICT ("personId", "eventId") DO UPDATE SET
+        "ticketCount" = EXCLUDED."ticketCount",
+        "checkedInCount" = EXCLUDED."checkedInCount",
+        "customFields" = EXCLUDED."customFields"
+    `;
+  }
 
-    const consentsData = inserted.flatMap((r) => {
-      const rows: Array<{
-        personId: string;
-        registrationId: string;
-        purpose: "LOGISTICS" | "MARKETING" | "ADVERTISING";
-        granted: boolean;
-      }> = [{ personId: r.personId, registrationId: r.id, purpose: "LOGISTICS", granted: true }];
-      if (consent.marketing) {
-        rows.push({ personId: r.personId, registrationId: r.id, purpose: "MARKETING" as const, granted: true });
-      }
-      if (consent.advertising) {
-        rows.push({ personId: r.personId, registrationId: r.id, purpose: "ADVERTISING" as const, granted: true });
-      }
-      return rows;
-    });
-    for (const consentBatch of chunk(consentsData, BATCH_SIZE)) {
-      await db.consent.createMany({ data: consentBatch });
+  const allRegs = await db.registration.findMany({
+    where: { eventId: event.id, personId: { in: personIds } },
+    select: { id: true, personId: true },
+  });
+
+  // 5. Consent — only for the newly-created registrations from this call.
+  const newlyRegistered = allRegs.filter((r) => !alreadyRegisteredIds.has(r.personId));
+  const consentsData: Array<{
+    personId: string;
+    registrationId: string;
+    purpose: "LOGISTICS" | "MARKETING" | "ADVERTISING";
+    granted: boolean;
+  }> = [];
+  for (const r of newlyRegistered) {
+    consentsData.push({ personId: r.personId, registrationId: r.id, purpose: "LOGISTICS", granted: true });
+    if (consent.marketing) {
+      consentsData.push({ personId: r.personId, registrationId: r.id, purpose: "MARKETING", granted: true });
+    }
+    if (consent.advertising) {
+      consentsData.push({ personId: r.personId, registrationId: r.id, purpose: "ADVERTISING", granted: true });
     }
   }
+  for (const consentBatch of chunk(consentsData, BATCH_SIZE)) {
+    await db.consent.createMany({ data: consentBatch });
+  }
+
+  const ticketsIssued = people.reduce((sum, p) => sum + p.ticketCount, 0);
+  const ticketsCheckedIn = people.reduce((sum, p) => sum + p.checkedInCount, 0);
 
   return NextResponse.json({
     ok: true,
     event: { slug: event.slug, name: event.name },
     totalPeopleInFile: people.length,
-    created,
-    alreadyRegistered: people.length - toRegister.length,
-    checkedInCount: toRegister.filter((p) => p.checkedIn).length,
+    created: newlyRegistered.length,
+    updated: personIds.length - newlyRegistered.length,
+    peopleWithAnyCheckIn: people.filter((p) => p.checkedInCount > 0).length,
+    ticketsIssued,
+    ticketsCheckedIn,
     professionsCreated,
   });
 }

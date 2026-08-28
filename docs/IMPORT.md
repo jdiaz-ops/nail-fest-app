@@ -24,12 +24,24 @@ Instagram — las mismas preguntas del formulario de registro.
    (titular + un acompañante), pero el acompañante nunca tiene datos
    propios: ambas filas traen el email/teléfono del titular. Agrupar por
    email es correcto, no solo dedup.
-3. **"Asistió" (checkedIn)** = al menos una de las boletas de esa persona
-   fue escaneada en la puerta. No es un headcount exacto (no se puede saber
-   si fue el titular o el acompañante quien entró), pero es la mejor señal
-   disponible y alimenta el filtro real "no asistió a X" en `/admin/segments`
-   y `/admin/broadcasts` (`attended`, distinto de `event` que solo significa
-   "se registró").
+3. **Aforo real (`ticketCount` / `checkedInCount`)** — cada registro guarda
+   cuántas boletas tenía esa persona (1 o 2: titular + acompañante) y
+   cuántas de esas boletas específicas fueron escaneadas ("Checked-in: Yes"
+   por fila del CSV, contado boleta por boleta — nunca se asume que si
+   escanearon al titular también entró el acompañante). `SUM(checkedInCount)`
+   de un evento es el aforo real que entró por la puerta, comparable al
+   "Checked in" que muestra Ticket Tailor — ver la tabla de aforo en
+   `/admin/registrations`. `checkedInCount > 0` a nivel de persona alimenta
+   el filtro `attended` ("no asistió a X") en `/admin/segments` y
+   `/admin/broadcasts`, distinto de `event` que solo significa "se
+   registró" sin importar si fue.
+
+   **Límite real, no de esta app**: esto es un snapshot (boleta escaneada
+   sí/no), no un log de reingresos — Ticket Tailor no registra cuántas
+   veces se escaneó cada boleta ni cuándo, solo si se escaneó alguna vez.
+   Reingreso de verdad (titular entra sábado, sale, vuelve domingo) solo
+   se podrá trackear con la futura app de escaneo propia, que si va a
+   guardar cada escaneo como su propio evento con fecha/hora.
 4. **Ciudad**: se recorta espacio y normaliza mayúsculas/minúsculas, pero
    NO se intenta fusionar variantes como "Pereira" con "Pereira Risaralda"
    — eso podría fusionar mal. Revisa el resumen antes de importar si eso te
@@ -48,10 +60,15 @@ Instagram — las mismas preguntas del formulario de registro.
 
 ## Seguro de correr dos veces
 
-Si subes el mismo archivo (o una versión corregida) otra vez para el mismo
-evento: los datos de `Person` se refrescan (upsert por email), pero NO se
-duplica el `Registration` de alguien que ya estaba importado para ese
-evento — se cuenta como "ya estaba" en el resultado, no como nuevo.
+Si subes el mismo archivo (o una versión corregida, ej. con datos de
+check-in actualizados) otra vez para el mismo evento: `Person` y
+`Registration` se actualizan en el lugar (upsert por email, y por
+persona+evento respectivamente) — nunca se duplica un registro. El
+resultado distingue `created` (gente nueva) de `updated` (ya existía, se
+refrescaron sus datos). El consentimiento SÍ es a prueba de duplicados
+distinto: solo se registra una vez, la primera vez que esa persona entra a
+ese evento — una segunda corrida no vuelve a insertar filas de
+consentimiento.
 
 ## Después de importar
 

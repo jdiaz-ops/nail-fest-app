@@ -7,10 +7,11 @@ import type { Person } from "@prisma/client";
  *
  * `event` = registered (CONFIRMED), regardless of whether they actually
  * showed up — the original proxy for "went" before check-in data existed.
- * `attended` = real door check-in (Registration.checkedIn), from the
- * scanning app once that ships, or backfilled on historical import (see
- * /admin/import). Use `attended` for "no asistió a X" segments — `event`
- * still answers "registrado a X" regardless of attendance.
+ * `attended` = real door check-in (Registration.checkedInCount > 0), from
+ * the scanning app once that ships, or backfilled on historical import
+ * (see /admin/import — checkedInCount is per-ticket, not a re-entry log;
+ * see docs/IMPORT.md). Use `attended` for "no asistió a X" segments —
+ * `event` still answers "registrado a X" regardless of attendance.
  */
 
 export type SegmentCondition =
@@ -35,7 +36,7 @@ async function matchingPersonIds(condition: SegmentCondition): Promise<Set<strin
     }
     case "attended": {
       const rows = await db.registration.findMany({
-        where: { checkedIn: true, event: { slug: condition.eventSlug } },
+        where: { checkedInCount: { gt: 0 }, event: { slug: condition.eventSlug } },
         select: { personId: true },
       });
       return new Set(rows.map((r) => r.personId));

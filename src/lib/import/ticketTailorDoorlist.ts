@@ -33,8 +33,13 @@ export interface ImportPerson {
   profession: string | null;
   cedula: string | null;
   instagram: string | null;
-  checkedIn: boolean;
+  // How many tickets this person's rows represent, and how many of those
+  // were marked "Checked-in: Yes" — a snapshot per physical ticket, capped
+  // by ticketCount. NOT a re-entry log: Ticket Tailor's own doorlist export
+  // has no scan-count/timestamp data, only this Yes/No per ticket. See
+  // docs/IMPORT.md.
   ticketCount: number;
+  checkedInCount: number;
 }
 
 /** Minimal RFC4180 CSV parser — handles quoted fields, escaped `""`, commas
@@ -199,9 +204,10 @@ export interface GroupResult {
 }
 
 /** Groups doorlist rows (one per ticket) into one record per unique email —
- * the actual person. "Checked-in" becomes true if ANY of their tickets was
- * scanned (can't distinguish which ticket in the party was scanned, since
- * the companion slot has no identity of its own). */
+ * the actual person. checkedInCount tallies how many of that email's rows
+ * were marked "Yes", capped at ticketCount — a per-ticket snapshot, not a
+ * scan log (Ticket Tailor's export has no re-entry/scan-count data; the
+ * live scanning app is where that would eventually live). */
 export function groupIntoImportPeople(rows: DoorlistRow[]): GroupResult {
   const byEmail = new Map<string, ImportPerson>();
   let skippedNoEmail = 0;
@@ -233,12 +239,12 @@ export function groupIntoImportPeople(rows: DoorlistRow[]): GroupResult {
         profession,
         cedula: row.cedula.trim() || null,
         instagram: row.instagram.trim() || null,
-        checkedIn: checkedInNow,
         ticketCount: 1,
+        checkedInCount: checkedInNow ? 1 : 0,
       });
     } else {
       existing.ticketCount++;
-      if (checkedInNow) existing.checkedIn = true;
+      if (checkedInNow) existing.checkedInCount++;
       // Fill in anything missing from a later row of the same person
       // (rare, but a companion-slot row could in principle differ if the
       // form was edited between purchases) — never overwrite a value

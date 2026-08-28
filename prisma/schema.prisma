@@ -83,6 +83,13 @@ model Registration {
   personId  String
   status    RegistrationStatus @default(STARTED)
 
+  // One person can hold more than one ticket under the same order — e.g.
+  // Ticket Tailor's "titular + acompañante" pattern, where the +1's own
+  // data is deliberately never collected (friction), but they're still a
+  // real body at the door with their own scannable ticket. ticketCount /
+  // checkedInCount track that gap so aforo (door headcount) reflects real
+  // people, not just identified CRM contacts — see docs/IMPORT.md.
+
   // Custom form fields captured at registration time, e.g.
   // { "profesion": "manicurista", "empresa": "..." }. Profession is also
   // denormalized onto Person for fast segment filtering.
@@ -100,18 +107,23 @@ model Registration {
   createdAt DateTime @default(now())
   confirmedAt DateTime?
 
-  // Real door check-in, distinct from "registered" — populated by the
-  // scanning app once that ships, or backfilled from a Ticket Tailor
-  // doorlist export on historical import (see /admin/import). Lets segment
-  // filters distinguish "no asistió" from "registró pero no fue" instead of
-  // treating a confirmed registration as a proxy for attendance.
-  checkedIn Boolean @default(false)
+  // How many tickets this registration represents (titular + up to 1
+  // acompañante slot — Ticket Tailor allows max 2 per order today) and how
+  // many of those were actually scanned at the door. checkedInCount is
+  // counted per physical ticket from the source data, never inferred from
+  // the titular's own status — scanning the titular's ticket does NOT
+  // imply the +1 also came in. checkedInCount > 0 is "this contact
+  // attended" for segment filters (see lib/segments/builder.ts `attended`);
+  // SUM(checkedInCount) across an event's registrations is the real door
+  // headcount (aforo) — see docs/IMPORT.md and /admin/registrations.
+  ticketCount    Int @default(1)
+  checkedInCount Int @default(0)
 
   consents  Consent[]
   metaEvents MetaEvent[]
 
+  @@unique([personId, eventId])
   @@index([eventId, status])
-  @@index([personId])
 }
 
 // Consent is recorded per purpose, per registration — never one blanket

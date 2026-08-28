@@ -97,7 +97,7 @@ export default function ImportComposer({ events }: Props) {
     setImporting(false);
     if (res.ok) {
       setResult(
-        `Listo — "${body.event.name}": ${body.created} personas nuevas importadas, ${body.alreadyRegistered} ya estaban (se actualizaron sus datos pero no se duplicó el registro), ${body.checkedInCount} con asistencia real confirmada. ${body.professionsCreated.length > 0 ? `Profesiones nuevas creadas: ${body.professionsCreated.join(", ")}.` : ""}`
+        `Listo — "${body.event.name}": ${body.created} registros nuevos, ${body.updated} ya existían y se actualizaron (sin duplicar). ${body.peopleWithAnyCheckIn} personas con asistencia real. Aforo real: ${body.ticketsCheckedIn} de ${body.ticketsIssued} boletas escaneadas en la puerta. ${body.professionsCreated.length > 0 ? `Profesiones nuevas creadas: ${body.professionsCreated.join(", ")}.` : ""}`
       );
       router.refresh();
     } else {
@@ -118,7 +118,10 @@ export default function ImportComposer({ events }: Props) {
           <p>
             <strong>{preview.people.length}</strong> personas únicas detectadas
             {preview.skippedNoEmail > 0 && <> — {preview.skippedNoEmail} filas sin email fueron omitidas</>}.{" "}
-            <strong>{preview.people.filter((p) => p.checkedIn).length}</strong> con asistencia real (check-in).
+            <strong>{preview.people.filter((p) => p.checkedInCount > 0).length}</strong> con asistencia real
+            (check-in) —{" "}
+            <strong>{preview.people.reduce((sum, p) => sum + p.checkedInCount, 0)}</strong> boletas escaneadas de{" "}
+            <strong>{preview.people.reduce((sum, p) => sum + p.ticketCount, 0)}</strong> emitidas (aforo real).
           </p>
           {preview.unmappedProfessions.length > 0 && (
             <p style={{ color: "#c2185b" }}>
