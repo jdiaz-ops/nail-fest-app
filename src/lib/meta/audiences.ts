@@ -52,7 +52,10 @@ export async function ensureWebsiteAudience(params: {
     method: "POST",
     body: JSON.stringify({
       name: params.name,
-      subtype: "WEBSITE",
+      // No `subtype` — confirmed against a live account that the API
+      // rejects it outright ("parameter 'subtype' is not supported").
+      // Betting that type is inferred from `rule` + `pixel_id` instead;
+      // unconfirmed until this actually creates the audience.
       customer_file_source: "USER_PROVIDED_ONLY",
       retention_days: params.retentionDays,
       rule: JSON.stringify({
@@ -89,7 +92,8 @@ export async function ensureCustomerListAudience(params: {
     method: "POST",
     body: JSON.stringify({
       name: params.name,
-      subtype: "CUSTOM",
+      // Same reasoning as the website audience above — no `subtype`, the
+      // API infers CUSTOM from customer_file_source alone with no `rule`.
       customer_file_source: "USER_PROVIDED_ONLY",
       retention_days: params.retentionDays,
     }),
