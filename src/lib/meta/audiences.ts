@@ -187,5 +187,55 @@ export async function ensureSeedAudiences() {
       retentionDays: 180,
     })
   );
-  return { landing, checkout, purchasers };
+
+  // Purchasers is a customer-list audience — unlike the two rule_v2
+  // audiences above, Meta doesn't auto-populate it. Sync it right after
+  // creating/finding it, so clicking this button once actually leaves it
+  // with members instead of "Ready" but empty.
+  let purchasersSync: SeedAudienceResult | undefined;
+  if ("id" in purchasers) {
+    purchasersSync = await attempt(async () => {
+      const people = await getAdvertisingConsentedPurchasers();
+      const { batches } = await syncPeopleToAudience(purchasers.id, people);
+      return `${people.length} personas, ${batches} lote(s)`;
+    });
+  }
+
+  return { landing, checkout, purchasers, purchasersSync };
+}
+
+/**
+ * Confirmed registrants who granted (and haven't revoked) ADVERTISING
+ * consent — the only people allowed to be sent to Meta for ad targeting
+ * (Ley 1581 purpose separation, same gate used for the CAPI Purchase event
+ * in /api/register). Done as two bulk queries + an in-memory "latest
+ * consent per person" reduction instead of hasActiveConsent() in a loop,
+ * since this can run over 10,000+ people per event.
+ */
+async function getAdvertisingConsentedPurchasers(): Promise<
+  Array<{ email: string; phone: string | null }>
+> {
+  const confirmed = await db.person.findMany({
+    where: { registrations: { some: { status: "CONFIRMED" } } },
+    select: { id: true, email: true, phone: true },
+  });
+  if (confirmed.length === 0) return [];
+
+  const consents = await db.consent.findMany({
+    where: { personId: { in: confirmed.map((p) => p.id) }, purpose: "ADVERTISING" },
+    orderBy: { grantedAt: "desc" },
+    select: { personId: true, granted: true, revokedAt: true },
+  });
+
+  const latestByPerson = new Map<string, { granted: boolean; revokedAt: Date | null }>();
+  for (const c of consents) {
+    if (!latestByPerson.has(c.personId)) latestByPerson.set(c.personId, c);
+  }
+
+  return confirmed
+    .filter((p) => {
+      const latest = latestByPerson.get(p.id);
+      return latest?.granted && !latest.revokedAt;
+    })
+    .map((p) => ({ email: p.email, phone: p.phone }));
 }
