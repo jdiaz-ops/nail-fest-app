@@ -291,19 +291,18 @@ export default function EventRegistration({
               )}
 
               {step === "detalles" && (
-                <div style={{ display: "grid", gridTemplateColumns: hasTicketTypes ? "1.5fr 1fr" : "1fr", gap: 24 }}>
-                  <RegistrationForm
-                    eventSlug={eventSlug}
-                    professionOptions={professionOptions}
-                    questions={questions}
-                    ticketTypeId={selectedType?.id}
-                    ticketCount={selectedType ? quantity : undefined}
-                    onReview={handleReview}
-                  />
-                  {hasTicketTypes && selectedType && (
-                    <OrderSummary eventName={eventName} eventWhen={eventWhen} eventVenue={eventVenue} typeName={selectedType.name} quantity={quantity} price={selectedType.price} />
-                  )}
-                </div>
+                // No order summary sidebar here on purpose — full width
+                // for the form itself instead of splitting the column
+                // (the summary still shows in Resumen, right before the
+                // real confirm).
+                <RegistrationForm
+                  eventSlug={eventSlug}
+                  professionOptions={professionOptions}
+                  questions={questions}
+                  ticketTypeId={selectedType?.id}
+                  ticketCount={selectedType ? quantity : undefined}
+                  onReview={handleReview}
+                />
               )}
 
               {step === "resumen" && reviewPayload && (

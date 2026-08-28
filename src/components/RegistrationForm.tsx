@@ -203,11 +203,51 @@ export default function RegistrationForm({ eventSlug, professionOptions, questio
           </div>
         ))}
 
-      {email && (
-        <div className="field">
-          <label htmlFor="field_email">{email.label}</label>
-          <input id="field_email" name="field_email" type="email" autoComplete="email" required />
-        </div>
+      {/* Email + Phone side by side — Detalles has the full modal width to
+          itself now (no order-summary sidebar stealing half of it), so a
+          single narrow column of full-width fields would waste it. */}
+      {(email || phone) && (
+        <Row>
+          {email && (
+            <div className="field" style={{ marginBottom: 0 }}>
+              <label htmlFor="field_email">{email.label}</label>
+              <input id="field_email" name="field_email" type="email" autoComplete="email" required />
+            </div>
+          )}
+          {phone && (
+            <div className="field" style={{ marginBottom: 0 }}>
+              <label htmlFor="phone">{phone.label}</label>
+              <div style={{ display: "flex", gap: 8 }}>
+                <select
+                  aria-label="Código de país"
+                  value={countryCode}
+                  onChange={(e) => setCountryCode(e.target.value)}
+                  // .field select in globals.css sets width:100% — inside this
+                  // flex row that becomes this select's flex-basis (flex-basis:
+                  // auto defers to `width`), so it was eating almost the whole
+                  // row and squeezing the number input into a sliver. A fixed
+                  // width here overrides that instead of fighting the cascade.
+                  style={{ flex: "0 0 auto", width: 112 }}
+                >
+                  {COUNTRY_CODES.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.label}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  autoComplete="tel"
+                  placeholder="321 1234567"
+                  required={phone.required}
+                  style={{ flex: 1, minWidth: 0 }}
+                />
+              </div>
+            </div>
+          )}
+        </Row>
       )}
 
       {email?.confirmEmail && (
@@ -217,52 +257,21 @@ export default function RegistrationForm({ eventSlug, professionOptions, questio
         </div>
       )}
 
-      {phone && (
-        <div className="field">
-          <label htmlFor="phone">{phone.label}</label>
-          <div style={{ display: "flex", gap: 8 }}>
-            <select
-              aria-label="Código de país"
-              value={countryCode}
-              onChange={(e) => setCountryCode(e.target.value)}
-              // .field select in globals.css sets width:100% — inside this
-              // flex row that becomes this select's flex-basis (flex-basis:
-              // auto defers to `width`), so it was eating almost the whole
-              // row and squeezing the number input into a sliver. A fixed
-              // width here overrides that instead of fighting the cascade.
-              style={{ flex: "0 0 auto", width: 112 }}
-            >
-              {COUNTRY_CODES.map((c) => (
-                <option key={c.code} value={c.code}>
-                  {c.label}
-                </option>
-              ))}
-            </select>
-            <input
-              id="phone"
-              name="phone"
-              type="tel"
-              autoComplete="tel"
-              placeholder="321 1234567"
-              required={phone.required}
-              style={{ flex: 1, minWidth: 0 }}
-            />
-          </div>
-        </div>
-      )}
-
-      {cedula && (
-        <div className="field">
-          <label htmlFor="field_cedula">{cedula.label}</label>
-          <input id="field_cedula" name="field_cedula" required={cedula.required} />
-        </div>
-      )}
-
-      {city && (
-        <div className="field">
-          <label htmlFor="field_city">{city.label}</label>
-          <input id="field_city" name="field_city" autoComplete="address-level2" required={city.required} />
-        </div>
+      {(cedula || city) && (
+        <Row>
+          {cedula && (
+            <div className="field" style={{ marginBottom: 0 }}>
+              <label htmlFor="field_cedula">{cedula.label}</label>
+              <input id="field_cedula" name="field_cedula" required={cedula.required} />
+            </div>
+          )}
+          {city && (
+            <div className="field" style={{ marginBottom: 0 }}>
+              <label htmlFor="field_city">{city.label}</label>
+              <input id="field_city" name="field_city" autoComplete="address-level2" required={city.required} />
+            </div>
+          )}
+        </Row>
       )}
 
       {profession && (
@@ -385,4 +394,11 @@ export default function RegistrationForm({ eventSlug, professionOptions, questio
       </button>
     </form>
   );
+}
+
+// Two fields side by side instead of stacked full-width — real estate
+// this form only has to spare now that Detalles has the modal's full
+// width to itself (see EventRegistration.tsx).
+function Row({ children }: { children: React.ReactNode }) {
+  return <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>{children}</div>;
 }
