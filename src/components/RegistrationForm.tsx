@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { attributionFromSearchParams } from "@/lib/utm";
-import { track } from "./tracking";
+import { track, ensureFbcCookie } from "./tracking";
 
 interface Props {
   eventSlug: string;
@@ -40,6 +40,10 @@ export default function RegistrationForm({ eventSlug, professionOptions }: Props
   const [countryCode, setCountryCode] = useState("+57");
 
   useEffect(() => {
+    // Reconstruct _fbc from ?fbclid= BEFORE the first track() call, since
+    // there's no Meta Pixel on this site to set it automatically — see
+    // ensureFbcCookie()'s own comment for why this matters.
+    ensureFbcCookie();
     // This single page serves as both "landing" and "ticket page" for
     // Slice 1 — PageView and ViewContent both fire on mount. Once the
     // landing gets its own step ahead of the form, split these.
