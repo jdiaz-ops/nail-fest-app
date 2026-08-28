@@ -1,0 +1,247 @@
+// Nail Fest — Slice 1 data model
+// CRM (deduplicated person), events/registrations, consent-by-purpose,
+// Meta attribution log, and email broadcast log.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// CRM
+// ---------------------------------------------------------------------------
+
+// One row per human being, deduplicated by email/phone. This is the "single
+// profile" the whole plan is built around — registrations, consents and
+// audience segments all hang off this, not off a per-event record.
+model Person {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  phone     String? // E.164, e.g. +57...
+  firstName String?
+  lastName  String?
+  city      String?
+  // Free-form categorical field (e.g. "manicurista", "estudiante").
+  // Kept as a plain string + a lookup table of known options (ProfessionOption)
+  // rather than true text so it stays usable as a segment filter — see
+  // docs/PLAN.md "campos personalizables como filtros de segmentación".
+  profession String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  registrations Registration[]
+  consents      Consent[]
+
+  @@index([phone])
+  @@index([city])
+  @@index([profession])
+}
+
+// Reusable, organizer-managed list of profession/category options so the
+// registration form uses a <select>, never free text — see brief.
+model ProfessionOption {
+  id    String @id @default(cuid())
+  label String @unique
+  active Boolean @default(true)
+}
+
+model Event {
+  id        String   @id @default(cuid())
+  slug      String   @unique // used in the landing URL, e.g. /bogota-2026
+  name      String
+  city      String
+  startsAt  DateTime
+  endsAt    DateTime?
+  capacity  Int?
+  createdAt DateTime @default(now())
+
+  registrations Registration[]
+
+  @@index([city])
+}
+
+enum RegistrationStatus {
+  STARTED // form opened / InitiateCheckout fired, not yet submitted
+  CONFIRMED // submitted, QR issued, Purchase fired
+  CANCELLED
+}
+
+model Registration {
+  id        String             @id @default(cuid())
+  event     Event              @relation(fields: [eventId], references: [id])
+  eventId   String
+  person    Person             @relation(fields: [personId], references: [id])
+  personId  String
+  status    RegistrationStatus @default(STARTED)
+
+  // Custom form fields captured at registration time, e.g.
+  // { "profesion": "manicurista", "empresa": "..." }. Profession is also
+  // denormalized onto Person for fast segment filtering.
+  customFields Json?
+
+  // Attribution capture — see docs/PLAN.md tracking section.
+  utmSource   String?
+  utmMedium   String?
+  utmCampaign String?
+  fbclid      String?
+  ttclid      String?
+  gclid       String?
+
+  qrToken   String?  @unique // signed token encoded in the ticket QR
+  createdAt DateTime @default(now())
+  confirmedAt DateTime?
+
+  consents  Consent[]
+  metaEvents MetaEvent[]
+
+  @@index([eventId, status])
+  @@index([personId])
+}
+
+// Consent is recorded per purpose, per registration — never one blanket
+// checkbox. Ley 1581 (Colombia) requires this to be separable and revocable.
+enum ConsentPurpose {
+  LOGISTICS // ticket delivery, event-operational emails
+  MARKETING // broadcast emails/newsletters
+  ADVERTISING // sharing hashed identifiers with Meta/TikTok/Google for audiences
+}
+
+model Consent {
+  id             String         @id @default(cuid())
+  person         Person         @relation(fields: [personId], references: [id])
+  personId       String
+  registration   Registration?  @relation(fields: [registrationId], references: [id])
+  registrationId String?
+  purpose        ConsentPurpose
+  granted        Boolean
+  grantedAt      DateTime       @default(now())
+  revokedAt      DateTime?
+
+  @@index([personId, purpose])
+}
+
+// ---------------------------------------------------------------------------
+// Meta attribution
+// ---------------------------------------------------------------------------
+
+// Singleton-ish: one row per Ad Account + Pixel pair. Kept as a table (not a
+// single config row) so a future token rotation has an audit trail.
+model MetaConnection {
+  id                String   @id @default(cuid())
+  adAccountId       String
+  pixelId           String
+  // Encrypted at the application layer before it ever reaches this column —
+  // see lib/crypto.ts. Never store the System User token in plaintext.
+  systemUserTokenEnc String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+enum MetaEventName {
+  PageView
+  ViewContent
+  InitiateCheckout
+  Purchase
+}
+
+enum MetaEventStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+// One row per Conversions API call attempt. event_id is the Meta dedup key
+// (shared with the browser Pixel call, if/when one exists) and the unique
+// constraint here is what makes retries idempotent.
+model MetaEvent {
+  id             String          @id @default(cuid())
+  eventId        String          @unique // Meta's "event_id" — dedup key
+  eventName      MetaEventName
+  registration   Registration?   @relation(fields: [registrationId], references: [id])
+  registrationId String?
+  status         MetaEventStatus @default(PENDING)
+  attempts       Int             @default(0)
+  nextAttemptAt  DateTime        @default(now())
+  sentAt         DateTime?
+  metaResponse   Json?
+  createdAt      DateTime        @default(now())
+
+  @@index([status, nextAttemptAt])
+}
+
+// ---------------------------------------------------------------------------
+// Email
+// ---------------------------------------------------------------------------
+
+enum EmailKind {
+  TRANSACTIONAL
+  MARKETING
+}
+
+enum BroadcastStatus {
+  DRAFT
+  QUEUED
+  SENDING
+  SENT
+  CANCELLED
+}
+
+// A segment definition is stored as the filter tree it represents so it can
+// be reused identically for an email broadcast and a Meta/TikTok/Google
+// Custom Audience sync — one engine, two consumers (see docs/PLAN.md).
+model SegmentDefinition {
+  id        String   @id @default(cuid())
+  name      String
+  // { include: [...conditions], exclude: [...conditions] } — see lib/segments/builder.ts
+  filter    Json
+  createdAt DateTime @default(now())
+
+  broadcasts EmailBroadcast[]
+}
+
+model EmailBroadcast {
+  id          String            @id @default(cuid())
+  segment     SegmentDefinition @relation(fields: [segmentId], references: [id])
+  segmentId   String
+  subject     String
+  bodyText    String
+  status      BroadcastStatus   @default(DRAFT)
+  createdAt   DateTime          @default(now())
+  sentAt      DateTime?
+
+  logs EmailLog[]
+}
+
+enum EmailLogStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  OPENED
+  CLICKED
+  BOUNCED
+  COMPLAINED
+  FAILED
+}
+
+// Per-recipient send record for both transactional and broadcast email —
+// this is the data the "panel de salud de email" reads from.
+model EmailLog {
+  id          String          @id @default(cuid())
+  kind        EmailKind
+  broadcast   EmailBroadcast? @relation(fields: [broadcastId], references: [id])
+  broadcastId String?
+  personId    String?
+  toEmail     String
+  sesMessageId String?
+  status      EmailLogStatus  @default(QUEUED)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([broadcastId, status])
+  @@index([toEmail])
+}

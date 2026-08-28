@@ -1,0 +1,35 @@
+{
+  "name": "nail-fest-app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "db:seed": "tsx prisma/seed.ts",
+    "meta:setup": "tsx scripts/setup-meta-connection.ts",
+    "meta:retry": "tsx scripts/retry-meta-events.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-sesv2": "^3.658.1",
+    "@prisma/client": "^5.20.0",
+    "next": "14.2.35",
+    "qrcode": "^1.5.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.15",
+    "@types/qrcode": "^1.5.5",
+    "@types/react": "^18.3.5",
+    "@types/react-dom": "^18.3.0",
+    "prisma": "^5.20.0",
+    "tsx": "^4.19.1",
+    "typescript": "^5.5.4"
+  }
+}
