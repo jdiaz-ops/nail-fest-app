@@ -7,8 +7,12 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  // Pooled (PgBouncer) — the app's normal query traffic.
+  url       = env("DATABASE_URL")
+  // Direct/unpooled — Prisma Migrate needs this, not the pooled URL
+  // (pooled + migrations => "prepared statement already exists" errors).
+  directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 // ---------------------------------------------------------------------------
