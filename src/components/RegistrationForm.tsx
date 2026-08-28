@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { attributionFromSearchParams } from "@/lib/utm";
-import { track, ensureFbcCookie } from "./tracking";
 
 export interface QuestionView {
   key: string;
@@ -18,15 +17,47 @@ export interface QuestionView {
   confirmEmail: boolean;
 }
 
+// Everything /api/register accepts, built here and handed up to
+// EventRegistration.tsx via onReview — this component only collects and
+// client-validates it now; the actual POST (and the Purchase pixel that
+// has to fire in step with it) happens at the real "Confirmar registro"
+// moment in the Resumen step, not here at "Siguiente".
+export interface RegisterPayload {
+  eventSlug: string;
+  email: string;
+  phone: string;
+  fullName?: string;
+  firstName?: string;
+  lastName?: string;
+  emailConfirm?: string;
+  city: string;
+  profession: string;
+  customFields: Record<string, string>;
+  consents: { logistics: boolean; marketing: boolean; advertising: boolean };
+  attribution?: {
+    utmSource?: string;
+    utmMedium?: string;
+    utmCampaign?: string;
+    fbclid?: string;
+    ttclid?: string;
+    gclid?: string;
+  };
+  fbc?: string;
+  fbp?: string;
+  ticketTypeId?: string;
+  ticketCount?: number;
+  // Set by EventRegistration.tsx at the real confirm moment (Resumen
+  // step), not here — see its own comment on why.
+  purchaseEventId?: string;
+}
+
 interface Props {
   eventSlug: string;
   professionOptions: string[];
   questions: QuestionView[];
-  // Event.registerButtonLabel (see /admin/events' EventForm.tsx) — Ticket
-  // Tailor's own "Select tickets button label" field, renamed since we
-  // have no ticket-selection step: this button submits straight to
-  // /api/register.
-  submitLabel: string;
+  ticketTypeId?: string;
+  ticketCount?: number;
+  onReview: (payload: RegisterPayload) => void;
 }
 
 // Matches the Ticket Tailor forms this replaces — Colombia default since
@@ -55,34 +86,13 @@ function byKey(questions: QuestionView[], key: string): QuestionView | undefined
   return questions.find((q) => q.key === key);
 }
 
-export default function RegistrationForm({ eventSlug, professionOptions, questions, submitLabel }: Props) {
+export default function RegistrationForm({ eventSlug, professionOptions, questions, ticketTypeId, ticketCount, onReview }: Props) {
   const searchParams = useSearchParams();
-  const firedCheckoutStart = useRef(false);
-  const [status, setStatus] = useState<"idle" | "submitting" | "done" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [countryCode, setCountryCode] = useState("+57");
 
-  useEffect(() => {
-    // Reconstruct _fbc from ?fbclid= BEFORE the first track() call, since
-    // there's no Meta Pixel on this site to set it automatically — see
-    // ensureFbcCookie()'s own comment for why this matters.
-    ensureFbcCookie();
-    // This single page serves as both "landing" and "ticket page" for
-    // Slice 1 — PageView and ViewContent both fire on mount. Once the
-    // landing gets its own step ahead of the form, split these.
-    track("PageView");
-    track("ViewContent");
-  }, []);
-
-  function markCheckoutStarted() {
-    if (firedCheckoutStart.current) return;
-    firedCheckoutStart.current = true;
-    track("InitiateCheckout");
-  }
-
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setStatus("submitting");
     setErrorMessage(null);
 
     const form = new FormData(e.currentTarget);
@@ -91,10 +101,6 @@ export default function RegistrationForm({ eventSlug, professionOptions, questio
     const fullNameQuestion = questions.find((q) => q.key === "fullName");
     const emailQuestion = questions.find((q) => q.key === "email");
     const usesFirstLast = fullNameQuestion?.nameFormat === "FIRST_LAST";
-    // Shared with the server-side CAPI Purchase call below so Meta
-    // dedupes the Pixel + CAPI pair instead of double-counting — same
-    // mechanism as track() in tracking.ts, see MetaPixelScript.tsx.
-    const purchaseEventId = crypto.randomUUID();
 
     // customFields holds every question that isn't one of the four real
     // Person columns (email/fullName/phone/city/profession) — cedula,
@@ -119,7 +125,7 @@ export default function RegistrationForm({ eventSlug, professionOptions, questio
 
     const email = String(form.get("field_email") ?? "");
 
-    const payload = {
+    const payload: RegisterPayload = {
       eventSlug,
       email,
       phone: localPhone ? `${countryCode}${localPhone}` : "",
@@ -141,11 +147,11 @@ export default function RegistrationForm({ eventSlug, professionOptions, questio
       attribution: attributionFromSearchParams(searchParams),
       fbc: readCookie("_fbc"),
       fbp: readCookie("_fbp"),
-      purchaseEventId,
+      ticketTypeId,
+      ticketCount,
     };
 
     if (!payload.consents.logistics) {
-      setStatus("error");
       setErrorMessage("Necesitamos tu autorización para enviarte la entrada por correo.");
       return;
     }
@@ -154,51 +160,11 @@ export default function RegistrationForm({ eventSlug, professionOptions, questio
     // client-side too so the person sees it immediately instead of a
     // round trip to the server.
     if (emailQuestion?.confirmEmail && payload.emailConfirm?.trim().toLowerCase() !== email.trim().toLowerCase()) {
-      setStatus("error");
       setErrorMessage("Los correos no coinciden — revísalos.");
       return;
     }
 
-    // Same ADVERTISING-consent gate as the server-side CAPI send (see
-    // /api/register) — firing the Pixel unconditionally would leak data to
-    // Meta regardless of what the person just chose, defeating the point
-    // of the checkbox.
-    if (advertisingConsent) {
-      window.fbq?.("track", "Purchase", {}, { eventID: purchaseEventId });
-    }
-
-    const res = await fetch("/api/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    if (res.ok) {
-      setStatus("done");
-    } else {
-      const body = await res.json().catch(() => ({}));
-      setStatus("error");
-      setErrorMessage(
-        body?.error === "event_not_found"
-          ? "Este evento ya no está disponible."
-          : body?.error === "not_permitted"
-            ? "No podemos completar tu registro con este correo."
-            : body?.error === "missing_required_fields"
-              ? "Faltan campos obligatorios — revisa el formulario."
-              : body?.error === "email_mismatch"
-                ? "Los correos no coinciden — revísalos."
-                : "Algo salió mal, intenta de nuevo."
-      );
-    }
-  }
-
-  if (status === "done") {
-    return (
-      <div>
-        <h2>¡Listo!</h2>
-        <p>Revisa tu correo — ahí va tu entrada con el código QR.</p>
-      </div>
-    );
+    onReview(payload);
   }
 
   const fullName = byKey(questions, "fullName");
@@ -210,7 +176,7 @@ export default function RegistrationForm({ eventSlug, professionOptions, questio
   const customQuestions = questions.filter((q) => !q.locked);
 
   return (
-    <form onSubmit={handleSubmit} onFocus={markCheckoutStarted}>
+    <form onSubmit={handleSubmit}>
       <h2 style={{ fontSize: 18, marginBottom: 4 }}>Tus datos</h2>
 
       {fullName &&
@@ -414,8 +380,8 @@ export default function RegistrationForm({ eventSlug, professionOptions, questio
 
       {errorMessage && <p style={{ color: "#c2185b" }}>{errorMessage}</p>}
 
-      <button className="primary" type="submit" disabled={status === "submitting"}>
-        {status === "submitting" ? "Enviando..." : submitLabel}
+      <button className="primary" type="submit">
+        Siguiente
       </button>
     </form>
   );

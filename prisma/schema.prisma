@@ -168,6 +168,8 @@ model TicketType {
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
 
+  registrations Registration[]
+
   @@index([eventId])
 }
 
@@ -184,6 +186,16 @@ model Registration {
   person    Person             @relation(fields: [personId], references: [id])
   personId  String
   status    RegistrationStatus @default(STARTED)
+
+  // Which TicketType this order was for (the "Entradas" step of the
+  // public registration modal — see EventRegistration.tsx) — nullable
+  // because older/seeded events have no TicketType rows at all yet
+  // (registration still works exactly as before for those, ticketCount
+  // defaults to 1, no Entradas step shown). SetNull instead of Cascade:
+  // deleting a ticket type later must never delete the real people who
+  // already registered under it.
+  ticketType   TicketType? @relation(fields: [ticketTypeId], references: [id], onDelete: SetNull)
+  ticketTypeId String?
 
   // One person can hold more than one ticket under the same order — e.g.
   // Ticket Tailor's "titular + acompañante" pattern, where the +1's own

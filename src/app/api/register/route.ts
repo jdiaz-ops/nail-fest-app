@@ -29,6 +29,12 @@ const bodySchema = z.object({
   lastName: z.string().optional(),
   city: z.string(),
   profession: z.string(),
+  // The "Entradas" step (EventRegistration.tsx) — omitted entirely for
+  // events with no TicketType rows yet (older/seeded events), which keep
+  // registering exactly as before: ticketCount defaults to 1, no ticket
+  // type stored.
+  ticketTypeId: z.string().optional(),
+  ticketCount: z.number().int().positive().optional(),
   // Everything that isn't one of the five fields above — cedula, and
   // whatever questions exist in /admin/settings/checkout-form (Instagram
   // by default, plus anything an admin added) — keyed by CheckoutQuestion.key.
@@ -135,6 +141,39 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "not_permitted" }, { status: 403 });
   }
 
+  // Fetched before the ticket-type capacity check below so a resend can
+  // exclude the person's OWN prior reservation from "how many are already
+  // taken" — otherwise resubmitting the same order would look like it's
+  // competing with itself for the last spot.
+  const existingPerson = await db.person.findUnique({ where: { email: normalizedEmail } });
+  const existingRegistrationForCapacityCheck = existingPerson
+    ? await db.registration.findUnique({ where: { personId_eventId: { personId: existingPerson.id, eventId: event.id } } })
+    : null;
+
+  let ticketCount = 1;
+  if (input.ticketTypeId) {
+    const ticketType = await db.ticketType.findUnique({ where: { id: input.ticketTypeId } });
+    if (!ticketType || ticketType.eventId !== event.id || ticketType.status !== "ON_SALE") {
+      return NextResponse.json({ error: "invalid_ticket_type" }, { status: 400 });
+    }
+    ticketCount = input.ticketCount ?? 1;
+    if (ticketCount < ticketType.minPerOrder || ticketCount > ticketType.maxPerOrder) {
+      return NextResponse.json({ error: "invalid_ticket_quantity" }, { status: 400 });
+    }
+    const sold = await db.registration.aggregate({
+      where: {
+        ticketTypeId: input.ticketTypeId,
+        status: { not: "CANCELLED" },
+        id: existingRegistrationForCapacityCheck ? { not: existingRegistrationForCapacityCheck.id } : undefined,
+      },
+      _sum: { ticketCount: true },
+    });
+    const remaining = ticketType.quantity - (sold._sum.ticketCount ?? 0);
+    if (ticketCount > remaining) {
+      return NextResponse.json({ error: "sold_out" }, { status: 400 });
+    }
+  }
+
   // Dedup on email — the whole point of the CRM being "one profile per
   // person" rather than one row per registration. city/profession here are
   // exactly what /admin/crm/segments and Broadcasts filter on (see
@@ -171,7 +210,10 @@ export async function POST(req: NextRequest) {
 
   const customFields = input.customFields;
   const registration = existingRegistration
-    ? await db.registration.update({ where: { id: existingRegistration.id }, data: { customFields } })
+    ? await db.registration.update({
+        where: { id: existingRegistration.id },
+        data: { customFields, ticketTypeId: input.ticketTypeId ?? null, ticketCount },
+      })
     : await db.registration.create({
         data: {
           eventId: event.id,
@@ -179,6 +221,8 @@ export async function POST(req: NextRequest) {
           status: "CONFIRMED",
           confirmedAt: new Date(),
           customFields,
+          ticketTypeId: input.ticketTypeId ?? null,
+          ticketCount,
           utmSource: input.attribution?.utmSource,
           utmMedium: input.attribution?.utmMedium,
           utmCampaign: input.attribution?.utmCampaign,

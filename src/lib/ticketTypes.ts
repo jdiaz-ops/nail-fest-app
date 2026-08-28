@@ -93,3 +93,50 @@ export async function updateTicketType(id: string, input: TicketTypeInput): Prom
 export async function deleteTicketType(id: string): Promise<void> {
   await db.ticketType.delete({ where: { id } });
 }
+
+export interface PublicTicketType {
+  id: string;
+  name: string;
+  price: number;
+  minPerOrder: number;
+  maxPerOrder: number;
+  remaining: number;
+  showRemainingOnPage: boolean;
+}
+
+// What the public "Entradas" step (EventRegistration.tsx) actually shows —
+// only ON_SALE types, respecting hideUntil/hideAfter, with real remaining
+// availability computed from actual registrations (quantity minus the sum
+// of ticketCount across every non-cancelled registration under that
+// type), not the raw quantity. HIDDEN/ACCESS_CODE_REQUIRED/SOLD_OUT/
+// UNAVAILABLE/ADMIN_ONLY statuses are deliberately not returned here —
+// gating by those (an access-code prompt, an admin preview mode) is real
+// scope beyond "show what's on sale", not built yet.
+export async function getPublicTicketTypes(eventId: string, now: Date = new Date()): Promise<PublicTicketType[]> {
+  const types = await db.ticketType.findMany({ where: { eventId, status: "ON_SALE" }, orderBy: { order: "asc" } });
+  const visible = types.filter((t) => {
+    if (t.hideUntil && now < t.hideUntil) return false;
+    if (t.hideAfter && now > t.hideAfter) return false;
+    return true;
+  });
+  if (visible.length === 0) return [];
+
+  const sold = await db.registration.groupBy({
+    by: ["ticketTypeId"],
+    where: { ticketTypeId: { in: visible.map((t) => t.id) }, status: { not: "CANCELLED" } },
+    _sum: { ticketCount: true },
+  });
+  const soldByType = new Map(sold.map((s) => [s.ticketTypeId, s._sum.ticketCount ?? 0]));
+
+  return visible
+    .map((t) => ({
+      id: t.id,
+      name: t.name,
+      price: t.price,
+      minPerOrder: t.minPerOrder,
+      maxPerOrder: t.maxPerOrder,
+      remaining: Math.max(0, t.quantity - (soldByType.get(t.id) ?? 0)),
+      showRemainingOnPage: t.showRemainingOnPage,
+    }))
+    .filter((t) => t.remaining > 0 || !types.find((raw) => raw.id === t.id)?.hideWhenSoldOut);
+}
