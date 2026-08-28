@@ -81,3 +81,31 @@ button.primary:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+/* Rendered output of RichTextEditor.tsx's TipTap description (see
+   [eventSlug]/page.tsx) — needs its embedded media to stay inside the
+   480px event page column instead of overflowing it. */
+.event-description img {
+  max-width: 100%;
+  border-radius: 8px;
+}
+.event-description iframe {
+  max-width: 100%;
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  border: none;
+  border-radius: 8px;
+}
+.event-description h1 {
+  font-size: 26px;
+}
+.event-description h2 {
+  font-size: 21px;
+}
+.event-description h3 {
+  font-size: 18px;
+}
+.event-description ul,
+.event-description ol {
+  padding-left: 22px;
+}

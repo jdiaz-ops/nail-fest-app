@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { getOrgSettings } from "@/lib/settings";
+import { DEFAULT_REGISTER_BUTTON_LABEL } from "@/lib/events";
 import EventForm from "../EventForm";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +23,7 @@ export default async function NewEventPage() {
           venueAddress: "",
           description: "",
           imageUrl: null,
+          registerButtonLabel: DEFAULT_REGISTER_BUTTON_LABEL,
           startsAtLocal: "",
           endsAtLocal: "",
           capacity: "",
@@ -38,6 +40,7 @@ export default async function NewEventPage() {
           venueAddress: ev.venueAddress ?? "",
           description: ev.description ?? "",
           imageUrl: ev.imageUrl,
+          registerButtonLabel: ev.registerButtonLabel ?? DEFAULT_REGISTER_BUTTON_LABEL,
           capacity: ev.capacity != null ? String(ev.capacity) : "",
         }))}
       />

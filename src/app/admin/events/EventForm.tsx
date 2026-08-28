@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { zonedTimeToUtc } from "@/lib/dateFormat";
+import RichTextEditor from "@/components/RichTextEditor";
 
 type EventStatus = "DRAFT" | "PUBLISHED";
 
@@ -14,6 +15,7 @@ export interface EventFormValues {
   venueAddress: string;
   description: string;
   imageUrl: string | null;
+  registerButtonLabel: string;
   startsAtLocal: string; // "YYYY-MM-DDTHH:mm", already in `timezone`
   endsAtLocal: string;
   capacity: string; // kept as text in the form, parsed on submit
@@ -34,6 +36,7 @@ export interface DuplicateSource {
   venueAddress: string;
   description: string;
   imageUrl: string | null;
+  registerButtonLabel: string;
   capacity: string;
 }
 
@@ -74,6 +77,7 @@ export default function EventForm({
       venueAddress: source.venueAddress,
       description: source.description,
       imageUrl: source.imageUrl,
+      registerButtonLabel: source.registerButtonLabel,
       capacity: source.capacity,
       // Dates and slug deliberately NOT copied — a new event needs its
       // own, and silently reusing the old ones is exactly the kind of
@@ -137,6 +141,7 @@ export default function EventForm({
       venueAddress: values.venueAddress.trim(),
       description: values.description.trim(),
       imageUrl: values.imageUrl,
+      registerButtonLabel: values.registerButtonLabel.trim(),
       startsAt: startsAt.toISOString(),
       endsAt: endsAt ? endsAt.toISOString() : null,
       capacity,
@@ -152,7 +157,12 @@ export default function EventForm({
 
     setSaving(false);
     if (res.ok) {
-      router.push("/admin/events");
+      const resBody = await res.json().catch(() => ({}));
+      // On create, go straight into editing the new event (not the list)
+      // so "Tickets and items" is reachable immediately — matches Ticket
+      // Tailor's own flow, where "Add new event" drops you straight into
+      // that event's edit screen instead of back to the events list.
+      router.push(isEdit ? "/admin/events" : `/admin/events/${resBody.event.id}/edit`);
       router.refresh();
     } else {
       setError("No se pudo guardar el evento — revisa los campos.");
@@ -249,17 +259,8 @@ export default function EventForm({
       <h2 style={{ fontSize: 16, marginTop: 32, marginBottom: 8 }}>Página del evento</h2>
 
       <div className="field">
-        <label>Descripción (opcional)</label>
-        <textarea
-          value={values.description}
-          onChange={(e) => set("description", e.target.value)}
-          rows={5}
-          placeholder="Cuéntale a la gente qué va a encontrar en el evento — agenda, invitados, qué traer…"
-          style={{ fontFamily: "inherit" }}
-        />
-        <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>
-          Se muestra en la página de registro, respetando los saltos de línea.
-        </p>
+        <label>Description</label>
+        <RichTextEditor value={values.description} onChange={(html) => set("description", html)} />
       </div>
 
       <div className="field">
@@ -299,6 +300,20 @@ export default function EventForm({
         <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageChange} disabled={uploading} />
         {uploading && <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>Subiendo…</p>}
         {uploadError && <p style={{ fontSize: 12, color: "#c2185b", margin: "4px 0 0" }}>{uploadError}</p>}
+      </div>
+
+      <div className="field">
+        <label>Select tickets button label</label>
+        <input
+          value={values.registerButtonLabel}
+          onChange={(e) => set("registerButtonLabel", e.target.value)}
+          placeholder="Registrarme GRATIS"
+        />
+        <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>
+          El texto del botón de registro en la página pública del evento (no hay paso de
+          &quot;elegir boleta&quot; en nuestro flujo, así que este botón manda directo al
+          registro).
+        </p>
       </div>
 
       {error && <p style={{ color: "#c2185b", fontSize: 13 }}>{error}</p>}

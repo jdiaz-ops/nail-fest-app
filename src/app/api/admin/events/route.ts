@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { createEvent } from "@/lib/events";
+import { createEvent, DEFAULT_REGISTER_BUTTON_LABEL } from "@/lib/events";
 
 // Protected by middleware (same Basic Auth as the rest of /admin).
 const bodySchema = z.object({
@@ -10,6 +10,7 @@ const bodySchema = z.object({
   venueAddress: z.string().default(""),
   description: z.string().default(""),
   imageUrl: z.string().nullable().optional(),
+  registerButtonLabel: z.string().optional(),
   startsAt: z.string().datetime().or(z.string().min(1)),
   endsAt: z.string().nullable().optional(),
   capacity: z.number().int().positive().nullable().optional(),
@@ -39,6 +40,7 @@ export async function POST(req: NextRequest) {
     venueAddress: data.venueAddress,
     description: data.description,
     imageUrl: data.imageUrl ?? null,
+    registerButtonLabel: data.registerButtonLabel?.trim() || DEFAULT_REGISTER_BUTTON_LABEL,
     startsAt,
     endsAt,
     capacity: data.capacity ?? null,

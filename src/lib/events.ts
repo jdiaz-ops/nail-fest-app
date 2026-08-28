@@ -1,5 +1,12 @@
 import { db } from "@/lib/db";
 import type { Event, EventStatus } from "@prisma/client";
+import { sanitizeEventDescription } from "@/lib/sanitizeHtml";
+
+// The public event page's own default when an event doesn't set its own
+// (see [eventSlug]/page.tsx) — kept here too so a freshly-created event's
+// form field starts on the same text instead of blank, matching what the
+// admin actually asked for.
+export const DEFAULT_REGISTER_BUTTON_LABEL = "Registrarme GRATIS";
 
 /** "Nail Fest Cali - 5 & 6 Septiembre" -> "nail-fest-cali-5-6-septiembre" —
  * same shape as the existing seeded slugs (e.g. "bogota-2026") so old and
@@ -35,6 +42,7 @@ export interface EventInput {
   venueAddress: string;
   description: string;
   imageUrl: string | null;
+  registerButtonLabel: string;
   startsAt: Date;
   endsAt: Date | null;
   capacity: number | null;
@@ -57,8 +65,9 @@ export async function createEvent(input: EventInput): Promise<Event> {
       city: input.city,
       venueName: input.venueName || null,
       venueAddress: input.venueAddress || null,
-      description: input.description || null,
+      description: input.description ? sanitizeEventDescription(input.description) : null,
       imageUrl: input.imageUrl,
+      registerButtonLabel: input.registerButtonLabel.trim() || null,
       startsAt: input.startsAt,
       endsAt: input.endsAt,
       capacity: input.capacity,
@@ -79,8 +88,9 @@ export async function updateEvent(id: string, input: EventInput): Promise<Event>
       city: input.city,
       venueName: input.venueName || null,
       venueAddress: input.venueAddress || null,
-      description: input.description || null,
+      description: input.description ? sanitizeEventDescription(input.description) : null,
       imageUrl: input.imageUrl,
+      registerButtonLabel: input.registerButtonLabel.trim() || null,
       startsAt: input.startsAt,
       endsAt: input.endsAt,
       capacity: input.capacity,

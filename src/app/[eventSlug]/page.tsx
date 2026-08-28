@@ -76,13 +76,22 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
       <p>Entrada gratuita. Cupo limitado{event.capacity ? ` a ${event.capacity} personas` : ""}.</p>
 
       {event.description && (
-        <p style={{ whiteSpace: "pre-wrap", color: "#3a3a3a" }}>{event.description}</p>
+        // Sanitized server-side before it was ever stored (lib/sanitizeHtml.ts,
+        // used by lib/events.ts's createEvent/updateEvent) — this is the
+        // one place that sanitizing has to hold, since this renders on an
+        // unauthenticated public page.
+        <div className="event-description" dangerouslySetInnerHTML={{ __html: event.description }} />
       )}
 
       <hr style={{ border: "none", borderTop: "1px solid #e3e1dc", margin: "24px 0" }} />
 
       <Suspense>
-        <RegistrationForm eventSlug={event.slug} professionOptions={professionOptions} questions={questions} />
+        <RegistrationForm
+          eventSlug={event.slug}
+          professionOptions={professionOptions}
+          questions={questions}
+          submitLabel={event.registerButtonLabel || "Registrarme GRATIS"}
+        />
       </Suspense>
 
       {orgSettings.selfServeResendEnabled && (

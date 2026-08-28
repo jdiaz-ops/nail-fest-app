@@ -22,6 +22,11 @@ interface Props {
   eventSlug: string;
   professionOptions: string[];
   questions: QuestionView[];
+  // Event.registerButtonLabel (see /admin/events' EventForm.tsx) — Ticket
+  // Tailor's own "Select tickets button label" field, renamed since we
+  // have no ticket-selection step: this button submits straight to
+  // /api/register.
+  submitLabel: string;
 }
 
 // Matches the Ticket Tailor forms this replaces — Colombia default since
@@ -50,7 +55,7 @@ function byKey(questions: QuestionView[], key: string): QuestionView | undefined
   return questions.find((q) => q.key === key);
 }
 
-export default function RegistrationForm({ eventSlug, professionOptions, questions }: Props) {
+export default function RegistrationForm({ eventSlug, professionOptions, questions, submitLabel }: Props) {
   const searchParams = useSearchParams();
   const firedCheckoutStart = useRef(false);
   const [status, setStatus] = useState<"idle" | "submitting" | "done" | "error">("idle");
@@ -410,7 +415,7 @@ export default function RegistrationForm({ eventSlug, professionOptions, questio
       {errorMessage && <p style={{ color: "#c2185b" }}>{errorMessage}</p>}
 
       <button className="primary" type="submit" disabled={status === "submitting"}>
-        {status === "submitting" ? "Enviando..." : "Confirmar mi registro"}
+        {status === "submitting" ? "Enviando..." : submitLabel}
       </button>
     </form>
   );

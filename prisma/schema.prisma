@@ -83,15 +83,23 @@ model Event {
   // not only which city (see /admin/events' own screenshots comparison).
   venueName    String?
   venueAddress String?
-  // Shown on the public event page above the registration form — plain
-  // text, line breaks preserved (see EventForm.tsx and the public page's
-  // own rendering), not rich text/HTML: no editor for that exists yet and
-  // a bare textarea is real, not a placeholder for one.
+  // Shown on the public event page above the registration form. Sanitized
+  // HTML from the real rich-text editor (RichTextEditor.tsx, TipTap) —
+  // sanitized server-side (lib/sanitizeHtml.ts) before it's ever stored,
+  // since it renders back out via dangerouslySetInnerHTML on a public,
+  // unauthenticated page.
   description  String?
   // Vercel Blob URL (see /api/admin/uploads/event-image) — null until an
   // admin uploads one; the public page and EventForm's preview both just
   // skip the hero image when this is null instead of showing a broken img.
   imageUrl     String?
+  // The public page's registration submit button — Ticket Tailor's own
+  // "Select tickets button label" field, renamed here since we have no
+  // ticket-selection step (RegistrationForm.tsx just submits straight to
+  // /api/register). Defaults to "Registrarme GRATIS" on create, not at
+  // the DB level, so existing events keep whatever they already show
+  // (see lib/events.ts's createEvent) instead of silently changing.
+  registerButtonLabel String?
   status       EventStatus @default(PUBLISHED)
   startsAt     DateTime
   endsAt       DateTime?
@@ -101,9 +109,66 @@ model Event {
 
   registrations Registration[]
   scans         ScanLog[]
+  ticketTypes   TicketType[]
 
   @@index([city])
   @@index([status])
+}
+
+// Ticket Tailor's own "ticket type" concept, kept even though every Nail
+// Fest event is free today (price defaults to, and in practice always
+// is, 0) — the admin explicitly wants the real structure to exist ahead
+// of any payment processor, not a placeholder for one. See
+// /admin/events/[id]/edit's "Tickets and items" section and its own
+// "Add a new ticket type" modal (TicketTypeModal.tsx), built field for
+// field off Ticket Tailor's real modal.
+enum TicketTypeStatus {
+  ON_SALE
+  HIDDEN
+  ACCESS_CODE_REQUIRED
+  SOLD_OUT // "Display as Sold Out"
+  UNAVAILABLE // "Display as Unavailable"
+  ADMIN_ONLY // "Only visible to admin"
+}
+
+// Whether a registration under this ticket type gets one QR per physical
+// ticket or one shared QR for the whole order — captured for real here,
+// but /api/register and /admin/scan don't branch on it yet (both still
+// issue exactly one QR per registration, today's only behavior); that's
+// a real follow-up, not silently dropped — see TicketTypesSection.tsx's
+// own comment.
+enum TicketIssuance {
+  INDIVIDUAL
+  GROUP
+}
+
+model TicketType {
+  id          String           @id @default(cuid())
+  event       Event            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId     String
+  name        String
+  quantity    Int
+  // Whole units of DEFAULT_CURRENCY (COP has no everyday sub-unit) — 0 for
+  // every Nail Fest event today since there's no payment processor wired
+  // up, but the field is real, not hardcoded, so it's ready the day that
+  // changes.
+  price       Int              @default(0)
+  bookingFee  Int              @default(0)
+  description String?
+  status      TicketTypeStatus @default(ON_SALE)
+  minPerOrder Int              @default(1)
+  maxPerOrder Int              @default(20)
+  issuance    TicketIssuance   @default(INDIVIDUAL)
+  hideUntil   DateTime?
+  hideAfter   DateTime?
+  hideWhenSoldOut        Boolean @default(false)
+  showRemainingOnPage    Boolean @default(false)
+  excludeFromLowestPrice Boolean @default(false)
+  order       Int              @default(0)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([eventId])
 }
 
 enum RegistrationStatus {
