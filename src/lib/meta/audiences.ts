@@ -14,7 +14,11 @@ async function graphFetch(path: string, token: string, init?: RequestInit) {
   const url = `https://graph.facebook.com/${GRAPH_VERSION}/${path}`;
   const res = await fetch(url, {
     ...init,
-    headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+      ...(init?.headers ?? {}),
+    },
   });
   const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(`Meta Graph API ${res.status} on ${path}: ${JSON.stringify(json)}`);
