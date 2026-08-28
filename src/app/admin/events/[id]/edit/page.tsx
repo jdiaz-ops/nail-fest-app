@@ -21,8 +21,8 @@ export default async function EditEventPage({ params }: { params: { id: string }
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 20 }}>Editar evento</h1>
       <EventForm
+        title="Editar evento"
         initial={{
           id: event.id,
           name: event.name,
@@ -42,7 +42,7 @@ export default async function EditEventPage({ params }: { params: { id: string }
         baseUrl={baseUrl}
       />
 
-      <div style={{ marginTop: 32, maxWidth: 640 }}>
+      <div style={{ marginTop: 32, maxWidth: 900 }}>
         <TicketTypesSection
           eventId={event.id}
           initialTicketTypes={ticketTypes.map((t) => ({

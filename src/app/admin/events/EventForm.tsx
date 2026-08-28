@@ -2,8 +2,11 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Fraunces } from "next/font/google";
 import { zonedTimeToUtc } from "@/lib/dateFormat";
 import RichTextEditor from "@/components/RichTextEditor";
+
+const fraunces = Fraunces({ subsets: ["latin"], weight: ["600", "900"] });
 
 type EventStatus = "DRAFT" | "PUBLISHED";
 
@@ -41,11 +44,13 @@ export interface DuplicateSource {
 }
 
 export default function EventForm({
+  title,
   initial,
   timezone,
   baseUrl,
   duplicateFrom,
 }: {
+  title: string;
   initial: EventFormValues;
   timezone: string;
   baseUrl: string;
@@ -170,170 +175,203 @@ export default function EventForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} style={{ maxWidth: 640 }}>
-      {!isEdit && duplicateFrom && duplicateFrom.length > 0 && (
-        <div className="field" style={{ marginBottom: 24 }}>
-          <label>Copiar detalles de…</label>
-          <select defaultValue="" onChange={(e) => applyDuplicate(e.target.value)}>
-            <option value="" disabled>
-              Empezar en blanco
-            </option>
-            {duplicateFrom.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name}
+    <div style={{ maxWidth: 900 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 16, marginBottom: 20, flexWrap: "wrap" }}>
+        <h1 className={fraunces.className} style={{ fontWeight: 900, fontSize: 26, margin: 0 }}>
+          {title}
+        </h1>
+        {!isEdit && duplicateFrom && duplicateFrom.length > 0 && (
+          <div style={{ minWidth: 260 }}>
+            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#5b5f6b", marginBottom: 4 }}>
+              Copiar detalles de…
+            </label>
+            <select defaultValue="" onChange={(e) => applyDuplicate(e.target.value)} style={{ width: "100%" }}>
+              <option value="" disabled>
+                Empezar en blanco
               </option>
-            ))}
-          </select>
-          <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>
-            Copia nombre, ciudad, lugar, descripción, imagen y cupo. Fecha y URL siempre quedan en
-            blanco — hay que ponerlas de nuevo.
-          </p>
-        </div>
-      )}
-
-      <h2 style={{ fontSize: 16, marginBottom: 8 }}>Datos del evento</h2>
-
-      <div className="field">
-        <label>Nombre del evento</label>
-        <input value={values.name} onChange={(e) => set("name", e.target.value)} placeholder="Nail Fest Cali - 5 & 6 Septiembre" required />
-      </div>
-
-      <div className="field">
-        <label>Ciudad</label>
-        <input value={values.city} onChange={(e) => set("city", e.target.value)} placeholder="Cali" required />
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-        <div className="field">
-          <label>Lugar</label>
-          <input value={values.venueName} onChange={(e) => set("venueName", e.target.value)} placeholder="Auditorio Lumen Unicatólica" />
-        </div>
-        <div className="field">
-          <label>Dirección</label>
-          <input value={values.venueAddress} onChange={(e) => set("venueAddress", e.target.value)} placeholder="Carrera 94 # 4c – 120" />
-        </div>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-        <div className="field">
-          <label>Empieza</label>
-          <input type="datetime-local" value={values.startsAtLocal} onChange={(e) => set("startsAtLocal", e.target.value)} required />
-        </div>
-        <div className="field">
-          <label>Termina (opcional)</label>
-          <input type="datetime-local" value={values.endsAtLocal} onChange={(e) => set("endsAtLocal", e.target.value)} />
-        </div>
-      </div>
-      <p style={{ fontSize: 12, color: "#5b5f6b", marginTop: -12, marginBottom: 16 }}>
-        Hora local de {timezone} (Configuración → Datos básicos).
-      </p>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-        <div className="field">
-          <label>Cupo (opcional)</label>
-          <input
-            type="number"
-            min={1}
-            value={values.capacity}
-            onChange={(e) => set("capacity", e.target.value)}
-            placeholder="Sin límite si se deja vacío"
-          />
-        </div>
-        <div className="field">
-          <label>Estado</label>
-          <select value={values.status} onChange={(e) => set("status", e.target.value as EventStatus)}>
-            <option value="DRAFT">Draft — no visible al público</option>
-            <option value="PUBLISHED">Published — página de registro activa</option>
-          </select>
-        </div>
-      </div>
-
-      <div className="field">
-        <label>URL personalizada (opcional)</label>
-        <input value={values.slug} onChange={(e) => set("slug", e.target.value)} placeholder="cali-2026" />
-        <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>
-          {baseUrl}/{values.slug.trim() || (isEdit ? initial.slug : "se-genera-del-nombre")}
-        </p>
-      </div>
-
-      <h2 style={{ fontSize: 16, marginTop: 32, marginBottom: 8 }}>Página del evento</h2>
-
-      <div className="field">
-        <label>Description</label>
-        <RichTextEditor value={values.description} onChange={(html) => set("description", html)} />
-      </div>
-
-      <div className="field">
-        <label>Imagen de portada (opcional)</label>
-        {values.imageUrl && (
-          <div style={{ marginBottom: 8, position: "relative", display: "inline-block" }}>
-            {/* eslint-disable-next-line @next/next/no-img-element -- admin preview of an arbitrary uploaded URL, not a known-size asset */}
-            <img
-              src={values.imageUrl}
-              alt="Portada del evento"
-              style={{ maxWidth: 320, maxHeight: 160, borderRadius: 8, display: "block", border: "1px solid #e3e1dc" }}
-            />
-            <button
-              type="button"
-              onClick={() => set("imageUrl", null)}
-              style={{
-                position: "absolute",
-                top: 6,
-                right: 6,
-                border: "none",
-                borderRadius: 999,
-                width: 24,
-                height: 24,
-                background: "rgba(28,19,16,0.7)",
-                color: "#fff",
-                cursor: "pointer",
-                fontSize: 14,
-                lineHeight: 1,
-              }}
-              aria-label="Quitar imagen"
-              title="Quitar imagen"
-            >
-              ×
-            </button>
+              {duplicateFrom.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
           </div>
         )}
-        <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageChange} disabled={uploading} />
-        {uploading && <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>Subiendo…</p>}
-        {uploadError && <p style={{ fontSize: 12, color: "#c2185b", margin: "4px 0 0" }}>{uploadError}</p>}
       </div>
-
-      <div className="field">
-        <label>Select tickets button label</label>
-        <input
-          value={values.registerButtonLabel}
-          onChange={(e) => set("registerButtonLabel", e.target.value)}
-          placeholder="Registrarme GRATIS"
-        />
-        <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>
-          El texto del botón de registro en la página pública del evento (no hay paso de
-          &quot;elegir boleta&quot; en nuestro flujo, así que este botón manda directo al
-          registro).
+      {!isEdit && duplicateFrom && duplicateFrom.length > 0 && (
+        <p style={{ fontSize: 12, color: "#5b5f6b", marginTop: -12, marginBottom: 20, textAlign: "right" }}>
+          Copia nombre, ciudad, lugar, descripción, imagen y cupo. Fecha y URL siempre quedan en blanco.
         </p>
-      </div>
+      )}
 
-      {error && <p style={{ color: "#c2185b", fontSize: 13 }}>{error}</p>}
+      <form onSubmit={handleSubmit} style={{ background: "#fff", border: "1px solid #e3e1dc", borderRadius: 12 }}>
+        <Section title="Datos del evento">
+          <div className="field">
+            <label>Nombre del evento</label>
+            <input value={values.name} onChange={(e) => set("name", e.target.value)} placeholder="Nail Fest Cali - 5 & 6 Septiembre" required />
+          </div>
+          <div className="field" style={{ marginBottom: 0 }}>
+            <label>Ciudad</label>
+            <input value={values.city} onChange={(e) => set("city", e.target.value)} placeholder="Cali" required />
+          </div>
+        </Section>
 
-      <div style={{ display: "flex", gap: 8, marginTop: 24 }}>
-        <button
-          type="submit"
-          disabled={saving || uploading}
-          style={{ padding: "10px 24px", borderRadius: 999, border: "none", background: "#12966b", color: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer" }}
-        >
-          {saving ? "Guardando…" : isEdit ? "Guardar cambios" : "Crear evento"}
-        </button>
-        <button
-          type="button"
-          onClick={() => router.push("/admin/events")}
-          style={{ padding: "10px 24px", borderRadius: 999, border: "1px solid #e3e1dc", background: "#fff", fontSize: 14, cursor: "pointer" }}
-        >
-          Cancelar
-        </button>
-      </div>
-    </form>
+        <Section title="Fechas">
+          <Row>
+            <div className="field" style={{ marginBottom: 0 }}>
+              <label>Empieza</label>
+              <input type="datetime-local" value={values.startsAtLocal} onChange={(e) => set("startsAtLocal", e.target.value)} required />
+            </div>
+            <div className="field" style={{ marginBottom: 0 }}>
+              <label>Termina (opcional)</label>
+              <input type="datetime-local" value={values.endsAtLocal} onChange={(e) => set("endsAtLocal", e.target.value)} />
+            </div>
+          </Row>
+          <p style={{ fontSize: 12, color: "#5b5f6b", marginTop: 10, marginBottom: 0 }}>
+            Hora local de {timezone} (Configuración → Datos básicos).
+          </p>
+        </Section>
+
+        <Section title="Ubicación">
+          <Row>
+            <div className="field" style={{ marginBottom: 0 }}>
+              <label>Lugar</label>
+              <input value={values.venueName} onChange={(e) => set("venueName", e.target.value)} placeholder="Auditorio Lumen Unicatólica" />
+            </div>
+            <div className="field" style={{ marginBottom: 0 }}>
+              <label>Dirección</label>
+              <input value={values.venueAddress} onChange={(e) => set("venueAddress", e.target.value)} placeholder="Carrera 94 # 4c – 120" />
+            </div>
+          </Row>
+        </Section>
+
+        <Section title="Configuración">
+          <Row columns="1fr 1fr 1fr">
+            <div className="field" style={{ marginBottom: 0 }}>
+              <label>Cupo (opcional)</label>
+              <input
+                type="number"
+                min={1}
+                value={values.capacity}
+                onChange={(e) => set("capacity", e.target.value)}
+                placeholder="Sin límite"
+              />
+            </div>
+            <div className="field" style={{ marginBottom: 0 }}>
+              <label>Estado</label>
+              <select value={values.status} onChange={(e) => set("status", e.target.value as EventStatus)}>
+                <option value="DRAFT">Draft — no visible al público</option>
+                <option value="PUBLISHED">Published — página activa</option>
+              </select>
+            </div>
+            <div className="field" style={{ marginBottom: 0 }}>
+              <label>URL personalizada (opcional)</label>
+              <input value={values.slug} onChange={(e) => set("slug", e.target.value)} placeholder="cali-2026" />
+            </div>
+          </Row>
+          <p style={{ fontSize: 12, color: "#5b5f6b", marginTop: 10, marginBottom: 0 }}>
+            {baseUrl}/{values.slug.trim() || (isEdit ? initial.slug : "se-genera-del-nombre")}
+          </p>
+        </Section>
+
+        <Section title="Página del evento" last>
+          <div className="field">
+            <label>Description</label>
+            <RichTextEditor value={values.description} onChange={(html) => set("description", html)} />
+          </div>
+
+          <div className="field">
+            <label>Imagen de portada (opcional)</label>
+            {values.imageUrl && (
+              <div style={{ marginBottom: 8, position: "relative", display: "inline-block" }}>
+                {/* eslint-disable-next-line @next/next/no-img-element -- admin preview of an arbitrary uploaded URL, not a known-size asset */}
+                <img
+                  src={values.imageUrl}
+                  alt="Portada del evento"
+                  style={{ maxWidth: 320, maxHeight: 160, borderRadius: 8, display: "block", border: "1px solid #e3e1dc" }}
+                />
+                <button
+                  type="button"
+                  onClick={() => set("imageUrl", null)}
+                  style={{
+                    position: "absolute",
+                    top: 6,
+                    right: 6,
+                    border: "none",
+                    borderRadius: 999,
+                    width: 24,
+                    height: 24,
+                    background: "rgba(28,19,16,0.7)",
+                    color: "#fff",
+                    cursor: "pointer",
+                    fontSize: 14,
+                    lineHeight: 1,
+                  }}
+                  aria-label="Quitar imagen"
+                  title="Quitar imagen"
+                >
+                  ×
+                </button>
+              </div>
+            )}
+            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageChange} disabled={uploading} />
+            {uploading && <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>Subiendo…</p>}
+            {uploadError && <p style={{ fontSize: 12, color: "#c2185b", margin: "4px 0 0" }}>{uploadError}</p>}
+          </div>
+
+          <div className="field" style={{ marginBottom: 0 }}>
+            <label>Select tickets button label</label>
+            <input
+              value={values.registerButtonLabel}
+              onChange={(e) => set("registerButtonLabel", e.target.value)}
+              placeholder="Registrarme GRATIS"
+              style={{ maxWidth: 360 }}
+            />
+            <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>
+              El texto del botón de registro en la página pública del evento (no hay paso de
+              &quot;elegir boleta&quot; en nuestro flujo, así que este botón manda directo al
+              registro).
+            </p>
+          </div>
+        </Section>
+
+        <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "20px 32px" }}>
+          <button
+            type="submit"
+            disabled={saving || uploading}
+            style={{ padding: "10px 24px", borderRadius: 999, border: "none", background: "#12966b", color: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer" }}
+          >
+            {saving ? "Guardando…" : isEdit ? "Guardar cambios" : "Crear evento"}
+          </button>
+          <button
+            type="button"
+            onClick={() => router.push("/admin/events")}
+            style={{ padding: "10px 24px", borderRadius: 999, border: "1px solid #e3e1dc", background: "#fff", fontSize: 14, cursor: "pointer" }}
+          >
+            Cancelar
+          </button>
+          {error && (
+            <p style={{ color: "#c2185b", fontSize: 13, margin: 0 }}>{error}</p>
+          )}
+        </div>
+      </form>
+    </div>
   );
+}
+
+// One visually distinct block per Ticket Tailor's own "Event info" /
+// "Dates" / "Location" / "Event page" grouping — a header, generous
+// padding, and a full-width divider below (except the last section),
+// instead of every field running together in one cramped column.
+function Section({ title, children, last }: { title: string; children: React.ReactNode; last?: boolean }) {
+  return (
+    <div style={{ padding: "24px 32px", borderBottom: last ? "none" : "1px solid #f0efec" }}>
+      <h2 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 18px" }}>{title}</h2>
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>{children}</div>
+    </div>
+  );
+}
+
+function Row({ children, columns = "1fr 1fr" }: { children: React.ReactNode; columns?: string }) {
+  return <div style={{ display: "grid", gridTemplateColumns: columns, gap: 24 }}>{children}</div>;
 }

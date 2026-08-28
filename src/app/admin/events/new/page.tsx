@@ -14,8 +14,8 @@ export default async function NewEventPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 20 }}>Nuevo evento</h1>
       <EventForm
+        title="Nuevo evento"
         initial={{
           name: "",
           city: "",
