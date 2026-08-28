@@ -7,6 +7,8 @@ import { getOrgSettings, updateOrgSettings } from "@/lib/settings";
 const patchSchema = z
   .object({
     name: z.string().min(1),
+    timezone: z.string().min(1),
+    language: z.enum(["es", "en"]),
     replyToEmail: z.string().email().or(z.literal("")),
     privacyPolicyText: z.string(),
     bannedEmails: z.array(z.string().email()),

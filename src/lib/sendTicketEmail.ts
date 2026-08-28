@@ -26,6 +26,8 @@ export async function sendTicketEmail(params: {
       startsAt: params.event.startsAt,
       qrImageUrl,
       orgName: orgSettings.name,
+      timezone: orgSettings.timezone,
+      language: orgSettings.language,
     });
     const qrAttachment = await renderQrPngBuffer(params.qrToken);
     const sent = await emailProvider.sendTransactional({

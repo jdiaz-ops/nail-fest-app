@@ -8,7 +8,11 @@ export default async function BasicSettingsPage() {
   return (
     <div>
       <h2 style={{ fontSize: 18, marginTop: 0 }}>Datos básicos</h2>
-      <BasicSettingsForm initialName={settings.name} />
+      <BasicSettingsForm
+        initialName={settings.name}
+        initialTimezone={settings.timezone}
+        initialLanguage={settings.language}
+      />
     </div>
   );
 }

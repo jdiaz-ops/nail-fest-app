@@ -4,6 +4,8 @@ export const ORG_SETTINGS_ID = "singleton";
 
 export interface OrgSettingsValue {
   name: string;
+  timezone: string;
+  language: string;
   replyToEmail: string | null;
   privacyPolicyText: string | null;
   bannedEmails: string[];
@@ -13,6 +15,8 @@ export interface OrgSettingsValue {
 
 const DEFAULTS: OrgSettingsValue = {
   name: "Nail Fest",
+  timezone: "America/Bogota",
+  language: "es",
   replyToEmail: null,
   privacyPolicyText: null,
   bannedEmails: [],
@@ -28,6 +32,8 @@ export async function getOrgSettings(): Promise<OrgSettingsValue> {
   if (!row) return DEFAULTS;
   return {
     name: row.name,
+    timezone: row.timezone,
+    language: row.language,
     replyToEmail: row.replyToEmail,
     privacyPolicyText: row.privacyPolicyText,
     bannedEmails: row.bannedEmails,
@@ -44,6 +50,8 @@ export async function updateOrgSettings(patch: Partial<OrgSettingsValue>): Promi
   });
   return {
     name: row.name,
+    timezone: row.timezone,
+    language: row.language,
     replyToEmail: row.replyToEmail,
     privacyPolicyText: row.privacyPolicyText,
     bannedEmails: row.bannedEmails,

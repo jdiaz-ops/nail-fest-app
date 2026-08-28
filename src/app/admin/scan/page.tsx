@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
+import { getOrgSettings } from "@/lib/settings";
 import ScanClient from "./ScanClient";
 
 export const dynamic = "force-dynamic";
@@ -20,10 +21,19 @@ export const metadata: Metadata = {
 // listing at the door — keeps the picker short instead of scrolling past
 // every past edition every time someone opens this on their phone.
 export default async function ScanPage() {
-  const events = await db.event.findMany({
-    orderBy: { startsAt: "desc" },
-    select: { id: true, slug: true, name: true, city: true, startsAt: true },
-  });
+  const [events, orgSettings] = await Promise.all([
+    db.event.findMany({
+      orderBy: { startsAt: "desc" },
+      select: { id: true, slug: true, name: true, city: true, startsAt: true },
+    }),
+    getOrgSettings(),
+  ]);
 
-  return <ScanClient events={events.map((e) => ({ ...e, startsAt: e.startsAt.toISOString() }))} />;
+  return (
+    <ScanClient
+      events={events.map((e) => ({ ...e, startsAt: e.startsAt.toISOString() }))}
+      timezone={orgSettings.timezone}
+      language={orgSettings.language}
+    />
+  );
 }

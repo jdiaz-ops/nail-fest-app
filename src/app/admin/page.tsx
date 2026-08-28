@@ -1,4 +1,6 @@
 import { db } from "@/lib/db";
+import { getOrgSettings } from "@/lib/settings";
+import { formatDateInTz } from "@/lib/dateFormat";
 
 export const dynamic = "force-dynamic";
 
@@ -7,7 +9,7 @@ function daysUntil(date: Date): number {
 }
 
 export default async function OverviewPage() {
-  const [nextEvent, totalRegistrations, checkedInAgg, recentRegistrations, events, aforo] = await Promise.all([
+  const [nextEvent, totalRegistrations, checkedInAgg, recentRegistrations, events, aforo, orgSettings] = await Promise.all([
     db.event.findFirst({ where: { startsAt: { gt: new Date() } }, orderBy: { startsAt: "asc" } }),
     db.registration.count(),
     db.registration.aggregate({ _sum: { checkedInCount: true } }),
@@ -21,6 +23,7 @@ export default async function OverviewPage() {
       by: ["eventId"],
       _sum: { ticketCount: true, checkedInCount: true },
     }),
+    getOrgSettings(),
   ]);
 
   const aforoByEvent = new Map(aforo.map((a) => [a.eventId, a]));
@@ -50,7 +53,9 @@ export default async function OverviewPage() {
             <tbody>
               {recentRegistrations.map((r) => (
                 <tr key={r.id} style={{ borderBottom: "1px solid #f0efec" }}>
-                  <td style={{ padding: 8, color: "#5b5f6b" }}>{r.createdAt.toLocaleString("es-CO")}</td>
+                  <td style={{ padding: 8, color: "#5b5f6b" }}>
+                    {formatDateInTz(r.createdAt, { dateStyle: "short", timeStyle: "short" }, orgSettings.timezone, orgSettings.language)}
+                  </td>
                   <td style={{ padding: 8 }}>
                     {[r.person.firstName, r.person.lastName].filter(Boolean).join(" ") || r.person.email}
                   </td>

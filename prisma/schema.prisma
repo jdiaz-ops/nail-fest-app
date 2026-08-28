@@ -352,6 +352,15 @@ model OrgSettings {
 
   // Basic settings
   name     String @default("Nail Fest")
+  // IANA timezone, e.g. "America/Bogota" — drives every date/time shown to
+  // attendees (event page, confirmation email) and in the admin (scan
+  // re-entry time, activity timestamps). See lib/dateFormat.ts.
+  timezone String @default("America/Bogota")
+  // "es" | "en" — controls the Intl locale used for those same date/time
+  // strings (month/day names, AM/PM vs 24h, etc.). Not a full UI
+  // translation — the app's own copy stays Spanish either way, there's no
+  // i18n string system for that; see lib/dateFormat.ts's own comment.
+  language String @default("es")
 
   // Contact preferences — where replies to any outbound email (ticket
   // confirmations, broadcasts) should land. Wired into email/ses.ts's
@@ -380,4 +389,49 @@ model OrgSettings {
 
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
+}
+
+// ---------------------------------------------------------------------------
+// Checkout form — Ticket Tailor's "Buyer questions" editor (see
+// /admin/settings/checkout-form and lib/checkoutForm.ts).
+// ---------------------------------------------------------------------------
+
+enum CheckoutQuestionType {
+  TEXT // single line — matches RegistrationForm's plain <input>
+  RADIO // single choice — matches the profession-style radio list
+}
+
+// One row per question on the registration form. `locked` rows are the six
+// structural fields (fullName/email/phone/cedula/city/profession) that
+// write into a real Person column or a name the rest of the app already
+// depends on (segments filter on city/profession specifically — see
+// lib/segments/builder.ts) — those can't be deleted or reordered from the
+// admin, only relabeled/toggled required, same as Ticket Tailor's own
+// "Name"/"Email" questions being compulsory. Everything else is a normal
+// row: create/edit/delete/reorder all really change what
+// RegistrationForm.tsx renders and what /api/register accepts — see
+// lib/checkoutForm.ts's own comment on why this needed a real table
+// instead of the static list this used to be.
+model CheckoutQuestion {
+  id        String               @id @default(cuid())
+  // Stable key — for locked rows this is one of "fullName" | "email" |
+  // "phone" | "cedula" | "city" | "profession" and also the key under
+  // Registration.customFields the answer is read from for "cedula" (the
+  // other locked ones map to real Person columns instead). For unlocked
+  // rows it's a generated slug, and customFields is always where the
+  // answer lives.
+  key       String               @unique
+  label     String
+  type      CheckoutQuestionType @default(TEXT)
+  required  Boolean              @default(false)
+  // Only meaningful for RADIO — ignored for the locked "profession" row,
+  // whose choices come from ProfessionOption instead (that list already
+  // has its own admin-managed source, see lib/professions.ts).
+  options   String[]             @default([])
+  order     Int
+  locked    Boolean              @default(false)
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+
+  @@index([order])
 }

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import jsQR from "jsqr";
+import { formatDateInTz } from "@/lib/dateFormat";
 
 interface EventOption {
   id: string;
@@ -31,7 +32,7 @@ const RESULT_COPY: Record<ScanApiResult["result"], { emoji: string; label: strin
 // the API twice — the decode loop runs many times a second.
 const RESCAN_COOLDOWN_MS = 2500;
 
-export default function ScanClient({ events }: { events: EventOption[] }) {
+export default function ScanClient({ events, timezone, language }: { events: EventOption[]; timezone: string; language: string }) {
   const [eventId, setEventId] = useState<string>("");
   const [scannerLabel, setScannerLabel] = useState<string>("");
   const [cameraError, setCameraError] = useState<string | null>(null);
@@ -230,7 +231,7 @@ export default function ScanClient({ events }: { events: EventOption[] }) {
           {outcome.result === "VALID_REENTRY" && outcome.previousScanAt && (
             <div style={{ fontSize: 13, marginTop: 4, opacity: 0.9 }}>
               Primera entrada:{" "}
-              {new Intl.DateTimeFormat("es-CO", { timeStyle: "short", timeZone: "America/Bogota" }).format(new Date(outcome.previousScanAt))}
+              {formatDateInTz(new Date(outcome.previousScanAt), { timeStyle: "short" }, timezone, language)}
             </div>
           )}
           <button

@@ -10,22 +10,23 @@ import { sendTicketEmail } from "@/lib/sendTicketEmail";
 import { clientIpFromHeaders, userAgentFromHeaders } from "@/lib/request";
 import { splitName } from "@/lib/name";
 import { getOrgSettings } from "@/lib/settings";
+import { getCheckoutQuestions, LOCKED_KEYS, type LockedKey } from "@/lib/checkoutForm";
 
 const bodySchema = z.object({
   eventSlug: z.string(),
   email: z.string().email(),
-  // Required — matches the live form (see RegistrationForm.tsx), same
-  // fields Ticket Tailor was collecting: WhatsApp number, cédula/NIT, and
-  // profession are all required there too, not optional.
-  phone: z.string().min(1),
+  phone: z.string(),
   // Single field — "Nombre y Apellido - o - Razón Social", same as the
   // Ticket Tailor forms this replaces. Split server-side (lib/name.ts) so
   // downstream code (emails, CRM) still gets a firstName/lastName pair.
   fullName: z.string().min(1),
-  city: z.string().min(1),
-  profession: z.string().min(1),
-  cedula: z.string().min(1),
-  instagram: z.string().optional(),
+  city: z.string(),
+  profession: z.string(),
+  // Everything that isn't one of the five fields above — cedula, and
+  // whatever questions exist in /admin/settings/checkout-form (Instagram
+  // by default, plus anything an admin added) — keyed by CheckoutQuestion.key.
+  // Stored as Registration.customFields verbatim; see checkoutForm.ts.
+  customFields: z.record(z.string()).default({}),
   consents: z.object({
     logistics: z.literal(true), // required — can't register without it
     marketing: z.boolean().default(false),
@@ -62,6 +63,35 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "event_not_found" }, { status: 404 });
   }
 
+  // Required-ness for phone/city/profession/cedula/every custom question
+  // comes from live /admin/settings/checkout-form config, not a fixed zod
+  // schema — that's the whole point of that editor actually changing what
+  // this endpoint accepts. fullName/email are hard-required regardless of
+  // what's stored (same as Ticket Tailor: Name/Email have no "Required"
+  // toggle at all, they're just always on) since the rest of the CRM
+  // (dedup key, personalization) depends on both existing.
+  const questions = await getCheckoutQuestions();
+  const requiredByKey = new Map(questions.map((q) => [q.key, q.required]));
+  const missing: string[] = [];
+  const LOCKED_TO_FIELD: Record<LockedKey, string | undefined> = {
+    fullName: undefined, // always required, checked separately
+    email: undefined, // always required, checked separately
+    phone: input.phone,
+    city: input.city,
+    profession: input.profession,
+    cedula: input.customFields.cedula,
+  };
+  for (const key of LOCKED_KEYS) {
+    if (key === "fullName" || key === "email") continue;
+    if (requiredByKey.get(key) && !LOCKED_TO_FIELD[key]?.trim()) missing.push(key);
+  }
+  for (const q of questions.filter((q) => !q.locked)) {
+    if (q.required && !input.customFields[q.key]?.trim()) missing.push(q.key);
+  }
+  if (missing.length > 0) {
+    return NextResponse.json({ error: "missing_required_fields", fields: missing }, { status: 400 });
+  }
+
   // See /admin/settings/banned-emails — checked before touching the CRM at
   // all, same as Ticket Tailor's own "Banned email addresses" block.
   const orgSettings = await getOrgSettings();
@@ -73,23 +103,25 @@ export async function POST(req: NextRequest) {
   const { firstName, lastName } = splitName(input.fullName);
 
   // Dedup on email — the whole point of the CRM being "one profile per
-  // person" rather than one row per registration.
+  // person" rather than one row per registration. city/profession here are
+  // exactly what /admin/crm/segments and Broadcasts filter on (see
+  // lib/segments/builder.ts) — same live value, not a separate copy.
   const person = await db.person.upsert({
     where: { email: normalizedEmail },
     create: {
       email: normalizedEmail,
-      phone: input.phone,
+      phone: input.phone || null,
       firstName,
       lastName,
-      city: input.city,
-      profession: input.profession,
+      city: input.city || null,
+      profession: input.profession || null,
     },
     update: {
-      phone: input.phone,
+      phone: input.phone || null,
       firstName,
       lastName,
-      city: input.city,
-      profession: input.profession,
+      city: input.city || null,
+      profession: input.profession || null,
     },
   });
 
@@ -104,7 +136,7 @@ export async function POST(req: NextRequest) {
   });
   const isResend = Boolean(existingRegistration);
 
-  const customFields = { cedula: input.cedula, instagram: input.instagram ?? null };
+  const customFields = input.customFields;
   const registration = existingRegistration
     ? await db.registration.update({ where: { id: existingRegistration.id }, data: { customFields } })
     : await db.registration.create({

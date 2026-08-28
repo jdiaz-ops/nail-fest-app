@@ -5,9 +5,19 @@ import { useSearchParams } from "next/navigation";
 import { attributionFromSearchParams } from "@/lib/utm";
 import { track, ensureFbcCookie } from "./tracking";
 
+export interface QuestionView {
+  key: string;
+  label: string;
+  type: "TEXT" | "RADIO";
+  required: boolean;
+  options: string[];
+  locked: boolean;
+}
+
 interface Props {
   eventSlug: string;
   professionOptions: string[];
+  questions: QuestionView[];
 }
 
 // Matches the Ticket Tailor forms this replaces — Colombia default since
@@ -32,7 +42,11 @@ function readCookie(name: string): string | undefined {
   return match?.[1] ? decodeURIComponent(match[1]) : undefined;
 }
 
-export default function RegistrationForm({ eventSlug, professionOptions }: Props) {
+function byKey(questions: QuestionView[], key: string): QuestionView | undefined {
+  return questions.find((q) => q.key === key);
+}
+
+export default function RegistrationForm({ eventSlug, professionOptions, questions }: Props) {
   const searchParams = useSearchParams();
   const firedCheckoutStart = useRef(false);
   const [status, setStatus] = useState<"idle" | "submitting" | "done" | "error">("idle");
@@ -64,21 +78,32 @@ export default function RegistrationForm({ eventSlug, professionOptions }: Props
 
     const form = new FormData(e.currentTarget);
     const localPhone = String(form.get("phone") ?? "").replace(/[^0-9]/g, "");
-    const instagram = String(form.get("instagram") ?? "").trim();
     const advertisingConsent = form.get("consentAdvertising") === "on";
     // Shared with the server-side CAPI Purchase call below so Meta
     // dedupes the Pixel + CAPI pair instead of double-counting — same
     // mechanism as track() in tracking.ts, see MetaPixelScript.tsx.
     const purchaseEventId = crypto.randomUUID();
+
+    // customFields holds every question that isn't one of the four real
+    // Person columns (email/fullName/phone/city/profession) — cedula,
+    // whatever custom questions exist (Instagram by default, plus
+    // anything added from /admin/settings/checkout-form), all keyed by
+    // the question's own `key` so a saved answer always round-trips to
+    // the same admin-configured question.
+    const customFields: Record<string, string> = {};
+    for (const q of questions.filter((q) => !q.locked || q.key === "cedula")) {
+      const value = String(form.get(`field_${q.key}`) ?? "").trim();
+      if (value) customFields[q.key] = value;
+    }
+
     const payload = {
       eventSlug,
-      email: String(form.get("email") ?? ""),
+      email: String(form.get("field_email") ?? ""),
       phone: localPhone ? `${countryCode}${localPhone}` : "",
-      fullName: String(form.get("fullName") ?? ""),
-      city: String(form.get("city") ?? ""),
-      profession: String(form.get("profession") ?? ""),
-      cedula: String(form.get("cedula") ?? ""),
-      instagram: instagram || undefined,
+      fullName: String(form.get("field_fullName") ?? ""),
+      city: String(form.get("field_city") ?? ""),
+      profession: String(form.get("field_profession") ?? ""),
+      customFields,
       consents: {
         logistics: form.get("consentLogistics") === "on",
         marketing: form.get("consentMarketing") === "on",
@@ -120,7 +145,9 @@ export default function RegistrationForm({ eventSlug, professionOptions }: Props
           ? "Este evento ya no está disponible."
           : body?.error === "not_permitted"
             ? "No podemos completar tu registro con este correo."
-            : "Algo salió mal, intenta de nuevo."
+            : body?.error === "missing_required_fields"
+              ? "Faltan campos obligatorios — revisa el formulario."
+              : "Algo salió mal, intenta de nuevo."
       );
     }
   }
@@ -134,73 +161,100 @@ export default function RegistrationForm({ eventSlug, professionOptions }: Props
     );
   }
 
+  const fullName = byKey(questions, "fullName");
+  const email = byKey(questions, "email");
+  const phone = byKey(questions, "phone");
+  const cedula = byKey(questions, "cedula");
+  const city = byKey(questions, "city");
+  const profession = byKey(questions, "profession");
+  const customQuestions = questions.filter((q) => !q.locked);
+
   return (
     <form onSubmit={handleSubmit} onFocus={markCheckoutStarted}>
       <h2 style={{ fontSize: 18, marginBottom: 4 }}>Tus datos</h2>
 
-      <div className="field">
-        <label htmlFor="fullName">Nombre y Apellido - o - Razón Social</label>
-        <input id="fullName" name="fullName" required />
-      </div>
-
-      <div className="field">
-        <label htmlFor="email">
-          Correo Electrónico (Importante: verifica que esté correcto; ahí enviaremos tu entrada)
-        </label>
-        <input id="email" name="email" type="email" required />
-      </div>
-
-      <div className="field">
-        <label htmlFor="phone">
-          Número de celular con WhatsApp - (asegúrate que sea correcto para recibir info del
-          evento)
-        </label>
-        <div style={{ display: "flex", gap: 8 }}>
-          <select
-            aria-label="Código de país"
-            value={countryCode}
-            onChange={(e) => setCountryCode(e.target.value)}
-            style={{ flex: "0 0 auto" }}
-          >
-            {COUNTRY_CODES.map((c) => (
-              <option key={c.code} value={c.code}>
-                {c.label}
-              </option>
-            ))}
-          </select>
-          <input id="phone" name="phone" type="tel" placeholder="321 1234567" required style={{ flex: 1 }} />
+      {fullName && (
+        <div className="field">
+          <label htmlFor="field_fullName">{fullName.label}</label>
+          <input id="field_fullName" name="field_fullName" required />
         </div>
-      </div>
+      )}
 
-      <div className="field">
-        <label htmlFor="cedula">Número de cédula - o - NIT</label>
-        <input id="cedula" name="cedula" required />
-      </div>
+      {email && (
+        <div className="field">
+          <label htmlFor="field_email">{email.label}</label>
+          <input id="field_email" name="field_email" type="email" required />
+        </div>
+      )}
 
-      <div className="field">
-        <label htmlFor="city">¿En que ciudad vives?</label>
-        <input id="city" name="city" required />
-      </div>
+      {phone && (
+        <div className="field">
+          <label htmlFor="phone">{phone.label}</label>
+          <div style={{ display: "flex", gap: 8 }}>
+            <select
+              aria-label="Código de país"
+              value={countryCode}
+              onChange={(e) => setCountryCode(e.target.value)}
+              style={{ flex: "0 0 auto" }}
+            >
+              {COUNTRY_CODES.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+            <input id="phone" name="phone" type="tel" placeholder="321 1234567" required={phone.required} style={{ flex: 1 }} />
+          </div>
+        </div>
+      )}
 
-      <fieldset style={{ border: "none", padding: 0, margin: "16px 0" }}>
-        <legend style={{ padding: 0, marginBottom: 8 }}>
-          ¿Cuál de estas opciones te describe mejor? (Selecciona una sola)
-        </legend>
-        {professionOptions.map((opt, i) => (
-          <label
-            key={opt}
-            style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", cursor: "pointer" }}
-          >
-            <input type="radio" name="profession" value={opt} required={i === 0} />
-            <span>{opt}</span>
-          </label>
-        ))}
-      </fieldset>
+      {cedula && (
+        <div className="field">
+          <label htmlFor="field_cedula">{cedula.label}</label>
+          <input id="field_cedula" name="field_cedula" required={cedula.required} />
+        </div>
+      )}
 
-      <div className="field">
-        <label htmlFor="instagram">Déjanos tu @ Instagram/Tiktok (Opcional)</label>
-        <input id="instagram" name="instagram" placeholder="@tuusuario" />
-      </div>
+      {city && (
+        <div className="field">
+          <label htmlFor="field_city">{city.label}</label>
+          <input id="field_city" name="field_city" required={city.required} />
+        </div>
+      )}
+
+      {profession && (
+        <fieldset style={{ border: "none", padding: 0, margin: "16px 0" }}>
+          <legend style={{ padding: 0, marginBottom: 8 }}>{profession.label}</legend>
+          {professionOptions.map((opt, i) => (
+            <label
+              key={opt}
+              style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", cursor: "pointer" }}
+            >
+              <input type="radio" name="field_profession" value={opt} required={profession.required && i === 0} />
+              <span>{opt}</span>
+            </label>
+          ))}
+        </fieldset>
+      )}
+
+      {customQuestions.map((q) =>
+        q.type === "RADIO" ? (
+          <fieldset key={q.key} style={{ border: "none", padding: 0, margin: "16px 0" }}>
+            <legend style={{ padding: 0, marginBottom: 8 }}>{q.label}</legend>
+            {q.options.map((opt, i) => (
+              <label key={opt} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", cursor: "pointer" }}>
+                <input type="radio" name={`field_${q.key}`} value={opt} required={q.required && i === 0} />
+                <span>{opt}</span>
+              </label>
+            ))}
+          </fieldset>
+        ) : (
+          <div className="field" key={q.key}>
+            <label htmlFor={`field_${q.key}`}>{q.label}</label>
+            <input id={`field_${q.key}`} name={`field_${q.key}`} required={q.required} />
+          </div>
+        )
+      )}
 
       <label className="consent">
         <input type="checkbox" name="consentLogistics" required />

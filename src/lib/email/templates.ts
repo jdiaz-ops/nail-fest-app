@@ -1,10 +1,4 @@
-function formatDate(d: Date): string {
-  return new Intl.DateTimeFormat("es-CO", {
-    dateStyle: "full",
-    timeStyle: "short",
-    timeZone: "America/Bogota",
-  }).format(d);
-}
+import { formatDateInTz } from "@/lib/dateFormat";
 
 export function confirmationEmail(params: {
   firstName: string;
@@ -14,9 +8,17 @@ export function confirmationEmail(params: {
   qrImageUrl: string;
   /** OrgSettings.name (see /admin/settings/basic) — falls back to "Nail Fest". */
   orgName?: string;
+  /** OrgSettings.timezone/.language — fall back to Colombia/Spanish, same as before these existed. */
+  timezone?: string;
+  language?: string;
 }): { subject: string; text: string; html: string } {
   const orgName = params.orgName || "Nail Fest";
-  const when = formatDate(params.startsAt);
+  const when = formatDateInTz(
+    params.startsAt,
+    { dateStyle: "full", timeStyle: "short" },
+    params.timezone || "America/Bogota",
+    params.language || "es"
+  );
   const subject = `Tu entrada para ${params.eventName}`;
   const text = [
     `Hola ${params.firstName},`,
