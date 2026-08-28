@@ -6,6 +6,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <nav style={{ display: "flex", gap: 16, marginBottom: 24, fontSize: 14 }}>
         <Link href="/admin/registrations">Inscritos</Link>
         <Link href="/admin/broadcasts">Broadcasts</Link>
+        <Link href="/admin/meta">Meta</Link>
       </nav>
       {children}
     </div>

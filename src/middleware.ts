@@ -32,5 +32,7 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  // Covers both the admin pages and their supporting /api/admin/* routes
+  // (e.g. the Meta connection form's save endpoint) under the same gate.
+  matcher: ["/admin/:path*", "/api/admin/:path*"],
 };
