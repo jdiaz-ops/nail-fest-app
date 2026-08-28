@@ -65,6 +65,7 @@ model Event {
   createdAt DateTime @default(now())
 
   registrations Registration[]
+  scans         ScanLog[]
 
   @@index([city])
 }
@@ -121,9 +122,44 @@ model Registration {
 
   consents  Consent[]
   metaEvents MetaEvent[]
+  scans      ScanLog[]
 
   @@unique([personId, eventId])
   @@index([eventId, status])
+}
+
+// Append-only — see lib/ticket.ts's note on why the QR token itself never
+// expires or gets consumed: re-entry (someone steps out for air and comes
+// back) has to work, so a scan is a logged event, not a one-time flag. This
+// is what makes checkedInCount trustworthy and what /admin/scan reads to
+// tell "primera entrada" from "reingreso" from "boleto de otro evento".
+enum ScanResult {
+  VALID_FIRST // first successful scan of this registration
+  VALID_REENTRY // registration already checked in — logged, not an error
+  WRONG_EVENT // token is real, but for a different event than this scanner is set to
+  INVALID_TOKEN // signature didn't verify, or wasn't shaped like our tokens
+  NOT_FOUND // signature verified but no registration exists for that id (e.g. stale/deleted)
+}
+
+model ScanLog {
+  id             String        @id @default(cuid())
+  registration   Registration? @relation(fields: [registrationId], references: [id])
+  registrationId String?
+  // Raw scanned token, kept even on failure — the only way to debug "the
+  // scanner says invalid" complaints after the fact.
+  token          String
+  result         ScanResult
+  // Which event the *scanner* was set to at scan time — not necessarily the
+  // registration's own event (that mismatch is exactly what WRONG_EVENT is).
+  scannedForEventId String?
+  scannedForEvent   Event?   @relation(fields: [scannedForEventId], references: [id])
+  // Free-text, e.g. "Puerta 1 - celular de Juan" — no device auth for the
+  // MVP, just enough to tell scanners apart in the log.
+  scannerLabel   String?
+  scannedAt      DateTime      @default(now())
+
+  @@index([registrationId])
+  @@index([scannedForEventId, scannedAt])
 }
 
 // Consent is recorded per purpose, per registration — never one blanket
