@@ -73,7 +73,7 @@ export default async function IntegrationsPage() {
 
         <p style={{ color: "#5b5f6b", fontSize: 13, marginTop: 32 }}>
           ¿Quieres una audiencia para un evento o filtro específico (ej. &quot;solo Pereira
-          2026&quot;)? Eso se arma en <a href="/admin/segments">Segmentos</a> — también se
+          2026&quot;)? Eso se arma en <a href="/admin/crm/segments">Segmentos</a> — también se
           sincroniza sola, sin botón.
         </p>
       </div>

@@ -12,6 +12,7 @@ const fraunces = Fraunces({ subsets: ["latin"], weight: ["600", "900"] });
 const EDIT_NAV: { href: string; label: string }[] = [
   { href: "/admin/settings/basic", label: "Datos básicos" },
   { href: "/admin/settings/contact", label: "Contacto" },
+  { href: "/admin/settings/checkout-form", label: "Checkout form" },
   { href: "/admin/settings/privacy", label: "Política de privacidad" },
   { href: "/admin/settings/banned-emails", label: "Correos bloqueados" },
   { href: "/admin/settings/cookie-consent", label: "Aviso de cookies" },

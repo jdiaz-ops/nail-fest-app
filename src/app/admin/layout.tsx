@@ -8,11 +8,8 @@ import AdminNavLink from "./AdminNavLink";
 // Tailor's own settings panels do inside a full-width shell.
 const NAV: { href: string; label: string }[] = [
   { href: "/admin", label: "Resumen" },
-  { href: "/admin/registrations", label: "Inscritos" },
+  { href: "/admin/crm", label: "CRM" },
   { href: "/admin/scan", label: "Escáner" },
-  { href: "/admin/import", label: "Importar" },
-  { href: "/admin/broadcasts", label: "Broadcasts" },
-  { href: "/admin/segments", label: "Segmentos" },
   { href: "/admin/settings", label: "Configuración" },
 ];
 
