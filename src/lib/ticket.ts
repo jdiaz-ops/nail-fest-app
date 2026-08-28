@@ -30,6 +30,17 @@ export function verifyQrToken(token: string): { valid: boolean; registrationId?:
   return { valid: true, registrationId };
 }
 
+const QR_RENDER_OPTS = { errorCorrectionLevel: "M" as const, margin: 1, width: 480 };
+
+/** Used by the "view my ticket" style pages, if/when one exists — not the
+ * confirmation email, which needs a real image URL (see renderQrPngBuffer
+ * and /api/ticket-qr) since inboxes drop data: URIs. */
 export async function renderQrPngDataUrl(token: string): Promise<string> {
-  return QRCode.toDataURL(token, { errorCorrectionLevel: "M", margin: 1, width: 320 });
+  return QRCode.toDataURL(token, QR_RENDER_OPTS);
+}
+
+/** Used both by /api/ticket-qr (the image URL embedded in the email) and
+ * by the emailed PNG attachment — one render, two delivery paths. */
+export async function renderQrPngBuffer(token: string): Promise<Buffer> {
+  return QRCode.toBuffer(token, QR_RENDER_OPTS);
 }

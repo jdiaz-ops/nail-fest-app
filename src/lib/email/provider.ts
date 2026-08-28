@@ -3,6 +3,12 @@
 // later (see docs/PLAN.md "chance of being accepted") is then a change to
 // this one file plus an env var, not a rewrite.
 
+export interface EmailAttachment {
+  filename: string;
+  content: Buffer;
+  contentType?: string;
+}
+
 export interface SendEmailInput {
   to: string;
   subject: string;
@@ -10,6 +16,7 @@ export interface SendEmailInput {
   html?: string;
   /** RFC 8058 header — required on every marketing send, never on transactional. */
   listUnsubscribeHeader?: string;
+  attachments?: EmailAttachment[];
 }
 
 export interface EmailProvider {

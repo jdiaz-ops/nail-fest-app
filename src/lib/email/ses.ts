@@ -1,4 +1,5 @@
 import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
+import nodemailer from "nodemailer";
 import type { EmailProvider, SendEmailInput } from "./provider";
 
 // Two logically separate channels on the SAME SES account/domain, per
@@ -6,52 +7,67 @@ import type { EmailProvider, SendEmailInput } from "./provider";
 // can't drag down the reputation of the transactional channel that
 // delivers the QR ticket. Create both Configuration Sets in the SES console
 // before going live — see docs/SES_SETUP.md.
+//
+// Routed through nodemailer's SES transport rather than calling
+// SendEmailCommand directly: SES's "Simple" content type (what the SDK's
+// SendEmailCommand builds on its own) has no attachment support at all —
+// getting a QR file attached onto the ticket email requires building a raw
+// MIME message, which nodemailer does for us instead of hand-rolling it.
 
-// Lazy singleton, not a top-level `const client = new SESv2Client(...)`.
-// Building on Vercel calls Next's page-data-collection step for every
-// route, which imports this module even for routes that never send an
-// email at build time — constructing the client eagerly meant a blank
-// AWS_REGION broke the *build*, not just runtime sends. Also: an env var
-// that exists but is left blank in Vercel's UI is `""`, not `undefined`,
-// so `??` doesn't fall back — use `||` for the same reason.
 let _client: SESv2Client | undefined;
 function getClient(): SESv2Client {
   if (!_client) {
+    // Env var left blank in Vercel's UI is "", not undefined — `||`, not
+    // `??`, so the fallback actually fires (bit us once already, see the
+    // build-failure fix commit).
     _client = new SESv2Client({ region: process.env.AWS_REGION || "us-east-1" });
   }
   return _client;
+}
+
+let _transporter: nodemailer.Transporter | undefined;
+function getTransporter(): nodemailer.Transporter {
+  if (!_transporter) {
+    _transporter = nodemailer.createTransport({
+      SES: { sesClient: getClient(), SendEmailCommand },
+    });
+  }
+  return _transporter;
+}
+
+// @types/nodemailer's Mail.Options doesn't know about the SES transport's
+// own extra `ses` option (ConfigurationSetName etc.) even though it's a
+// real, documented runtime feature (nodemailer.com/transports/ses) — the
+// community types just haven't caught up. Narrow, deliberate `any` here
+// rather than losing type-checking on the whole call.
+interface SesMailOptions extends nodemailer.SendMailOptions {
+  ses?: { ConfigurationSetName?: string };
 }
 
 async function send(
   input: SendEmailInput,
   opts: { from: string; configurationSet: string }
 ): Promise<{ providerMessageId: string }> {
-  const headers = input.listUnsubscribeHeader
-    ? [
-        { Name: "List-Unsubscribe", Value: input.listUnsubscribeHeader },
-        { Name: "List-Unsubscribe-Post", Value: "List-Unsubscribe=One-Click" },
-      ]
-    : undefined;
+  const mailOptions: SesMailOptions = {
+    from: opts.from,
+    to: input.to,
+    subject: input.subject,
+    text: input.text,
+    html: input.html,
+    attachments: input.attachments,
+    headers: input.listUnsubscribeHeader
+      ? {
+          "List-Unsubscribe": input.listUnsubscribeHeader,
+          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        }
+      : undefined,
+    ses: { ConfigurationSetName: opts.configurationSet },
+  };
+  const info = (await getTransporter().sendMail(mailOptions)) as { messageId?: string };
 
-  const command = new SendEmailCommand({
-    FromEmailAddress: opts.from,
-    ConfigurationSetName: opts.configurationSet,
-    Destination: { ToAddresses: [input.to] },
-    Content: {
-      Simple: {
-        Subject: { Data: input.subject, Charset: "UTF-8" },
-        Body: {
-          Text: { Data: input.text, Charset: "UTF-8" },
-          ...(input.html ? { Html: { Data: input.html, Charset: "UTF-8" } } : {}),
-        },
-        Headers: headers,
-      },
-    },
-  });
-
-  const res = await getClient().send(command);
-  if (!res.MessageId) throw new Error("SES did not return a MessageId");
-  return { providerMessageId: res.MessageId };
+  const messageId = info.messageId;
+  if (!messageId) throw new Error("SES did not return a MessageId");
+  return { providerMessageId: messageId };
 }
 
 export const sesProvider: EmailProvider = {

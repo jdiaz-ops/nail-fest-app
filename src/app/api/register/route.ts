@@ -4,7 +4,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { queueMetaEvent } from "@/lib/meta/capi";
 import { recordConsents, hasActiveConsent } from "@/lib/consent";
-import { issueQrToken } from "@/lib/ticket";
+import { issueQrToken, renderQrPngBuffer } from "@/lib/ticket";
 import { emailProvider } from "@/lib/email";
 import { clientIpFromHeaders, userAgentFromHeaders } from "@/lib/request";
 import { confirmationEmail } from "@/lib/email/templates";
@@ -114,7 +114,17 @@ export async function POST(req: NextRequest) {
       startsAt: event.startsAt,
       qrImageUrl,
     });
-    const sent = await emailProvider.sendTransactional({ to: person.email, subject, text, html });
+    // Attached as a file too, not just shown inline — so it's saved in the
+    // mail app itself and works even with no signal at the door, instead
+    // of depending on the inline image loading over data.
+    const qrAttachment = await renderQrPngBuffer(qrToken);
+    const sent = await emailProvider.sendTransactional({
+      to: person.email,
+      subject,
+      text,
+      html,
+      attachments: [{ filename: "entrada-nailfest.png", content: qrAttachment, contentType: "image/png" }],
+    });
     await db.emailLog.create({
       data: {
         kind: "TRANSACTIONAL",
