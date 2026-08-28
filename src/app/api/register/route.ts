@@ -3,6 +3,7 @@ import { randomUUID } from "crypto";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { queueMetaEvent } from "@/lib/meta/capi";
+import { pushNewRegistrantToEventAudiences } from "@/lib/meta/audiences";
 import { recordConsents, hasActiveConsent } from "@/lib/consent";
 import { issueQrToken, renderQrPngBuffer } from "@/lib/ticket";
 import { emailProvider } from "@/lib/email";
@@ -129,6 +130,12 @@ export async function POST(req: NextRequest) {
       ADVERTISING: input.consents.advertising,
     },
   });
+
+  // Push this one person straight into any "registrados a este evento"
+  // Meta audience right now, instead of waiting for the cron — cheap (one
+  // person, not a full resync), and never throws. See
+  // pushNewRegistrantToEventAudiences() for what it does and doesn't cover.
+  await pushNewRegistrantToEventAudiences(event.slug, person);
 
   // --- Transactional QR email — always sent; this is the LOGISTICS purpose,
   // which is a condition of registering at all, not an optional consent. ---

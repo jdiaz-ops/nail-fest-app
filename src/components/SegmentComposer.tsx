@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 interface Props {
@@ -20,11 +20,7 @@ export default function SegmentComposer({ events, professionOptions }: Props) {
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState<string | null>(null);
 
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-    setResult(null);
-
+  const filter = useMemo(() => {
     const include = [
       includeEvent ? { field: "event", eventSlug: includeEvent } : null,
       includeAttended ? { field: "attended", eventSlug: includeAttended } : null,
@@ -35,15 +31,55 @@ export default function SegmentComposer({ events, professionOptions }: Props) {
       excludeEvent ? { field: "event", eventSlug: excludeEvent } : null,
       excludeAttended ? { field: "attended", eventSlug: excludeAttended } : null,
     ].filter(Boolean);
+    return { include, exclude };
+  }, [includeEvent, includeAttended, includeCity, includeProfession, excludeEvent, excludeAttended]);
+
+  const hasAnyFilter = filter.include.length > 0 || filter.exclude.length > 0;
+  const [previewCount, setPreviewCount] = useState<number | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  // Live count as the filter changes — debounced so typing a city name
+  // doesn't fire a request per keystroke. Same resolveSegment() the real
+  // sync uses, so this is the actual count, not an estimate.
+  useEffect(() => {
+    if (!hasAnyFilter) {
+      setPreviewCount(null);
+      return;
+    }
+    setPreviewLoading(true);
+    const timer = setTimeout(async () => {
+      const res = await fetch("/api/admin/segments/preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filter }),
+      });
+      const body = await res.json().catch(() => ({}));
+      setPreviewCount(res.ok ? body.count : null);
+      setPreviewLoading(false);
+    }, 400);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(filter)]);
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setResult(null);
 
     const res = await fetch("/api/admin/segments", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, filter: { include, exclude } }),
+      body: JSON.stringify({ name, filter }),
     });
+    const body = await res.json().catch(() => ({}));
     setSaving(false);
     if (res.ok) {
-      setResult("Segmento guardado — se sincroniza con Meta automáticamente en el próximo cron, sin nada más que hacer aquí.");
+      const first = body.firstSync;
+      setResult(
+        first?.status === "OK"
+          ? `Segmento guardado y sincronizado con Meta de una vez — ${first.memberCount} personas ahora mismo. De aquí en adelante se mantiene solo (nuevos registros entran al toque; el cron reconcilia el resto).`
+          : `Segmento guardado. La primera sincronización con Meta no se pudo completar ahora (${first?.error ?? "revisa /admin/meta"}) — el cron lo reintenta solo.`
+      );
       setName("");
       setIncludeEvent("");
       setIncludeAttended("");
@@ -51,6 +87,7 @@ export default function SegmentComposer({ events, professionOptions }: Props) {
       setIncludeProfession("");
       setExcludeEvent("");
       setExcludeAttended("");
+      setPreviewCount(null);
       router.refresh();
     } else {
       setResult("Error al guardar — revisa la consola.");
@@ -144,10 +181,31 @@ export default function SegmentComposer({ events, professionOptions }: Props) {
         </p>
       </fieldset>
 
+      <div
+        style={{
+          background: "#f0efec",
+          borderRadius: 8,
+          padding: "10px 14px",
+          marginBottom: 16,
+          fontSize: 14,
+        }}
+      >
+        {!hasAnyFilter ? (
+          <span style={{ color: "#5b5f6b" }}>Elige al menos un filtro para ver cuántas personas incluye.</span>
+        ) : previewLoading ? (
+          <span style={{ color: "#5b5f6b" }}>Calculando...</span>
+        ) : previewCount !== null ? (
+          <span>
+            <strong>{previewCount}</strong> {previewCount === 1 ? "persona coincide" : "personas coinciden"} con
+            este filtro ahora mismo.
+          </span>
+        ) : null}
+      </div>
+
       <p style={{ fontSize: 13, color: "#5b5f6b", marginBottom: 12 }}>
-        Al guardar, este segmento queda vinculado a una Custom Audience en Meta con el mismo
-        nombre. No hay botón de &quot;sincronizar&quot; — un cron lo mantiene actualizado solo,
-        cada vez incluyendo solo a quienes dieron consentimiento de publicidad.
+        Al guardar, este segmento se sincroniza con Meta de inmediato (no hay que esperar al
+        cron) y luego se mantiene solo — nuevos registros entran casi al instante, el resto se
+        reconcilia en segundo plano.
       </p>
 
       <button className="primary" type="submit" disabled={saving}>

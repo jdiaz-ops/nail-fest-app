@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { resolveSegment, type SegmentFilter } from "@/lib/segments/builder";
+import { filterSchema } from "@/lib/segments/schema";
 import { hasActiveConsent } from "@/lib/consent";
 import { emailProvider } from "@/lib/email";
 import { broadcastEmail } from "@/lib/email/templates";
@@ -14,19 +15,9 @@ import { buildUnsubscribeUrl } from "@/lib/unsubscribe";
 // CAPI batching note in the brief review) — the code is structured so
 // that swap only touches this route, not the segment/email/consent logic.
 
-const conditionSchema = z.union([
-  z.object({ field: z.literal("event"), eventSlug: z.string() }),
-  z.object({ field: z.literal("attended"), eventSlug: z.string() }),
-  z.object({ field: z.literal("city"), city: z.string() }),
-  z.object({ field: z.literal("profession"), profession: z.string() }),
-]);
-
 const bodySchema = z.object({
   name: z.string().min(1),
-  filter: z.object({
-    include: z.array(conditionSchema),
-    exclude: z.array(conditionSchema),
-  }),
+  filter: filterSchema,
   subject: z.string().min(1),
   bodyText: z.string().min(1),
 });

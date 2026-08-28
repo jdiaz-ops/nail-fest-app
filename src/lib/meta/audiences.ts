@@ -268,54 +268,104 @@ async function getAdvertisingConsentedPurchasers(): Promise<
 }
 
 /**
- * Automatic segment → Meta Custom Audience sync. Every SegmentMetaSync row
- * (created from /admin/segments) is re-resolved and re-uploaded on every
- * call — no diffing, Meta dedupes the hashed upload on ingest, so a full
- * resync is simple and safe. Called on a schedule by
- * /api/meta/sync-audiences (Vercel Cron, same mechanism as the Meta CAPI
- * retry job) — deliberately no manual per-segment "sync now" button;
- * creating the segment in /admin/segments is the only step, the cron
- * picks it up on its next run.
- *
- * One segment failing (e.g. a bad filter, or the Meta token expiring
- * mid-run) doesn't stop the others — same resilience pattern as
- * ensureSeedAudiences(). Status is written back onto the row so
- * /admin/segments can show it instead of failing silently.
+ * Full resync of ONE segment's Meta Custom Audience — resolve the filter,
+ * keep only ADVERTISING-consented people, upsert the audience, upload the
+ * whole current member list. Called from three places: the cron loop
+ * below (syncAllSegmentAudiences), immediately after a segment is created
+ * in /admin/segments (so the audience exists right away, not after up to a
+ * day's wait for the cron), and nowhere else — this is the "full resync"
+ * path; pushNewRegistrantToEventAudiences() below is the cheap incremental
+ * path used on every new registration instead of calling this per-person.
+ */
+export async function syncSegmentAudience(
+  segmentId: string
+): Promise<{ status: "OK"; audienceId: string; memberCount: number } | { status: "ERROR"; error: string }> {
+  const link = await db.segmentMetaSync.findUnique({ where: { segmentId }, include: { segment: true } });
+  if (!link) return { status: "ERROR", error: "Segment not linked for Meta sync." };
+
+  try {
+    const people = await resolveSegment(link.segment.filter as unknown as SegmentFilter);
+    const consented = await filterByActiveConsent(people, "ADVERTISING");
+    const audienceId = await ensureCustomerListAudience({
+      name: `Nail Fest — ${link.segment.name}`,
+      retentionDays: 180,
+    });
+    await syncPeopleToAudience(audienceId, consented);
+    await db.segmentMetaSync.update({
+      where: { id: link.id },
+      data: { status: "OK", metaAudienceId: audienceId, lastSyncedAt: new Date(), lastError: null },
+    });
+    return { status: "OK", audienceId, memberCount: consented.length };
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err);
+    await db.segmentMetaSync.update({ where: { id: link.id }, data: { status: "ERROR", lastError: error } });
+    return { status: "ERROR", error };
+  }
+}
+
+/**
+ * Automatic segment → Meta Custom Audience sync for every linked segment.
+ * Called on a schedule by /api/meta/sync-audiences (Vercel Cron, same
+ * mechanism as the Meta CAPI retry job) — this is the reconciliation
+ * safety net: it catches consent revocations, `attended` segments that
+ * change as check-in data comes in, and anything the per-registration
+ * incremental push (below) missed or can't handle (multi-condition
+ * filters). One segment failing doesn't stop the others.
  */
 export async function syncAllSegmentAudiences(): Promise<{ synced: number; failed: number }> {
-  const links = await db.segmentMetaSync.findMany({ include: { segment: true } });
+  const links = await db.segmentMetaSync.findMany({ select: { segmentId: true } });
 
   let synced = 0;
   let failed = 0;
   for (const link of links) {
-    try {
-      const people = await resolveSegment(link.segment.filter as unknown as SegmentFilter);
-      const consented = await filterByActiveConsent(people, "ADVERTISING");
-      const audienceId = await ensureCustomerListAudience({
-        name: `Nail Fest — ${link.segment.name}`,
-        retentionDays: 180,
-      });
-      await syncPeopleToAudience(audienceId, consented);
-      await db.segmentMetaSync.update({
-        where: { id: link.id },
-        data: {
-          status: "OK",
-          metaAudienceId: audienceId,
-          lastSyncedAt: new Date(),
-          lastError: null,
-        },
-      });
-      synced++;
-    } catch (err) {
-      await db.segmentMetaSync.update({
-        where: { id: link.id },
-        data: {
-          status: "ERROR",
-          lastError: err instanceof Error ? err.message : String(err),
-        },
-      });
-      failed++;
-    }
+    const result = await syncSegmentAudience(link.segmentId);
+    if (result.status === "OK") synced++;
+    else failed++;
   }
   return { synced, failed };
+}
+
+/**
+ * Cheap, near-real-time counterpart to syncSegmentAudience(): pushes ONE
+ * newly-registered person to every segment's Meta audience that simply
+ * means "registered to this event" — no full resync (re-uploading a
+ * 5,000-person audience for every single new signup doesn't scale and
+ * wastes API calls for no benefit; Meta dedupes on ingest but that's not
+ * free). Only handles the common single-condition case
+ * (`include: [{ field: "event", eventSlug }]`, no other include/exclude
+ * conditions) — anything with city/profession/exclude conditions needs the
+ * full resolveSegment() pass, so it's left to the cron instead of
+ * re-implementing filter evaluation for one person here. Silently a no-op
+ * for a segment that hasn't completed its first full sync yet (no
+ * audienceId to push to) — the cron/first-sync will pick them up.
+ *
+ * Never throws — called from /api/register right after a registration
+ * completes; a Meta hiccup here must not fail someone's registration.
+ */
+export async function pushNewRegistrantToEventAudiences(
+  eventSlug: string,
+  person: { id: string; email: string; phone: string | null }
+): Promise<void> {
+  try {
+    if (!(await filterByActiveConsent([person], "ADVERTISING")).length) return;
+
+    const links = await db.segmentMetaSync.findMany({
+      where: { status: "OK", metaAudienceId: { not: null } },
+      include: { segment: true },
+    });
+
+    for (const link of links) {
+      const filter = link.segment.filter as unknown as SegmentFilter;
+      const isSimpleEventMatch =
+        filter.exclude.length === 0 &&
+        filter.include.length === 1 &&
+        filter.include[0]?.field === "event" &&
+        filter.include[0].eventSlug === eventSlug;
+      if (!isSimpleEventMatch || !link.metaAudienceId) continue;
+
+      await syncPeopleToAudience(link.metaAudienceId, [person]);
+    }
+  } catch (err) {
+    console.error("pushNewRegistrantToEventAudiences failed (non-fatal)", err);
+  }
 }

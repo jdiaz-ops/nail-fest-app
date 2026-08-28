@@ -1,26 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
+import { filterSchema } from "@/lib/segments/schema";
+import { syncSegmentAudience } from "@/lib/meta/audiences";
 
 // Protected by middleware (same Basic Auth as the rest of /admin/api).
 // Creates a named, reusable segment AND links it for automatic Meta sync
-// in one step — there's no separate "enable sync" toggle. The cron
-// (/api/meta/sync-audiences) picks up the new SegmentMetaSync row (status
-// PENDING) on its next run; no manual trigger from here.
-
-const conditionSchema = z.union([
-  z.object({ field: z.literal("event"), eventSlug: z.string() }),
-  z.object({ field: z.literal("attended"), eventSlug: z.string() }),
-  z.object({ field: z.literal("city"), city: z.string() }),
-  z.object({ field: z.literal("profession"), profession: z.string() }),
-]);
+// in one step — there's no separate "enable sync" toggle. Also fires the
+// FIRST sync immediately (awaited, not left for the cron) so the audience
+// exists in Meta the moment you save, instead of waiting up to a day —
+// the cron (/api/meta/sync-audiences) then keeps it current going forward.
 
 const bodySchema = z.object({
   name: z.string().min(1),
-  filter: z.object({
-    include: z.array(conditionSchema),
-    exclude: z.array(conditionSchema),
-  }),
+  filter: filterSchema,
 });
 
 export async function POST(req: NextRequest) {
@@ -33,7 +26,14 @@ export async function POST(req: NextRequest) {
   const segment = await db.segmentDefinition.create({ data: { name, filter } });
   await db.segmentMetaSync.create({ data: { segmentId: segment.id } });
 
-  return NextResponse.json({ ok: true, segmentId: segment.id });
+  // Best-effort — if this throws (e.g. Meta token not connected yet), the
+  // segment still saves; it just shows PENDING/ERROR until the cron's next
+  // run instead of OK immediately. Never fails the save itself.
+  const firstSync = await syncSegmentAudience(segment.id).catch((err) => ({
+    error: err instanceof Error ? err.message : String(err),
+  }));
+
+  return NextResponse.json({ ok: true, segmentId: segment.id, firstSync });
 }
 
 export async function DELETE(req: NextRequest) {
