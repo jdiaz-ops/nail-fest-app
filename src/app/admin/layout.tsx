@@ -1,18 +1,42 @@
-import Link from "next/link";
+import AdminNavLink from "./AdminNavLink";
+
+// Full-width dark top bar, matching Ticket Tailor's dashboard shell — the
+// nav items are our real sections (no Orders/Products/Promote stand-ins;
+// see the settings work's discussion on why those don't map to anything
+// here). Content below is full-bleed too; individual pages set their own
+// internal max-width where it matters (forms, cards), same as Ticket
+// Tailor's own settings panels do inside a full-width shell.
+const NAV: { href: string; label: string }[] = [
+  { href: "/admin", label: "Overview" },
+  { href: "/admin/registrations", label: "Inscritos" },
+  { href: "/admin/scan", label: "Escáner" },
+  { href: "/admin/import", label: "Importar" },
+  { href: "/admin/broadcasts", label: "Broadcasts" },
+  { href: "/admin/segments", label: "Segmentos" },
+  { href: "/admin/meta", label: "Meta" },
+  { href: "/admin/settings", label: "Configuración" },
+];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ maxWidth: 900, margin: "0 auto", padding: "24px 20px" }}>
-      <nav style={{ display: "flex", gap: 16, marginBottom: 24, fontSize: 14 }}>
-        <Link href="/admin/registrations">Inscritos</Link>
-        <Link href="/admin/scan">Escáner</Link>
-        <Link href="/admin/import">Importar</Link>
-        <Link href="/admin/broadcasts">Broadcasts</Link>
-        <Link href="/admin/segments">Segmentos</Link>
-        <Link href="/admin/meta">Meta</Link>
-        <Link href="/admin/settings">Configuración</Link>
-      </nav>
-      {children}
+    <div>
+      <header style={{ background: "#14141c" }}>
+        <nav
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 4,
+            padding: "12px 32px",
+            overflowX: "auto",
+          }}
+        >
+          <span style={{ color: "#fff", fontWeight: 700, marginRight: 20, whiteSpace: "nowrap" }}>Nail Fest</span>
+          {NAV.map((item) => (
+            <AdminNavLink key={item.href} href={item.href} label={item.label} />
+          ))}
+        </nav>
+      </header>
+      <div style={{ padding: "24px 32px" }}>{children}</div>
     </div>
   );
 }
