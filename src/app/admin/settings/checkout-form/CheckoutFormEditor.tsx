@@ -38,6 +38,7 @@ export default function CheckoutFormEditor({ initialQuestions }: { initialQuesti
   const [error, setError] = useState<string | null>(null);
 
   const unlocked = initialQuestions.filter((q) => !q.locked);
+  const editingQuestion = editingId ? initialQuestions.find((q) => q.id === editingId) : null;
 
   async function refresh() {
     router.refresh();
@@ -104,59 +105,103 @@ export default function CheckoutFormEditor({ initialQuestions }: { initialQuesti
         <div style={{ fontWeight: 600 }}>Buyer questions</div>
         <button
           type="button"
-          onClick={() => setAdding((v) => !v)}
+          onClick={() => setAdding(true)}
           style={{ padding: "8px 16px", borderRadius: 999, border: "none", background: "#1c1310", color: "#fff", fontSize: 13, cursor: "pointer" }}
         >
-          {adding ? "Cancelar" : "Add a buyer question"}
+          Add a buyer question
         </button>
       </div>
       <p style={{ fontSize: 12, color: "#5b5f6b", marginTop: 0, marginBottom: 16 }}>Se preguntan una vez por registro.</p>
 
       {error && <p style={{ color: "#c2185b", fontSize: 13 }}>{error}</p>}
 
-      {adding && <NewQuestionForm busy={busy} onCreate={handleCreate} onCancel={() => setAdding(false)} />}
-
       {initialQuestions.map((q, i) => {
-        const isEditing = editingId === q.id;
         const unlockedIdx = unlocked.findIndex((u) => u.id === q.id);
         return (
-          <div key={q.id} style={{ borderBottom: i < initialQuestions.length - 1 ? "1px solid #f0efec" : "none" }}>
-            {isEditing ? (
-              <EditQuestionForm
-                question={q}
-                busy={busy}
-                onSave={(patch) => handleSave(q.id, patch)}
-                onCancel={() => setEditingId(null)}
-              />
-            ) : (
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", fontSize: 14 }}>
-                <span>
-                  {q.label} {q.required && <span style={{ color: "#c2185b" }}>*</span>}
-                  {q.locked && <span style={{ fontSize: 11, color: "#8a8478", marginLeft: 8 }}>(fija)</span>}
-                </span>
-                <span style={{ display: "flex", gap: 4 }}>
-                  <IconButton title="Editar" onClick={() => setEditingId(q.id)} disabled={busy}>
-                    ✏️
+          <div
+            key={q.id}
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              padding: "10px 0",
+              fontSize: 14,
+              borderBottom: i < initialQuestions.length - 1 ? "1px solid #f0efec" : "none",
+            }}
+          >
+            <span>
+              {q.label} {q.required && <span style={{ color: "#c2185b" }}>*</span>}
+              {q.locked && <span style={{ fontSize: 11, color: "#8a8478", marginLeft: 8 }}>(fija)</span>}
+            </span>
+            <span style={{ display: "flex", gap: 4 }}>
+              <IconButton title="Editar" onClick={() => setEditingId(q.id)} disabled={busy}>
+                ✏️
+              </IconButton>
+              {!q.locked && (
+                <>
+                  <IconButton title="Subir" onClick={() => handleMove(q.id, "up")} disabled={busy || unlockedIdx === 0}>
+                    ↑
                   </IconButton>
-                  {!q.locked && (
-                    <>
-                      <IconButton title="Subir" onClick={() => handleMove(q.id, "up")} disabled={busy || unlockedIdx === 0}>
-                        ↑
-                      </IconButton>
-                      <IconButton title="Bajar" onClick={() => handleMove(q.id, "down")} disabled={busy || unlockedIdx === unlocked.length - 1}>
-                        ↓
-                      </IconButton>
-                      <IconButton title="Borrar" onClick={() => handleDelete(q.id)} disabled={busy}>
-                        🗑️
-                      </IconButton>
-                    </>
-                  )}
-                </span>
-              </div>
-            )}
+                  <IconButton title="Bajar" onClick={() => handleMove(q.id, "down")} disabled={busy || unlockedIdx === unlocked.length - 1}>
+                    ↓
+                  </IconButton>
+                  <IconButton title="Borrar" onClick={() => handleDelete(q.id)} disabled={busy}>
+                    🗑️
+                  </IconButton>
+                </>
+              )}
+            </span>
           </div>
         );
       })}
+
+      {editingQuestion && (
+        <Modal title="Buyer question" onClose={() => setEditingId(null)}>
+          <EditQuestionForm question={editingQuestion} busy={busy} onSave={(patch) => handleSave(editingQuestion.id, patch)} onCancel={() => setEditingId(null)} />
+        </Modal>
+      )}
+
+      {adding && (
+        <Modal title="Buyer question" onClose={() => setAdding(false)}>
+          <NewQuestionForm busy={busy} onCreate={handleCreate} onCancel={() => setAdding(false)} />
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(28,19,16,0.5)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 20,
+        zIndex: 100,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{ background: "#fff", borderRadius: 12, padding: 24, maxWidth: 480, width: "100%", maxHeight: "85vh", overflowY: "auto" }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <div style={{ fontSize: 18, fontWeight: 700 }}>{title}</div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Cerrar"
+            style={{ border: "none", background: "transparent", fontSize: 22, lineHeight: 1, cursor: "pointer", color: "#5b5f6b" }}
+          >
+            ×
+          </button>
+        </div>
+        {children}
+      </div>
     </div>
   );
 }
@@ -198,30 +243,36 @@ function EditQuestionForm({
   const canEditTypeAndOptions = !question.locked && question.key !== "profession";
 
   return (
-    <div style={{ padding: "12px 0", display: "flex", flexDirection: "column", gap: 8 }}>
-      <input value={label} onChange={(e) => setLabel(e.target.value)} style={{ padding: "8px 10px", border: "1px solid #e3e1dc", borderRadius: 6 }} />
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {canEditTypeAndOptions && (
-        <select value={type} onChange={(e) => setType(e.target.value as "TEXT" | "RADIO")} style={{ padding: "8px 10px", border: "1px solid #e3e1dc", borderRadius: 6 }}>
-          <option value="TEXT">Texto corto</option>
-          <option value="RADIO">Selección única</option>
-        </select>
+        <div className="field">
+          <label>What kind of response do you want?</label>
+          <select value={type} onChange={(e) => setType(e.target.value as "TEXT" | "RADIO")}>
+            <option value="TEXT">Texto corto</option>
+            <option value="RADIO">Selección única</option>
+          </select>
+        </div>
       )}
+      <div className="field">
+        <label>What question do you want to ask?</label>
+        <input value={label} onChange={(e) => setLabel(e.target.value)} />
+      </div>
       {canEditTypeAndOptions && type === "RADIO" && (
-        <textarea
-          value={optionsText}
-          onChange={(e) => setOptionsText(e.target.value)}
-          rows={4}
-          placeholder="Una opción por línea"
-          style={{ padding: "8px 10px", border: "1px solid #e3e1dc", borderRadius: 6, fontFamily: "inherit" }}
-        />
+        <div className="field">
+          <label>Options for answer (Enter one answer per line)</label>
+          <textarea value={optionsText} onChange={(e) => setOptionsText(e.target.value)} rows={6} style={{ fontFamily: "inherit" }} />
+        </div>
       )}
       {showRequiredToggle && (
         <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
           <input type="checkbox" checked={required} onChange={(e) => setRequired(e.target.checked)} />
-          Obligatoria
+          Required
         </label>
       )}
-      <div style={{ display: "flex", gap: 8 }}>
+      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+        <button type="button" onClick={onCancel} style={{ padding: "8px 20px", borderRadius: 999, border: "1px solid #e3e1dc", background: "#fff", fontSize: 13, cursor: "pointer" }}>
+          Cancel
+        </button>
         <button
           type="button"
           disabled={busy || !label.trim()}
@@ -233,12 +284,9 @@ function EditQuestionForm({
               options: canEditTypeAndOptions ? optionsText.split("\n").map((o) => o.trim()).filter(Boolean) : undefined,
             })
           }
-          style={{ padding: "6px 16px", borderRadius: 999, border: "none", background: "#12966b", color: "#fff", fontSize: 13, cursor: "pointer" }}
+          style={{ padding: "8px 20px", borderRadius: 999, border: "none", background: "#12966b", color: "#fff", fontSize: 13, cursor: "pointer" }}
         >
-          Guardar
-        </button>
-        <button type="button" onClick={onCancel} style={{ padding: "6px 16px", borderRadius: 999, border: "1px solid #e3e1dc", background: "#fff", fontSize: 13, cursor: "pointer" }}>
-          Cancelar
+          Save question
         </button>
       </div>
     </div>
@@ -260,41 +308,45 @@ function NewQuestionForm({
   const [optionsText, setOptionsText] = useState("");
 
   return (
-    <div style={{ padding: "12px 0", marginBottom: 12, borderBottom: "1px solid #f0efec", display: "flex", flexDirection: "column", gap: 8 }}>
-      <select value={type} onChange={(e) => setType(e.target.value as "TEXT" | "RADIO")} style={{ padding: "8px 10px", border: "1px solid #e3e1dc", borderRadius: 6 }}>
-        <option value="TEXT">Texto corto</option>
-        <option value="RADIO">Selección única</option>
-      </select>
-      <input
-        value={label}
-        onChange={(e) => setLabel(e.target.value)}
-        placeholder="¿Qué pregunta quieres hacer?"
-        style={{ padding: "8px 10px", border: "1px solid #e3e1dc", borderRadius: 6 }}
-      />
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div className="field">
+        <label>What kind of response do you want?</label>
+        <select value={type} onChange={(e) => setType(e.target.value as "TEXT" | "RADIO")}>
+          <option value="TEXT">Texto corto</option>
+          <option value="RADIO">Selección única</option>
+        </select>
+      </div>
+      <div className="field">
+        <label>What question do you want to ask?</label>
+        <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="¿Qué pregunta quieres hacer?" />
+      </div>
       {type === "RADIO" && (
-        <textarea
-          value={optionsText}
-          onChange={(e) => setOptionsText(e.target.value)}
-          rows={4}
-          placeholder="Una opción por línea (mínimo 2)"
-          style={{ padding: "8px 10px", border: "1px solid #e3e1dc", borderRadius: 6, fontFamily: "inherit" }}
-        />
+        <div className="field">
+          <label>Options for answer (Enter one answer per line)</label>
+          <textarea
+            value={optionsText}
+            onChange={(e) => setOptionsText(e.target.value)}
+            rows={6}
+            placeholder="Una opción por línea (mínimo 2)"
+            style={{ fontFamily: "inherit" }}
+          />
+        </div>
       )}
       <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
         <input type="checkbox" checked={required} onChange={(e) => setRequired(e.target.checked)} />
-        Obligatoria
+        Required
       </label>
-      <div style={{ display: "flex", gap: 8 }}>
+      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+        <button type="button" onClick={onCancel} style={{ padding: "8px 20px", borderRadius: 999, border: "1px solid #e3e1dc", background: "#fff", fontSize: 13, cursor: "pointer" }}>
+          Cancel
+        </button>
         <button
           type="button"
           disabled={busy || !label.trim()}
           onClick={() => onCreate({ label: label.trim(), type, required, options: optionsText.split("\n").map((o) => o.trim()).filter(Boolean) })}
-          style={{ padding: "6px 16px", borderRadius: 999, border: "none", background: "#12966b", color: "#fff", fontSize: 13, cursor: "pointer" }}
+          style={{ padding: "8px 20px", borderRadius: 999, border: "none", background: "#12966b", color: "#fff", fontSize: 13, cursor: "pointer" }}
         >
-          Crear pregunta
-        </button>
-        <button type="button" onClick={onCancel} style={{ padding: "6px 16px", borderRadius: 999, border: "1px solid #e3e1dc", background: "#fff", fontSize: 13, cursor: "pointer" }}>
-          Cancelar
+          Save custom question
         </button>
       </div>
     </div>
