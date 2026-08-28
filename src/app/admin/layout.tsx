@@ -13,7 +13,6 @@ const NAV: { href: string; label: string }[] = [
   { href: "/admin/import", label: "Importar" },
   { href: "/admin/broadcasts", label: "Broadcasts" },
   { href: "/admin/segments", label: "Segmentos" },
-  { href: "/admin/meta", label: "Meta" },
   { href: "/admin/settings", label: "Configuración" },
 ];
 

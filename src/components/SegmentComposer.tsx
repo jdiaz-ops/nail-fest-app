@@ -78,7 +78,7 @@ export default function SegmentComposer({ events, professionOptions }: Props) {
       setResult(
         first?.status === "OK"
           ? `Segmento guardado y sincronizado con Meta de una vez — ${first.memberCount} personas ahora mismo. De aquí en adelante se mantiene solo (nuevos registros entran al toque; el cron reconcilia el resto).`
-          : `Segmento guardado. La primera sincronización con Meta no se pudo completar ahora (${first?.error ?? "revisa /admin/meta"}) — el cron lo reintenta solo.`
+          : `Segmento guardado. La primera sincronización con Meta no se pudo completar ahora (${first?.error ?? "revisa /admin/settings/integrations"}) — el cron lo reintenta solo.`
       );
       setName("");
       setIncludeEvent("");

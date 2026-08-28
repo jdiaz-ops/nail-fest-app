@@ -15,7 +15,8 @@ import Script from "next/script";
  * https://developers.facebook.com/docs/marketing-api/conversions-api/deduplicate-pixel-and-server-events
  *
  * Renders nothing if no pixelId is configured yet (Meta not connected —
- * see /admin/meta) — CAPI-only keeps working exactly as before either way.
+ * see /admin/settings/integrations) — CAPI-only keeps working exactly as
+ * before either way.
  */
 export default function MetaPixelScript({ pixelId }: { pixelId: string | null }) {
   if (!pixelId) return null;
