@@ -18,7 +18,7 @@ export const cardStyle: CSSProperties = {
   border: "1px solid #e3e1dc",
   borderRadius: 12,
   padding: 32,
-  maxWidth: 900,
+  width: "100%",
 };
 
 export const saveButtonStyle: CSSProperties = {
@@ -29,4 +29,32 @@ export const saveButtonStyle: CSSProperties = {
   color: "#fff",
   fontWeight: 600,
   cursor: "pointer",
+};
+
+// Every /admin/settings/* page with a single small form pairs it with a
+// side panel (live preview, current status, a link to the public page it
+// affects) instead of stretching the form itself to fill the row — a
+// single text input spanning most of an ultra-wide screen is worse UI,
+// not better use of space. The panel is real information, not filler.
+export const pageGridStyle: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "minmax(0, 640px) minmax(280px, 360px)",
+  gap: 32,
+  alignItems: "start",
+};
+
+export const sidePanelStyle: CSSProperties = {
+  background: "#f6f4f0",
+  border: "1px solid #e3e1dc",
+  borderRadius: 12,
+  padding: 20,
+};
+
+export const sidePanelLabelStyle: CSSProperties = {
+  fontSize: 12,
+  fontWeight: 600,
+  textTransform: "uppercase",
+  letterSpacing: "0.04em",
+  color: "#8a8478",
+  marginBottom: 12,
 };
