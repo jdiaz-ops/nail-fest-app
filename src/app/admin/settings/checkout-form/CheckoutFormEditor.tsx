@@ -3,11 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+type QuestionType = "TEXT" | "SELECT" | "RADIO" | "CHECKBOX" | "DATE" | "AGREEMENT";
+
 interface QuestionRow {
   id: string;
   key: string;
   label: string;
-  type: "TEXT" | "RADIO";
+  type: QuestionType;
   required: boolean;
   options: string[];
   locked: boolean;
@@ -17,6 +19,21 @@ interface QuestionRow {
 // Tailor's own "compulsory" questions — because the rest of the CRM
 // (dedup key, personalization) genuinely can't function without them.
 const ALWAYS_REQUIRED_KEYS = new Set(["fullName", "email"]);
+
+// No "Opt in to receive marketing emails" type — see the
+// CheckoutQuestionType enum's own comment in schema.prisma for why: that
+// consent already exists as a real, connected feature (the MARKETING
+// checkbox on the form, backed by the Consent table), so a question of
+// that "type" here would just be a disconnected duplicate.
+const TYPE_LABELS: Record<QuestionType, string> = {
+  TEXT: "Texto corto",
+  SELECT: "Lista desplegable",
+  RADIO: "Selección única",
+  CHECKBOX: "Casillas (varias opciones)",
+  DATE: "Fecha",
+  AGREEMENT: "Aceptación de términos (una casilla)",
+};
+const TYPES_WITH_OPTIONS = new Set<QuestionType>(["SELECT", "RADIO", "CHECKBOX"]);
 
 async function api(path: string, init?: RequestInit) {
   const res = await fetch(path, {
@@ -44,7 +61,7 @@ export default function CheckoutFormEditor({ initialQuestions }: { initialQuesti
     router.refresh();
   }
 
-  async function handleSave(id: string, patch: { label: string; required: boolean; type?: "TEXT" | "RADIO"; options?: string[] }) {
+  async function handleSave(id: string, patch: { label: string; required: boolean; type?: QuestionType; options?: string[] }) {
     setBusy(true);
     setError(null);
     try {
@@ -85,7 +102,7 @@ export default function CheckoutFormEditor({ initialQuestions }: { initialQuesti
     }
   }
 
-  async function handleCreate(input: { label: string; type: "TEXT" | "RADIO"; required: boolean; options: string[] }) {
+  async function handleCreate(input: { label: string; type: QuestionType; required: boolean; options: string[] }) {
     setBusy(true);
     setError(null);
     try {
@@ -93,7 +110,7 @@ export default function CheckoutFormEditor({ initialQuestions }: { initialQuesti
       setAdding(false);
       await refresh();
     } catch {
-      setError("No se pudo crear la pregunta — si es de selección única, necesita al menos 2 opciones.");
+      setError("No se pudo crear la pregunta — si es de lista, selección única o casillas, necesita al menos 2 opciones.");
     } finally {
       setBusy(false);
     }
@@ -229,12 +246,12 @@ function EditQuestionForm({
 }: {
   question: QuestionRow;
   busy: boolean;
-  onSave: (patch: { label: string; required: boolean; type?: "TEXT" | "RADIO"; options?: string[] }) => void;
+  onSave: (patch: { label: string; required: boolean; type?: QuestionType; options?: string[] }) => void;
   onCancel: () => void;
 }) {
   const [label, setLabel] = useState(question.label);
   const [required, setRequired] = useState(question.required);
-  const [type, setType] = useState<"TEXT" | "RADIO">(question.type);
+  const [type, setType] = useState<QuestionType>(question.type);
   const [optionsText, setOptionsText] = useState(question.options.join("\n"));
   const showRequiredToggle = !ALWAYS_REQUIRED_KEYS.has(question.key);
   // profession's real options come from ProfessionOption (see
@@ -247,9 +264,12 @@ function EditQuestionForm({
       {canEditTypeAndOptions && (
         <div className="field">
           <label>What kind of response do you want?</label>
-          <select value={type} onChange={(e) => setType(e.target.value as "TEXT" | "RADIO")}>
-            <option value="TEXT">Texto corto</option>
-            <option value="RADIO">Selección única</option>
+          <select value={type} onChange={(e) => setType(e.target.value as QuestionType)}>
+            {Object.entries(TYPE_LABELS).map(([value, typeLabel]) => (
+              <option key={value} value={value}>
+                {typeLabel}
+              </option>
+            ))}
           </select>
         </div>
       )}
@@ -257,7 +277,7 @@ function EditQuestionForm({
         <label>What question do you want to ask?</label>
         <input value={label} onChange={(e) => setLabel(e.target.value)} />
       </div>
-      {canEditTypeAndOptions && type === "RADIO" && (
+      {canEditTypeAndOptions && TYPES_WITH_OPTIONS.has(type) && (
         <div className="field">
           <label>Options for answer (Enter one answer per line)</label>
           <textarea value={optionsText} onChange={(e) => setOptionsText(e.target.value)} rows={6} style={{ fontFamily: "inherit" }} />
@@ -299,11 +319,11 @@ function NewQuestionForm({
   onCancel,
 }: {
   busy: boolean;
-  onCreate: (input: { label: string; type: "TEXT" | "RADIO"; required: boolean; options: string[] }) => void;
+  onCreate: (input: { label: string; type: QuestionType; required: boolean; options: string[] }) => void;
   onCancel: () => void;
 }) {
   const [label, setLabel] = useState("");
-  const [type, setType] = useState<"TEXT" | "RADIO">("TEXT");
+  const [type, setType] = useState<QuestionType>("TEXT");
   const [required, setRequired] = useState(false);
   const [optionsText, setOptionsText] = useState("");
 
@@ -311,16 +331,19 @@ function NewQuestionForm({
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div className="field">
         <label>What kind of response do you want?</label>
-        <select value={type} onChange={(e) => setType(e.target.value as "TEXT" | "RADIO")}>
-          <option value="TEXT">Texto corto</option>
-          <option value="RADIO">Selección única</option>
+        <select value={type} onChange={(e) => setType(e.target.value as QuestionType)}>
+          {Object.entries(TYPE_LABELS).map(([value, typeLabel]) => (
+            <option key={value} value={value}>
+              {typeLabel}
+            </option>
+          ))}
         </select>
       </div>
       <div className="field">
         <label>What question do you want to ask?</label>
         <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="¿Qué pregunta quieres hacer?" />
       </div>
-      {type === "RADIO" && (
+      {TYPES_WITH_OPTIONS.has(type) && (
         <div className="field">
           <label>Options for answer (Enter one answer per line)</label>
           <textarea

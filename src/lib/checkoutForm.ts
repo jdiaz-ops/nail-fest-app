@@ -37,6 +37,10 @@ const LOCKED_DEFAULTS: Omit<CheckoutQuestion, "id" | "createdAt" | "updatedAt">[
 export const LOCKED_KEYS = ["fullName", "email", "phone", "cedula", "city", "profession"] as const;
 export type LockedKey = (typeof LOCKED_KEYS)[number];
 
+// The three types that need a real options list — everything else ignores
+// whatever `options` is passed and stores an empty array.
+export const TYPES_WITH_OPTIONS = new Set<CheckoutQuestionType>(["SELECT", "RADIO", "CHECKBOX"]);
+
 async function ensureSeeded(): Promise<void> {
   const count = await db.checkoutQuestion.count();
   if (count > 0) return;
@@ -67,7 +71,7 @@ export async function createCustomQuestion(input: {
       label: input.label,
       type: input.type,
       required: input.required,
-      options: input.type === "RADIO" ? input.options.filter(Boolean) : [],
+      options: TYPES_WITH_OPTIONS.has(input.type) ? input.options.filter(Boolean) : [],
       order: (maxOrder._max.order ?? -1) + 1,
       locked: false,
     },
@@ -97,7 +101,7 @@ export async function updateQuestion(
       label: patch.label ?? existing.label,
       required: patch.required ?? existing.required,
       type: nextType,
-      options: nextType === "RADIO" ? (patch.options ?? existing.options).filter(Boolean) : [],
+      options: TYPES_WITH_OPTIONS.has(nextType) ? (patch.options ?? existing.options).filter(Boolean) : [],
     },
   });
 }

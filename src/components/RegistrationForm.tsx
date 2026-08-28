@@ -8,7 +8,7 @@ import { track, ensureFbcCookie } from "./tracking";
 export interface QuestionView {
   key: string;
   label: string;
-  type: "TEXT" | "RADIO";
+  type: "TEXT" | "SELECT" | "RADIO" | "CHECKBOX" | "DATE" | "AGREEMENT";
   required: boolean;
   options: string[];
   locked: boolean;
@@ -92,8 +92,17 @@ export default function RegistrationForm({ eventSlug, professionOptions, questio
     // the same admin-configured question.
     const customFields: Record<string, string> = {};
     for (const q of questions.filter((q) => !q.locked || q.key === "cedula")) {
-      const value = String(form.get(`field_${q.key}`) ?? "").trim();
-      if (value) customFields[q.key] = value;
+      if (q.type === "CHECKBOX") {
+        // Multiple inputs share one name — join the checked ones so a
+        // single string still fits Registration.customFields' shape.
+        const values = form.getAll(`field_${q.key}`).map(String);
+        if (values.length > 0) customFields[q.key] = values.join(", ");
+      } else if (q.type === "AGREEMENT") {
+        if (form.get(`field_${q.key}`) === "on") customFields[q.key] = "Sí";
+      } else {
+        const value = String(form.get(`field_${q.key}`) ?? "").trim();
+        if (value) customFields[q.key] = value;
+      }
     }
 
     const payload = {
@@ -237,24 +246,76 @@ export default function RegistrationForm({ eventSlug, professionOptions, questio
         </fieldset>
       )}
 
-      {customQuestions.map((q) =>
-        q.type === "RADIO" ? (
-          <fieldset key={q.key} style={{ border: "none", padding: 0, margin: "16px 0" }}>
-            <legend style={{ padding: 0, marginBottom: 8 }}>{q.label}</legend>
-            {q.options.map((opt, i) => (
-              <label key={opt} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", cursor: "pointer" }}>
-                <input type="radio" name={`field_${q.key}`} value={opt} required={q.required && i === 0} />
-                <span>{opt}</span>
-              </label>
-            ))}
-          </fieldset>
-        ) : (
+      {customQuestions.map((q) => {
+        if (q.type === "RADIO") {
+          return (
+            <fieldset key={q.key} style={{ border: "none", padding: 0, margin: "16px 0" }}>
+              <legend style={{ padding: 0, marginBottom: 8 }}>{q.label}</legend>
+              {q.options.map((opt, i) => (
+                <label key={opt} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", cursor: "pointer" }}>
+                  <input type="radio" name={`field_${q.key}`} value={opt} required={q.required && i === 0} />
+                  <span>{opt}</span>
+                </label>
+              ))}
+            </fieldset>
+          );
+        }
+        if (q.type === "CHECKBOX") {
+          // No native `required` here — HTML can't express "at least one
+          // of this group" per-checkbox; missing-required-fields is
+          // caught server-side (see /api/register) and shown as an error.
+          return (
+            <fieldset key={q.key} style={{ border: "none", padding: 0, margin: "16px 0" }}>
+              <legend style={{ padding: 0, marginBottom: 8 }}>{q.label}</legend>
+              {q.options.map((opt) => (
+                <label key={opt} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", cursor: "pointer" }}>
+                  <input type="checkbox" name={`field_${q.key}`} value={opt} />
+                  <span>{opt}</span>
+                </label>
+              ))}
+            </fieldset>
+          );
+        }
+        if (q.type === "SELECT") {
+          return (
+            <div className="field" key={q.key}>
+              <label htmlFor={`field_${q.key}`}>{q.label}</label>
+              <select id={`field_${q.key}`} name={`field_${q.key}`} required={q.required} defaultValue="">
+                <option value="" disabled>
+                  Selecciona una opción
+                </option>
+                {q.options.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
+                ))}
+              </select>
+            </div>
+          );
+        }
+        if (q.type === "DATE") {
+          return (
+            <div className="field" key={q.key}>
+              <label htmlFor={`field_${q.key}`}>{q.label}</label>
+              <input id={`field_${q.key}`} name={`field_${q.key}`} type="date" required={q.required} />
+            </div>
+          );
+        }
+        if (q.type === "AGREEMENT") {
+          return (
+            <label className="consent" key={q.key}>
+              <input type="checkbox" name={`field_${q.key}`} required={q.required} />
+              <span>{q.label}</span>
+            </label>
+          );
+        }
+        return (
           <div className="field" key={q.key}>
             <label htmlFor={`field_${q.key}`}>{q.label}</label>
             <input id={`field_${q.key}`} name={`field_${q.key}`} required={q.required} />
           </div>
-        )
-      )}
+        );
+      })}
 
       <label className="consent">
         <input type="checkbox" name="consentLogistics" required />

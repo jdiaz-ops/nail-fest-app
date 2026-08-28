@@ -396,9 +396,20 @@ model OrgSettings {
 // /admin/settings/checkout-form and lib/checkoutForm.ts).
 // ---------------------------------------------------------------------------
 
+// Deliberately NOT offering Ticket Tailor's "Opt in to receive marketing
+// emails" type here — that already exists as a real, connected feature
+// (the MARKETING consent checkbox on the form, backed by the Consent
+// table and read by hasActiveConsent()/broadcasts). A question of that
+// "type" would just write to customFields, disconnected from the actual
+// consent system segments and broadcasts check — a decorative duplicate,
+// not a real feature. See RegistrationForm.tsx's consent checkboxes instead.
 enum CheckoutQuestionType {
   TEXT // single line — matches RegistrationForm's plain <input>
+  SELECT // dropdown — same options list as RADIO, different control
   RADIO // single choice — matches the profession-style radio list
+  CHECKBOX // multiple choice — answer stored as a comma-joined string
+  DATE // <input type="date"> — stored as the ISO date string
+  AGREEMENT // one checkbox, label IS the terms text — "must check to submit" when required
 }
 
 // One row per question on the registration form. `locked` rows are the six
@@ -424,9 +435,10 @@ model CheckoutQuestion {
   label     String
   type      CheckoutQuestionType @default(TEXT)
   required  Boolean              @default(false)
-  // Only meaningful for RADIO — ignored for the locked "profession" row,
-  // whose choices come from ProfessionOption instead (that list already
-  // has its own admin-managed source, see lib/professions.ts).
+  // Only meaningful for SELECT/RADIO/CHECKBOX (see TYPES_WITH_OPTIONS in
+  // lib/checkoutForm.ts) — ignored for the locked "profession" row, whose
+  // choices come from ProfessionOption instead (that list already has its
+  // own admin-managed source, see lib/professions.ts).
   options   String[]             @default([])
   order     Int
   locked    Boolean              @default(false)
