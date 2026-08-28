@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { zonedTimeToUtc } from "@/lib/dateFormat";
 
@@ -12,6 +12,8 @@ export interface EventFormValues {
   city: string;
   venueName: string;
   venueAddress: string;
+  description: string;
+  imageUrl: string | null;
   startsAtLocal: string; // "YYYY-MM-DDTHH:mm", already in `timezone`
   endsAtLocal: string;
   capacity: string; // kept as text in the form, parsed on submit
@@ -19,23 +21,93 @@ export interface EventFormValues {
   slug: string;
 }
 
+// What "Copiar detalles de..." (Ticket Tailor's "Copy event details
+// from...") can carry over — everything EXCEPT dates and slug, which
+// stay blank/auto so a copied event never accidentally goes live under
+// the old event's dates or URL without the admin deliberately setting
+// new ones.
+export interface DuplicateSource {
+  id: string;
+  name: string;
+  city: string;
+  venueName: string;
+  venueAddress: string;
+  description: string;
+  imageUrl: string | null;
+  capacity: string;
+}
+
 export default function EventForm({
   initial,
   timezone,
   baseUrl,
+  duplicateFrom,
 }: {
   initial: EventFormValues;
   timezone: string;
   baseUrl: string;
+  // Only passed on the "new event" page — editing an existing event has
+  // nothing to copy FROM, it already has its own values.
+  duplicateFrom?: DuplicateSource[];
 }) {
   const router = useRouter();
   const [values, setValues] = useState(initial);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const isEdit = Boolean(initial.id);
 
   function set<K extends keyof EventFormValues>(key: K, value: EventFormValues[K]) {
     setValues((v) => ({ ...v, [key]: value }));
+  }
+
+  function applyDuplicate(id: string) {
+    const source = duplicateFrom?.find((d) => d.id === id);
+    if (!source) return;
+    setValues((v) => ({
+      ...v,
+      name: `${source.name} (copia)`,
+      city: source.city,
+      venueName: source.venueName,
+      venueAddress: source.venueAddress,
+      description: source.description,
+      imageUrl: source.imageUrl,
+      capacity: source.capacity,
+      // Dates and slug deliberately NOT copied — a new event needs its
+      // own, and silently reusing the old ones is exactly the kind of
+      // mistake that ships a wrong date.
+    }));
+  }
+
+  async function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch("/api/admin/uploads/event-image", { method: "POST", body: form });
+      const body = await res.json().catch(() => ({}));
+      if (res.ok) {
+        set("imageUrl", body.url);
+      } else {
+        setUploadError(
+          body?.error === "blob_not_configured"
+            ? "El almacenamiento de imágenes no está activo todavía."
+            : body?.error === "not_an_image"
+              ? "Ese archivo no es una imagen."
+              : body?.error === "too_large"
+                ? "La imagen pesa más de 5MB."
+                : "No se pudo subir la imagen."
+        );
+      }
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -63,6 +135,8 @@ export default function EventForm({
       city: values.city.trim(),
       venueName: values.venueName.trim(),
       venueAddress: values.venueAddress.trim(),
+      description: values.description.trim(),
+      imageUrl: values.imageUrl,
       startsAt: startsAt.toISOString(),
       endsAt: endsAt ? endsAt.toISOString() : null,
       capacity,
@@ -87,6 +161,28 @@ export default function EventForm({
 
   return (
     <form onSubmit={handleSubmit} style={{ maxWidth: 640 }}>
+      {!isEdit && duplicateFrom && duplicateFrom.length > 0 && (
+        <div className="field" style={{ marginBottom: 24 }}>
+          <label>Copiar detalles de…</label>
+          <select defaultValue="" onChange={(e) => applyDuplicate(e.target.value)}>
+            <option value="" disabled>
+              Empezar en blanco
+            </option>
+            {duplicateFrom.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name}
+              </option>
+            ))}
+          </select>
+          <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>
+            Copia nombre, ciudad, lugar, descripción, imagen y cupo. Fecha y URL siempre quedan en
+            blanco — hay que ponerlas de nuevo.
+          </p>
+        </div>
+      )}
+
+      <h2 style={{ fontSize: 16, marginBottom: 8 }}>Datos del evento</h2>
+
       <div className="field">
         <label>Nombre del evento</label>
         <input value={values.name} onChange={(e) => set("name", e.target.value)} placeholder="Nail Fest Cali - 5 & 6 Septiembre" required />
@@ -150,12 +246,67 @@ export default function EventForm({
         </p>
       </div>
 
+      <h2 style={{ fontSize: 16, marginTop: 32, marginBottom: 8 }}>Página del evento</h2>
+
+      <div className="field">
+        <label>Descripción (opcional)</label>
+        <textarea
+          value={values.description}
+          onChange={(e) => set("description", e.target.value)}
+          rows={5}
+          placeholder="Cuéntale a la gente qué va a encontrar en el evento — agenda, invitados, qué traer…"
+          style={{ fontFamily: "inherit" }}
+        />
+        <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>
+          Se muestra en la página de registro, respetando los saltos de línea.
+        </p>
+      </div>
+
+      <div className="field">
+        <label>Imagen de portada (opcional)</label>
+        {values.imageUrl && (
+          <div style={{ marginBottom: 8, position: "relative", display: "inline-block" }}>
+            {/* eslint-disable-next-line @next/next/no-img-element -- admin preview of an arbitrary uploaded URL, not a known-size asset */}
+            <img
+              src={values.imageUrl}
+              alt="Portada del evento"
+              style={{ maxWidth: 320, maxHeight: 160, borderRadius: 8, display: "block", border: "1px solid #e3e1dc" }}
+            />
+            <button
+              type="button"
+              onClick={() => set("imageUrl", null)}
+              style={{
+                position: "absolute",
+                top: 6,
+                right: 6,
+                border: "none",
+                borderRadius: 999,
+                width: 24,
+                height: 24,
+                background: "rgba(28,19,16,0.7)",
+                color: "#fff",
+                cursor: "pointer",
+                fontSize: 14,
+                lineHeight: 1,
+              }}
+              aria-label="Quitar imagen"
+              title="Quitar imagen"
+            >
+              ×
+            </button>
+          </div>
+        )}
+        <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageChange} disabled={uploading} />
+        {uploading && <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>Subiendo…</p>}
+        {uploadError && <p style={{ fontSize: 12, color: "#c2185b", margin: "4px 0 0" }}>{uploadError}</p>}
+      </div>
+
       {error && <p style={{ color: "#c2185b", fontSize: 13 }}>{error}</p>}
 
       <div style={{ display: "flex", gap: 8, marginTop: 24 }}>
         <button
           type="submit"
-          disabled={saving}
+          disabled={saving || uploading}
           style={{ padding: "10px 24px", borderRadius: 999, border: "none", background: "#12966b", color: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer" }}
         >
           {saving ? "Guardando…" : isEdit ? "Guardar cambios" : "Crear evento"}

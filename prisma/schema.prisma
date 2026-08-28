@@ -83,6 +83,15 @@ model Event {
   // not only which city (see /admin/events' own screenshots comparison).
   venueName    String?
   venueAddress String?
+  // Shown on the public event page above the registration form — plain
+  // text, line breaks preserved (see EventForm.tsx and the public page's
+  // own rendering), not rich text/HTML: no editor for that exists yet and
+  // a bare textarea is real, not a placeholder for one.
+  description  String?
+  // Vercel Blob URL (see /api/admin/uploads/event-image) — null until an
+  // admin uploads one; the public page and EventForm's preview both just
+  // skip the hero image when this is null instead of showing a broken img.
+  imageUrl     String?
   status       EventStatus @default(PUBLISHED)
   startsAt     DateTime
   endsAt       DateTime?

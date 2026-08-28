@@ -49,6 +49,15 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
     <main style={{ maxWidth: 480, margin: "0 auto", padding: "40px 20px" }}>
       <MetaPixelScript pixelId={metaConnection?.pixelId ?? null} />
 
+      {event.imageUrl && (
+        // eslint-disable-next-line @next/next/no-img-element -- admin-uploaded Blob URL, not a build-time-known asset
+        <img
+          src={event.imageUrl}
+          alt={event.name}
+          style={{ width: "100%", maxHeight: 260, objectFit: "cover", borderRadius: 12, marginBottom: 20 }}
+        />
+      )}
+
       <p style={{ textTransform: "uppercase", letterSpacing: "0.08em", fontSize: 12, color: "#5b5f6b" }}>
         {orgSettings.name} · {event.city}
       </p>
@@ -65,6 +74,10 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
         <p style={{ color: "#5b5f6b" }}>{[event.venueName, event.venueAddress].filter(Boolean).join(" — ")}</p>
       )}
       <p>Entrada gratuita. Cupo limitado{event.capacity ? ` a ${event.capacity} personas` : ""}.</p>
+
+      {event.description && (
+        <p style={{ whiteSpace: "pre-wrap", color: "#3a3a3a" }}>{event.description}</p>
+      )}
 
       <hr style={{ border: "none", borderTop: "1px solid #e3e1dc", margin: "24px 0" }} />
 

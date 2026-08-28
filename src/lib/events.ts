@@ -33,6 +33,8 @@ export interface EventInput {
   city: string;
   venueName: string;
   venueAddress: string;
+  description: string;
+  imageUrl: string | null;
   startsAt: Date;
   endsAt: Date | null;
   capacity: number | null;
@@ -55,6 +57,8 @@ export async function createEvent(input: EventInput): Promise<Event> {
       city: input.city,
       venueName: input.venueName || null,
       venueAddress: input.venueAddress || null,
+      description: input.description || null,
+      imageUrl: input.imageUrl,
       startsAt: input.startsAt,
       endsAt: input.endsAt,
       capacity: input.capacity,
@@ -75,6 +79,8 @@ export async function updateEvent(id: string, input: EventInput): Promise<Event>
       city: input.city,
       venueName: input.venueName || null,
       venueAddress: input.venueAddress || null,
+      description: input.description || null,
+      imageUrl: input.imageUrl,
       startsAt: input.startsAt,
       endsAt: input.endsAt,
       capacity: input.capacity,

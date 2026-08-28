@@ -22,6 +22,8 @@ export default async function EditEventPage({ params }: { params: { id: string }
           city: event.city,
           venueName: event.venueName ?? "",
           venueAddress: event.venueAddress ?? "",
+          description: event.description ?? "",
+          imageUrl: event.imageUrl,
           startsAtLocal: utcToZonedInputValue(event.startsAt, orgSettings.timezone),
           endsAtLocal: event.endsAt ? utcToZonedInputValue(event.endsAt, orgSettings.timezone) : "",
           capacity: event.capacity != null ? String(event.capacity) : "",
