@@ -9,9 +9,11 @@ interface Props {
 
 export default function BroadcastComposer({ events, professionOptions }: Props) {
   const [includeEvent, setIncludeEvent] = useState("");
+  const [includeAttended, setIncludeAttended] = useState("");
   const [includeCity, setIncludeCity] = useState("");
   const [includeProfession, setIncludeProfession] = useState("");
   const [excludeEvent, setExcludeEvent] = useState("");
+  const [excludeAttended, setExcludeAttended] = useState("");
   const [subject, setSubject] = useState("");
   const [bodyText, setBodyText] = useState("");
   const [result, setResult] = useState<string | null>(null);
@@ -24,10 +26,14 @@ export default function BroadcastComposer({ events, professionOptions }: Props) 
 
     const include = [
       includeEvent ? { field: "event", eventSlug: includeEvent } : null,
+      includeAttended ? { field: "attended", eventSlug: includeAttended } : null,
       includeCity ? { field: "city", city: includeCity } : null,
       includeProfession ? { field: "profession", profession: includeProfession } : null,
     ].filter(Boolean);
-    const exclude = [excludeEvent ? { field: "event", eventSlug: excludeEvent } : null].filter(Boolean);
+    const exclude = [
+      excludeEvent ? { field: "event", eventSlug: excludeEvent } : null,
+      excludeAttended ? { field: "attended", eventSlug: excludeAttended } : null,
+    ].filter(Boolean);
 
     const res = await fetch("/api/broadcasts", {
       method: "POST",
@@ -70,6 +76,18 @@ export default function BroadcastComposer({ events, professionOptions }: Props) 
         </div>
 
         <div className="field">
+          <label>Incluir: asistió (check-in real) a este evento</label>
+          <select value={includeAttended} onChange={(e) => setIncludeAttended(e.target.value)}>
+            <option value="">(cualquiera)</option>
+            {events.map((ev) => (
+              <option key={ev.slug} value={ev.slug}>
+                {ev.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="field">
           <label>Incluir: ciudad</label>
           <input value={includeCity} onChange={(e) => setIncludeCity(e.target.value)} placeholder="Bogotá" />
         </div>
@@ -97,9 +115,22 @@ export default function BroadcastComposer({ events, professionOptions }: Props) 
             ))}
           </select>
         </div>
+
+        <div className="field">
+          <label>Excluir: asistió (check-in real) a este evento</label>
+          <select value={excludeAttended} onChange={(e) => setExcludeAttended(e.target.value)}>
+            <option value="">(ninguno)</option>
+            {events.map((ev) => (
+              <option key={ev.slug} value={ev.slug}>
+                {ev.name}
+              </option>
+            ))}
+          </select>
+        </div>
         <p style={{ fontSize: 12, color: "#5b5f6b" }}>
-          Ej: profesión = Manicurista, excluir evento = Cali 2025 → &quot;manicuristas que no
-          asistieron a Cali 2025&quot;. Solo recibe quien dio consentimiento de marketing.
+          Ej: profesión = Manicurista, excluir asistió = Cali 2025 → &quot;manicuristas que no
+          fueron a Cali 2025&quot; (usa asistencia real, no solo registro). Solo recibe quien dio
+          consentimiento de marketing.
         </p>
       </fieldset>
 

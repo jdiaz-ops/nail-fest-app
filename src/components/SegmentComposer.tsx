@@ -12,9 +12,11 @@ export default function SegmentComposer({ events, professionOptions }: Props) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [includeEvent, setIncludeEvent] = useState("");
+  const [includeAttended, setIncludeAttended] = useState("");
   const [includeCity, setIncludeCity] = useState("");
   const [includeProfession, setIncludeProfession] = useState("");
   const [excludeEvent, setExcludeEvent] = useState("");
+  const [excludeAttended, setExcludeAttended] = useState("");
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState<string | null>(null);
 
@@ -25,10 +27,14 @@ export default function SegmentComposer({ events, professionOptions }: Props) {
 
     const include = [
       includeEvent ? { field: "event", eventSlug: includeEvent } : null,
+      includeAttended ? { field: "attended", eventSlug: includeAttended } : null,
       includeCity ? { field: "city", city: includeCity } : null,
       includeProfession ? { field: "profession", profession: includeProfession } : null,
     ].filter(Boolean);
-    const exclude = [excludeEvent ? { field: "event", eventSlug: excludeEvent } : null].filter(Boolean);
+    const exclude = [
+      excludeEvent ? { field: "event", eventSlug: excludeEvent } : null,
+      excludeAttended ? { field: "attended", eventSlug: excludeAttended } : null,
+    ].filter(Boolean);
 
     const res = await fetch("/api/admin/segments", {
       method: "POST",
@@ -40,9 +46,11 @@ export default function SegmentComposer({ events, professionOptions }: Props) {
       setResult("Segmento guardado — se sincroniza con Meta automáticamente en el próximo cron, sin nada más que hacer aquí.");
       setName("");
       setIncludeEvent("");
+      setIncludeAttended("");
       setIncludeCity("");
       setIncludeProfession("");
       setExcludeEvent("");
+      setExcludeAttended("");
       router.refresh();
     } else {
       setResult("Error al guardar — revisa la consola.");
@@ -69,6 +77,18 @@ export default function SegmentComposer({ events, professionOptions }: Props) {
         <div className="field">
           <label>Incluir: registrados a este evento</label>
           <select value={includeEvent} onChange={(e) => setIncludeEvent(e.target.value)}>
+            <option value="">(cualquiera)</option>
+            {events.map((ev) => (
+              <option key={ev.slug} value={ev.slug}>
+                {ev.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="field">
+          <label>Incluir: asistió (check-in real) a este evento</label>
+          <select value={includeAttended} onChange={(e) => setIncludeAttended(e.target.value)}>
             <option value="">(cualquiera)</option>
             {events.map((ev) => (
               <option key={ev.slug} value={ev.slug}>
@@ -106,6 +126,22 @@ export default function SegmentComposer({ events, professionOptions }: Props) {
             ))}
           </select>
         </div>
+
+        <div className="field">
+          <label>Excluir: asistió (check-in real) a este evento</label>
+          <select value={excludeAttended} onChange={(e) => setExcludeAttended(e.target.value)}>
+            <option value="">(ninguno)</option>
+            {events.map((ev) => (
+              <option key={ev.slug} value={ev.slug}>
+                {ev.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <p style={{ fontSize: 12, color: "#5b5f6b" }}>
+          Ej: profesión = Manicurista, excluir asistió = Cali 2025 → &quot;manicuristas que no
+          fueron a Cali 2025&quot; (usa asistencia real, no solo registro).
+        </p>
       </fieldset>
 
       <p style={{ fontSize: 13, color: "#5b5f6b", marginBottom: 12 }}>

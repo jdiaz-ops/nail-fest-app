@@ -100,6 +100,13 @@ model Registration {
   createdAt DateTime @default(now())
   confirmedAt DateTime?
 
+  // Real door check-in, distinct from "registered" — populated by the
+  // scanning app once that ships, or backfilled from a Ticket Tailor
+  // doorlist export on historical import (see /admin/import). Lets segment
+  // filters distinguish "no asistió" from "registró pero no fue" instead of
+  // treating a confirmed registration as a proxy for attendance.
+  checkedIn Boolean @default(false)
+
   consents  Consent[]
   metaEvents MetaEvent[]
 

@@ -10,6 +10,7 @@ import { db } from "@/lib/db";
 
 const conditionSchema = z.union([
   z.object({ field: z.literal("event"), eventSlug: z.string() }),
+  z.object({ field: z.literal("attended"), eventSlug: z.string() }),
   z.object({ field: z.literal("city"), city: z.string() }),
   z.object({ field: z.literal("profession"), profession: z.string() }),
 ]);

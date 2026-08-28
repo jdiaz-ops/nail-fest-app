@@ -5,15 +5,17 @@ import type { Person } from "@prisma/client";
  * One shared segment engine, two consumers: Meta/TikTok/Google audience
  * sync, and the email broadcast composer. See docs/PLAN.md.
  *
- * NOTE — "attended" filtering (e.g. "asistió Bogotá 2025") needs the
- * check-in log from the scanning app, which isn't in this slice yet.
- * `event` conditions here match CONFIRMED registrations as the closest
- * available proxy for "went" until check-in data exists — swap the
- * resolver's query for a real check-in join once that phase ships.
+ * `event` = registered (CONFIRMED), regardless of whether they actually
+ * showed up — the original proxy for "went" before check-in data existed.
+ * `attended` = real door check-in (Registration.checkedIn), from the
+ * scanning app once that ships, or backfilled on historical import (see
+ * /admin/import). Use `attended` for "no asistió a X" segments — `event`
+ * still answers "registrado a X" regardless of attendance.
  */
 
 export type SegmentCondition =
   | { field: "event"; eventSlug: string }
+  | { field: "attended"; eventSlug: string }
   | { field: "city"; city: string }
   | { field: "profession"; profession: string };
 
@@ -27,6 +29,13 @@ async function matchingPersonIds(condition: SegmentCondition): Promise<Set<strin
     case "event": {
       const rows = await db.registration.findMany({
         where: { status: "CONFIRMED", event: { slug: condition.eventSlug } },
+        select: { personId: true },
+      });
+      return new Set(rows.map((r) => r.personId));
+    }
+    case "attended": {
+      const rows = await db.registration.findMany({
+        where: { checkedIn: true, event: { slug: condition.eventSlug } },
         select: { personId: true },
       });
       return new Set(rows.map((r) => r.personId));
