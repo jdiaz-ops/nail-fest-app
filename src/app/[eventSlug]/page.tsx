@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { db } from "@/lib/db";
 import { getOrderedProfessionOptions } from "@/lib/professions";
+import { getOrgSettings } from "@/lib/settings";
 import RegistrationForm from "@/components/RegistrationForm";
 import MetaPixelScript from "@/components/MetaPixelScript";
 
@@ -19,9 +20,10 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
   const event = await db.event.findUnique({ where: { slug: params.eventSlug } });
   if (!event) notFound();
 
-  const [professionOptions, metaConnection] = await Promise.all([
+  const [professionOptions, metaConnection, orgSettings] = await Promise.all([
     getOrderedProfessionOptions(),
     db.metaConnection.findFirst({ orderBy: { createdAt: "desc" }, select: { pixelId: true } }),
+    getOrgSettings(),
   ]);
 
   return (
@@ -29,7 +31,7 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
       <MetaPixelScript pixelId={metaConnection?.pixelId ?? null} />
 
       <p style={{ textTransform: "uppercase", letterSpacing: "0.08em", fontSize: 12, color: "#5b5f6b" }}>
-        Nail Fest · {event.city}
+        {orgSettings.name} · {event.city}
       </p>
       <h1 style={{ marginTop: 4 }}>{event.name}</h1>
       <p>{formatDate(event.startsAt)}</p>
@@ -40,6 +42,12 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
       <Suspense>
         <RegistrationForm eventSlug={event.slug} professionOptions={professionOptions} />
       </Suspense>
+
+      {orgSettings.selfServeResendEnabled && (
+        <p style={{ fontSize: 12, color: "#5b5f6b", marginTop: 24, textAlign: "center" }}>
+          ¿Ya te registraste y perdiste el correo? <a href="/reenviar">Reenviar mi entrada</a>
+        </p>
+      )}
     </main>
   );
 }

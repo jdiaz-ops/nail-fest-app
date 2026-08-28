@@ -12,7 +12,10 @@ export function confirmationEmail(params: {
   eventCity: string;
   startsAt: Date;
   qrImageUrl: string;
+  /** OrgSettings.name (see /admin/settings/basic) — falls back to "Nail Fest". */
+  orgName?: string;
 }): { subject: string; text: string; html: string } {
+  const orgName = params.orgName || "Nail Fest";
   const when = formatDate(params.startsAt);
   const subject = `Tu entrada para ${params.eventName}`;
   const text = [
@@ -23,7 +26,7 @@ export function confirmationEmail(params: {
     ``,
     `Presenta el código QR adjunto en este correo (o una captura de pantalla) en la entrada. Puedes reingresar las veces que necesites durante el evento con el mismo código.`,
     ``,
-    `Nos vemos ahí — Nail Fest`,
+    `Nos vemos ahí — ${orgName}`,
   ].join("\n");
 
   const html = `
@@ -35,7 +38,7 @@ export function confirmationEmail(params: {
       <p><strong>Fecha:</strong> ${escapeHtml(when)}</p>
       <p>Presenta este código QR en la entrada. Es válido para todo el evento — puedes reingresar las veces que necesites con el mismo código.</p>
       <img src="${params.qrImageUrl}" alt="Código QR de tu entrada" width="240" height="240" style="display:block;margin:16px 0;" />
-      <p style="color:#666; font-size: 13px;">Nail Fest</p>
+      <p style="color:#666; font-size: 13px;">${escapeHtml(orgName)}</p>
     </div>
   `;
 

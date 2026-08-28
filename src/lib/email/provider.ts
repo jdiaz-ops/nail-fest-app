@@ -17,6 +17,8 @@ export interface SendEmailInput {
   /** RFC 8058 header — required on every marketing send, never on transactional. */
   listUnsubscribeHeader?: string;
   attachments?: EmailAttachment[];
+  /** From OrgSettings.replyToEmail (see /admin/settings/contact) — omit to fall back to the From address. */
+  replyTo?: string;
 }
 
 export interface EmailProvider {

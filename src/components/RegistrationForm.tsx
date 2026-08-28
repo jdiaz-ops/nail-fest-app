@@ -115,7 +115,13 @@ export default function RegistrationForm({ eventSlug, professionOptions }: Props
     } else {
       const body = await res.json().catch(() => ({}));
       setStatus("error");
-      setErrorMessage(body?.error === "event_not_found" ? "Este evento ya no está disponible." : "Algo salió mal, intenta de nuevo.");
+      setErrorMessage(
+        body?.error === "event_not_found"
+          ? "Este evento ya no está disponible."
+          : body?.error === "not_permitted"
+            ? "No podemos completar tu registro con este correo."
+            : "Algo salió mal, intenta de nuevo."
+      );
     }
   }
 
@@ -214,6 +220,14 @@ export default function RegistrationForm({ eventSlug, professionOptions }: Props
           relevante de Nail Fest.
         </span>
       </label>
+
+      <p style={{ fontSize: 12, color: "#5b5f6b" }}>
+        Al registrarte aceptas nuestra{" "}
+        <a href="/privacidad" target="_blank" rel="noreferrer">
+          política de privacidad
+        </a>
+        .
+      </p>
 
       {errorMessage && <p style={{ color: "#c2185b" }}>{errorMessage}</p>}
 

@@ -1,6 +1,7 @@
 import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
 import nodemailer from "nodemailer";
 import type { EmailProvider, SendEmailInput } from "./provider";
+import { getOrgSettings } from "@/lib/settings";
 
 // Two logically separate channels on the SAME SES account/domain, per
 // docs/PLAN.md: different Configuration Sets so a marketing complaint spike
@@ -48,12 +49,19 @@ async function send(
   input: SendEmailInput,
   opts: { from: string; configurationSet: string }
 ): Promise<{ providerMessageId: string }> {
+  // Explicit input.replyTo wins; otherwise fall back to the account-wide
+  // setting (/admin/settings/contact) — one DB read per send, acceptable
+  // for our volume and simpler than threading the setting through every
+  // call site.
+  const replyTo = input.replyTo ?? (await getOrgSettings()).replyToEmail ?? undefined;
+
   const mailOptions: SesMailOptions = {
     from: opts.from,
     to: input.to,
     subject: input.subject,
     text: input.text,
     html: input.html,
+    replyTo,
     attachments: input.attachments,
     headers: input.listUnsubscribeHeader
       ? {

@@ -5,11 +5,11 @@ import { db } from "@/lib/db";
 import { queueMetaEvent } from "@/lib/meta/capi";
 import { pushNewRegistrantToEventAudiences } from "@/lib/meta/audiences";
 import { recordConsents, hasActiveConsent } from "@/lib/consent";
-import { issueQrToken, renderQrPngBuffer } from "@/lib/ticket";
-import { emailProvider } from "@/lib/email";
+import { issueQrToken } from "@/lib/ticket";
+import { sendTicketEmail } from "@/lib/sendTicketEmail";
 import { clientIpFromHeaders, userAgentFromHeaders } from "@/lib/request";
-import { confirmationEmail } from "@/lib/email/templates";
 import { splitName } from "@/lib/name";
+import { getOrgSettings } from "@/lib/settings";
 
 const bodySchema = z.object({
   eventSlug: z.string(),
@@ -62,14 +62,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "event_not_found" }, { status: 404 });
   }
 
+  // See /admin/settings/banned-emails — checked before touching the CRM at
+  // all, same as Ticket Tailor's own "Banned email addresses" block.
+  const orgSettings = await getOrgSettings();
+  const normalizedEmail = input.email.trim().toLowerCase();
+  if (orgSettings.bannedEmails.includes(normalizedEmail)) {
+    return NextResponse.json({ error: "not_permitted" }, { status: 403 });
+  }
+
   const { firstName, lastName } = splitName(input.fullName);
 
   // Dedup on email — the whole point of the CRM being "one profile per
   // person" rather than one row per registration.
   const person = await db.person.upsert({
-    where: { email: input.email.trim().toLowerCase() },
+    where: { email: normalizedEmail },
     create: {
-      email: input.email.trim().toLowerCase(),
+      email: normalizedEmail,
       phone: input.phone,
       firstName,
       lastName,
@@ -142,53 +150,10 @@ export async function POST(req: NextRequest) {
   await pushNewRegistrantToEventAudiences(event.slug, person);
 
   // --- Transactional QR email — always sent; this is the LOGISTICS purpose,
-  // which is a condition of registering at all, not an optional consent. ---
-  try {
-    // A real URL, not a base64 data: URI — Gmail and most inboxes silently
-    // drop inline data: images in HTML mail (they render fine in a browser
-    // preview, which is why this only shows up once real mail is tested).
-    const qrImageUrl = `${process.env.APP_BASE_URL || ""}/api/ticket-qr/${qrToken}`;
-    const { subject, text, html } = confirmationEmail({
-      firstName: person.firstName ?? "",
-      eventName: event.name,
-      eventCity: event.city,
-      startsAt: event.startsAt,
-      qrImageUrl,
-    });
-    // Attached as a file too, not just shown inline — so it's saved in the
-    // mail app itself and works even with no signal at the door, instead
-    // of depending on the inline image loading over data.
-    const qrAttachment = await renderQrPngBuffer(qrToken);
-    const sent = await emailProvider.sendTransactional({
-      to: person.email,
-      subject,
-      text,
-      html,
-      attachments: [{ filename: "entrada-nailfest.png", content: qrAttachment, contentType: "image/png" }],
-    });
-    await db.emailLog.create({
-      data: {
-        kind: "TRANSACTIONAL",
-        personId: person.id,
-        toEmail: person.email,
-        sesMessageId: sent.providerMessageId,
-        status: "SENT",
-      },
-    });
-  } catch (err) {
-    // Never fail the registration because the email had a hiccup — log it
-    // and let a human requeue the send. Losing the API response here would
-    // be worse: the person would think they aren't registered when they are.
-    await db.emailLog.create({
-      data: {
-        kind: "TRANSACTIONAL",
-        personId: person.id,
-        toEmail: person.email,
-        status: "FAILED",
-      },
-    });
-    console.error("confirmation email failed", err);
-  }
+  // which is a condition of registering at all, not an optional consent.
+  // Never fails the registration itself: sendTicketEmail swallows its own
+  // errors into an EmailLog row for a human to requeue. ---
+  await sendTicketEmail({ person, event, qrToken });
 
   // --- Purchase → Meta CAPI, gated by the ADVERTISING consent, not just
   // "did they register". Sharing hashed identifiers with Meta is a distinct

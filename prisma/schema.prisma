@@ -334,3 +334,50 @@ model EmailLog {
   @@index([broadcastId, status])
   @@index([toEmail])
 }
+
+// ---------------------------------------------------------------------------
+// Account-level settings ("Box office settings" in Ticket Tailor's terms —
+// nivel 1, one row for the whole account, distinct from any single event).
+// ---------------------------------------------------------------------------
+
+// True singleton — always read/written at id "singleton", never
+// @default(cuid()) + findFirst like MetaConnection. MetaConnection's
+// history-of-rows pattern makes sense for one bundle of correlated secrets
+// saved together; this is a settings bag edited piecemeal from several
+// different admin pages, so an in-place upsert is the safer fit — a
+// partial save from one page can't accidentally revert fields owned by
+// another page to their schema defaults.
+model OrgSettings {
+  id String @id
+
+  // Basic settings
+  name     String @default("Nail Fest")
+
+  // Contact preferences — where replies to any outbound email (ticket
+  // confirmations, broadcasts) should land. Wired into email/ses.ts's
+  // `send()` as the Reply-To header; null means "reply goes to the From
+  // address", same as today's behavior before this existed.
+  replyToEmail String?
+
+  // Privacy policy — rendered at /privacidad, linked from the
+  // registration form's consent section.
+  privacyPolicyText String?
+
+  // Emails blocked from registering at all — checked in /api/register.
+  bannedEmails String[] @default([])
+
+  // Shows a simple cookie notice site-wide when true. Independent of (and
+  // in addition to) the explicit ADVERTISING consent checkbox that already
+  // gates the Meta Pixel/CAPI — that checkbox covers the ad-sharing
+  // purpose specifically; this covers the general "we use cookies" notice
+  // Ticket Tailor shows whenever any tracking script is active.
+  cookieConsentEnabled Boolean @default(false)
+
+  // Turns on /reenviar — a public "resend my ticket" page that only needs
+  // an email address, for people who lost the confirmation email and
+  // don't want to fill the whole registration form again.
+  selfServeResendEnabled Boolean @default(true)
+
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+}
