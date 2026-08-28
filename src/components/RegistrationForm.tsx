@@ -65,8 +65,7 @@ export default function RegistrationForm({ eventSlug, professionOptions }: Props
       eventSlug,
       email: String(form.get("email") ?? ""),
       phone: localPhone ? `${countryCode}${localPhone}` : "",
-      firstName: String(form.get("firstName") ?? ""),
-      lastName: String(form.get("lastName") ?? ""),
+      fullName: String(form.get("fullName") ?? ""),
       city: String(form.get("city") ?? ""),
       profession: String(form.get("profession") ?? ""),
       cedula: String(form.get("cedula") ?? ""),
@@ -113,23 +112,25 @@ export default function RegistrationForm({ eventSlug, professionOptions }: Props
 
   return (
     <form onSubmit={handleSubmit} onFocus={markCheckoutStarted}>
+      <h2 style={{ fontSize: 18, marginBottom: 4 }}>Tus datos</h2>
+
       <div className="field">
-        <label htmlFor="firstName">Nombre</label>
-        <input id="firstName" name="firstName" required />
+        <label htmlFor="fullName">Nombre y Apellido - o - Razón Social</label>
+        <input id="fullName" name="fullName" required />
       </div>
+
       <div className="field">
-        <label htmlFor="lastName">Apellido</label>
-        <input id="lastName" name="lastName" required />
-      </div>
-      <div className="field">
-        <label htmlFor="email">Correo electrónico</label>
+        <label htmlFor="email">
+          Correo Electrónico (Importante: verifica que esté correcto; ahí enviaremos tu entrada)
+        </label>
         <input id="email" name="email" type="email" required />
-        <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>
-          Verifica que esté bien escrito — ahí te enviamos tu entrada.
-        </p>
       </div>
+
       <div className="field">
-        <label htmlFor="phone">Número de celular con WhatsApp</label>
+        <label htmlFor="phone">
+          Número de celular con WhatsApp - (asegúrate que sea correcto para recibir info del
+          evento)
+        </label>
         <div style={{ display: "flex", gap: 8 }}>
           <select
             aria-label="Código de país"
@@ -143,35 +144,37 @@ export default function RegistrationForm({ eventSlug, professionOptions }: Props
               </option>
             ))}
           </select>
-          <input id="phone" name="phone" type="tel" placeholder="300 1234567" required style={{ flex: 1 }} />
+          <input id="phone" name="phone" type="tel" placeholder="321 1234567" required style={{ flex: 1 }} />
         </div>
-        <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>
-          Asegúrate que sea correcto para recibir información del evento.
-        </p>
       </div>
+
       <div className="field">
-        <label htmlFor="cedula">Número de cédula o NIT</label>
+        <label htmlFor="cedula">Número de cédula - o - NIT</label>
         <input id="cedula" name="cedula" required />
       </div>
+
       <div className="field">
-        <label htmlFor="city">¿En qué ciudad vives?</label>
+        <label htmlFor="city">¿En que ciudad vives?</label>
         <input id="city" name="city" required />
       </div>
+
+      <fieldset style={{ border: "none", padding: 0, margin: "16px 0" }}>
+        <legend style={{ padding: 0, marginBottom: 8 }}>
+          ¿Cuál de estas opciones te describe mejor? (Selecciona una sola)
+        </legend>
+        {professionOptions.map((opt, i) => (
+          <label
+            key={opt}
+            style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", cursor: "pointer" }}
+          >
+            <input type="radio" name="profession" value={opt} required={i === 0} />
+            <span>{opt}</span>
+          </label>
+        ))}
+      </fieldset>
+
       <div className="field">
-        <label htmlFor="profession">¿Cuál de estas opciones te describe mejor?</label>
-        <select id="profession" name="profession" defaultValue="" required>
-          <option value="" disabled>
-            Selecciona una opción
-          </option>
-          {professionOptions.map((opt) => (
-            <option key={opt} value={opt}>
-              {opt}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="field">
-        <label htmlFor="instagram">Déjanos tu @ Instagram/TikTok (opcional)</label>
+        <label htmlFor="instagram">Déjanos tu @ Instagram/Tiktok (Opcional)</label>
         <input id="instagram" name="instagram" placeholder="@tuusuario" />
       </div>
 

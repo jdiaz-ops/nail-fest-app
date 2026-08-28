@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { getOrderedProfessionOptions } from "@/lib/professions";
 import SegmentComposer from "@/components/SegmentComposer";
 import DeleteSegmentButton from "@/components/DeleteSegmentButton";
 
@@ -13,7 +14,7 @@ const STATUS_LABEL: Record<string, string> = {
 export default async function SegmentsPage() {
   const [events, professionOptions, segments] = await Promise.all([
     db.event.findMany({ orderBy: { startsAt: "asc" } }),
-    db.professionOption.findMany({ where: { active: true }, orderBy: { label: "asc" } }),
+    getOrderedProfessionOptions(),
     db.segmentDefinition.findMany({
       orderBy: { createdAt: "desc" },
       include: { metaSync: true },
@@ -30,7 +31,7 @@ export default async function SegmentsPage() {
         luego puedes usar para retargeting o para excluirla de campañas de otros eventos.
       </p>
 
-      <SegmentComposer events={events} professionOptions={professionOptions.map((p) => p.label)} />
+      <SegmentComposer events={events} professionOptions={professionOptions} />
 
       <h2 style={{ marginTop: 40 }}>Segmentos guardados</h2>
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>

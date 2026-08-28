@@ -8,6 +8,7 @@ import { issueQrToken, renderQrPngBuffer } from "@/lib/ticket";
 import { emailProvider } from "@/lib/email";
 import { clientIpFromHeaders, userAgentFromHeaders } from "@/lib/request";
 import { confirmationEmail } from "@/lib/email/templates";
+import { splitName } from "@/lib/name";
 
 const bodySchema = z.object({
   eventSlug: z.string(),
@@ -16,8 +17,10 @@ const bodySchema = z.object({
   // fields Ticket Tailor was collecting: WhatsApp number, cédula/NIT, and
   // profession are all required there too, not optional.
   phone: z.string().min(1),
-  firstName: z.string().min(1),
-  lastName: z.string().min(1),
+  // Single field — "Nombre y Apellido - o - Razón Social", same as the
+  // Ticket Tailor forms this replaces. Split server-side (lib/name.ts) so
+  // downstream code (emails, CRM) still gets a firstName/lastName pair.
+  fullName: z.string().min(1),
   city: z.string().min(1),
   profession: z.string().min(1),
   cedula: z.string().min(1),
@@ -54,6 +57,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "event_not_found" }, { status: 404 });
   }
 
+  const { firstName, lastName } = splitName(input.fullName);
+
   // Dedup on email — the whole point of the CRM being "one profile per
   // person" rather than one row per registration.
   const person = await db.person.upsert({
@@ -61,15 +66,15 @@ export async function POST(req: NextRequest) {
     create: {
       email: input.email.trim().toLowerCase(),
       phone: input.phone,
-      firstName: input.firstName,
-      lastName: input.lastName,
+      firstName,
+      lastName,
       city: input.city,
       profession: input.profession,
     },
     update: {
       phone: input.phone,
-      firstName: input.firstName,
-      lastName: input.lastName,
+      firstName,
+      lastName,
       city: input.city,
       profession: input.profession,
     },

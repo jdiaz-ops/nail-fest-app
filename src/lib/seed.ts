@@ -3,7 +3,10 @@ import type { PrismaClient } from "@prisma/client";
 // The real 9 categories from the live registration form (same wording used
 // on nailfest's Ticket Tailor forms across events) — kept 1:1 so historical
 // imports (see /admin/import) map onto these without inventing new labels.
-const PROFESSIONS = [
+// Exported (not just used here) so lib/professions.ts can sort by this
+// order instead of alphabetically — alphabetical sorts by the leading
+// emoji's codepoint, not the form's actual intended order.
+export const PROFESSIONS = [
   "💅 Soy manicurista profesional",
   "📚 Soy estudiante de un programa técnico o carrera enfocada en manos y pies",
   "🎨 Soy aficionada al nail art (me pinto las uñas en casa como hobby)",

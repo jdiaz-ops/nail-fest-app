@@ -2,6 +2,8 @@
 // record per real person — pure functions, no DB access, so this runs
 // identically in the browser (for a preview) and on the server (for the
 // actual write). See /admin/import and docs/IMPORT.md.
+
+import { splitName } from "@/lib/name";
 //
 // Doorlist quirk (confirmed against a real export): a person can hold up to
 // 2 tickets under one order — themselves + a "+1" companion slot — but the
@@ -188,13 +190,6 @@ export function normalizeProfession(raw: string): string | null {
   const trimmed = raw.trim();
   if (!trimmed) return null;
   return PROFESSION_CANONICAL[trimmed.toLowerCase()] ?? trimmed;
-}
-
-function splitName(fullName: string): { firstName: string; lastName: string } {
-  const parts = fullName.trim().split(/\s+/);
-  if (parts.length === 0) return { firstName: "", lastName: "" };
-  if (parts.length === 1) return { firstName: parts[0]!, lastName: "" };
-  return { firstName: parts[0]!, lastName: parts.slice(1).join(" ") };
 }
 
 export interface GroupResult {

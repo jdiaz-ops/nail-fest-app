@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { db } from "@/lib/db";
+import { getOrderedProfessionOptions } from "@/lib/professions";
 import RegistrationForm from "@/components/RegistrationForm";
 
 export const dynamic = "force-dynamic";
@@ -17,10 +18,7 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
   const event = await db.event.findUnique({ where: { slug: params.eventSlug } });
   if (!event) notFound();
 
-  const professionOptions = await db.professionOption.findMany({
-    where: { active: true },
-    orderBy: { label: "asc" },
-  });
+  const professionOptions = await getOrderedProfessionOptions();
 
   return (
     <main style={{ maxWidth: 480, margin: "0 auto", padding: "40px 20px" }}>
@@ -34,10 +32,7 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
       <hr style={{ border: "none", borderTop: "1px solid #e3e1dc", margin: "24px 0" }} />
 
       <Suspense>
-        <RegistrationForm
-          eventSlug={event.slug}
-          professionOptions={professionOptions.map((p) => p.label)}
-        />
+        <RegistrationForm eventSlug={event.slug} professionOptions={professionOptions} />
       </Suspense>
     </main>
   );
