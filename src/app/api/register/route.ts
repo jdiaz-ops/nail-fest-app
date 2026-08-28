@@ -43,6 +43,10 @@ const bodySchema = z.object({
     .optional(),
   fbc: z.string().optional(),
   fbp: z.string().optional(),
+  // Shared with the browser Pixel's client-side Purchase call (see
+  // RegistrationForm.tsx) so Meta dedupes the pair instead of double-
+  // counting — see MetaPixelScript.tsx for the full explanation.
+  purchaseEventId: z.string().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -193,7 +197,7 @@ export async function POST(req: NextRequest) {
   // would inflate the conversion count Meta uses for ad optimization. ---
   if (!isResend && (await hasActiveConsent(person.id, "ADVERTISING"))) {
     await queueMetaEvent({
-      eventId: randomUUID(),
+      eventId: input.purchaseEventId ?? randomUUID(),
       eventName: "Purchase",
       eventSourceUrl: `${process.env.APP_BASE_URL ?? ""}/${event.slug}`,
       userData: {

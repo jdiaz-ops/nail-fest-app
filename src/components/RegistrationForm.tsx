@@ -65,6 +65,11 @@ export default function RegistrationForm({ eventSlug, professionOptions }: Props
     const form = new FormData(e.currentTarget);
     const localPhone = String(form.get("phone") ?? "").replace(/[^0-9]/g, "");
     const instagram = String(form.get("instagram") ?? "").trim();
+    const advertisingConsent = form.get("consentAdvertising") === "on";
+    // Shared with the server-side CAPI Purchase call below so Meta
+    // dedupes the Pixel + CAPI pair instead of double-counting — same
+    // mechanism as track() in tracking.ts, see MetaPixelScript.tsx.
+    const purchaseEventId = crypto.randomUUID();
     const payload = {
       eventSlug,
       email: String(form.get("email") ?? ""),
@@ -77,17 +82,26 @@ export default function RegistrationForm({ eventSlug, professionOptions }: Props
       consents: {
         logistics: form.get("consentLogistics") === "on",
         marketing: form.get("consentMarketing") === "on",
-        advertising: form.get("consentAdvertising") === "on",
+        advertising: advertisingConsent,
       },
       attribution: attributionFromSearchParams(searchParams),
       fbc: readCookie("_fbc"),
       fbp: readCookie("_fbp"),
+      purchaseEventId,
     };
 
     if (!payload.consents.logistics) {
       setStatus("error");
       setErrorMessage("Necesitamos tu autorización para enviarte la entrada por correo.");
       return;
+    }
+
+    // Same ADVERTISING-consent gate as the server-side CAPI send (see
+    // /api/register) — firing the Pixel unconditionally would leak data to
+    // Meta regardless of what the person just chose, defeating the point
+    // of the checkbox.
+    if (advertisingConsent) {
+      window.fbq?.("track", "Purchase", {}, { eventID: purchaseEventId });
     }
 
     const res = await fetch("/api/register", {

@@ -1,5 +1,11 @@
 "use client";
 
+declare global {
+  interface Window {
+    fbq?: (...args: unknown[]) => void;
+  }
+}
+
 function readCookie(name: string): string | undefined {
   const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
   return match?.[1] ? decodeURIComponent(match[1]) : undefined;
@@ -27,8 +33,17 @@ export function ensureFbcCookie() {
 }
 
 export function track(eventName: "PageView" | "ViewContent" | "InitiateCheckout") {
+  // Shared between the browser Pixel call and the server-side CAPI call
+  // below — Meta dedupes on (event_name, event_id), so firing both without
+  // a matching id would double-count every event instead of complementing
+  // each other. See MetaPixelScript.tsx's comment for the full picture.
+  const eventId = crypto.randomUUID();
+
+  window.fbq?.("track", eventName, {}, { eventID: eventId });
+
   const body = {
     eventName,
+    eventId,
     eventSourceUrl: window.location.href,
     fbc: readCookie("_fbc"),
     fbp: readCookie("_fbp"),
