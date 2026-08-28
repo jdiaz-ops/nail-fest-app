@@ -48,8 +48,8 @@ export default function MetaSetupPage() {
 
       <h2 style={{ fontSize: 18 }}>Audiencias semilla</h2>
       <p style={{ color: "#5b5f6b", fontSize: 14 }}>
-        Crea las tres audiencias base — <strong>Landing visitors (30d)</strong>,{" "}
-        <strong>Checkout started (30d)</strong> y <strong>Purchasers (180d)</strong>. Solo hace
+        Crea las tres audiencias base — <strong>Landing visitors (180d)</strong>,{" "}
+        <strong>Checkout started (180d)</strong> y <strong>Purchasers (180d)</strong>. Solo hace
         falta correrlo una vez (es seguro darle click varias veces, no duplica nada).
       </p>
       <MetaAudiencesButton />

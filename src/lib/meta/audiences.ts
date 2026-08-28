@@ -29,29 +29,63 @@ async function graphFetch(path: string, token: string, init?: RequestInit) {
  * Website-rule audiences (Landing visitors, Checkout started): created ONCE
  * — Meta auto-populates them from the Pixel/CAPI events we're already
  * sending. There is no per-user "sync" step for these; sending the events
- * IS the sync. This function is idempotent by name so it's safe to call on
- * every deploy.
+ * IS the sync.
+ *
+ * Lookup is by `baseName` (a stable label, e.g. "Nail Fest — Landing
+ * visitors"), NOT the full display name — the display name bakes in the
+ * retention window (e.g. "(180d)") so it stays accurate, but if that
+ * changes we want to UPDATE the existing audience in place (keeping its id
+ * and accumulated population/match score), not create a duplicate that
+ * starts "Populating" from zero.
  */
 export async function ensureWebsiteAudience(params: {
-  name: string;
+  baseName: string;
   eventName: "PageView" | "InitiateCheckout";
   retentionDays: number;
 }): Promise<string> {
   const conn = await getConnection();
+  const displayName = `${params.baseName} (${params.retentionDays}d)`;
+
+  const rule = JSON.stringify({
+    inclusions: {
+      operator: "or",
+      rules: [
+        {
+          event_sources: [{ type: "pixel", id: conn.pixelId }],
+          retention_seconds: params.retentionDays * 24 * 60 * 60,
+          filter: {
+            operator: "and",
+            filters: [{ field: "event", operator: "=", value: params.eventName }],
+          },
+        },
+      ],
+    },
+  });
 
   const existing = await graphFetch(
     `act_${conn.adAccountId}/customaudiences?fields=id,name&limit=200`,
     conn.token
   );
   const found = (existing.data as Array<{ id: string; name: string }> | undefined)?.find(
-    (a) => a.name === params.name
+    (a) => a.name === displayName || a.name.startsWith(`${params.baseName} (`)
   );
-  if (found) return found.id;
+
+  if (found) {
+    if (found.name !== displayName) {
+      // Same audience, retention window changed since last run — update in
+      // place rather than duplicate.
+      await graphFetch(found.id, conn.token, {
+        method: "POST",
+        body: JSON.stringify({ name: displayName, rule, retention_days: params.retentionDays }),
+      });
+    }
+    return found.id;
+  }
 
   const created = await graphFetch(`act_${conn.adAccountId}/customaudiences`, conn.token, {
     method: "POST",
     body: JSON.stringify({
-      name: params.name,
+      name: displayName,
       // No `subtype` — confirmed against a live account that the API
       // rejects it outright ("parameter 'subtype' is not supported").
       // Type is inferred from `rule` (website-rule audience) instead.
@@ -62,21 +96,7 @@ export async function ensureWebsiteAudience(params: {
       // shape is the current format; the pixel and lookback window now live
       // inside the rule itself (event_sources / retention_seconds) instead
       // of as top-level `pixel_id`.
-      rule: JSON.stringify({
-        inclusions: {
-          operator: "or",
-          rules: [
-            {
-              event_sources: [{ type: "pixel", id: conn.pixelId }],
-              retention_seconds: params.retentionDays * 24 * 60 * 60,
-              filter: {
-                operator: "and",
-                filters: [{ field: "event", operator: "=", value: params.eventName }],
-              },
-            },
-          ],
-        },
-      }),
+      rule,
     }),
   });
   return created.id as string;
@@ -169,16 +189,16 @@ async function attempt(fn: () => Promise<string>): Promise<SeedAudienceResult> {
 export async function ensureSeedAudiences() {
   const landing = await attempt(() =>
     ensureWebsiteAudience({
-      name: "Nail Fest — Landing visitors (30d)",
+      baseName: "Nail Fest — Landing visitors",
       eventName: "PageView",
-      retentionDays: 30,
+      retentionDays: 180,
     })
   );
   const checkout = await attempt(() =>
     ensureWebsiteAudience({
-      name: "Nail Fest — Checkout started (30d)",
+      baseName: "Nail Fest — Checkout started",
       eventName: "InitiateCheckout",
-      retentionDays: 30,
+      retentionDays: 180,
     })
   );
   const purchasers = await attempt(() =>
