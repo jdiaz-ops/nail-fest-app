@@ -54,14 +54,29 @@ export async function ensureWebsiteAudience(params: {
       name: params.name,
       // No `subtype` — confirmed against a live account that the API
       // rejects it outright ("parameter 'subtype' is not supported").
-      // Betting that type is inferred from `rule` + `pixel_id` instead;
-      // unconfirmed until this actually creates the audience.
+      // Type is inferred from `rule` (website-rule audience) instead.
       customer_file_source: "USER_PROVIDED_ONLY",
       retention_days: params.retentionDays,
+      // Modern "rule_v2" schema — the flat `{"event":{"eq":...}}` shape is
+      // what Meta rejected as "too old". This nested inclusions/rules/filter
+      // shape is the current format; the pixel and lookback window now live
+      // inside the rule itself (event_sources / retention_seconds) instead
+      // of as top-level `pixel_id`.
       rule: JSON.stringify({
-        event: { eq: params.eventName },
+        inclusions: {
+          operator: "or",
+          rules: [
+            {
+              event_sources: [{ type: "pixel", id: conn.pixelId }],
+              retention_seconds: params.retentionDays * 24 * 60 * 60,
+              filter: {
+                operator: "and",
+                filters: [{ field: "event", operator: "=", value: params.eventName }],
+              },
+            },
+          ],
+        },
       }),
-      pixel_id: conn.pixelId,
     }),
   });
   return created.id as string;
@@ -130,21 +145,44 @@ export async function syncPeopleToAudience(
   return { batches };
 }
 
-/** The three seed audiences from the brief — call once during setup. */
+type SeedAudienceResult = { id: string } | { error: string };
+
+async function attempt(fn: () => Promise<string>): Promise<SeedAudienceResult> {
+  try {
+    return { id: await fn() };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : String(err) };
+  }
+}
+
+/**
+ * The three seed audiences from the brief — call once during setup.
+ * Each is attempted independently so one failing (website-rule audiences
+ * are hitting a Graph API rule-syntax version mismatch as of this writing —
+ * see docs/META_SETUP.md) doesn't block the others, notably Purchasers,
+ * which doesn't use `rule` at all and is the one that actually needs to
+ * stay in sync automatically.
+ */
 export async function ensureSeedAudiences() {
-  const landing = await ensureWebsiteAudience({
-    name: "Nail Fest — Landing visitors (30d)",
-    eventName: "PageView",
-    retentionDays: 30,
-  });
-  const checkout = await ensureWebsiteAudience({
-    name: "Nail Fest — Checkout started (30d)",
-    eventName: "InitiateCheckout",
-    retentionDays: 30,
-  });
-  const purchasers = await ensureCustomerListAudience({
-    name: "Nail Fest — Purchasers (180d)",
-    retentionDays: 180,
-  });
+  const landing = await attempt(() =>
+    ensureWebsiteAudience({
+      name: "Nail Fest — Landing visitors (30d)",
+      eventName: "PageView",
+      retentionDays: 30,
+    })
+  );
+  const checkout = await attempt(() =>
+    ensureWebsiteAudience({
+      name: "Nail Fest — Checkout started (30d)",
+      eventName: "InitiateCheckout",
+      retentionDays: 30,
+    })
+  );
+  const purchasers = await attempt(() =>
+    ensureCustomerListAudience({
+      name: "Nail Fest — Purchasers (180d)",
+      retentionDays: 180,
+    })
+  );
   return { landing, checkout, purchasers };
 }
