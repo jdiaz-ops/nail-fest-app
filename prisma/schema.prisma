@@ -47,11 +47,17 @@ model Person {
 }
 
 // Reusable, organizer-managed list of profession/category options so the
-// registration form uses a <select>, never free text — see brief.
+// registration form uses a <select>, never free text — see brief. Now
+// genuinely admin-editable from the Checkout form's "Profesión" question
+// (see lib/professions.ts's syncProfessionOptions) instead of a read-only
+// seed — `order` is what makes that editing actually stick: the admin's
+// textarea order is saved here and read back the same way, rather than
+// re-sorting by the original seed list every time.
 model ProfessionOption {
-  id    String @id @default(cuid())
-  label String @unique
+  id     String  @id @default(cuid())
+  label  String  @unique
   active Boolean @default(true)
+  order  Int     @default(0)
 }
 
 model Event {
@@ -412,6 +418,17 @@ enum CheckoutQuestionType {
   AGREEMENT // one checkbox, label IS the terms text — "must check to submit" when required
 }
 
+// Only meaningful for the locked "fullName" row — matches Ticket Tailor's
+// own "Format" control on its compulsory Name question. FULL keeps today's
+// single field, split into firstName/lastName heuristically server-side
+// (lib/name.ts: first word vs. the rest). FIRST_LAST renders two real
+// inputs instead and sends firstName/lastName directly — no guessing —
+// since Person already stores them as separate columns either way.
+enum NameFormat {
+  FULL
+  FIRST_LAST
+}
+
 // One row per question on the registration form. `locked` rows are the six
 // structural fields (fullName/email/phone/cedula/city/profession) that
 // write into a real Person column or a name the rest of the app already
@@ -436,14 +453,24 @@ model CheckoutQuestion {
   type      CheckoutQuestionType @default(TEXT)
   required  Boolean              @default(false)
   // Only meaningful for SELECT/RADIO/CHECKBOX (see TYPES_WITH_OPTIONS in
-  // lib/checkoutForm.ts) — ignored for the locked "profession" row, whose
-  // choices come from ProfessionOption instead (that list already has its
-  // own admin-managed source, see lib/professions.ts).
-  options   String[]             @default([])
-  order     Int
-  locked    Boolean              @default(false)
-  createdAt DateTime             @default(now())
-  updatedAt DateTime             @updatedAt
+  // lib/checkoutForm.ts) — always empty on the locked "profession" row,
+  // whose real, admin-editable choices live in ProfessionOption instead
+  // (lib/checkoutForm.ts's getCheckoutQuestions overlays that live list
+  // onto this field at read time so the admin editor still edits "the
+  // question's options" from its point of view).
+  options    String[]             @default([])
+  order      Int
+  locked     Boolean              @default(false)
+  // Only meaningful for the locked "fullName" row — see the NameFormat
+  // enum's own comment.
+  nameFormat NameFormat           @default(FULL)
+  // Only meaningful for the locked "email" row — Ticket Tailor's own
+  // "Customers have to enter their email twice to avoid typos" toggle.
+  // When true, RegistrationForm renders a second confirm-email input and
+  // /api/register rejects the submission if the two don't match.
+  confirmEmail Boolean            @default(false)
+  createdAt  DateTime             @default(now())
+  updatedAt  DateTime             @updatedAt
 
   @@index([order])
 }

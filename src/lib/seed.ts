@@ -25,8 +25,8 @@ export const PROFESSIONS = [
  * session can't reach the production DB directly to run it itself.
  */
 export async function seedBaseline(db: PrismaClient) {
-  for (const label of PROFESSIONS) {
-    await db.professionOption.upsert({ where: { label }, update: {}, create: { label } });
+  for (const [order, label] of PROFESSIONS.entries()) {
+    await db.professionOption.upsert({ where: { label }, update: {}, create: { label, order } });
   }
 
   const event = await db.event.upsert({

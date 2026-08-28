@@ -12,6 +12,10 @@ export interface QuestionView {
   required: boolean;
   options: string[];
   locked: boolean;
+  // fullName only — "Full name" (one field) vs. "First & Last Name" (two).
+  nameFormat: "FULL" | "FIRST_LAST";
+  // email only — ask twice to catch typos.
+  confirmEmail: boolean;
 }
 
 interface Props {
@@ -79,6 +83,9 @@ export default function RegistrationForm({ eventSlug, professionOptions, questio
     const form = new FormData(e.currentTarget);
     const localPhone = String(form.get("phone") ?? "").replace(/[^0-9]/g, "");
     const advertisingConsent = form.get("consentAdvertising") === "on";
+    const fullNameQuestion = questions.find((q) => q.key === "fullName");
+    const emailQuestion = questions.find((q) => q.key === "email");
+    const usesFirstLast = fullNameQuestion?.nameFormat === "FIRST_LAST";
     // Shared with the server-side CAPI Purchase call below so Meta
     // dedupes the Pixel + CAPI pair instead of double-counting — same
     // mechanism as track() in tracking.ts, see MetaPixelScript.tsx.
@@ -105,11 +112,19 @@ export default function RegistrationForm({ eventSlug, professionOptions, questio
       }
     }
 
+    const email = String(form.get("field_email") ?? "");
+
     const payload = {
       eventSlug,
-      email: String(form.get("field_email") ?? ""),
+      email,
       phone: localPhone ? `${countryCode}${localPhone}` : "",
-      fullName: String(form.get("field_fullName") ?? ""),
+      // Only one of fullName or firstName/lastName is ever actually
+      // populated below — sending both keys with one blank is fine,
+      // /api/register only looks at firstName first, then falls back.
+      fullName: usesFirstLast ? undefined : String(form.get("field_fullName") ?? ""),
+      firstName: usesFirstLast ? String(form.get("field_firstName") ?? "").trim() : undefined,
+      lastName: usesFirstLast ? String(form.get("field_lastName") ?? "").trim() : undefined,
+      emailConfirm: emailQuestion?.confirmEmail ? String(form.get("field_emailConfirm") ?? "") : undefined,
       city: String(form.get("field_city") ?? ""),
       profession: String(form.get("field_profession") ?? ""),
       customFields,
@@ -127,6 +142,15 @@ export default function RegistrationForm({ eventSlug, professionOptions, questio
     if (!payload.consents.logistics) {
       setStatus("error");
       setErrorMessage("Necesitamos tu autorización para enviarte la entrada por correo.");
+      return;
+    }
+
+    // Same typo-catching purpose as the second input itself — checked
+    // client-side too so the person sees it immediately instead of a
+    // round trip to the server.
+    if (emailQuestion?.confirmEmail && payload.emailConfirm?.trim().toLowerCase() !== email.trim().toLowerCase()) {
+      setStatus("error");
+      setErrorMessage("Los correos no coinciden — revísalos.");
       return;
     }
 
@@ -156,7 +180,9 @@ export default function RegistrationForm({ eventSlug, professionOptions, questio
             ? "No podemos completar tu registro con este correo."
             : body?.error === "missing_required_fields"
               ? "Faltan campos obligatorios — revisa el formulario."
-              : "Algo salió mal, intenta de nuevo."
+              : body?.error === "email_mismatch"
+                ? "Los correos no coinciden — revísalos."
+                : "Algo salió mal, intenta de nuevo."
       );
     }
   }
@@ -182,17 +208,41 @@ export default function RegistrationForm({ eventSlug, professionOptions, questio
     <form onSubmit={handleSubmit} onFocus={markCheckoutStarted}>
       <h2 style={{ fontSize: 18, marginBottom: 4 }}>Tus datos</h2>
 
-      {fullName && (
-        <div className="field">
-          <label htmlFor="field_fullName">{fullName.label}</label>
-          <input id="field_fullName" name="field_fullName" required />
-        </div>
-      )}
+      {fullName &&
+        (fullName.nameFormat === "FIRST_LAST" ? (
+          <fieldset style={{ border: "none", padding: 0, margin: "0 0 16px" }}>
+            <legend style={{ padding: 0, marginBottom: 8, fontSize: 13, fontWeight: 600, color: "var(--ink-muted)" }}>
+              {fullName.label}
+            </legend>
+            <div style={{ display: "flex", gap: 8 }}>
+              <div className="field" style={{ flex: 1, marginBottom: 0 }}>
+                <label htmlFor="field_firstName">Nombre</label>
+                <input id="field_firstName" name="field_firstName" autoComplete="given-name" required />
+              </div>
+              <div className="field" style={{ flex: 1, marginBottom: 0 }}>
+                <label htmlFor="field_lastName">Apellido</label>
+                <input id="field_lastName" name="field_lastName" autoComplete="family-name" />
+              </div>
+            </div>
+          </fieldset>
+        ) : (
+          <div className="field">
+            <label htmlFor="field_fullName">{fullName.label}</label>
+            <input id="field_fullName" name="field_fullName" autoComplete="name" required />
+          </div>
+        ))}
 
       {email && (
         <div className="field">
           <label htmlFor="field_email">{email.label}</label>
-          <input id="field_email" name="field_email" type="email" required />
+          <input id="field_email" name="field_email" type="email" autoComplete="email" required />
+        </div>
+      )}
+
+      {email?.confirmEmail && (
+        <div className="field">
+          <label htmlFor="field_emailConfirm">Confirma tu correo electrónico</label>
+          <input id="field_emailConfirm" name="field_emailConfirm" type="email" autoComplete="email" required />
         </div>
       )}
 
@@ -204,7 +254,12 @@ export default function RegistrationForm({ eventSlug, professionOptions, questio
               aria-label="Código de país"
               value={countryCode}
               onChange={(e) => setCountryCode(e.target.value)}
-              style={{ flex: "0 0 auto" }}
+              // .field select in globals.css sets width:100% — inside this
+              // flex row that becomes this select's flex-basis (flex-basis:
+              // auto defers to `width`), so it was eating almost the whole
+              // row and squeezing the number input into a sliver. A fixed
+              // width here overrides that instead of fighting the cascade.
+              style={{ flex: "0 0 auto", width: 112 }}
             >
               {COUNTRY_CODES.map((c) => (
                 <option key={c.code} value={c.code}>
@@ -212,7 +267,15 @@ export default function RegistrationForm({ eventSlug, professionOptions, questio
                 </option>
               ))}
             </select>
-            <input id="phone" name="phone" type="tel" placeholder="321 1234567" required={phone.required} style={{ flex: 1 }} />
+            <input
+              id="phone"
+              name="phone"
+              type="tel"
+              autoComplete="tel"
+              placeholder="321 1234567"
+              required={phone.required}
+              style={{ flex: 1, minWidth: 0 }}
+            />
           </div>
         </div>
       )}
@@ -227,7 +290,7 @@ export default function RegistrationForm({ eventSlug, professionOptions, questio
       {city && (
         <div className="field">
           <label htmlFor="field_city">{city.label}</label>
-          <input id="field_city" name="field_city" required={city.required} />
+          <input id="field_city" name="field_city" autoComplete="address-level2" required={city.required} />
         </div>
       )}
 

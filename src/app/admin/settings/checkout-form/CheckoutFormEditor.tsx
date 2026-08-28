@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 type QuestionType = "TEXT" | "SELECT" | "RADIO" | "CHECKBOX" | "DATE" | "AGREEMENT";
+type NameFormat = "FULL" | "FIRST_LAST";
 
 interface QuestionRow {
   id: string;
@@ -13,6 +14,8 @@ interface QuestionRow {
   required: boolean;
   options: string[];
   locked: boolean;
+  nameFormat: NameFormat;
+  confirmEmail: boolean;
 }
 
 // Name/Email never show a Required toggle at all — same as Ticket
@@ -61,15 +64,29 @@ export default function CheckoutFormEditor({ initialQuestions }: { initialQuesti
     router.refresh();
   }
 
-  async function handleSave(id: string, patch: { label: string; required: boolean; type?: QuestionType; options?: string[] }) {
+  async function handleSave(
+    id: string,
+    patch: {
+      label: string;
+      required: boolean;
+      type?: QuestionType;
+      options?: string[];
+      nameFormat?: NameFormat;
+      confirmEmail?: boolean;
+    }
+  ) {
     setBusy(true);
     setError(null);
     try {
       await api(`/api/admin/checkout-questions/${id}`, { method: "PATCH", body: JSON.stringify(patch) });
       setEditingId(null);
       await refresh();
-    } catch {
-      setError("No se pudo guardar la pregunta.");
+    } catch (err) {
+      setError(
+        err instanceof Error && err.message === "needs_options"
+          ? "Necesitas al menos 2 opciones."
+          : "No se pudo guardar la pregunta."
+      );
     } finally {
       setBusy(false);
     }
@@ -238,6 +255,11 @@ function IconButton({ children, onClick, disabled, title }: { children: React.Re
   );
 }
 
+const NAME_FORMAT_LABELS: Record<NameFormat, string> = {
+  FULL: "Full name",
+  FIRST_LAST: "First & Last Name",
+};
+
 function EditQuestionForm({
   question,
   busy,
@@ -246,21 +268,41 @@ function EditQuestionForm({
 }: {
   question: QuestionRow;
   busy: boolean;
-  onSave: (patch: { label: string; required: boolean; type?: QuestionType; options?: string[] }) => void;
+  onSave: (patch: {
+    label: string;
+    required: boolean;
+    type?: QuestionType;
+    options?: string[];
+    nameFormat?: NameFormat;
+    confirmEmail?: boolean;
+  }) => void;
   onCancel: () => void;
 }) {
   const [label, setLabel] = useState(question.label);
   const [required, setRequired] = useState(question.required);
   const [type, setType] = useState<QuestionType>(question.type);
   const [optionsText, setOptionsText] = useState(question.options.join("\n"));
+  const [nameFormat, setNameFormat] = useState<NameFormat>(question.nameFormat);
+  const [confirmEmail, setConfirmEmail] = useState(question.confirmEmail);
   const showRequiredToggle = !ALWAYS_REQUIRED_KEYS.has(question.key);
+  const isFullName = question.key === "fullName";
+  const isEmail = question.key === "email";
+  const isProfession = question.key === "profession";
   // profession's real options come from ProfessionOption (see
-  // lib/professions.ts), not this table — editing them here would do
-  // nothing, so that one specific row skips the type/options controls too.
-  const canEditTypeAndOptions = !question.locked && question.key !== "profession";
+  // lib/professions.ts) — this row has no `type` control (always RADIO)
+  // but DOES get its own options editor below, wired to that table
+  // instead of this question's own `options` column.
+  const canEditTypeAndOptions = !question.locked && !isProfession;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {question.locked && (isFullName || isEmail) && (
+        <p style={{ fontSize: 13, color: "#5b5f6b", margin: 0 }}>
+          {isFullName
+            ? "The 'Name' question is compulsory and can't be removed from the form. Below you can edit the label and choose whether to collect it as one field or split into First & Last Name."
+            : "The 'Email' question is compulsory and can't be removed from the form. Below you can edit the label and choose whether customers need to repeat their email to reduce typos."}
+        </p>
+      )}
       {canEditTypeAndOptions && (
         <div className="field">
           <label>What kind of response do you want?</label>
@@ -273,15 +315,40 @@ function EditQuestionForm({
           </select>
         </div>
       )}
+      {isFullName && (
+        <div className="field">
+          <label>Format</label>
+          <select value={nameFormat} onChange={(e) => setNameFormat(e.target.value as NameFormat)}>
+            {Object.entries(NAME_FORMAT_LABELS).map(([value, formatLabel]) => (
+              <option key={value} value={value}>
+                {formatLabel}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
       <div className="field">
         <label>What question do you want to ask?</label>
         <input value={label} onChange={(e) => setLabel(e.target.value)} />
       </div>
-      {canEditTypeAndOptions && TYPES_WITH_OPTIONS.has(type) && (
+      {((canEditTypeAndOptions && TYPES_WITH_OPTIONS.has(type)) || isProfession) && (
         <div className="field">
           <label>Options for answer (Enter one answer per line)</label>
-          <textarea value={optionsText} onChange={(e) => setOptionsText(e.target.value)} rows={6} style={{ fontFamily: "inherit" }} />
+          {isProfession && (
+            <p style={{ fontSize: 12, color: "#5b5f6b", margin: "0 0 6px" }}>
+              Esta es la lista real de profesiones — cambiarla aquí cambia lo que la gente ve en el
+              formulario y lo que se puede filtrar en Segmentos. Quitar una no borra el historial de
+              quienes ya la eligieron.
+            </p>
+          )}
+          <textarea value={optionsText} onChange={(e) => setOptionsText(e.target.value)} rows={isProfession ? 9 : 6} style={{ fontFamily: "inherit" }} />
         </div>
+      )}
+      {isEmail && (
+        <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
+          <input type="checkbox" checked={confirmEmail} onChange={(e) => setConfirmEmail(e.target.checked)} />
+          Customers have to enter their email twice to avoid typos
+        </label>
       )}
       {showRequiredToggle && (
         <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
@@ -301,7 +368,12 @@ function EditQuestionForm({
               label: label.trim(),
               required: ALWAYS_REQUIRED_KEYS.has(question.key) ? true : required,
               type: canEditTypeAndOptions ? type : undefined,
-              options: canEditTypeAndOptions ? optionsText.split("\n").map((o) => o.trim()).filter(Boolean) : undefined,
+              options:
+                (canEditTypeAndOptions && TYPES_WITH_OPTIONS.has(type)) || isProfession
+                  ? optionsText.split("\n").map((o) => o.trim()).filter(Boolean)
+                  : undefined,
+              nameFormat: isFullName ? nameFormat : undefined,
+              confirmEmail: isEmail ? confirmEmail : undefined,
             })
           }
           style={{ padding: "8px 20px", borderRadius: 999, border: "none", background: "#12966b", color: "#fff", fontSize: 13, cursor: "pointer" }}

@@ -7,6 +7,10 @@ const patchSchema = z.object({
   required: z.boolean().optional(),
   type: z.enum(["TEXT", "SELECT", "RADIO", "CHECKBOX", "DATE", "AGREEMENT"]).optional(),
   options: z.array(z.string()).optional(),
+  // fullName only — see the NameFormat enum's own comment in schema.prisma.
+  nameFormat: z.enum(["FULL", "FIRST_LAST"]).optional(),
+  // email only — see the confirmEmail field's own comment on CheckoutQuestion.
+  confirmEmail: z.boolean().optional(),
 });
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
@@ -21,6 +25,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const question = await updateQuestion(params.id, parsed.data);
     return NextResponse.json({ ok: true, question });
   } catch (err) {
+    // Thrown by updateQuestion when the locked "profession" row's options
+    // (really a ProfessionOption sync, see lib/professions.ts) come in
+    // under 2 — same shape as the needs_options check above so the client
+    // handles both identically.
+    if (err instanceof Error && err.message === "needs_options") {
+      return NextResponse.json({ error: "needs_options" }, { status: 400 });
+    }
     console.error("update checkout question failed", err);
     return NextResponse.json({ error: "not_found" }, { status: 404 });
   }

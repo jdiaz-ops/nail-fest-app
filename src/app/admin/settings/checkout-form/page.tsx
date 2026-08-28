@@ -26,6 +26,8 @@ export default async function CheckoutFormPage() {
           required: q.required,
           options: q.options,
           locked: q.locked,
+          nameFormat: q.nameFormat,
+          confirmEmail: q.confirmEmail,
         }))}
       />
     </div>

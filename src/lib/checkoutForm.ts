@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { randomUUID } from "crypto";
-import type { CheckoutQuestion, CheckoutQuestionType } from "@prisma/client";
+import type { CheckoutQuestion, CheckoutQuestionType, NameFormat } from "@prisma/client";
+import { getOrderedProfessionOptions, syncProfessionOptions } from "@/lib/professions";
 
 // See the CheckoutQuestion model's own comment in schema.prisma for why
 // this exists as a real table instead of the static list it used to be:
@@ -9,7 +10,17 @@ import type { CheckoutQuestion, CheckoutQuestionType } from "@prisma/client";
 // definition so the form and its validation never drift apart.
 
 const LOCKED_DEFAULTS: Omit<CheckoutQuestion, "id" | "createdAt" | "updatedAt">[] = [
-  { key: "fullName", label: "Nombre y Apellido - o - Razón Social", type: "TEXT", required: true, options: [], order: 0, locked: true },
+  {
+    key: "fullName",
+    label: "Nombre y Apellido - o - Razón Social",
+    type: "TEXT",
+    required: true,
+    options: [],
+    order: 0,
+    locked: true,
+    nameFormat: "FULL",
+    confirmEmail: false,
+  },
   {
     key: "email",
     label: "Correo Electrónico (verifica que esté correcto; ahí enviaremos tu entrada)",
@@ -18,10 +29,42 @@ const LOCKED_DEFAULTS: Omit<CheckoutQuestion, "id" | "createdAt" | "updatedAt">[
     options: [],
     order: 1,
     locked: true,
+    nameFormat: "FULL",
+    confirmEmail: false,
   },
-  { key: "phone", label: "Número de celular con WhatsApp", type: "TEXT", required: true, options: [], order: 2, locked: true },
-  { key: "cedula", label: "Número de cédula - o - NIT", type: "TEXT", required: true, options: [], order: 3, locked: true },
-  { key: "city", label: "¿En qué ciudad vives?", type: "TEXT", required: true, options: [], order: 4, locked: true },
+  {
+    key: "phone",
+    label: "Número de celular con WhatsApp",
+    type: "TEXT",
+    required: true,
+    options: [],
+    order: 2,
+    locked: true,
+    nameFormat: "FULL",
+    confirmEmail: false,
+  },
+  {
+    key: "cedula",
+    label: "Número de cédula - o - NIT",
+    type: "TEXT",
+    required: true,
+    options: [],
+    order: 3,
+    locked: true,
+    nameFormat: "FULL",
+    confirmEmail: false,
+  },
+  {
+    key: "city",
+    label: "¿En qué ciudad vives?",
+    type: "TEXT",
+    required: true,
+    options: [],
+    order: 4,
+    locked: true,
+    nameFormat: "FULL",
+    confirmEmail: false,
+  },
   {
     key: "profession",
     label: "¿Cuál de estas opciones te describe mejor? (Selecciona una sola)",
@@ -30,8 +73,20 @@ const LOCKED_DEFAULTS: Omit<CheckoutQuestion, "id" | "createdAt" | "updatedAt">[
     options: [],
     order: 5,
     locked: true,
+    nameFormat: "FULL",
+    confirmEmail: false,
   },
-  { key: "instagram", label: "Déjanos tu @ Instagram/TikTok", type: "TEXT", required: false, options: [], order: 6, locked: false },
+  {
+    key: "instagram",
+    label: "Déjanos tu @ Instagram/TikTok",
+    type: "TEXT",
+    required: false,
+    options: [],
+    order: 6,
+    locked: false,
+    nameFormat: "FULL",
+    confirmEmail: false,
+  },
 ];
 
 export const LOCKED_KEYS = ["fullName", "email", "phone", "cedula", "city", "profession"] as const;
@@ -54,7 +109,16 @@ async function ensureSeeded(): Promise<void> {
 
 export async function getCheckoutQuestions(): Promise<CheckoutQuestion[]> {
   await ensureSeeded();
-  return db.checkoutQuestion.findMany({ orderBy: { order: "asc" } });
+  const questions = await db.checkoutQuestion.findMany({ orderBy: { order: "asc" } });
+  // The "profession" row's real options live in ProfessionOption, not this
+  // table (see syncProfessionOptions) — overlay the live list here so
+  // every caller (the admin editor, most visibly) sees "the question's
+  // options" as one coherent thing without needing to know that.
+  const professionRow = questions.find((q) => q.key === "profession");
+  if (professionRow) {
+    professionRow.options = await getOrderedProfessionOptions();
+  }
+  return questions;
 }
 
 export async function createCustomQuestion(input: {
@@ -80,19 +144,45 @@ export async function createCustomQuestion(input: {
 
 export async function updateQuestion(
   id: string,
-  patch: { label?: string; required?: boolean; type?: CheckoutQuestionType; options?: string[] }
+  patch: {
+    label?: string;
+    required?: boolean;
+    type?: CheckoutQuestionType;
+    options?: string[];
+    nameFormat?: NameFormat;
+    confirmEmail?: boolean;
+  }
 ): Promise<CheckoutQuestion> {
   const existing = await db.checkoutQuestion.findUniqueOrThrow({ where: { id } });
-  // Locked rows: only label/required are ever editable, matching Ticket
-  // Tailor's "compulsory question" behavior for Name/Email — type and
-  // options are structural (profession's options come from
-  // ProfessionOption, not here) so any type/options in the patch are
-  // silently ignored rather than erroring, simplest for the caller.
+  // Locked rows: type is always structural and never editable here. Three
+  // of them have one extra real, connected control beyond label/required —
+  // everything else silently ignores anything else in the patch, simplest
+  // for the caller.
   if (existing.locked) {
-    return db.checkoutQuestion.update({
-      where: { id },
-      data: { label: patch.label ?? existing.label, required: patch.required ?? existing.required },
-    });
+    const data: { label: string; required: boolean; nameFormat?: NameFormat; confirmEmail?: boolean } = {
+      label: patch.label ?? existing.label,
+      required: patch.required ?? existing.required,
+    };
+    // fullName: Full name (one field) vs. First & Last Name (two fields,
+    // sent straight through instead of guessed via lib/name.ts) — see the
+    // NameFormat enum's own comment.
+    if (existing.key === "fullName" && patch.nameFormat) {
+      data.nameFormat = patch.nameFormat;
+    }
+    // email: "ask twice to catch typos" — see the confirmEmail field's own
+    // comment on CheckoutQuestion.
+    if (existing.key === "email" && typeof patch.confirmEmail === "boolean") {
+      data.confirmEmail = patch.confirmEmail;
+    }
+    // profession: the options textarea in the admin editor edits the real
+    // ProfessionOption list, not a column on this row — see
+    // syncProfessionOptions' own comment for why nothing is hard-deleted.
+    if (existing.key === "profession" && patch.options) {
+      const cleaned = patch.options.map((o) => o.trim()).filter(Boolean);
+      if (cleaned.length < 2) throw new Error("needs_options");
+      await syncProfessionOptions(cleaned);
+    }
+    return db.checkoutQuestion.update({ where: { id }, data });
   }
   const nextType = patch.type ?? existing.type;
   return db.checkoutQuestion.update({

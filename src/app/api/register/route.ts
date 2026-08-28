@@ -15,11 +15,18 @@ import { getCheckoutQuestions, LOCKED_KEYS, type LockedKey } from "@/lib/checkou
 const bodySchema = z.object({
   eventSlug: z.string(),
   email: z.string().email(),
+  // Only sent when the "email" question's confirmEmail is on (Ticket
+  // Tailor's "ask twice to catch typos") — see CheckoutFormEditor.tsx.
+  emailConfirm: z.string().optional(),
   phone: z.string(),
-  // Single field — "Nombre y Apellido - o - Razón Social", same as the
-  // Ticket Tailor forms this replaces. Split server-side (lib/name.ts) so
-  // downstream code (emails, CRM) still gets a firstName/lastName pair.
-  fullName: z.string().min(1),
+  // Exactly one of fullName (Format: "Full name", the default) or
+  // firstName/lastName (Format: "First & Last Name") is populated, never
+  // both — see RegistrationForm.tsx. fullName gets split server-side
+  // (lib/name.ts: first word vs. the rest) when that's the one sent;
+  // firstName/lastName are used directly, no guessing, when they are.
+  fullName: z.string().optional(),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
   city: z.string(),
   profession: z.string(),
   // Everything that isn't one of the five fields above — cedula, and
@@ -88,8 +95,30 @@ export async function POST(req: NextRequest) {
   for (const q of questions.filter((q) => !q.locked)) {
     if (q.required && !input.customFields[q.key]?.trim()) missing.push(q.key);
   }
+
+  // fullName's own required-ness, split by nameFormat (see the field's own
+  // comment on bodySchema above) — firstName is the one that actually
+  // needs to be non-empty either way, lastName stays optional (matches
+  // splitName's own leniency for a single-word name).
+  const sentFirstLast = Boolean(input.firstName?.trim());
+  const { firstName, lastName } = sentFirstLast
+    ? { firstName: input.firstName!.trim(), lastName: (input.lastName ?? "").trim() }
+    : splitName(input.fullName ?? "");
+  if (!firstName) missing.push("fullName");
+
+  const emailQuestion = questions.find((q) => q.key === "email");
   if (missing.length > 0) {
     return NextResponse.json({ error: "missing_required_fields", fields: missing }, { status: 400 });
+  }
+
+  // "Ask twice to catch typos" — see the confirmEmail field's own comment
+  // on CheckoutQuestion. Checked here too (not just client-side in
+  // RegistrationForm.tsx) so a direct API call can't skip it.
+  if (
+    emailQuestion?.confirmEmail &&
+    (!input.emailConfirm || input.emailConfirm.trim().toLowerCase() !== input.email.trim().toLowerCase())
+  ) {
+    return NextResponse.json({ error: "email_mismatch" }, { status: 400 });
   }
 
   // See /admin/settings/banned-emails — checked before touching the CRM at
@@ -99,8 +128,6 @@ export async function POST(req: NextRequest) {
   if (orgSettings.bannedEmails.includes(normalizedEmail)) {
     return NextResponse.json({ error: "not_permitted" }, { status: 403 });
   }
-
-  const { firstName, lastName } = splitName(input.fullName);
 
   // Dedup on email — the whole point of the CRM being "one profile per
   // person" rather than one row per registration. city/profession here are
