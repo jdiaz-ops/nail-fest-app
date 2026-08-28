@@ -218,51 +218,49 @@ export default function RegistrationForm({
           </div>
         ))}
 
-      {/* Email + Phone side by side — Detalles has the full modal width to
-          itself now (no order-summary sidebar stealing half of it), so a
-          single narrow column of full-width fields would waste it. */}
-      {(email || phone) && (
-        <Row>
-          {email && (
-            <div className="field" style={{ marginBottom: 0 }}>
-              <label htmlFor="field_email">{email.label}</label>
-              <input id="field_email" name="field_email" type="email" autoComplete="email" required />
-            </div>
-          )}
-          {phone && (
-            <div className="field" style={{ marginBottom: 0 }}>
-              <label htmlFor="phone">{phone.label}</label>
-              <div style={{ display: "flex", gap: 8 }}>
-                <select
-                  aria-label="Código de país"
-                  value={countryCode}
-                  onChange={(e) => setCountryCode(e.target.value)}
-                  // .field select in globals.css sets width:100% — inside this
-                  // flex row that becomes this select's flex-basis (flex-basis:
-                  // auto defers to `width`), so it was eating almost the whole
-                  // row and squeezing the number input into a sliver. A fixed
-                  // width here overrides that instead of fighting the cascade.
-                  style={{ flex: "0 0 auto", width: 112 }}
-                >
-                  {COUNTRY_CODES.map((c) => (
-                    <option key={c.code} value={c.code}>
-                      {c.label}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  id="phone"
-                  name="phone"
-                  type="tel"
-                  autoComplete="tel"
-                  placeholder="321 1234567"
-                  required={phone.required}
-                  style={{ flex: 1, minWidth: 0 }}
-                />
-              </div>
-            </div>
-          )}
-        </Row>
+      {email && (
+        <div className="field">
+          <label htmlFor="field_email">{email.label}</label>
+          <input id="field_email" name="field_email" type="email" autoComplete="email" required />
+        </div>
+      )}
+
+      {/* Phone gets its own full-width row — it already splits internally
+          into a country select + number input, so pairing it side by side
+          with Email (each getting half the modal's width) squeezed that
+          number input down to a few characters and made it unreadable. */}
+      {phone && (
+        <div className="field">
+          <label htmlFor="phone">{phone.label}</label>
+          <div style={{ display: "flex", gap: 8 }}>
+            <select
+              aria-label="Código de país"
+              value={countryCode}
+              onChange={(e) => setCountryCode(e.target.value)}
+              // .field select in globals.css sets width:100% — inside this
+              // flex row that becomes this select's flex-basis (flex-basis:
+              // auto defers to `width`), so it was eating almost the whole
+              // row and squeezing the number input into a sliver. A fixed
+              // width here overrides that instead of fighting the cascade.
+              style={{ flex: "0 0 auto", width: 112 }}
+            >
+              {COUNTRY_CODES.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.label}
+                </option>
+              ))}
+            </select>
+            <input
+              id="phone"
+              name="phone"
+              type="tel"
+              autoComplete="tel"
+              placeholder="321 1234567"
+              required={phone.required}
+              style={{ flex: 1, minWidth: 0 }}
+            />
+          </div>
+        </div>
       )}
 
       {email?.confirmEmail && (

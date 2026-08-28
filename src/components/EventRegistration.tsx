@@ -218,13 +218,11 @@ export default function EventRegistration({
                       {ticketTypes.map((t) => {
                         const currentQty = selectedTicketTypeId === t.id ? quantity : 0;
                         const soldOut = t.remaining <= 0;
+                        const effectiveMax = Math.min(t.maxPerOrder, t.remaining);
                         return (
                           <div
                             key={t.id}
                             style={{
-                              display: "flex",
-                              justifyContent: "space-between",
-                              alignItems: "center",
                               border: "1px solid #e3e1dc",
                               borderRadius: 10,
                               padding: "14px 16px",
@@ -232,25 +230,35 @@ export default function EventRegistration({
                               opacity: soldOut ? 0.5 : 1,
                             }}
                           >
-                            <div>
-                              <div style={{ fontWeight: 600 }}>{t.name}</div>
-                              <div style={{ fontSize: 13, color: "#5b5f6b", textTransform: "uppercase" }}>
-                                {soldOut ? "AGOTADO" : t.price > 0 ? `$${t.price.toLocaleString("es-CO")}` : "GRATUITO"}
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                              <div>
+                                <div style={{ fontWeight: 600 }}>{t.name}</div>
+                                <div style={{ fontSize: 13, color: "#5b5f6b", textTransform: "uppercase" }}>
+                                  {soldOut ? "AGOTADO" : t.price > 0 ? `$${t.price.toLocaleString("es-CO")}` : "GRATUITO"}
+                                </div>
                               </div>
+                              {!soldOut && (
+                                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                  <StepperButton disabled={currentQty <= 0} onClick={() => setTypeQuantity(t.id, currentQty - 1)}>
+                                    −
+                                  </StepperButton>
+                                  <span style={{ width: 24, textAlign: "center", fontWeight: 600 }}>{currentQty}</span>
+                                  <StepperButton
+                                    disabled={currentQty >= effectiveMax}
+                                    onClick={() => setTypeQuantity(t.id, currentQty <= 0 ? t.minPerOrder : currentQty + 1)}
+                                  >
+                                    +
+                                  </StepperButton>
+                                </div>
+                              )}
                             </div>
-                            {!soldOut && (
-                              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                                <StepperButton disabled={currentQty <= 0} onClick={() => setTypeQuantity(t.id, currentQty - 1)}>
-                                  −
-                                </StepperButton>
-                                <span style={{ width: 24, textAlign: "center", fontWeight: 600 }}>{currentQty}</span>
-                                <StepperButton
-                                  disabled={currentQty >= Math.min(t.maxPerOrder, t.remaining)}
-                                  onClick={() => setTypeQuantity(t.id, currentQty <= 0 ? t.minPerOrder : currentQty + 1)}
-                                >
-                                  +
-                                </StepperButton>
-                              </div>
+                            {/* Sutil, no un CTA — solo aclara el tope real (cupo restante
+                                incluido) para que no toquen "+" esperando más de lo que hay. */}
+                            {!soldOut && effectiveMax > 1 && (
+                              <p style={{ fontSize: 12, color: "#8a8f9c", margin: "8px 0 0" }}>
+                                Puedes seleccionar hasta {effectiveMax} entradas
+                                {effectiveMax === 2 ? " (una para ti, una para tu acompañante)" : ""}.
+                              </p>
                             )}
                           </div>
                         );
