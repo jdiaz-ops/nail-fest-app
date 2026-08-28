@@ -107,8 +107,11 @@ export async function ensureCustomerListAudience(params: {
     method: "POST",
     body: JSON.stringify({
       name: params.name,
-      // Same reasoning as the website audience above — no `subtype`, the
-      // API infers CUSTOM from customer_file_source alone with no `rule`.
+      // Unlike the rule_v2 audiences above (where Meta infers the type from
+      // the rule and rejects an explicit `subtype`), a customer-list
+      // audience has no rule to infer from — Meta requires `subtype` here
+      // ("(#100) Missing parameter(s): subtype", confirmed live).
+      subtype: "CUSTOM",
       customer_file_source: "USER_PROVIDED_ONLY",
       retention_days: params.retentionDays,
     }),
