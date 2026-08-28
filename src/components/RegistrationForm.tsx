@@ -18,10 +18,10 @@ export interface QuestionView {
 }
 
 // Everything /api/register accepts, built here and handed up to
-// EventRegistration.tsx via onReview — this component only collects and
-// client-validates it now; the actual POST (and the Purchase pixel that
-// has to fire in step with it) happens at the real "Confirmar registro"
-// moment in the Resumen step, not here at "Siguiente".
+// EventRegistration.tsx via onSubmitPayload — this component only
+// collects and client-validates it; the actual POST (and the Purchase
+// pixel that has to fire in step with it) lives in the parent, which
+// also owns the post-submit confirmation screen.
 export interface RegisterPayload {
   eventSlug: string;
   email: string;
@@ -57,7 +57,13 @@ interface Props {
   questions: QuestionView[];
   ticketTypeId?: string;
   ticketCount?: number;
-  onReview: (payload: RegisterPayload) => void;
+  // One combined step (Shopify-style) — this is the real submit now, not
+  // a "review before submitting" hop. EventRegistration.tsx owns the
+  // actual fetch(); this component only builds and client-validates the
+  // payload, then hands it up.
+  onSubmitPayload: (payload: RegisterPayload) => void;
+  submitting: boolean;
+  submitLabel: string;
 }
 
 // Matches the Ticket Tailor forms this replaces — Colombia default since
@@ -86,7 +92,16 @@ function byKey(questions: QuestionView[], key: string): QuestionView | undefined
   return questions.find((q) => q.key === key);
 }
 
-export default function RegistrationForm({ eventSlug, professionOptions, questions, ticketTypeId, ticketCount, onReview }: Props) {
+export default function RegistrationForm({
+  eventSlug,
+  professionOptions,
+  questions,
+  ticketTypeId,
+  ticketCount,
+  onSubmitPayload,
+  submitting,
+  submitLabel,
+}: Props) {
   const searchParams = useSearchParams();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [countryCode, setCountryCode] = useState("+57");
@@ -164,7 +179,7 @@ export default function RegistrationForm({ eventSlug, professionOptions, questio
       return;
     }
 
-    onReview(payload);
+    onSubmitPayload(payload);
   }
 
   const fullName = byKey(questions, "fullName");
@@ -389,8 +404,8 @@ export default function RegistrationForm({ eventSlug, professionOptions, questio
 
       {errorMessage && <p style={{ color: "#c2185b" }}>{errorMessage}</p>}
 
-      <button className="primary" type="submit">
-        Siguiente
+      <button className="primary" type="submit" disabled={submitting}>
+        {submitting ? "Enviando…" : submitLabel}
       </button>
     </form>
   );

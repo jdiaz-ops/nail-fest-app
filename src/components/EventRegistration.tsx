@@ -24,11 +24,13 @@ interface Props {
   registerButtonLabel: string;
 }
 
-type Step = "entradas" | "detalles" | "resumen" | "done";
-
-function questionLabel(questions: QuestionView[], key: string): string {
-  return questions.find((q) => q.key === key)?.label ?? key;
-}
+// One combined checkout step (Shopify-style, per the admin's own call —
+// with no payment step to protect, a separate "review before you submit"
+// screen was pure friction) — ticket quantity (if any) and the form
+// together, one button that really submits. "Resumen" is the destination
+// AFTER that submit (the confirmation), not a step you pass through
+// before it.
+type Step = "checkout" | "resumen";
 
 export default function EventRegistration({
   eventSlug,
@@ -42,15 +44,14 @@ export default function EventRegistration({
 }: Props) {
   const hasTicketTypes = ticketTypes.length > 0;
   const [open, setOpen] = useState(false);
-  const [step, setStep] = useState<Step>(hasTicketTypes ? "entradas" : "detalles");
+  const [step, setStep] = useState<Step>("checkout");
   // Only pre-select when there's exactly one type AND it actually has
   // stock — a single sold-out type must NOT default to a nonzero
-  // quantity, or "Siguiente" would wrongly enable with nothing real
-  // behind it (found by the sold-out Playwright check below).
+  // quantity, or the submit button would wrongly enable with nothing
+  // real behind it.
   const onlyType = ticketTypes.length === 1 && (ticketTypes[0]?.remaining ?? 0) > 0 ? ticketTypes[0] : undefined;
   const [selectedTicketTypeId, setSelectedTicketTypeId] = useState<string | null>(onlyType?.id ?? null);
   const [quantity, setQuantity] = useState<number>(onlyType?.minPerOrder ?? 0);
-  const [reviewPayload, setReviewPayload] = useState<RegisterPayload | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const firedCheckoutStart = useRef(false);
@@ -77,6 +78,7 @@ export default function EventRegistration({
   }
 
   const selectedType = ticketTypes.find((t) => t.id === selectedTicketTypeId) ?? null;
+  const requiresTicketPick = hasTicketTypes && !selectedType;
 
   function setTypeQuantity(typeId: string, next: number) {
     const type = ticketTypes.find((t) => t.id === typeId);
@@ -95,31 +97,23 @@ export default function EventRegistration({
     setQuantity(clamped);
   }
 
-  function handleReview(payload: RegisterPayload) {
-    setReviewPayload({
-      ...payload,
-      ticketTypeId: selectedType?.id,
-      ticketCount: selectedType ? quantity : undefined,
-    });
-    setStep("resumen");
-  }
-
-  async function handleConfirm() {
-    if (!reviewPayload) return;
+  async function handleSubmitPayload(payload: RegisterPayload) {
     setSubmitting(true);
     setSubmitError(null);
 
     // Shared with the server-side CAPI Purchase call (see /api/register)
     // so Meta dedupes the Pixel + CAPI pair instead of double-counting —
     // same mechanism as track() in tracking.ts, see MetaPixelScript.tsx.
-    // Generated (and the client Pixel fired) only now, at the real
-    // confirm — not at "Siguiente" — so abandoning at Resumen never
-    // counts as a Purchase.
     const purchaseEventId = crypto.randomUUID();
-    if (reviewPayload.consents.advertising) {
+    if (payload.consents.advertising) {
       window.fbq?.("track", "Purchase", {}, { eventID: purchaseEventId });
     }
-    const bodyToSend = { ...reviewPayload, purchaseEventId };
+    const bodyToSend: RegisterPayload = {
+      ...payload,
+      ticketTypeId: selectedType?.id,
+      ticketCount: selectedType ? quantity : undefined,
+      purchaseEventId,
+    };
 
     const res = await fetch("/api/register", {
       method: "POST",
@@ -129,7 +123,7 @@ export default function EventRegistration({
 
     setSubmitting(false);
     if (res.ok) {
-      setStep("done");
+      setStep("resumen");
     } else {
       const body = await res.json().catch(() => ({}));
       setSubmitError(
@@ -144,7 +138,7 @@ export default function EventRegistration({
                 : body?.error === "sold_out"
                   ? "Justo se agotaron las entradas de este tipo mientras llenabas el formulario."
                   : body?.error === "invalid_ticket_quantity"
-                    ? "La cantidad elegida ya no es válida — vuelve al paso Entradas."
+                    ? "La cantidad elegida ya no es válida — ajústala arriba."
                     : "Algo salió mal, intenta de nuevo."
       );
     }
@@ -200,15 +194,6 @@ export default function EventRegistration({
             <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid #e3e1dc" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
                 <div>
-                  {step !== "entradas" && step !== "done" && (
-                    <button
-                      type="button"
-                      onClick={() => setStep(step === "resumen" ? "detalles" : "entradas")}
-                      style={{ border: "none", background: "transparent", cursor: "pointer", padding: 0, marginBottom: 6, fontSize: 13, color: "#5b5f6b" }}
-                    >
-                      ← Atrás
-                    </button>
-                  )}
                   <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>{eventName}</h2>
                   <p style={{ fontSize: 13, color: "#5b5f6b", margin: "4px 0 0" }}>📅 {eventWhen}</p>
                   {eventVenue && <p style={{ fontSize: 13, color: "#5b5f6b", margin: "2px 0 0" }}>📍 {eventVenue}</p>}
@@ -222,118 +207,78 @@ export default function EventRegistration({
                   ×
                 </button>
               </div>
-
-              {step !== "done" && (
-                <div style={{ display: "flex", gap: 6, marginTop: 14, fontSize: 13 }}>
-                  <StepCrumb label="Entradas" active={step === "entradas"} done={step !== "entradas"} />
-                  <span style={{ color: "#c8c4bb" }}>›</span>
-                  <StepCrumb label="Detalles" active={step === "detalles"} done={step === "resumen"} />
-                  <span style={{ color: "#c8c4bb" }}>›</span>
-                  <StepCrumb label="Resumen" active={step === "resumen"} done={false} />
-                </div>
-              )}
             </div>
 
             <div style={{ padding: 24 }}>
-              {step === "entradas" && (
-                <div>
-                  <h3 style={{ fontSize: 15, marginTop: 0 }}>Seleccionar entradas</h3>
-                  {ticketTypes.map((t) => {
-                    const currentQty = selectedTicketTypeId === t.id ? quantity : 0;
-                    const soldOut = t.remaining <= 0;
-                    return (
-                      <div
-                        key={t.id}
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                          border: "1px solid #e3e1dc",
-                          borderRadius: 10,
-                          padding: "14px 16px",
-                          marginBottom: 10,
-                          opacity: soldOut ? 0.5 : 1,
-                        }}
-                      >
-                        <div>
-                          <div style={{ fontWeight: 600 }}>{t.name}</div>
-                          <div style={{ fontSize: 13, color: "#5b5f6b", textTransform: "uppercase" }}>
-                            {soldOut ? "AGOTADO" : t.price > 0 ? `$${t.price.toLocaleString("es-CO")}` : "GRATUITO"}
+              {step === "checkout" && (
+                <>
+                  {hasTicketTypes && (
+                    <div style={{ marginBottom: 24 }}>
+                      <h3 style={{ fontSize: 15, marginTop: 0 }}>Seleccionar entradas</h3>
+                      {ticketTypes.map((t) => {
+                        const currentQty = selectedTicketTypeId === t.id ? quantity : 0;
+                        const soldOut = t.remaining <= 0;
+                        return (
+                          <div
+                            key={t.id}
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              border: "1px solid #e3e1dc",
+                              borderRadius: 10,
+                              padding: "14px 16px",
+                              marginBottom: 10,
+                              opacity: soldOut ? 0.5 : 1,
+                            }}
+                          >
+                            <div>
+                              <div style={{ fontWeight: 600 }}>{t.name}</div>
+                              <div style={{ fontSize: 13, color: "#5b5f6b", textTransform: "uppercase" }}>
+                                {soldOut ? "AGOTADO" : t.price > 0 ? `$${t.price.toLocaleString("es-CO")}` : "GRATUITO"}
+                              </div>
+                            </div>
+                            {!soldOut && (
+                              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                <StepperButton disabled={currentQty <= 0} onClick={() => setTypeQuantity(t.id, currentQty - 1)}>
+                                  −
+                                </StepperButton>
+                                <span style={{ width: 24, textAlign: "center", fontWeight: 600 }}>{currentQty}</span>
+                                <StepperButton
+                                  disabled={currentQty >= Math.min(t.maxPerOrder, t.remaining)}
+                                  onClick={() => setTypeQuantity(t.id, currentQty <= 0 ? t.minPerOrder : currentQty + 1)}
+                                >
+                                  +
+                                </StepperButton>
+                              </div>
+                            )}
                           </div>
-                        </div>
-                        {!soldOut && (
-                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                            <StepperButton disabled={currentQty <= 0} onClick={() => setTypeQuantity(t.id, currentQty - 1)}>
-                              −
-                            </StepperButton>
-                            <span style={{ width: 24, textAlign: "center", fontWeight: 600 }}>{currentQty}</span>
-                            <StepperButton
-                              disabled={currentQty >= Math.min(t.maxPerOrder, t.remaining)}
-                              onClick={() => setTypeQuantity(t.id, currentQty <= 0 ? t.minPerOrder : currentQty + 1)}
-                            >
-                              +
-                            </StepperButton>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                  <button
-                    type="button"
-                    className="primary"
-                    disabled={quantity <= 0}
-                    onClick={() => setStep("detalles")}
-                    style={{ marginTop: 8 }}
-                  >
-                    Siguiente
-                  </button>
-                </div>
-              )}
-
-              {step === "detalles" && (
-                // No order summary sidebar here on purpose — full width
-                // for the form itself instead of splitting the column
-                // (the summary still shows in Resumen, right before the
-                // real confirm).
-                <RegistrationForm
-                  eventSlug={eventSlug}
-                  professionOptions={professionOptions}
-                  questions={questions}
-                  ticketTypeId={selectedType?.id}
-                  ticketCount={selectedType ? quantity : undefined}
-                  onReview={handleReview}
-                />
-              )}
-
-              {step === "resumen" && reviewPayload && (
-                <div style={{ display: "grid", gridTemplateColumns: hasTicketTypes && selectedType ? "1.5fr 1fr" : "1fr", gap: 24 }}>
-                  <div>
-                    <h3 style={{ fontSize: 15, marginTop: 0 }}>Revisa tus datos</h3>
-                    <ReviewRow label={questionLabel(questions, "fullName")} value={reviewPayload.fullName || [reviewPayload.firstName, reviewPayload.lastName].filter(Boolean).join(" ")} />
-                    <ReviewRow label={questionLabel(questions, "email")} value={reviewPayload.email} />
-                    <ReviewRow label={questionLabel(questions, "phone")} value={reviewPayload.phone} />
-                    {reviewPayload.customFields.cedula && <ReviewRow label={questionLabel(questions, "cedula")} value={reviewPayload.customFields.cedula} />}
-                    <ReviewRow label={questionLabel(questions, "city")} value={reviewPayload.city} />
-                    <ReviewRow label={questionLabel(questions, "profession")} value={reviewPayload.profession} />
-                    {questions
-                      .filter((q) => !q.locked && reviewPayload!.customFields[q.key])
-                      .map((q) => (
-                        <ReviewRow key={q.key} label={q.label} value={reviewPayload!.customFields[q.key] ?? ""} />
-                      ))}
-
-                    {submitError && <p style={{ color: "#c2185b", fontSize: 13 }}>{submitError}</p>}
-
-                    <button type="button" className="primary" disabled={submitting} onClick={handleConfirm} style={{ marginTop: 16 }}>
-                      {submitting ? "Confirmando…" : "Confirmar registro"}
-                    </button>
-                  </div>
-                  {hasTicketTypes && selectedType && (
-                    <OrderSummary eventName={eventName} eventWhen={eventWhen} eventVenue={eventVenue} typeName={selectedType.name} quantity={quantity} price={selectedType.price} />
+                        );
+                      })}
+                      {requiresTicketPick && (
+                        <p style={{ fontSize: 13, color: "#5b5f6b", margin: "4px 0 0" }}>Elige una cantidad para continuar.</p>
+                      )}
+                      <hr style={{ border: "none", borderTop: "1px solid #e3e1dc", margin: "20px 0" }} />
+                    </div>
                   )}
-                </div>
+
+                  <fieldset disabled={requiresTicketPick} style={{ border: "none", padding: 0, margin: 0, opacity: requiresTicketPick ? 0.5 : 1 }}>
+                    <RegistrationForm
+                      eventSlug={eventSlug}
+                      professionOptions={professionOptions}
+                      questions={questions}
+                      ticketTypeId={selectedType?.id}
+                      ticketCount={selectedType ? quantity : undefined}
+                      onSubmitPayload={handleSubmitPayload}
+                      submitting={submitting}
+                      submitLabel={registerButtonLabel}
+                    />
+                  </fieldset>
+                  {submitError && <p style={{ color: "#c2185b", fontSize: 13 }}>{submitError}</p>}
+                </>
               )}
 
-              {step === "done" && (
+              {step === "resumen" && (
                 <div style={{ textAlign: "center", padding: "24px 0" }}>
                   <h2>¡Listo!</h2>
                   <p>Revisa tu correo — ahí va tu entrada con el código QR.</p>
@@ -347,19 +292,6 @@ export default function EventRegistration({
         </div>
       )}
     </>
-  );
-}
-
-function StepCrumb({ label, active, done }: { label: string; active: boolean; done: boolean }) {
-  return (
-    <span
-      style={{
-        fontWeight: active ? 700 : 400,
-        color: active ? "#1c1310" : done ? "#5b5f6b" : "#a7a49b",
-      }}
-    >
-      {label}
-    </span>
   );
 }
 
@@ -383,46 +315,5 @@ function StepperButton({ children, disabled, onClick }: { children: React.ReactN
     >
       {children}
     </button>
-  );
-}
-
-function OrderSummary({
-  eventName,
-  eventWhen,
-  eventVenue,
-  typeName,
-  quantity,
-  price,
-}: {
-  eventName: string;
-  eventWhen: string;
-  eventVenue: string;
-  typeName: string;
-  quantity: number;
-  price: number;
-}) {
-  return (
-    <div style={{ border: "1px solid #e3e1dc", borderRadius: 10, padding: 16, alignSelf: "flex-start", background: "#faf9f7" }}>
-      <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 6 }}>Resumen del pedido</div>
-      <div style={{ fontWeight: 600, fontSize: 13 }}>{eventName}</div>
-      <div style={{ fontSize: 12, color: "#5b5f6b", margin: "2px 0" }}>{eventWhen}</div>
-      {eventVenue && <div style={{ fontSize: 12, color: "#5b5f6b", marginBottom: 8 }}>{eventVenue}</div>}
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, borderTop: "1px solid #e3e1dc", paddingTop: 8, marginTop: 8 }}>
-        <span>
-          {typeName} × {quantity}
-        </span>
-        <span>{price > 0 ? `$${(price * quantity).toLocaleString("es-CO")}` : "Gratis"}</span>
-      </div>
-    </div>
-  );
-}
-
-function ReviewRow({ label, value }: { label: string; value: string }) {
-  if (!value) return null;
-  return (
-    <div style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "8px 0", borderBottom: "1px solid #f0efec", fontSize: 14 }}>
-      <span style={{ color: "#5b5f6b" }}>{label}</span>
-      <span style={{ fontWeight: 600, textAlign: "right" }}>{value}</span>
-    </div>
   );
 }
