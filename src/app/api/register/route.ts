@@ -71,25 +71,45 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  const registration = await db.registration.create({
-    data: {
-      eventId: event.id,
-      personId: person.id,
-      status: "CONFIRMED",
-      confirmedAt: new Date(),
-      customFields: input.customFields ?? {},
-      utmSource: input.attribution?.utmSource,
-      utmMedium: input.attribution?.utmMedium,
-      utmCampaign: input.attribution?.utmCampaign,
-      fbclid: input.attribution?.fbclid,
-      ttclid: input.attribution?.ttclid,
-      gclid: input.attribution?.gclid,
-    },
+  // People re-submit the form for an event they already registered for
+  // constantly — they forgot they did, or (most often) they just lost the
+  // QR email and want it resent. `@@unique([personId, eventId])` means a
+  // second `create()` here would throw instead of quietly duplicating —
+  // reuse the existing registration and treat this as "resend my ticket",
+  // which is what they actually want, rather than surfacing a DB error.
+  const existingRegistration = await db.registration.findUnique({
+    where: { personId_eventId: { personId: person.id, eventId: event.id } },
   });
+  const isResend = Boolean(existingRegistration);
 
-  const qrToken = issueQrToken(registration.id);
-  await db.registration.update({ where: { id: registration.id }, data: { qrToken } });
+  const registration =
+    existingRegistration ??
+    (await db.registration.create({
+      data: {
+        eventId: event.id,
+        personId: person.id,
+        status: "CONFIRMED",
+        confirmedAt: new Date(),
+        customFields: input.customFields ?? {},
+        utmSource: input.attribution?.utmSource,
+        utmMedium: input.attribution?.utmMedium,
+        utmCampaign: input.attribution?.utmCampaign,
+        fbclid: input.attribution?.fbclid,
+        ttclid: input.attribution?.ttclid,
+        gclid: input.attribution?.gclid,
+      },
+    }));
 
+  let qrToken = registration.qrToken;
+  if (!qrToken) {
+    qrToken = issueQrToken(registration.id);
+    await db.registration.update({ where: { id: registration.id }, data: { qrToken } });
+  }
+
+  // Record their consent choice from THIS submission either way — even on
+  // a resend, it's a fresh explicit answer (they might have changed their
+  // mind on marketing/ads since the first time) and consent is append-only
+  // by design, so this never overwrites the earlier record, just adds to it.
   await recordConsents({
     personId: person.id,
     registrationId: registration.id,
@@ -151,8 +171,10 @@ export async function POST(req: NextRequest) {
 
   // --- Purchase → Meta CAPI, gated by the ADVERTISING consent, not just
   // "did they register". Sharing hashed identifiers with Meta is a distinct
-  // purpose under Ley 1581 and needs its own opt-in. ---
-  if (await hasActiveConsent(person.id, "ADVERTISING")) {
+  // purpose under Ley 1581 and needs its own opt-in. Skipped on a resend —
+  // it's the same registration, not a second purchase; firing it again
+  // would inflate the conversion count Meta uses for ad optimization. ---
+  if (!isResend && (await hasActiveConsent(person.id, "ADVERTISING"))) {
     await queueMetaEvent({
       eventId: randomUUID(),
       eventName: "Purchase",
@@ -173,5 +195,5 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  return NextResponse.json({ ok: true, registrationId: registration.id });
+  return NextResponse.json({ ok: true, registrationId: registration.id, resent: isResend });
 }
