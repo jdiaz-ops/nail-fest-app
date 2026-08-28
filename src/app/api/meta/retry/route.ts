@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { processDueMetaEvents } from "@/lib/meta/capi";
+import { isAuthorizedCronRequest } from "@/lib/cron";
 
-// Hit on a schedule (e.g. every 5 minutes) by whatever cron mechanism the
-// host provides — Vercel Cron, a GitHub Action, etc. Not public: requires
-// the shared secret so it can't be used to hammer the Meta API by anyone
-// who finds the URL.
-export async function POST(req: NextRequest) {
-  const secret = req.headers.get("x-cron-secret");
-  if (!process.env.INTERNAL_CRON_SECRET || secret !== process.env.INTERNAL_CRON_SECRET) {
+// Declared in vercel.json's `crons` — Vercel hits this on a schedule with no
+// dashboard setup needed. POST still works too, for manual testing:
+// curl -X POST .../api/meta/retry -H "x-cron-secret: <INTERNAL_CRON_SECRET>"
+async function handle(req: NextRequest) {
+  if (!isAuthorizedCronRequest(req)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   const result = await processDueMetaEvents();
   return NextResponse.json(result);
 }
+
+export const GET = handle;
+export const POST = handle;

@@ -48,11 +48,20 @@ export default function MetaSetupPage() {
 
       <h2 style={{ fontSize: 18 }}>Audiencias semilla</h2>
       <p style={{ color: "#5b5f6b", fontSize: 14 }}>
-        Crea las tres audiencias base — <strong>Landing visitors (180d)</strong>,{" "}
-        <strong>Checkout started (180d)</strong> y <strong>Purchasers (180d)</strong>. Solo hace
-        falta correrlo una vez (es seguro darle click varias veces, no duplica nada).
+        <strong>Landing visitors (180d)</strong>, <strong>Checkout started (180d)</strong> y{" "}
+        <strong>Purchasers (180d)</strong> se mantienen solas — un cron
+        (<code>/api/meta/sync-audiences</code>, ver <code>docs/DEPLOY.md</code>) las crea/actualiza
+        y resincroniza Purchasers automáticamente. El botón de abajo solo sirve para forzar una
+        corrida ahora mismo (ej. para probar sin esperar al cron); no hace falta usarlo en el día a
+        día.
       </p>
       <MetaAudiencesButton />
+
+      <p style={{ color: "#5b5f6b", fontSize: 13, marginTop: 32 }}>
+        ¿Quieres una audiencia para un evento o filtro específico (ej. &quot;solo Pereira
+        2026&quot;)? Eso se arma en <a href="/admin/segments">Segmentos</a> — también se
+        sincroniza sola, sin botón.
+      </p>
     </div>
   );
 }

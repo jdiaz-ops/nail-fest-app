@@ -29,7 +29,8 @@ below):
 | `DEFAULT_CURRENCY` | `COP` |
 | `META_PURCHASE_PLACEHOLDER_VALUE` | `1` (placeholder — see the Meta brief discussion) |
 | `ADMIN_USERNAME` / `ADMIN_PASSWORD` | Whatever you want — gates `/admin/*` |
-| `INTERNAL_CRON_SECRET` | Any random string — gates `/api/meta/retry` and the one-time seed endpoint below |
+| `INTERNAL_CRON_SECRET` | Any random string — gates the cron routes (manual `curl` testing) and the one-time seed endpoint below |
+| `CRON_SECRET` | Same value as `INTERNAL_CRON_SECRET` (simplest) — Vercel auto-attaches this as a Bearer token when it triggers the crons declared in `vercel.json`, see below |
 
 Meta (`META_*`) and SES (`AWS_*`, `SES_*`) vars can stay empty for this
 first deploy — the app degrades gracefully without them (registration still
@@ -66,9 +67,31 @@ Safe to call more than once — every write is an upsert. After this,
 - (Optional, once Meta is configured) confirm events land in Meta Events
   Manager's Test Events tab.
 
-## Ongoing: the Meta retry cron
+## Ongoing: the two background crons
 
-`/api/meta/retry` needs to be hit on a schedule (every ~5 minutes) to retry
-failed Meta sends with backoff. Vercel Cron Jobs (Settings → Cron Jobs) is
-the simplest way — point one at `POST /api/meta/retry` with header
-`x-cron-secret: <INTERNAL_CRON_SECRET>` on that interval.
+Both are declared in `vercel.json`'s `crons` array, so there's nothing to
+click in the Vercel dashboard — they're created automatically on deploy as
+long as `CRON_SECRET` is set (see the env var table above):
+
+- **`/api/meta/retry`** — retries failed Meta CAPI sends with backoff.
+- **`/api/meta/sync-audiences`** — keeps every Meta Custom Audience
+  current: creates/updates the three seed audiences (Landing visitors,
+  Checkout started, Purchasers) and resyncs Purchasers' member list, then
+  resolves and resyncs every segment linked from `/admin/segments`. No
+  manual "sync now" step anywhere in this flow by design.
+
+Default schedule is once daily (`0 3 * * *` / `0 4 * * *`) — that's the
+fastest interval Vercel's free/Hobby tier allows for cron jobs. **If you're
+on Vercel Pro**, tighten both in `vercel.json` for fresher data: `*/5 * * *
+*` for `retry` (matches the backoff design) and something like `0 */6 * * *`
+for `sync-audiences` (these don't need real-time freshness — a full resync
+is cheap since Meta dedupes the hashed upload, so shorter is safe too, just
+not necessary).
+
+Both routes still accept a manual `POST` for on-demand testing without
+waiting for the schedule:
+
+```bash
+curl -X POST https://<your-deployment-url>/api/meta/sync-audiences \
+  -H "x-cron-secret: <your INTERNAL_CRON_SECRET value>"
+```

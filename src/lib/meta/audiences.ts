@@ -1,6 +1,8 @@
+import type { ConsentPurpose } from "@prisma/client";
 import { db } from "@/lib/db";
 import { decryptSecret } from "@/lib/crypto";
 import { hashEmail, hashPhone } from "@/lib/hashing";
+import { resolveSegment, type SegmentFilter } from "@/lib/segments/builder";
 
 const GRAPH_VERSION = "v21.0";
 
@@ -225,24 +227,21 @@ export async function ensureSeedAudiences() {
 }
 
 /**
- * Confirmed registrants who granted (and haven't revoked) ADVERTISING
- * consent — the only people allowed to be sent to Meta for ad targeting
- * (Ley 1581 purpose separation, same gate used for the CAPI Purchase event
- * in /api/register). Done as two bulk queries + an in-memory "latest
- * consent per person" reduction instead of hasActiveConsent() in a loop,
- * since this can run over 10,000+ people per event.
+ * Filters a list of people down to those who granted (and haven't revoked)
+ * consent for the given purpose — the gate that decides who's allowed to
+ * be sent to Meta for ad targeting (Ley 1581 purpose separation, same rule
+ * used for the CAPI Purchase event in /api/register). One bulk query + an
+ * in-memory "latest consent per person" reduction instead of
+ * hasActiveConsent() in a loop, since this can run over 10,000+ people.
  */
-async function getAdvertisingConsentedPurchasers(): Promise<
-  Array<{ email: string; phone: string | null }>
-> {
-  const confirmed = await db.person.findMany({
-    where: { registrations: { some: { status: "CONFIRMED" } } },
-    select: { id: true, email: true, phone: true },
-  });
-  if (confirmed.length === 0) return [];
+async function filterByActiveConsent<T extends { id: string }>(
+  people: T[],
+  purpose: ConsentPurpose
+): Promise<T[]> {
+  if (people.length === 0) return [];
 
   const consents = await db.consent.findMany({
-    where: { personId: { in: confirmed.map((p) => p.id) }, purpose: "ADVERTISING" },
+    where: { personId: { in: people.map((p) => p.id) }, purpose },
     orderBy: { grantedAt: "desc" },
     select: { personId: true, granted: true, revokedAt: true },
   });
@@ -252,10 +251,71 @@ async function getAdvertisingConsentedPurchasers(): Promise<
     if (!latestByPerson.has(c.personId)) latestByPerson.set(c.personId, c);
   }
 
-  return confirmed
-    .filter((p) => {
-      const latest = latestByPerson.get(p.id);
-      return latest?.granted && !latest.revokedAt;
-    })
-    .map((p) => ({ email: p.email, phone: p.phone }));
+  return people.filter((p) => {
+    const latest = latestByPerson.get(p.id);
+    return latest?.granted && !latest.revokedAt;
+  });
+}
+
+async function getAdvertisingConsentedPurchasers(): Promise<
+  Array<{ email: string; phone: string | null }>
+> {
+  const confirmed = await db.person.findMany({
+    where: { registrations: { some: { status: "CONFIRMED" } } },
+    select: { id: true, email: true, phone: true },
+  });
+  return filterByActiveConsent(confirmed, "ADVERTISING");
+}
+
+/**
+ * Automatic segment → Meta Custom Audience sync. Every SegmentMetaSync row
+ * (created from /admin/segments) is re-resolved and re-uploaded on every
+ * call — no diffing, Meta dedupes the hashed upload on ingest, so a full
+ * resync is simple and safe. Called on a schedule by
+ * /api/meta/sync-audiences (Vercel Cron, same mechanism as the Meta CAPI
+ * retry job) — deliberately no manual per-segment "sync now" button;
+ * creating the segment in /admin/segments is the only step, the cron
+ * picks it up on its next run.
+ *
+ * One segment failing (e.g. a bad filter, or the Meta token expiring
+ * mid-run) doesn't stop the others — same resilience pattern as
+ * ensureSeedAudiences(). Status is written back onto the row so
+ * /admin/segments can show it instead of failing silently.
+ */
+export async function syncAllSegmentAudiences(): Promise<{ synced: number; failed: number }> {
+  const links = await db.segmentMetaSync.findMany({ include: { segment: true } });
+
+  let synced = 0;
+  let failed = 0;
+  for (const link of links) {
+    try {
+      const people = await resolveSegment(link.segment.filter as unknown as SegmentFilter);
+      const consented = await filterByActiveConsent(people, "ADVERTISING");
+      const audienceId = await ensureCustomerListAudience({
+        name: `Nail Fest — ${link.segment.name}`,
+        retentionDays: 180,
+      });
+      await syncPeopleToAudience(audienceId, consented);
+      await db.segmentMetaSync.update({
+        where: { id: link.id },
+        data: {
+          status: "OK",
+          metaAudienceId: audienceId,
+          lastSyncedAt: new Date(),
+          lastError: null,
+        },
+      });
+      synced++;
+    } catch (err) {
+      await db.segmentMetaSync.update({
+        where: { id: link.id },
+        data: {
+          status: "ERROR",
+          lastError: err instanceof Error ? err.message : String(err),
+        },
+      });
+      failed++;
+    }
+  }
+  return { synced, failed };
 }

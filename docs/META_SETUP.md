@@ -30,10 +30,10 @@ user token expires ~60 days, a System User token doesn't).
    your `.env`. Every event sent while that's set shows up live in the Test
    Events tab instead of counting as production data. Remove it once you're
    confident and ready for real traffic.
-7. **Seed audiences** (run once, or whenever you want to confirm they still
-   exist): call `ensureSeedAudiences()` from `src/lib/meta/audiences.ts` —
-   there's no CLI wrapper for this yet, add one if you want it outside a
-   REPL/route.
+7. **Seed audiences and any segment you save in `/admin/segments`** stay in
+   sync on their own — the `/api/meta/sync-audiences` cron (declared in
+   `vercel.json`, see `docs/DEPLOY.md`) creates/updates them automatically.
+   No manual step needed once the connection above is saved.
 
 No App Review needed: this only ever acts on your own Business Manager's
 assets, which is exactly the case Meta exempts from that process.

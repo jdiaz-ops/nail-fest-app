@@ -211,6 +211,31 @@ model SegmentDefinition {
   createdAt DateTime @default(now())
 
   broadcasts EmailBroadcast[]
+  metaSync   SegmentMetaSync?
+}
+
+enum SyncStatus {
+  PENDING
+  OK
+  ERROR
+}
+
+// Links a named, reusable segment (created from /admin/segments — distinct
+// from the throwaway SegmentDefinition rows a one-off broadcast creates) to
+// a Meta Custom Audience that a cron keeps in sync automatically. No manual
+// "sync now" step — see /api/meta/sync-audiences and syncAllSegmentAudiences().
+model SegmentMetaSync {
+  id             String     @id @default(cuid())
+  segment        SegmentDefinition @relation(fields: [segmentId], references: [id])
+  segmentId      String     @unique
+  // Filled in on first successful sync — ensureCustomerListAudience() looks
+  // audiences up by name too, but caching the id here saves a lookup call
+  // per segment per cron run.
+  metaAudienceId String?
+  status         SyncStatus @default(PENDING)
+  lastError      String?
+  lastSyncedAt   DateTime?
+  createdAt      DateTime   @default(now())
 }
 
 model EmailBroadcast {
