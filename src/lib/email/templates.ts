@@ -11,7 +11,7 @@ export function confirmationEmail(params: {
   eventName: string;
   eventCity: string;
   startsAt: Date;
-  qrDataUrl: string;
+  qrImageUrl: string;
 }): { subject: string; text: string; html: string } {
   const when = formatDate(params.startsAt);
   const subject = `Tu entrada para ${params.eventName}`;
@@ -34,7 +34,7 @@ export function confirmationEmail(params: {
       )}) quedó confirmado.</p>
       <p><strong>Fecha:</strong> ${escapeHtml(when)}</p>
       <p>Presenta este código QR en la entrada. Es válido para todo el evento — puedes reingresar las veces que necesites con el mismo código.</p>
-      <img src="${params.qrDataUrl}" alt="Código QR de tu entrada" width="240" height="240" style="display:block;margin:16px 0;" />
+      <img src="${params.qrImageUrl}" alt="Código QR de tu entrada" width="240" height="240" style="display:block;margin:16px 0;" />
       <p style="color:#666; font-size: 13px;">Nail Fest</p>
     </div>
   `;

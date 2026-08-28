@@ -4,7 +4,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { queueMetaEvent } from "@/lib/meta/capi";
 import { recordConsents, hasActiveConsent } from "@/lib/consent";
-import { issueQrToken, renderQrPngDataUrl } from "@/lib/ticket";
+import { issueQrToken } from "@/lib/ticket";
 import { emailProvider } from "@/lib/email";
 import { clientIpFromHeaders, userAgentFromHeaders } from "@/lib/request";
 import { confirmationEmail } from "@/lib/email/templates";
@@ -103,13 +103,16 @@ export async function POST(req: NextRequest) {
   // --- Transactional QR email — always sent; this is the LOGISTICS purpose,
   // which is a condition of registering at all, not an optional consent. ---
   try {
-    const qrDataUrl = await renderQrPngDataUrl(qrToken);
+    // A real URL, not a base64 data: URI — Gmail and most inboxes silently
+    // drop inline data: images in HTML mail (they render fine in a browser
+    // preview, which is why this only shows up once real mail is tested).
+    const qrImageUrl = `${process.env.APP_BASE_URL || ""}/api/ticket-qr/${qrToken}`;
     const { subject, text, html } = confirmationEmail({
       firstName: person.firstName ?? "",
       eventName: event.name,
       eventCity: event.city,
       startsAt: event.startsAt,
-      qrDataUrl,
+      qrImageUrl,
     });
     const sent = await emailProvider.sendTransactional({ to: person.email, subject, text, html });
     await db.emailLog.create({
