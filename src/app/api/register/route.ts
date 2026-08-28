@@ -12,12 +12,16 @@ import { confirmationEmail } from "@/lib/email/templates";
 const bodySchema = z.object({
   eventSlug: z.string(),
   email: z.string().email(),
-  phone: z.string().optional(),
+  // Required — matches the live form (see RegistrationForm.tsx), same
+  // fields Ticket Tailor was collecting: WhatsApp number, cédula/NIT, and
+  // profession are all required there too, not optional.
+  phone: z.string().min(1),
   firstName: z.string().min(1),
   lastName: z.string().min(1),
   city: z.string().min(1),
-  profession: z.string().optional(),
-  customFields: z.record(z.string()).optional(),
+  profession: z.string().min(1),
+  cedula: z.string().min(1),
+  instagram: z.string().optional(),
   consents: z.object({
     logistics: z.literal(true), // required — can't register without it
     marketing: z.boolean().default(false),
@@ -82,23 +86,24 @@ export async function POST(req: NextRequest) {
   });
   const isResend = Boolean(existingRegistration);
 
-  const registration =
-    existingRegistration ??
-    (await db.registration.create({
-      data: {
-        eventId: event.id,
-        personId: person.id,
-        status: "CONFIRMED",
-        confirmedAt: new Date(),
-        customFields: input.customFields ?? {},
-        utmSource: input.attribution?.utmSource,
-        utmMedium: input.attribution?.utmMedium,
-        utmCampaign: input.attribution?.utmCampaign,
-        fbclid: input.attribution?.fbclid,
-        ttclid: input.attribution?.ttclid,
-        gclid: input.attribution?.gclid,
-      },
-    }));
+  const customFields = { cedula: input.cedula, instagram: input.instagram ?? null };
+  const registration = existingRegistration
+    ? await db.registration.update({ where: { id: existingRegistration.id }, data: { customFields } })
+    : await db.registration.create({
+        data: {
+          eventId: event.id,
+          personId: person.id,
+          status: "CONFIRMED",
+          confirmedAt: new Date(),
+          customFields,
+          utmSource: input.attribution?.utmSource,
+          utmMedium: input.attribution?.utmMedium,
+          utmCampaign: input.attribution?.utmCampaign,
+          fbclid: input.attribution?.fbclid,
+          ttclid: input.attribution?.ttclid,
+          gclid: input.attribution?.gclid,
+        },
+      });
 
   let qrToken = registration.qrToken;
   if (!qrToken) {
