@@ -11,7 +11,11 @@ export default function MetaConnectionForm() {
     setStatus("saving");
     setErrorMessage(null);
 
-    const form = new FormData(e.currentTarget);
+    // Captured before the first await — e.currentTarget goes null once the
+    // synchronous part of the handler finishes, so using it after the
+    // fetch resolves throws instead of resetting the form.
+    const formEl = e.currentTarget;
+    const form = new FormData(formEl);
     const res = await fetch("/api/admin/meta-connection", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -24,7 +28,7 @@ export default function MetaConnectionForm() {
 
     if (res.ok) {
       setStatus("done");
-      e.currentTarget.reset();
+      formEl.reset();
     } else {
       const body = await res.json().catch(() => ({}));
       setStatus("error");
@@ -33,18 +37,24 @@ export default function MetaConnectionForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} style={{ maxWidth: 520 }}>
+    <form onSubmit={handleSubmit} style={{ maxWidth: 700 }}>
       <div className="field">
         <label htmlFor="systemUserToken">System User Access Token</label>
         <input id="systemUserToken" name="systemUserToken" type="password" required autoComplete="off" />
       </div>
-      <div className="field">
-        <label htmlFor="adAccountId">Ad Account ID</label>
-        <input id="adAccountId" name="adAccountId" placeholder="act_1234567890 o solo 1234567890" required />
-      </div>
-      <div className="field">
-        <label htmlFor="pixelId">Pixel ID</label>
-        <input id="pixelId" name="pixelId" required />
+      {/* Paired side by side — both are short IDs, same reasoning as Ticket
+          Tailor's own Date format / Time format row. The token above stays
+          full-width alone: it's long and sensitive, pairing it with
+          anything would just make both columns look cramped. */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+        <div className="field">
+          <label htmlFor="adAccountId">Ad Account ID</label>
+          <input id="adAccountId" name="adAccountId" placeholder="act_1234567890 o solo 1234567890" required />
+        </div>
+        <div className="field">
+          <label htmlFor="pixelId">Pixel ID</label>
+          <input id="pixelId" name="pixelId" required />
+        </div>
       </div>
 
       <button className="primary" type="submit" disabled={status === "saving"}>

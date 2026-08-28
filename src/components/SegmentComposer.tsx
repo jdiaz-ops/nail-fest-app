@@ -95,7 +95,7 @@ export default function SegmentComposer({ events, professionOptions }: Props) {
   }
 
   return (
-    <form onSubmit={handleSave} style={{ maxWidth: 520 }}>
+    <form onSubmit={handleSave} style={{ maxWidth: 900 }}>
       <h2>Nuevo segmento</h2>
 
       <div className="field">
@@ -108,74 +108,84 @@ export default function SegmentComposer({ events, professionOptions }: Props) {
         />
       </div>
 
-      <fieldset style={{ marginTop: 12, marginBottom: 16, border: "1px solid #e3e1dc", borderRadius: 8, padding: 12 }}>
+      <fieldset style={{ marginTop: 12, marginBottom: 16, border: "1px solid #e3e1dc", borderRadius: 8, padding: 16 }}>
         <legend>Filtro</legend>
 
-        <div className="field">
-          <label>Incluir: registrados a este evento</label>
-          <select value={includeEvent} onChange={(e) => setIncludeEvent(e.target.value)}>
-            <option value="">(cualquiera)</option>
-            {events.map((ev) => (
-              <option key={ev.slug} value={ev.slug}>
-                {ev.name}
-              </option>
-            ))}
-          </select>
+        {/* Incluir / Excluir side by side — same reasoning as BroadcastComposer. */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "#5b5f6b", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>
+              Incluir
+            </div>
+            <div className="field">
+              <label>Registrados a este evento</label>
+              <select value={includeEvent} onChange={(e) => setIncludeEvent(e.target.value)}>
+                <option value="">(cualquiera)</option>
+                {events.map((ev) => (
+                  <option key={ev.slug} value={ev.slug}>
+                    {ev.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label>Asistió (check-in real) a este evento</label>
+              <select value={includeAttended} onChange={(e) => setIncludeAttended(e.target.value)}>
+                <option value="">(cualquiera)</option>
+                {events.map((ev) => (
+                  <option key={ev.slug} value={ev.slug}>
+                    {ev.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label>Ciudad</label>
+              <input value={includeCity} onChange={(e) => setIncludeCity(e.target.value)} placeholder="Bogotá" />
+            </div>
+            <div className="field">
+              <label>Profesión</label>
+              <select value={includeProfession} onChange={(e) => setIncludeProfession(e.target.value)}>
+                <option value="">(cualquiera)</option>
+                {professionOptions.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "#5b5f6b", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>
+              Excluir
+            </div>
+            <div className="field">
+              <label>Registrados a este evento</label>
+              <select value={excludeEvent} onChange={(e) => setExcludeEvent(e.target.value)}>
+                <option value="">(ninguno)</option>
+                {events.map((ev) => (
+                  <option key={ev.slug} value={ev.slug}>
+                    {ev.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label>Asistió (check-in real) a este evento</label>
+              <select value={excludeAttended} onChange={(e) => setExcludeAttended(e.target.value)}>
+                <option value="">(ninguno)</option>
+                {events.map((ev) => (
+                  <option key={ev.slug} value={ev.slug}>
+                    {ev.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
         </div>
 
-        <div className="field">
-          <label>Incluir: asistió (check-in real) a este evento</label>
-          <select value={includeAttended} onChange={(e) => setIncludeAttended(e.target.value)}>
-            <option value="">(cualquiera)</option>
-            {events.map((ev) => (
-              <option key={ev.slug} value={ev.slug}>
-                {ev.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="field">
-          <label>Incluir: ciudad</label>
-          <input value={includeCity} onChange={(e) => setIncludeCity(e.target.value)} placeholder="Bogotá" />
-        </div>
-
-        <div className="field">
-          <label>Incluir: profesión</label>
-          <select value={includeProfession} onChange={(e) => setIncludeProfession(e.target.value)}>
-            <option value="">(cualquiera)</option>
-            {professionOptions.map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="field">
-          <label>Excluir: registrados a este evento</label>
-          <select value={excludeEvent} onChange={(e) => setExcludeEvent(e.target.value)}>
-            <option value="">(ninguno)</option>
-            {events.map((ev) => (
-              <option key={ev.slug} value={ev.slug}>
-                {ev.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="field">
-          <label>Excluir: asistió (check-in real) a este evento</label>
-          <select value={excludeAttended} onChange={(e) => setExcludeAttended(e.target.value)}>
-            <option value="">(ninguno)</option>
-            {events.map((ev) => (
-              <option key={ev.slug} value={ev.slug}>
-                {ev.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <p style={{ fontSize: 12, color: "#5b5f6b" }}>
+        <p style={{ fontSize: 12, color: "#5b5f6b", marginTop: 8, marginBottom: 0 }}>
           Ej: profesión = Manicurista, excluir asistió = Cali 2025 → &quot;manicuristas que no
           fueron a Cali 2025&quot; (usa asistencia real, no solo registro).
         </p>
@@ -208,7 +218,7 @@ export default function SegmentComposer({ events, professionOptions }: Props) {
         reconcilia en segundo plano.
       </p>
 
-      <button className="primary" type="submit" disabled={saving}>
+      <button className="primary" type="submit" disabled={saving} style={{ width: "auto", padding: "10px 24px" }}>
         {saving ? "Guardando..." : "Guardar segmento"}
       </button>
       {result && <p style={{ marginTop: 12 }}>{result}</p>}

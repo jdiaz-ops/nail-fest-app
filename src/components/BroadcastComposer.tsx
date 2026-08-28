@@ -57,77 +57,89 @@ export default function BroadcastComposer({ events, professionOptions }: Props) 
   }
 
   return (
-    <form onSubmit={handleSend} style={{ maxWidth: 520 }}>
+    <form onSubmit={handleSend} style={{ maxWidth: 900 }}>
       <h2>Nuevo broadcast</h2>
 
-      <fieldset style={{ marginBottom: 16, border: "1px solid #e3e1dc", borderRadius: 8, padding: 12 }}>
+      <fieldset style={{ marginBottom: 16, border: "1px solid #e3e1dc", borderRadius: 8, padding: 16 }}>
         <legend>Segmento</legend>
 
-        <div className="field">
-          <label>Incluir: registrados a este evento</label>
-          <select value={includeEvent} onChange={(e) => setIncludeEvent(e.target.value)}>
-            <option value="">(cualquiera)</option>
-            {events.map((ev) => (
-              <option key={ev.slug} value={ev.slug}>
-                {ev.name}
-              </option>
-            ))}
-          </select>
+        {/* Incluir / Excluir side by side — they're two independent halves
+            of the same filter (see api/broadcasts), so this is the actual
+            shape of the data, not just a wider layout for its own sake. */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "#5b5f6b", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>
+              Incluir
+            </div>
+            <div className="field">
+              <label>Registrados a este evento</label>
+              <select value={includeEvent} onChange={(e) => setIncludeEvent(e.target.value)}>
+                <option value="">(cualquiera)</option>
+                {events.map((ev) => (
+                  <option key={ev.slug} value={ev.slug}>
+                    {ev.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label>Asistió (check-in real) a este evento</label>
+              <select value={includeAttended} onChange={(e) => setIncludeAttended(e.target.value)}>
+                <option value="">(cualquiera)</option>
+                {events.map((ev) => (
+                  <option key={ev.slug} value={ev.slug}>
+                    {ev.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label>Ciudad</label>
+              <input value={includeCity} onChange={(e) => setIncludeCity(e.target.value)} placeholder="Bogotá" />
+            </div>
+            <div className="field">
+              <label>Profesión</label>
+              <select value={includeProfession} onChange={(e) => setIncludeProfession(e.target.value)}>
+                <option value="">(cualquiera)</option>
+                {professionOptions.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: "#5b5f6b", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>
+              Excluir
+            </div>
+            <div className="field">
+              <label>Registrados a este evento</label>
+              <select value={excludeEvent} onChange={(e) => setExcludeEvent(e.target.value)}>
+                <option value="">(ninguno)</option>
+                {events.map((ev) => (
+                  <option key={ev.slug} value={ev.slug}>
+                    {ev.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label>Asistió (check-in real) a este evento</label>
+              <select value={excludeAttended} onChange={(e) => setExcludeAttended(e.target.value)}>
+                <option value="">(ninguno)</option>
+                {events.map((ev) => (
+                  <option key={ev.slug} value={ev.slug}>
+                    {ev.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
         </div>
 
-        <div className="field">
-          <label>Incluir: asistió (check-in real) a este evento</label>
-          <select value={includeAttended} onChange={(e) => setIncludeAttended(e.target.value)}>
-            <option value="">(cualquiera)</option>
-            {events.map((ev) => (
-              <option key={ev.slug} value={ev.slug}>
-                {ev.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="field">
-          <label>Incluir: ciudad</label>
-          <input value={includeCity} onChange={(e) => setIncludeCity(e.target.value)} placeholder="Bogotá" />
-        </div>
-
-        <div className="field">
-          <label>Incluir: profesión</label>
-          <select value={includeProfession} onChange={(e) => setIncludeProfession(e.target.value)}>
-            <option value="">(cualquiera)</option>
-            {professionOptions.map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="field">
-          <label>Excluir: registrados a este evento</label>
-          <select value={excludeEvent} onChange={(e) => setExcludeEvent(e.target.value)}>
-            <option value="">(ninguno)</option>
-            {events.map((ev) => (
-              <option key={ev.slug} value={ev.slug}>
-                {ev.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="field">
-          <label>Excluir: asistió (check-in real) a este evento</label>
-          <select value={excludeAttended} onChange={(e) => setExcludeAttended(e.target.value)}>
-            <option value="">(ninguno)</option>
-            {events.map((ev) => (
-              <option key={ev.slug} value={ev.slug}>
-                {ev.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <p style={{ fontSize: 12, color: "#5b5f6b" }}>
+        <p style={{ fontSize: 12, color: "#5b5f6b", marginTop: 8, marginBottom: 0 }}>
           Ej: profesión = Manicurista, excluir asistió = Cali 2025 → &quot;manicuristas que no
           fueron a Cali 2025&quot; (usa asistencia real, no solo registro). Solo recibe quien dio
           consentimiento de marketing.
@@ -145,11 +157,11 @@ export default function BroadcastComposer({ events, professionOptions }: Props) 
           onChange={(e) => setBodyText(e.target.value)}
           rows={6}
           required
-          style={{ padding: 10, border: "1px solid #e3e1dc", borderRadius: 8 }}
+          style={{ padding: 10, border: "1px solid #e3e1dc", borderRadius: 8, width: "100%" }}
         />
       </div>
 
-      <button className="primary" type="submit" disabled={sending}>
+      <button className="primary" type="submit" disabled={sending} style={{ width: "auto", padding: "10px 24px" }}>
         {sending ? "Enviando..." : "Enviar broadcast"}
       </button>
       {result && <p style={{ marginTop: 12 }}>{result}</p>}

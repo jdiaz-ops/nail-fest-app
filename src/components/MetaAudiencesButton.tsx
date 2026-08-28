@@ -40,7 +40,7 @@ export default function MetaAudiencesButton() {
   }
 
   return (
-    <div style={{ maxWidth: 560 }}>
+    <div style={{ maxWidth: 700 }}>
       <button className="primary" onClick={handleClick} disabled={status === "loading"}>
         {status === "loading" ? "Creando..." : "Crear audiencias semilla"}
       </button>

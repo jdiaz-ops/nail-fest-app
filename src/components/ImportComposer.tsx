@@ -106,7 +106,7 @@ export default function ImportComposer({ events }: Props) {
   }
 
   return (
-    <div style={{ maxWidth: 640 }}>
+    <div style={{ maxWidth: 700 }}>
       <div className="field">
         <label>Archivo CSV (export &quot;doorlist&quot; de Ticket Tailor)</label>
         <input type="file" accept=".csv" onChange={handleFile} />
