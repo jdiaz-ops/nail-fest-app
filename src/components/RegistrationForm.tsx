@@ -92,6 +92,19 @@ function byKey(questions: QuestionView[], key: string): QuestionView | undefined
   return questions.find((q) => q.key === key);
 }
 
+// Red "*" next to a label/legend for a required field — same --danger
+// token as error text and the delete button, not the brand accent (a
+// required-field marker isn't a brand moment, it's a warning-adjacent one).
+function Req({ required }: { required?: boolean }) {
+  if (!required) return null;
+  return (
+    <span aria-hidden="true" style={{ color: "var(--danger)" }}>
+      {" "}
+      *
+    </span>
+  );
+}
+
 export default function RegistrationForm({
   eventSlug,
   professionOptions,
@@ -195,6 +208,7 @@ export default function RegistrationForm({
   return (
     <form onSubmit={handleSubmit}>
       <h2 style={{ fontSize: 18, marginBottom: 4 }}>Tus datos</h2>
+      <p style={{ fontSize: 12, color: "var(--danger)", marginTop: 0, marginBottom: 16 }}>* Campos obligatorios</p>
 
       {fullName &&
         (fullName.nameFormat === "FIRST_LAST" ? (
@@ -204,7 +218,10 @@ export default function RegistrationForm({
             </legend>
             <div style={{ display: "flex", gap: 8 }}>
               <div className="field" style={{ flex: 1, marginBottom: 0 }}>
-                <label htmlFor="field_firstName">Nombre</label>
+                <label htmlFor="field_firstName">
+                  Nombre
+                  <Req required />
+                </label>
                 <input id="field_firstName" name="field_firstName" autoComplete="given-name" required />
               </div>
               <div className="field" style={{ flex: 1, marginBottom: 0 }}>
@@ -215,14 +232,20 @@ export default function RegistrationForm({
           </fieldset>
         ) : (
           <div className="field">
-            <label htmlFor="field_fullName">{fullName.label}</label>
+            <label htmlFor="field_fullName">
+              {fullName.label}
+              <Req required />
+            </label>
             <input id="field_fullName" name="field_fullName" autoComplete="name" required />
           </div>
         ))}
 
       {email && (
         <div className="field">
-          <label htmlFor="field_email">{email.label}</label>
+          <label htmlFor="field_email">
+            {email.label}
+            <Req required />
+          </label>
           <input id="field_email" name="field_email" type="email" autoComplete="email" required />
         </div>
       )}
@@ -233,7 +256,10 @@ export default function RegistrationForm({
           number input down to a few characters and made it unreadable. */}
       {phone && (
         <div className="field">
-          <label htmlFor="phone">{phone.label}</label>
+          <label htmlFor="phone">
+            {phone.label}
+            <Req required={phone.required} />
+          </label>
           <div style={{ display: "flex", gap: 8 }}>
             <select
               aria-label="Código de país"
@@ -267,7 +293,10 @@ export default function RegistrationForm({
 
       {email?.confirmEmail && (
         <div className="field">
-          <label htmlFor="field_emailConfirm">Confirma tu correo electrónico</label>
+          <label htmlFor="field_emailConfirm">
+            Confirma tu correo electrónico
+            <Req required />
+          </label>
           <input id="field_emailConfirm" name="field_emailConfirm" type="email" autoComplete="email" required />
         </div>
       )}
@@ -276,13 +305,19 @@ export default function RegistrationForm({
         <Row>
           {cedula && (
             <div className="field" style={{ marginBottom: 0 }}>
-              <label htmlFor="field_cedula">{cedula.label}</label>
+              <label htmlFor="field_cedula">
+                {cedula.label}
+                <Req required={cedula.required} />
+              </label>
               <input id="field_cedula" name="field_cedula" required={cedula.required} />
             </div>
           )}
           {city && (
             <div className="field" style={{ marginBottom: 0 }}>
-              <label htmlFor="field_city">{city.label}</label>
+              <label htmlFor="field_city">
+                {city.label}
+                <Req required={city.required} />
+              </label>
               <input id="field_city" name="field_city" autoComplete="address-level2" required={city.required} />
             </div>
           )}
@@ -291,7 +326,10 @@ export default function RegistrationForm({
 
       {profession && (
         <fieldset style={{ border: "none", padding: 0, margin: "16px 0" }}>
-          <legend style={{ padding: 0, marginBottom: 8 }}>{profession.label}</legend>
+          <legend style={{ padding: 0, marginBottom: 8 }}>
+            {profession.label}
+            <Req required={profession.required} />
+          </legend>
           {professionOptions.map((opt, i) => (
             <label
               key={opt}
@@ -308,7 +346,10 @@ export default function RegistrationForm({
         if (q.type === "RADIO") {
           return (
             <fieldset key={q.key} style={{ border: "none", padding: 0, margin: "16px 0" }}>
-              <legend style={{ padding: 0, marginBottom: 8 }}>{q.label}</legend>
+              <legend style={{ padding: 0, marginBottom: 8 }}>
+                {q.label}
+                <Req required={q.required} />
+              </legend>
               {q.options.map((opt, i) => (
                 <label key={opt} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", cursor: "pointer" }}>
                   <input type="radio" name={`field_${q.key}`} value={opt} required={q.required && i === 0} />
@@ -324,7 +365,10 @@ export default function RegistrationForm({
           // caught server-side (see /api/register) and shown as an error.
           return (
             <fieldset key={q.key} style={{ border: "none", padding: 0, margin: "16px 0" }}>
-              <legend style={{ padding: 0, marginBottom: 8 }}>{q.label}</legend>
+              <legend style={{ padding: 0, marginBottom: 8 }}>
+                {q.label}
+                <Req required={q.required} />
+              </legend>
               {q.options.map((opt) => (
                 <label key={opt} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", cursor: "pointer" }}>
                   <input type="checkbox" name={`field_${q.key}`} value={opt} />
@@ -337,7 +381,10 @@ export default function RegistrationForm({
         if (q.type === "SELECT") {
           return (
             <div className="field" key={q.key}>
-              <label htmlFor={`field_${q.key}`}>{q.label}</label>
+              <label htmlFor={`field_${q.key}`}>
+                {q.label}
+                <Req required={q.required} />
+              </label>
               <select id={`field_${q.key}`} name={`field_${q.key}`} required={q.required} defaultValue="">
                 <option value="" disabled>
                   Selecciona una opción
@@ -354,7 +401,10 @@ export default function RegistrationForm({
         if (q.type === "DATE") {
           return (
             <div className="field" key={q.key}>
-              <label htmlFor={`field_${q.key}`}>{q.label}</label>
+              <label htmlFor={`field_${q.key}`}>
+                {q.label}
+                <Req required={q.required} />
+              </label>
               <input id={`field_${q.key}`} name={`field_${q.key}`} type="date" required={q.required} />
             </div>
           );
@@ -363,13 +413,19 @@ export default function RegistrationForm({
           return (
             <label className="consent" key={q.key}>
               <input type="checkbox" name={`field_${q.key}`} required={q.required} />
-              <span>{q.label}</span>
+              <span>
+                {q.label}
+                <Req required={q.required} />
+              </span>
             </label>
           );
         }
         return (
           <div className="field" key={q.key}>
-            <label htmlFor={`field_${q.key}`}>{q.label}</label>
+            <label htmlFor={`field_${q.key}`}>
+              {q.label}
+              <Req required={q.required} />
+            </label>
             <input id={`field_${q.key}`} name={`field_${q.key}`} required={q.required} />
           </div>
         );

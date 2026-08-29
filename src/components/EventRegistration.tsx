@@ -193,10 +193,11 @@ export default function EventRegistration({
           >
             <div style={{ padding: "20px 24px 16px", borderBottom: "1px solid #e3e1dc" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12 }}>
+                {/* Fecha/lugar ya no se repiten aquí — quedan arriba del botón
+                    flotante, en la página misma (ver [eventSlug]/page.tsx),
+                    así que mostrarlos otra vez en el modal era redundante. */}
                 <div>
                   <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>{eventName}</h2>
-                  <p style={{ fontSize: 13, color: "#5b5f6b", margin: "4px 0 0" }}>📅 {eventWhen}</p>
-                  {eventVenue && <p style={{ fontSize: 13, color: "#5b5f6b", margin: "2px 0 0" }}>📍 {eventVenue}</p>}
                 </div>
                 <button
                   type="button"
