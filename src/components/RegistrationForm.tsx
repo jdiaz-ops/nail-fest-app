@@ -112,12 +112,6 @@ export default function RegistrationForm({
 
     const form = new FormData(e.currentTarget);
     const localPhone = String(form.get("phone") ?? "").replace(/[^0-9]/g, "");
-    // One combined checkbox now covers both marketing email and Meta ad
-    // targeting — see the checkbox below for why they're merged in the UI
-    // while still recorded as two separate Consent rows server-side (so
-    // /api/unsubscribe can still revoke MARKETING on its own later without
-    // touching ADVERTISING).
-    const marketingAdsConsent = form.get("consentMarketingAds") === "on";
     const fullNameQuestion = questions.find((q) => q.key === "fullName");
     const emailQuestion = questions.find((q) => q.key === "email");
     const usesFirstLast = fullNameQuestion?.nameFormat === "FIRST_LAST";
@@ -159,17 +153,18 @@ export default function RegistrationForm({
       city: String(form.get("field_city") ?? ""),
       profession: String(form.get("field_profession") ?? ""),
       customFields,
-      // LOGISTICS is no longer a separate checkbox — it's implicit in
-      // submitting the form at all (can't register without an entrada to
-      // send), covered by the privacy-policy acceptance line below instead
-      // of its own tickbox. MARKETING and ADVERTISING share one checkbox
-      // now (see marketingAdsConsent above) but are still sent as two
-      // distinct consents, since /api/register records them as separate
-      // Consent rows for separate purposes (marketing emails vs. Meta ads).
+      // No consent checkboxes at all anymore — LOGISTICS, MARKETING and
+      // ADVERTISING are all implicit in submitting the form, covered by
+      // the acceptance line below the button (which spells out the
+      // marketing/ads authorization explicitly, not just "terms" in the
+      // abstract). Still sent as three distinct consents/Consent rows
+      // server-side — unchanged plumbing, only the UI got simpler — so
+      // /api/unsubscribe can still revoke MARKETING on its own later
+      // without touching ADVERTISING.
       consents: {
         logistics: true,
-        marketing: marketingAdsConsent,
-        advertising: marketingAdsConsent,
+        marketing: true,
+        advertising: true,
       },
       attribution: attributionFromSearchParams(searchParams),
       fbc: readCookie("_fbc"),
@@ -380,19 +375,14 @@ export default function RegistrationForm({
         );
       })}
 
-      {/* Un solo checkbox para marketing + publicidad — antes eran dos
-          separados, pero para quien se registra es una sola decisión
-          ("¿quieres saber de futuros eventos?"). Sigue guardando dos
-          consentimientos distintos por debajo (ver handleSubmit) porque
-          /api/unsubscribe solo revoca MARKETING, no ADVERTISING. */}
-      <label className="consent">
-        <input type="checkbox" name="consentMarketingAds" />
-        <span>
-          Quiero recibir novedades y futuros eventos de Nail Fest, y autorizo mostrarme publicidad
-          relevante en Meta con mis datos (de forma cifrada).
-        </span>
-      </label>
-
+      {/* Ningún checkbox de consentimiento ya — ni logística, ni
+          marketing/publicidad. Todo queda implícito en la propia acción de
+          enviar el formulario, cubierto por esta misma línea (que menciona
+          explícitamente la autorización de marketing/publicidad, no solo
+          "términos" en abstracto — ese texto también debe reflejarse en el
+          contenido real de /terminos y /privacidad que se edita desde el
+          admin). Sigue enviando tres consentimientos distintos al servidor
+          (ver handleSubmit) — solo cambió la UI, no el modelo de datos. */}
       <p style={{ fontSize: 12, color: "#5b5f6b" }}>
         Al hacer clic en &ldquo;{submitLabel}&rdquo; aceptas nuestros{" "}
         <a href="/terminos" target="_blank" rel="noreferrer">
@@ -402,8 +392,9 @@ export default function RegistrationForm({
         <a href="/privacidad" target="_blank" rel="noreferrer">
           política de privacidad
         </a>
-        , y autorizas el tratamiento de tus datos para enviarte tu entrada y la información
-        operativa de este evento.
+        ; autorizas el tratamiento de tus datos para enviarte tu entrada y la información operativa
+        de este evento; y autorizas recibir novedades de futuros eventos de Nail Fest y que te
+        mostremos publicidad relevante en Meta con tus datos (de forma cifrada).
       </p>
 
       {errorMessage && <p style={{ color: "#c2185b" }}>{errorMessage}</p>}
