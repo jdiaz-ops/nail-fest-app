@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import type { Event, EventStatus } from "@prisma/client";
 import { sanitizeEventDescription } from "@/lib/sanitizeHtml";
+import { createTicketType } from "@/lib/ticketTypes";
 
 // The public event page's own default when an event doesn't set its own
 // (see [eventSlug]/page.tsx) — kept here too so a freshly-created event's
@@ -101,4 +102,63 @@ export async function updateEvent(id: string, input: EventInput): Promise<Event>
 
 export async function setEventStatus(id: string, status: EventStatus): Promise<Event> {
   return db.event.update({ where: { id }, data: { status } });
+}
+
+/** "Copiar a nuevo evento" — the explicit ask behind this: opening a new
+ * city shouldn't mean rebuilding everything from zero. Copies the event's
+ * own configuration (name/venue/description/image/button label/capacity,
+ * and every TicketType row) into a brand-new Event with its own id, slug,
+ * landing URL, and — since nothing here touches Registration/ScanLog —
+ * its own empty registration history and stats, same as any other event.
+ * Always lands as DRAFT regardless of the source event's status, same
+ * reasoning as createEvent: a copy is a starting point to edit (new
+ * dates, maybe a new city), not something that should go live immediately
+ * under the old event's name. Dates are NOT copied (the one field an
+ * admin always has to set for a new city) — startsAt defaults to 7 days
+ * out so the record is valid until edited, not a silent copy of a date
+ * that's already passed.
+ *
+ * NOTE for future maintainers: when a per-event field is added elsewhere
+ * (e.g. a stored Event confirmation template override), decide there
+ * whether it belongs in this copy too — this function won't pick it up
+ * automatically.
+ */
+export async function duplicateEvent(sourceId: string): Promise<Event> {
+  const source = await db.event.findUniqueOrThrow({ where: { id: sourceId }, include: { ticketTypes: true } });
+  const slug = await uniqueSlug(`${source.name} copia`);
+  const copy = await db.event.create({
+    data: {
+      slug,
+      name: `${source.name} (copia)`,
+      city: source.city,
+      venueName: source.venueName,
+      venueAddress: source.venueAddress,
+      description: source.description,
+      imageUrl: source.imageUrl,
+      registerButtonLabel: source.registerButtonLabel,
+      startsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      endsAt: null,
+      capacity: source.capacity,
+      status: "DRAFT",
+    },
+  });
+  for (const tt of source.ticketTypes.sort((a, b) => a.order - b.order)) {
+    await createTicketType(copy.id, {
+      name: tt.name,
+      quantity: tt.quantity,
+      price: tt.price,
+      bookingFee: tt.bookingFee,
+      description: tt.description ?? "",
+      status: tt.status,
+      minPerOrder: tt.minPerOrder,
+      maxPerOrder: tt.maxPerOrder,
+      issuance: tt.issuance,
+      hideUntil: tt.hideUntil,
+      hideAfter: tt.hideAfter,
+      hideWhenSoldOut: tt.hideWhenSoldOut,
+      showRemainingOnPage: tt.showRemainingOnPage,
+      excludeFromLowestPrice: tt.excludeFromLowestPrice,
+    });
+  }
+  return copy;
 }

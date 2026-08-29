@@ -104,7 +104,7 @@ export default function EventsTable({ events, timezone, language }: { events: Ev
               return (
                 <tr key={ev.id} style={{ borderBottom: "1px solid #f0efec" }}>
                   <td style={{ padding: "14px 12px 14px 0" }}>
-                    <Link href={`/admin/events/${ev.id}/edit`} style={{ fontWeight: 600, color: "#1c1310", textDecoration: "none" }}>
+                    <Link href={`/admin/events/${ev.id}`} style={{ fontWeight: 600, color: "#1c1310", textDecoration: "none" }}>
                       {ev.name}
                     </Link>
                     <div style={{ fontSize: 13, color: "#5b5f6b", marginTop: 2 }}>
