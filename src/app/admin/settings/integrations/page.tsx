@@ -62,12 +62,21 @@ export default async function IntegrationsPage() {
 
         <h3 style={{ fontSize: 16 }}>Audiencias semilla</h3>
         <p style={{ color: "#5b5f6b", fontSize: 14 }}>
-          <strong>Landing visitors (180d)</strong>, <strong>Checkout started (180d)</strong> y{" "}
-          <strong>Purchasers (180d)</strong> se mantienen solas — un cron
-          (<code>/api/meta/sync-audiences</code>, ver <code>docs/DEPLOY.md</code>) las
-          crea/actualiza y resincroniza Purchasers automáticamente. El botón de abajo solo sirve
-          para forzar una corrida ahora mismo (ej. para probar sin esperar al cron); no hace falta
-          usarlo en el día a día.
+          <strong>Landing visitors (180d)</strong>, <strong>Checkout started (180d)</strong>,{" "}
+          <strong>Carritos abandonados (180d)</strong> y <strong>Purchasers (180d)</strong> se
+          mantienen solas — un cron (<code>/api/meta/sync-audiences</code>, ver{" "}
+          <code>docs/DEPLOY.md</code>) las crea/actualiza y resincroniza Purchasers
+          automáticamente. El botón de abajo solo sirve para forzar una corrida ahora mismo (ej.
+          para probar sin esperar al cron); no hace falta usarlo en el día a día.
+        </p>
+        <p style={{ color: "#5b5f6b", fontSize: 14 }}>
+          Carritos abandonados = llegó a &quot;Iniciar registro&quot; pero nunca completó la
+          compra (InitiateCheckout sin Purchase), 100% desde el Pixel — igual que Landing
+          visitors/Checkout started, nunca subimos el correo o celular real de nadie para armarla.
+          A propósito: esta gente nunca envió el formulario, así que nunca dio ningún
+          consentimiento (ver <code>/admin/crm/abandonados</code>), y subir sus datos reales a
+          Meta no tendría base legal — solo Purchasers, que sí consintió, sube identificadores
+          reales.
         </p>
         <MetaAudiencesButton />
 

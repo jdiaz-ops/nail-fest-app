@@ -44,9 +44,20 @@ export async function ensureWebsiteAudience(params: {
   baseName: string;
   eventName: "PageView" | "InitiateCheckout";
   retentionDays: number;
+  /** Set for "started X but never finished" audiences (e.g. carritos
+   * abandonados = InitiateCheckout minus Purchase) — still 100% pixel-side,
+   * no personal data of ours ever leaves for this one either. Unlike the
+   * two include-only rules above (each individually confirmed against a
+   * live ad account), this `exclusions` block follows Meta's documented
+   * rule_v2 shape but hasn't been confirmed live yet — if Meta rejects the
+   * syntax, this seed audience fails independently (see the `attempt()`
+   * wrapper below) without blocking Landing visitors/Checkout started/
+   * Purchasers. */
+  excludeEventName?: "Purchase";
 }): Promise<string> {
   const conn = await getConnection();
   const displayName = `${params.baseName} (${params.retentionDays}d)`;
+  const retentionSeconds = params.retentionDays * 24 * 60 * 60;
 
   const rule = JSON.stringify({
     inclusions: {
@@ -54,7 +65,7 @@ export async function ensureWebsiteAudience(params: {
       rules: [
         {
           event_sources: [{ type: "pixel", id: conn.pixelId }],
-          retention_seconds: params.retentionDays * 24 * 60 * 60,
+          retention_seconds: retentionSeconds,
           filter: {
             operator: "and",
             filters: [{ field: "event", operator: "=", value: params.eventName }],
@@ -62,6 +73,21 @@ export async function ensureWebsiteAudience(params: {
         },
       ],
     },
+    ...(params.excludeEventName && {
+      exclusions: {
+        operator: "or",
+        rules: [
+          {
+            event_sources: [{ type: "pixel", id: conn.pixelId }],
+            retention_seconds: retentionSeconds,
+            filter: {
+              operator: "and",
+              filters: [{ field: "event", operator: "=", value: params.excludeEventName }],
+            },
+          },
+        ],
+      },
+    }),
   });
 
   const existing = await graphFetch(
@@ -181,9 +207,10 @@ async function attempt(fn: () => Promise<string>): Promise<SeedAudienceResult> {
 }
 
 /**
- * The three seed audiences from the brief — call once during setup.
- * Each is attempted independently so one failing (website-rule audiences
- * are hitting a Graph API rule-syntax version mismatch as of this writing —
+ * The seed audiences from the brief — call once during setup (also
+ * re-run daily by the cron, see /api/meta/sync-audiences). Each is
+ * attempted independently so one failing (website-rule audiences are
+ * hitting a Graph API rule-syntax version mismatch as of this writing —
  * see docs/META_SETUP.md) doesn't block the others, notably Purchasers,
  * which doesn't use `rule` at all and is the one that actually needs to
  * stay in sync automatically.
@@ -203,6 +230,22 @@ export async function ensureSeedAudiences() {
       retentionDays: 180,
     })
   );
+  // Real cart abandoners: reached checkout but never completed it. Pixel-only
+  // (InitiateCheckout minus Purchase), same as Landing visitors/Checkout
+  // started above — deliberately NOT a customer-list upload of these
+  // people's real email/phone. Someone in this group never submitted the
+  // registration form, so they never granted ANY consent (see the comment
+  // in /admin/crm/abandonados) — sending their identifiers to Meta would
+  // have no Ley 1581 basis, unlike Purchasers below which only includes
+  // people who did consent.
+  const abandonedCarts = await attempt(() =>
+    ensureWebsiteAudience({
+      baseName: "Nail Fest — Carritos abandonados",
+      eventName: "InitiateCheckout",
+      excludeEventName: "Purchase",
+      retentionDays: 180,
+    })
+  );
   const purchasers = await attempt(() =>
     ensureCustomerListAudience({
       name: "Nail Fest — Purchasers (180d)",
@@ -210,8 +253,8 @@ export async function ensureSeedAudiences() {
     })
   );
 
-  // Purchasers is a customer-list audience — unlike the two rule_v2
-  // audiences above, Meta doesn't auto-populate it. Sync it right after
+  // Purchasers is a customer-list audience — unlike the rule_v2 audiences
+  // above, Meta doesn't auto-populate it. Sync it right after
   // creating/finding it, so clicking this button once actually leaves it
   // with members instead of "Ready" but empty.
   let purchasersSync: SeedAudienceResult | undefined;
@@ -223,7 +266,7 @@ export async function ensureSeedAudiences() {
     });
   }
 
-  return { landing, checkout, purchasers, purchasersSync };
+  return { landing, checkout, abandonedCarts, purchasers, purchasersSync };
 }
 
 /**

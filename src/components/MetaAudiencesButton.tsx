@@ -6,6 +6,7 @@ type AudienceResult = { id: string } | { error: string };
 type Results = {
   landing: AudienceResult;
   checkout: AudienceResult;
+  abandonedCarts: AudienceResult;
   purchasers: AudienceResult;
   purchasersSync?: AudienceResult;
 };
@@ -30,6 +31,7 @@ export default function MetaAudiencesButton() {
       setResults({
         landing: body.landing,
         checkout: body.checkout,
+        abandonedCarts: body.abandonedCarts,
         purchasers: body.purchasers,
         purchasersSync: body.purchasersSync,
       });
@@ -58,6 +60,7 @@ export default function MetaAudiencesButton() {
           {[
             line("Landing visitors", results.landing),
             line("Checkout started", results.checkout),
+            line("Carritos abandonados", results.abandonedCarts),
             line("Purchasers", results.purchasers),
             results.purchasersSync ? line("Purchasers — sync", results.purchasersSync) : null,
           ]
