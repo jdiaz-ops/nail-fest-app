@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import RegisterServiceWorker from "./RegisterServiceWorker";
 
 // Makes "Add to Home Screen" (Android via the manifest, iOS via
 // appleWebApp) give this whole area its own icon/name instead of a
@@ -15,5 +16,10 @@ export const metadata: Metadata = {
 };
 
 export default function ScanLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
+  return (
+    <>
+      <RegisterServiceWorker />
+      {children}
+    </>
+  );
 }
