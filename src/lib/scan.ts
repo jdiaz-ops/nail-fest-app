@@ -2,6 +2,13 @@ import { db } from "@/lib/db";
 import { verifyQrToken } from "@/lib/ticket";
 import type { ScanResult } from "@prisma/client";
 
+// See the comment at its one use below — this is not "how long a re-entry
+// takes", it's "how long a single physical scan can visibly linger before
+// the next decode of the same still-in-frame QR should count as a new
+// event". Real re-entries are minutes away at the soonest; this only needs
+// to be longer than any plausible accidental hover.
+const SCAN_DEDUP_WINDOW_MS = 60_000;
+
 export interface ScanOutcome {
   result: ScanResult;
   personName?: string;
@@ -104,9 +111,28 @@ export async function recordScan(
   });
 
   if (previousScan) {
-    await db.scanLog.create({
-      data: { registrationId, token, result: "VALID_REENTRY", scannedForEventId, scannerLabel, scannedAt, clientScanId },
-    });
+    // Real-world case caught in testing: a staff member holds the phone
+    // steady over a QR that already scanned successfully (helping the next
+    // person, distracted, etc.). The client only debounces 2.5s of the SAME
+    // decode loop staying on screen (ScannerTab.tsx's RESCAN_COOLDOWN_MS) —
+    // past that it treats each decode as a brand-new scan, with a fresh
+    // clientScanId every time, so the earlier idempotency check above never
+    // catches it. Left unguarded, that logs a fresh VALID_REENTRY roughly
+    // every 2.5s for as long as the phone sits there — inflating reingreso
+    // counts and cluttering the check-in history with scans that never
+    // happened. A genuine re-entry (someone actually leaving and coming
+    // back) is realistically minutes away at the soonest, so anything this
+    // close to the last logged scan for the SAME registration is almost
+    // certainly the same physical moment repeated, not a new one: report it
+    // exactly like the real scan that started it, but don't write a second
+    // row for it.
+    const effectiveNow = scannedAt ?? new Date();
+    const isLikelySameLingeringScan = effectiveNow.getTime() - previousScan.scannedAt.getTime() < SCAN_DEDUP_WINDOW_MS;
+    if (!isLikelySameLingeringScan) {
+      await db.scanLog.create({
+        data: { registrationId, token, result: "VALID_REENTRY", scannedForEventId, scannerLabel, scannedAt, clientScanId },
+      });
+    }
     return { result: "VALID_REENTRY", personName, eventName: registration.event.name, previousScanAt: previousScan.scannedAt };
   }
 
