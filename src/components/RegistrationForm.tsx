@@ -112,7 +112,12 @@ export default function RegistrationForm({
 
     const form = new FormData(e.currentTarget);
     const localPhone = String(form.get("phone") ?? "").replace(/[^0-9]/g, "");
-    const advertisingConsent = form.get("consentAdvertising") === "on";
+    // One combined checkbox now covers both marketing email and Meta ad
+    // targeting — see the checkbox below for why they're merged in the UI
+    // while still recorded as two separate Consent rows server-side (so
+    // /api/unsubscribe can still revoke MARKETING on its own later without
+    // touching ADVERTISING).
+    const marketingAdsConsent = form.get("consentMarketingAds") === "on";
     const fullNameQuestion = questions.find((q) => q.key === "fullName");
     const emailQuestion = questions.find((q) => q.key === "email");
     const usesFirstLast = fullNameQuestion?.nameFormat === "FIRST_LAST";
@@ -154,10 +159,17 @@ export default function RegistrationForm({
       city: String(form.get("field_city") ?? ""),
       profession: String(form.get("field_profession") ?? ""),
       customFields,
+      // LOGISTICS is no longer a separate checkbox — it's implicit in
+      // submitting the form at all (can't register without an entrada to
+      // send), covered by the privacy-policy acceptance line below instead
+      // of its own tickbox. MARKETING and ADVERTISING share one checkbox
+      // now (see marketingAdsConsent above) but are still sent as two
+      // distinct consents, since /api/register records them as separate
+      // Consent rows for separate purposes (marketing emails vs. Meta ads).
       consents: {
-        logistics: form.get("consentLogistics") === "on",
-        marketing: form.get("consentMarketing") === "on",
-        advertising: advertisingConsent,
+        logistics: true,
+        marketing: marketingAdsConsent,
+        advertising: marketingAdsConsent,
       },
       attribution: attributionFromSearchParams(searchParams),
       fbc: readCookie("_fbc"),
@@ -165,11 +177,6 @@ export default function RegistrationForm({
       ticketTypeId,
       ticketCount,
     };
-
-    if (!payload.consents.logistics) {
-      setErrorMessage("Necesitamos tu autorización para enviarte la entrada por correo.");
-      return;
-    }
 
     // Same typo-catching purpose as the second input itself — checked
     // client-side too so the person sees it immediately instead of a
@@ -373,31 +380,26 @@ export default function RegistrationForm({
         );
       })}
 
+      {/* Un solo checkbox para marketing + publicidad — antes eran dos
+          separados, pero para quien se registra es una sola decisión
+          ("¿quieres saber de futuros eventos?"). Sigue guardando dos
+          consentimientos distintos por debajo (ver handleSubmit) porque
+          /api/unsubscribe solo revoca MARKETING, no ADVERTISING. */}
       <label className="consent">
-        <input type="checkbox" name="consentLogistics" required />
+        <input type="checkbox" name="consentMarketingAds" />
         <span>
-          Autorizo el tratamiento de mis datos para enviarme mi entrada y la información operativa
-          de este evento. (Requerido)
-        </span>
-      </label>
-      <label className="consent">
-        <input type="checkbox" name="consentMarketing" />
-        <span>Quiero recibir novedades y futuros eventos de Nail Fest por correo.</span>
-      </label>
-      <label className="consent">
-        <input type="checkbox" name="consentAdvertising" />
-        <span>
-          Autorizo compartir mis datos (de forma cifrada) con Meta para mostrarme publicidad
-          relevante de Nail Fest.
+          Quiero recibir novedades y futuros eventos de Nail Fest, y autorizo mostrarme publicidad
+          relevante en Meta con mis datos (de forma cifrada).
         </span>
       </label>
 
       <p style={{ fontSize: 12, color: "#5b5f6b" }}>
-        Al registrarte aceptas nuestra{" "}
+        Al hacer clic en &ldquo;{submitLabel}&rdquo; aceptas nuestra{" "}
         <a href="/privacidad" target="_blank" rel="noreferrer">
           política de privacidad
-        </a>
-        .
+        </a>{" "}
+        y autorizas el tratamiento de tus datos para enviarte tu entrada y la información operativa
+        de este evento.
       </p>
 
       {errorMessage && <p style={{ color: "#c2185b" }}>{errorMessage}</p>}
