@@ -2,6 +2,7 @@
   "buildCommand": "npx prisma generate && npx prisma migrate deploy && npm run build",
   "crons": [
     { "path": "/api/meta/retry", "schedule": "0 3 * * *" },
-    { "path": "/api/meta/sync-audiences", "schedule": "0 4 * * *" }
+    { "path": "/api/meta/sync-audiences", "schedule": "0 4 * * *" },
+    { "path": "/api/broadcasts/send-due", "schedule": "*/15 * * * *" }
   ]
 }

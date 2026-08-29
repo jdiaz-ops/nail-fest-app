@@ -110,6 +110,7 @@ model Event {
   registrations Registration[]
   scans         ScanLog[]
   ticketTypes   TicketType[]
+  broadcasts    EmailBroadcast[]
 
   @@index([city])
   @@index([status])
@@ -169,6 +170,7 @@ model TicketType {
   updatedAt   DateTime         @updatedAt
 
   registrations Registration[]
+  broadcasts    EmailBroadcast[]
 
   @@index([eventId])
 }
@@ -421,17 +423,68 @@ model SegmentMetaSync {
   createdAt      DateTime   @default(now())
 }
 
+// Ticket Tailor's own 4 send-time options on its per-event broadcast
+// composer — see EventBroadcastComposer.tsx. IMMEDIATE/AT_DATETIME both
+// resolve to a fixed instant; the other two are relative to the event's
+// OWN dates, recomputed at send-check time (see lib/broadcastSchedule.ts)
+// rather than frozen at creation — editing the event's date after
+// scheduling "3 days before it starts" should move the send with it, not
+// leave it computed against a date that's no longer true.
+enum BroadcastScheduleKind {
+  IMMEDIATE
+  AT_DATETIME
+  BEFORE_EVENT_START
+  AFTER_EVENT_END
+}
+
 model EmailBroadcast {
   id          String            @id @default(cuid())
-  segment     SegmentDefinition @relation(fields: [segmentId], references: [id])
-  segmentId   String
+  // Nullable now — an event-scoped broadcast (see eventId below) targets
+  // "everyone who registered for this event" directly, with no need for a
+  // named, reusable SegmentDefinition; that mechanism stays exactly as it
+  // was for the original /admin/crm/broadcasts flow, which still requires
+  // one (see BroadcastComposer.tsx's own comment on why a raw filter is
+  // never accepted there).
+  segment     SegmentDefinition? @relation(fields: [segmentId], references: [id])
+  segmentId   String?
+  // Set only for a broadcast created from an event's own "Correos del
+  // evento" page — recipients resolve directly from this event's real
+  // registrations (see lib/broadcastRecipients.ts), optionally narrowed
+  // to one ticket type below. A broadcast has exactly one of
+  // segmentId/eventId set, never both, never neither — enforced in
+  // application code (lib/broadcasts.ts), not the DB, same pattern as
+  // the rest of this schema's optional-relation pairs.
+  event       Event?            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId     String?
+  // "Ticket buyers who bought a specific ticket type" — Ticket Tailor's
+  // own recipient-narrowing option. Null = every confirmed registration
+  // for the event, regardless of type.
+  ticketType   TicketType?      @relation(fields: [ticketTypeId], references: [id], onDelete: SetNull)
+  ticketTypeId String?
   subject     String
-  bodyText    String
+  // Plain text — the original /admin/crm/broadcasts flow (escaped +
+  // newline-to-<br/> at send time, see lib/email/templates.ts's
+  // broadcastEmail). Exactly one of bodyText/bodyHtml is set, matching
+  // which composer created the row.
+  bodyText    String?
+  // Rich-text HTML from the same TipTap editor as the event confirmation
+  // and event description (RichTextEditor.tsx) — sanitized server-side
+  // before storage, same as those, since it renders in a real inbox.
+  bodyHtml    String?
   status      BroadcastStatus   @default(DRAFT)
+  scheduleKind BroadcastScheduleKind @default(IMMEDIATE)
+  // AT_DATETIME's fixed target instant.
+  scheduledAt DateTime?
+  // BEFORE_EVENT_START / AFTER_EVENT_END's offset from the event's own
+  // startsAt/endsAt — see this enum's own comment on why this is an
+  // offset, not a frozen instant.
+  scheduleOffsetMinutes Int?
   createdAt   DateTime          @default(now())
   sentAt      DateTime?
 
   logs EmailLog[]
+
+  @@index([status, scheduleKind])
 }
 
 enum EmailLogStatus {

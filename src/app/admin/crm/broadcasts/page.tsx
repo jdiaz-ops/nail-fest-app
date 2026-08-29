@@ -14,7 +14,11 @@ const STATUS_STYLE: Record<string, { bg: string; ink: string }> = {
 export default async function BroadcastsPage() {
   const [segmentRows, broadcasts] = await Promise.all([
     db.segmentDefinition.findMany({ orderBy: { createdAt: "desc" } }),
+    // segmentId: not null — event-scoped broadcasts (see
+    // /admin/events/[id]/broadcasts) have their own history under their
+    // own event, they don't belong mixed into this global list.
     db.emailBroadcast.findMany({
+      where: { segmentId: { not: null } },
       orderBy: { createdAt: "desc" },
       take: 20,
       include: { segment: true, _count: { select: { logs: true } } },
@@ -55,7 +59,7 @@ export default async function BroadcastsPage() {
               return (
                 <tr key={b.id} style={{ borderTop: "1px solid #f0efec" }}>
                   <td style={{ padding: "10px 12px" }}>{b.subject}</td>
-                  <td style={{ padding: "10px 12px", color: "#5b5f6b" }}>{b.segment.name}</td>
+                  <td style={{ padding: "10px 12px", color: "#5b5f6b" }}>{b.segment?.name ?? "—"}</td>
                   <td style={{ padding: "10px 12px" }}>
                     <span
                       style={{

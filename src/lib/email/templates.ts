@@ -191,6 +191,51 @@ export function broadcastEmail(params: {
   return { subject: params.subject, text, html };
 }
 
+// The event-scoped broadcast composer (EventBroadcastComposer.tsx) uses
+// the same TipTap rich-text editor as the event description and
+// confirmation email, not a plain textarea — so its content arrives here
+// as real (sanitized before storage — see EmailBroadcast.bodyHtml's own
+// schema comment) HTML to embed directly, not plain text to escape and
+// line-break. A no-unsubscribe-link variant isn't offered: every event
+// broadcast still only reaches people who gave marketing consent (see
+// the sending code's own hasActiveConsent gate), so the same real
+// unsubscribe path applies here too.
+export function broadcastEmailHtml(params: {
+  subject: string;
+  bodyHtml: string;
+  unsubscribeUrl: string;
+}): { subject: string; text: string; html: string } {
+  const text = `${htmlToPlainText(params.bodyHtml)}\n\n---\nDarse de baja de estos correos: ${params.unsubscribeUrl}`;
+  const html = `
+    <div style="font-family: -apple-system, Segoe UI, Roboto, sans-serif; max-width: 560px; margin: 0 auto; color:#1a1a1a;">
+      ${params.bodyHtml}
+      <hr style="border:none;border-top:1px solid #ddd; margin: 24px 0;" />
+      <p style="color:#888; font-size: 12px;">
+        Recibiste este correo porque diste tu consentimiento de marketing al registrarte en un evento de Nail Fest.
+        <a href="${params.unsubscribeUrl}">Darme de baja</a>
+      </p>
+    </div>
+  `;
+  return { subject: params.subject, text, html };
+}
+
+// A rough, good-enough plain-text fallback for the multipart email's text
+// part — not meant to preserve rich formatting, just to give inboxes that
+// prefer text/plain (or strip HTML entirely) something readable instead
+// of raw markup.
+function htmlToPlainText(html: string): string {
+  return html
+    .replace(/<(p|div|h[1-6]|li|br)[^>]*>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 function escapeHtml(input: string): string {
   return input
     .replace(/&/g, "&amp;")
