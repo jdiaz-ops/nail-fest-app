@@ -4,8 +4,19 @@
   --bg: #faf9f7;
   --surface: #ffffff;
   --border: #e3e1dc;
-  --accent: #c2185b;
-  --accent-ink: #ffffff;
+  /* Brand palette (given by the client, not the earlier coral/rose
+     placeholder): teal primary + peach secondary. --accent-ink is dark,
+     not white — white text on this teal only hits ~2.3:1 contrast
+     (fails WCAG AA), the dark ink hits ~8:1. */
+  --accent: #00beb5;
+  --accent-ink: #0b2e2c;
+  --accent-secondary: #ffc5a8;
+  --accent-secondary-ink: #1c1310;
+  /* Kept as the old brand rose — deliberately NOT changed to teal. Error
+     text, delete actions and required-field markers need a color that
+     reads as "danger", separate from the brand accent (see dataviz
+     guidance: semantic color is its own thing, not the accent hue). */
+  --danger: #c2185b;
 }
 
 * {

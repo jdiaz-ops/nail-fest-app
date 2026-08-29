@@ -17,7 +17,7 @@ export default function CrmNavLink({ href, label }: { href: string; label: strin
         fontSize: 14,
         color: "#1c1310",
         textDecoration: "none",
-        background: active ? "#f6c4b2" : "transparent",
+        background: active ? "#ffc5a8" : "transparent",
         fontWeight: active ? 600 : 400,
       }}
     >

@@ -45,7 +45,7 @@ export default function CookieConsentBanner() {
     >
       <span>
         Usamos cookies para mostrarte publicidad relevante.{" "}
-        <a href="/privacidad" style={{ color: "#f6c4b2" }}>
+        <a href="/privacidad" style={{ color: "#ffc5a8" }}>
           Más información
         </a>
         .
@@ -60,7 +60,7 @@ export default function CookieConsentBanner() {
           }
           setDismissed(true);
         }}
-        style={{ padding: "6px 16px", borderRadius: 999, border: "none", background: "#f6c4b2", color: "#1c1310", fontWeight: 600 }}
+        style={{ padding: "6px 16px", borderRadius: 999, border: "none", background: "#ffc5a8", color: "#1c1310", fontWeight: 600 }}
       >
         Aceptar
       </button>

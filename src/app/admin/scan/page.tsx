@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Escáner — Nail Fest",
   manifest: "/scan-manifest.webmanifest",
-  themeColor: "#c2185b",
+  themeColor: "#00beb5",
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "NF Escáner" },
   icons: { apple: "/icon-192.png" },
 };

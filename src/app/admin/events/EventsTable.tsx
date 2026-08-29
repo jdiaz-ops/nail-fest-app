@@ -183,7 +183,7 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
         fontSize: 13,
         fontWeight: 600,
         cursor: "pointer",
-        background: active ? "#f6c4b2" : "transparent",
+        background: active ? "#ffc5a8" : "transparent",
         color: active ? "#1c1310" : "#5b5f6b",
       }}
     >

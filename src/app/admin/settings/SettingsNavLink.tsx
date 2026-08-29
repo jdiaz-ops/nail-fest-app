@@ -19,7 +19,7 @@ export default function SettingsNavLink({ href, label }: { href: string; label: 
         fontSize: 14,
         color: "#1c1310",
         textDecoration: "none",
-        background: active ? "#f6c4b2" : "transparent",
+        background: active ? "#ffc5a8" : "transparent",
         fontWeight: active ? 600 : 400,
       }}
     >

@@ -18,7 +18,7 @@ export default function AdminNavLink({ href, label }: { href: string; label: str
         fontSize: 14,
         textDecoration: "none",
         color: active ? "#1c1310" : "#e8e4dc",
-        background: active ? "#f6c4b2" : "transparent",
+        background: active ? "#ffc5a8" : "transparent",
         fontWeight: active ? 600 : 400,
         whiteSpace: "nowrap",
       }}

@@ -1,12 +1,15 @@
 import { formatDateInTz } from "@/lib/dateFormat";
 
 // Colors match the app's own brand tokens (src/app/globals.css: --ink,
-// --ink-muted, --border, --accent) — the ticket should look like it came
-// from the same product as the registration page, not a generic mailer.
+// --ink-muted, --border, --accent, --accent-ink) — the ticket should look
+// like it came from the same product as the registration page, not a
+// generic mailer. ACCENT_INK is dark, not white: white text on this teal
+// only hits ~2.3:1 contrast (fails WCAG AA), the dark ink hits ~8:1.
 const INK = "#17181c";
 const INK_MUTED = "#5b5f6b";
 const BORDER = "#e3e1dc";
-const ACCENT = "#c2185b";
+const ACCENT = "#00beb5";
+const ACCENT_INK = "#0b2e2c";
 const PAPER = "#f6f5f2";
 
 export function confirmationEmail(params: {
@@ -113,8 +116,8 @@ export function confirmationEmail(params: {
                   }
                   <tr>
                     <td style="background:${ACCENT};padding:16px 24px;">
-                      <p style="margin:0;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#ffffff;opacity:.85;">${escapeHtml(orgName)}</p>
-                      <p style="margin:4px 0 0;font-size:18px;font-weight:700;color:#ffffff;">${escapeHtml(params.eventName)}</p>
+                      <p style="margin:0;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:${ACCENT_INK};opacity:.7;">${escapeHtml(orgName)}</p>
+                      <p style="margin:4px 0 0;font-size:18px;font-weight:700;color:${ACCENT_INK};">${escapeHtml(params.eventName)}</p>
                     </td>
                   </tr>
                   <tr>
