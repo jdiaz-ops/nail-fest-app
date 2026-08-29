@@ -34,7 +34,12 @@ export async function POST(req: NextRequest) {
     });
     for (const registration of registrations) {
       if (!registration.qrToken) continue;
-      await sendTicketEmail({ person, event: registration.event, qrToken: registration.qrToken });
+      await sendTicketEmail({
+        person,
+        event: registration.event,
+        qrToken: registration.qrToken,
+        registration: { id: registration.id, ticketTypeId: registration.ticketTypeId, ticketCount: registration.ticketCount },
+      });
     }
   }
 

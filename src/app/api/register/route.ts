@@ -262,7 +262,12 @@ export async function POST(req: NextRequest) {
   // which is a condition of registering at all, not an optional consent.
   // Never fails the registration itself: sendTicketEmail swallows its own
   // errors into an EmailLog row for a human to requeue. ---
-  await sendTicketEmail({ person, event, qrToken });
+  await sendTicketEmail({
+    person,
+    event,
+    qrToken,
+    registration: { id: registration.id, ticketTypeId: registration.ticketTypeId, ticketCount: registration.ticketCount },
+  });
 
   // --- Purchase → Meta CAPI, gated by the ADVERTISING consent, not just
   // "did they register". Sharing hashed identifiers with Meta is a distinct
