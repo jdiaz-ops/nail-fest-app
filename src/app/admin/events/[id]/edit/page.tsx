@@ -6,6 +6,7 @@ import { DEFAULT_REGISTER_BUTTON_LABEL } from "@/lib/events";
 import { listTicketTypes } from "@/lib/ticketTypes";
 import EventForm from "../../EventForm";
 import TicketTypesSection from "../../TicketTypesSection";
+import EventDecisionStats from "../../EventDecisionStats";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,15 @@ export default async function EditEventPage({ params }: { params: { id: string }
 
   return (
     <div>
+      <div style={{ marginBottom: 40, paddingBottom: 32, borderBottom: "1px solid #e3e1dc" }}>
+        <h2 style={{ fontSize: 18, marginBottom: 4 }}>Estadísticas de {event.name}</h2>
+        <p style={{ color: "#5b5f6b", marginTop: 0, marginBottom: 20 }}>
+          Solo de este evento — venta, de dónde viene la gente, y a quién le está llegando. Para consultar en vivo
+          parado en la puerta, ve al Dashboard del escáner en su lugar.
+        </p>
+        <EventDecisionStats eventId={event.id} />
+      </div>
+
       <EventForm
         title="Editar evento"
         initial={{
