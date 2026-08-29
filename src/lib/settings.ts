@@ -12,6 +12,7 @@ export interface OrgSettingsValue {
   bannedEmails: string[];
   cookieConsentEnabled: boolean;
   selfServeResendEnabled: boolean;
+  confirmationEmailHtml: string | null;
 }
 
 const DEFAULTS: OrgSettingsValue = {
@@ -24,6 +25,7 @@ const DEFAULTS: OrgSettingsValue = {
   bannedEmails: [],
   cookieConsentEnabled: false,
   selfServeResendEnabled: true,
+  confirmationEmailHtml: null,
 };
 
 // No row exists until the first save from /admin/settings — reads never
@@ -42,6 +44,7 @@ export async function getOrgSettings(): Promise<OrgSettingsValue> {
     bannedEmails: row.bannedEmails,
     cookieConsentEnabled: row.cookieConsentEnabled,
     selfServeResendEnabled: row.selfServeResendEnabled,
+    confirmationEmailHtml: row.confirmationEmailHtml,
   };
 }
 
@@ -61,5 +64,6 @@ export async function updateOrgSettings(patch: Partial<OrgSettingsValue>): Promi
     bannedEmails: row.bannedEmails,
     cookieConsentEnabled: row.cookieConsentEnabled,
     selfServeResendEnabled: row.selfServeResendEnabled,
+    confirmationEmailHtml: row.confirmationEmailHtml,
   };
 }

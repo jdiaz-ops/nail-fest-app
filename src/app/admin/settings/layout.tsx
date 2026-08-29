@@ -14,6 +14,7 @@ const EDIT_NAV: { href: string; label: string }[] = [
   { href: "/admin/settings/basic", label: "Datos básicos" },
   { href: "/admin/settings/contact", label: "Contacto" },
   { href: "/admin/settings/checkout-form", label: "Checkout form" },
+  { href: "/admin/settings/confirmation", label: "Confirmación de correo" },
   { href: "/admin/settings/privacy", label: "Política de privacidad" },
   { href: "/admin/settings/terms", label: "Términos y condiciones" },
   { href: "/admin/settings/banned-emails", label: "Correos bloqueados" },

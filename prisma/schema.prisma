@@ -104,6 +104,12 @@ model Event {
   startsAt     DateTime
   endsAt       DateTime?
   capacity     Int?
+  // Per-event override of the confirmation email — see OrgSettings.
+  // confirmationEmailHtml's own comment for the full fallback chain
+  // (this -> the account-wide template -> the original hand-built
+  // design). Null (the default) means this event just uses whatever the
+  // account-wide template resolves to.
+  confirmationEmailHtml String?
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 
@@ -588,6 +594,17 @@ model OrgSettings {
   // an email address, for people who lost the confirmation email and
   // don't want to fill the whole registration form again.
   selfServeResendEnabled Boolean @default(true)
+
+  // The GLOBAL confirmation email template — rich-text HTML from the same
+  // TipTap editor as the event description (RichTextEditor.tsx),
+  // sanitized before storage same as that. Null (the default — nobody
+  // has to touch this) means "use the existing hand-built design in
+  // lib/email/templates.ts's confirmationEmail()" exactly as before this
+  // feature existed. See Event.confirmationEmailHtml for the per-event
+  // override this falls back to when THAT is also unset — see
+  // lib/confirmationTemplate.ts for the merge-tag substitution and the
+  // real fallback chain (event -> global -> hand-built default).
+  confirmationEmailHtml String?
 
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())

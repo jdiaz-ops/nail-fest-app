@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useState } from "react";
 import { useEditor, EditorContent, Extension } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Underline from "@tiptap/extension-underline";
@@ -67,7 +67,19 @@ async function uploadImage(file: File): Promise<string | null> {
   return res.ok ? body.url : null;
 }
 
-export default function RichTextEditor({ value, onChange }: { value: string; onChange: (html: string) => void }) {
+// Imperative handle for callers that need to insert content at the
+// current cursor position from OUTSIDE the editor — e.g. a merge-tag
+// button (see EventConfirmationEditor.tsx) that isn't part of the
+// toolbar itself. Optional: every existing call site that doesn't pass a
+// ref keeps working exactly as before, forwardRef is additive.
+export interface RichTextEditorHandle {
+  insertAtCursor: (html: string) => void;
+}
+
+const RichTextEditor = forwardRef<RichTextEditorHandle, { value: string; onChange: (html: string) => void }>(function RichTextEditor(
+  { value, onChange },
+  ref
+) {
   const [showSource, setShowSource] = useState(false);
   const [sourceDraft, setSourceDraft] = useState(value);
   const [uploading, setUploading] = useState(false);
@@ -91,6 +103,12 @@ export default function RichTextEditor({ value, onChange }: { value: string; onC
     },
     immediatelyRender: false,
   });
+
+  useImperativeHandle(ref, () => ({
+    insertAtCursor: (html: string) => {
+      editor?.chain().focus().insertContent(html).run();
+    },
+  }));
 
   // Keep the editor in sync if `value` changes from outside (e.g.
   // "Copiar detalles de..." pre-filling the form) without fighting the
@@ -284,7 +302,9 @@ export default function RichTextEditor({ value, onChange }: { value: string; onC
       )}
     </div>
   );
-}
+});
+
+export default RichTextEditor;
 
 function ToolbarButton({
   children,

@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getOrgSettings, updateOrgSettings } from "@/lib/settings";
 import { requireUser } from "@/lib/auth/guard";
+import { sanitizeEventDescription } from "@/lib/sanitizeHtml";
 
-// Shared by all six /admin/settings/* forms — each one POSTs only the
+// Shared by all seven /admin/settings/* forms — each one POSTs only the
 // field(s) it owns, so this stays a partial update, never a full replace.
 const patchSchema = z
   .object({
@@ -16,6 +17,9 @@ const patchSchema = z
     bannedEmails: z.array(z.string().email()),
     cookieConsentEnabled: z.boolean(),
     selfServeResendEnabled: z.boolean(),
+    // "" means "clear it, revert to the original hand-built design" — see
+    // lib/confirmationTemplate.ts's fallback chain.
+    confirmationEmailHtml: z.string(),
   })
   .partial();
 
@@ -36,10 +40,13 @@ export async function POST(req: NextRequest) {
   }
   // "" from an empty optional email input means "clear it", not "set it to
   // an empty string that fails email validation on the next read".
-  const { replyToEmail, ...rest } = parsed.data;
+  const { replyToEmail, confirmationEmailHtml, ...rest } = parsed.data;
   const updated = await updateOrgSettings({
     ...rest,
     ...(replyToEmail !== undefined ? { replyToEmail: replyToEmail || null } : {}),
+    ...(confirmationEmailHtml !== undefined
+      ? { confirmationEmailHtml: confirmationEmailHtml ? sanitizeEventDescription(confirmationEmailHtml) : null }
+      : {}),
   });
   return NextResponse.json({ ok: true, settings: updated });
 }

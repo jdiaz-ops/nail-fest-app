@@ -223,7 +223,7 @@ export function broadcastEmailHtml(params: {
 // part — not meant to preserve rich formatting, just to give inboxes that
 // prefer text/plain (or strip HTML entirely) something readable instead
 // of raw markup.
-function htmlToPlainText(html: string): string {
+export function htmlToPlainText(html: string): string {
   return html
     .replace(/<(p|div|h[1-6]|li|br)[^>]*>/gi, "\n")
     .replace(/<[^>]+>/g, "")

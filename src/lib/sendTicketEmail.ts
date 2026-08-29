@@ -1,13 +1,15 @@
 import { db } from "@/lib/db";
 import { emailProvider } from "@/lib/email";
 import { confirmationEmail } from "@/lib/email/templates";
+import { renderConfirmationFromTemplate } from "@/lib/confirmationTemplate";
 import { renderQrPngBuffer } from "@/lib/ticket";
 import { getOrgSettings } from "@/lib/settings";
 
-// Shared by /api/register (first send + resend-on-resubmit) and
-// /api/resend-ticket (the self-serve "I lost my email" flow) — one place
-// that renders the QR, builds the email, sends it, and logs the attempt,
-// so both call sites stay identical instead of drifting apart.
+// Shared by /api/register (first send + resend-on-resubmit), /api/resend-
+// ticket (the self-serve "I lost my email" flow), and /api/admin/
+// registrations/[id]/resend (an admin resending on someone's behalf) —
+// one place that renders the QR, builds the email, sends it, and logs the
+// attempt, so every call site stays identical instead of drifting apart.
 export async function sendTicketEmail(params: {
   person: { id: string; email: string; firstName: string | null; lastName?: string | null };
   event: {
@@ -18,6 +20,13 @@ export async function sendTicketEmail(params: {
     venueName?: string | null;
     venueAddress?: string | null;
     imageUrl?: string | null;
+    // Per-event override of the confirmation template — see
+    // Event.confirmationEmailHtml's own schema comment for the fallback
+    // chain (this -> the account-wide template -> the hand-built
+    // default). Optional so the type stays satisfied by any older/other
+    // caller that doesn't have it; Prisma's own Event rows already carry
+    // it since none of the existing call sites use a narrowing `select`.
+    confirmationEmailHtml?: string | null;
   };
   qrToken: string;
   // Registration.id/ticketTypeId/ticketCount — optional so this keeps
@@ -40,24 +49,48 @@ export async function sendTicketEmail(params: {
     // meaningful, just a short human-readable reference (Ticket Tailor's
     // own "order #") for someone reading it over the phone or WhatsApp.
     const confirmationCode = (params.registration?.id ?? params.qrToken).slice(-8).toUpperCase();
-    const { subject, text, html } = confirmationEmail({
-      firstName: params.person.firstName ?? "",
-      lastName: params.person.lastName ?? undefined,
-      eventName: params.event.name,
-      eventCity: params.event.city,
-      venueName: params.event.venueName ?? undefined,
-      venueAddress: params.event.venueAddress ?? undefined,
-      startsAt: params.event.startsAt,
-      endsAt: params.event.endsAt ?? undefined,
-      qrImageUrl,
-      eventImageUrl: params.event.imageUrl ?? undefined,
-      ticketTypeName: ticketType?.name,
-      ticketCount: params.registration?.ticketCount ?? undefined,
-      confirmationCode,
-      orgName: orgSettings.name,
-      timezone: orgSettings.timezone,
-      language: orgSettings.language,
-    });
+
+    // Fallback chain: this event's own override -> the account-wide
+    // template -> the original hand-built design (confirmationEmail()),
+    // exactly as before this feature existed. Whoever never opens
+    // Confirmación del evento gets IDENTICAL behavior to before — this
+    // whole branch is additive, not a rewrite of the default path.
+    const customTemplate = params.event.confirmationEmailHtml ?? orgSettings.confirmationEmailHtml;
+    const { subject, text, html } = customTemplate
+      ? renderConfirmationFromTemplate(customTemplate, {
+          firstName: params.person.firstName ?? "",
+          lastName: params.person.lastName ?? undefined,
+          eventName: params.event.name,
+          venueName: params.event.venueName ?? undefined,
+          venueAddress: params.event.venueAddress ?? undefined,
+          startsAt: params.event.startsAt,
+          endsAt: params.event.endsAt ?? undefined,
+          qrImageUrl,
+          ticketTypeName: ticketType?.name,
+          ticketCount: params.registration?.ticketCount ?? undefined,
+          confirmationCode,
+          orgName: orgSettings.name,
+          timezone: orgSettings.timezone,
+          language: orgSettings.language,
+        })
+      : confirmationEmail({
+          firstName: params.person.firstName ?? "",
+          lastName: params.person.lastName ?? undefined,
+          eventName: params.event.name,
+          eventCity: params.event.city,
+          venueName: params.event.venueName ?? undefined,
+          venueAddress: params.event.venueAddress ?? undefined,
+          startsAt: params.event.startsAt,
+          endsAt: params.event.endsAt ?? undefined,
+          qrImageUrl,
+          eventImageUrl: params.event.imageUrl ?? undefined,
+          ticketTypeName: ticketType?.name,
+          ticketCount: params.registration?.ticketCount ?? undefined,
+          confirmationCode,
+          orgName: orgSettings.name,
+          timezone: orgSettings.timezone,
+          language: orgSettings.language,
+        });
     const qrAttachment = await renderQrPngBuffer(params.qrToken);
     const sent = await emailProvider.sendTransactional({
       to: params.person.email,
