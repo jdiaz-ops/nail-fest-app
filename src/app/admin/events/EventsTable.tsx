@@ -86,8 +86,8 @@ export default function EventsTable({ events, timezone, language }: { events: Ev
         </Link>
       </div>
 
-      <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+      <div className="admin-table-wrap">
+        <table style={{ borderCollapse: "collapse", fontSize: 14 }}>
           <thead>
             <tr style={{ textAlign: "left", borderBottom: "1px solid #e3e1dc", color: "#5b5f6b", fontSize: 12, textTransform: "uppercase", letterSpacing: "0.03em" }}>
               <th style={{ padding: "8px 12px 8px 0" }}>Evento</th>

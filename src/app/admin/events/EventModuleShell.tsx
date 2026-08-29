@@ -87,8 +87,8 @@ export default function EventModuleShell({
         </div>
       </div>
 
-      <div style={{ display: "flex", gap: 32, alignItems: "flex-start" }}>
-        <nav style={{ width: 220, flexShrink: 0 }}>
+      <div className="admin-sidebar-layout">
+        <nav className="admin-sidebar-nav" style={{ width: 220, flexShrink: 0 }}>
           {groups.map((group, gi) => (
             <div key={gi} style={{ marginBottom: 20 }}>
               {group.heading && (
@@ -128,7 +128,7 @@ export default function EventModuleShell({
           </div>
         </nav>
 
-        <div style={{ flex: 1, minWidth: 0 }}>{children}</div>
+        <div className="admin-sidebar-content">{children}</div>
       </div>
     </div>
   );

@@ -51,8 +51,8 @@ export default async function EventBroadcastsPage({ params }: { params: { id: st
         post-evento. Para correos generales a toda la base, ve a CRM → Broadcasts.
       </p>
 
-      <div style={{ border: "1px solid #e3e1dc", borderRadius: 10, overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+      <div className="admin-table-wrap" style={{ border: "1px solid #e3e1dc", borderRadius: 10 }}>
+        <table style={{ borderCollapse: "collapse", fontSize: 13 }}>
           <thead>
             <tr style={{ textAlign: "left", background: "#faf9f7" }}>
               <th style={{ padding: "8px 12px" }}>Asunto</th>

@@ -41,8 +41,8 @@ export default async function SettingsLayout({ children }: { children: React.Rea
       <h1 className={fraunces.className} style={{ fontWeight: 900, fontSize: 28, marginBottom: 24 }}>
         Configuración general
       </h1>
-      <div style={{ display: "flex", gap: 32, alignItems: "flex-start" }}>
-        <nav style={{ width: 200, flex: "0 0 auto" }}>
+      <div className="admin-sidebar-layout">
+        <nav className="admin-sidebar-nav" style={{ width: 200, flex: "0 0 auto" }}>
           <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: "0.06em", color: "#8a8478", marginBottom: 8 }}>
             Editar
           </div>
@@ -70,7 +70,7 @@ export default async function SettingsLayout({ children }: { children: React.Rea
             ))}
           </ul>
         </nav>
-        <div style={{ flex: 1, minWidth: 0 }}>{children}</div>
+        <div className="admin-sidebar-content">{children}</div>
       </div>
     </div>
   );

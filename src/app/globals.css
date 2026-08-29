@@ -99,6 +99,60 @@ button.primary:disabled {
   cursor: not-allowed;
 }
 
+/* Nested-sidebar admin sections (CRM, Configuración, cada evento) — side
+   by side on desktop; below ~720px the sidebar nav stacks ABOVE the
+   content as a full-width list instead of squeezing the content into a
+   ~150px column (the actual mobile bug: sidebar at a fixed 200/220px
+   left barely 150px for real content on a phone). Real CSS classes
+   instead of the inline style objects these pages otherwise use — an
+   inline `style` can't express a breakpoint. Each page keeps its own
+   inline `width` on <nav> for the desktop value; the media query below
+   overrides it with `!important` (a plain inline style always beats a
+   class, so this is the one place that's required, not decorative). */
+.admin-sidebar-layout {
+  display: flex;
+  gap: 32px;
+  align-items: flex-start;
+}
+.admin-sidebar-content {
+  flex: 1;
+  min-width: 0;
+}
+@media (max-width: 720px) {
+  .admin-sidebar-layout {
+    flex-direction: column;
+    /* Real bug this stacking exposed: align-items only governs the CROSS
+       axis, which becomes width once flex-direction is column — the base
+       rule's flex-start (fine for row layout, irrelevant to width there)
+       left every stacked child sized to its own content instead of
+       stretching to the full column width, so the table's natural
+       content width (744px) won out over the 311px actually available.
+       stretch is what makes nav/content actually span full width here. */
+    align-items: stretch;
+    gap: 20px;
+  }
+  .admin-sidebar-nav {
+    width: 100% !important;
+  }
+}
+
+/* Every admin list table — lets it scroll horizontally instead of
+   silently cramming/cutting off columns on a narrow screen (the other
+   mobile bug flagged alongside the sidebar one: a table forced to
+   width:100% of a ~350px phone screen with 6+ columns has nowhere to put
+   the content except clip it). Table itself drops its own width:100%
+   (kept only as a floor via min-width here) so the browser's normal
+   auto-layout sizes columns by their real content instead of forcing
+   them to fit — when that natural width exceeds the viewport, this
+   wrapper scrolls instead of the table shrinking columns into mush. */
+.admin-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.admin-table-wrap table {
+  min-width: 100%;
+}
+
 /* Rendered output of RichTextEditor.tsx's TipTap description (see
    [eventSlug]/page.tsx) — needs its embedded media to stay inside the
    480px event page column instead of overflowing it. */

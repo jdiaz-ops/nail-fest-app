@@ -55,8 +55,8 @@ export default function UsersPanel({ users, currentUserId }: { users: UserRow[];
     <div style={{ marginTop: 20 }}>
       <CreateUserForm onCreated={() => router.refresh()} />
 
-      <div style={{ border: "1px solid #e3e1dc", borderRadius: 10, overflow: "hidden", marginTop: 24 }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+      <div className="admin-table-wrap" style={{ border: "1px solid #e3e1dc", borderRadius: 10, marginTop: 24 }}>
+        <table style={{ borderCollapse: "collapse", fontSize: 14 }}>
           <thead>
             <tr style={{ textAlign: "left", background: "#faf9f7" }}>
               <th style={{ padding: "10px 12px" }}>Usuario</th>

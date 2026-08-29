@@ -52,7 +52,8 @@ export default async function OverviewPage() {
       <div style={{ display: "flex", gap: 24, alignItems: "flex-start", flexWrap: "wrap" }}>
         <section style={{ flex: "1 1 420px", minWidth: 0 }}>
           <h2 style={{ fontSize: 16 }}>Actividad reciente</h2>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+          <div className="admin-table-wrap">
+          <table style={{ borderCollapse: "collapse", fontSize: 14 }}>
             <thead>
               <tr style={{ textAlign: "left", borderBottom: "1px solid #e3e1dc" }}>
                 <th style={{ padding: 8 }}>Cuándo</th>
@@ -81,6 +82,7 @@ export default async function OverviewPage() {
               )}
             </tbody>
           </table>
+          </div>
         </section>
 
         <section style={{ flex: "1 1 380px", minWidth: 0 }}>

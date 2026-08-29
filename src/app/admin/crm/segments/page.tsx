@@ -55,8 +55,8 @@ export default async function SegmentsPage() {
       <SegmentComposer events={events} professionOptions={professionOptions} />
 
       <h2 style={{ fontSize: 16, marginTop: 40 }}>Segmentos guardados</h2>
-      <div style={{ border: "1px solid #e3e1dc", borderRadius: 10, overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+      <div className="admin-table-wrap" style={{ border: "1px solid #e3e1dc", borderRadius: 10 }}>
+        <table style={{ borderCollapse: "collapse", fontSize: 14 }}>
           <thead>
             <tr style={{ textAlign: "left", background: "#faf9f7" }}>
               <th style={{ padding: "10px 12px" }}>Nombre</th>

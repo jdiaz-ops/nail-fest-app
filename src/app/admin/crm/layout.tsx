@@ -23,8 +23,8 @@ export default async function CrmLayout({ children }: { children: React.ReactNod
       <h1 className={fraunces.className} style={{ fontWeight: 900, fontSize: 28, marginBottom: 24 }}>
         CRM
       </h1>
-      <div style={{ display: "flex", gap: 32, alignItems: "flex-start" }}>
-        <nav style={{ width: 200, flex: "0 0 auto" }}>
+      <div className="admin-sidebar-layout">
+        <nav className="admin-sidebar-nav" style={{ width: 200, flex: "0 0 auto" }}>
           <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 2 }}>
             {NAV.map((item) => (
               <li key={item.href}>
@@ -33,7 +33,7 @@ export default async function CrmLayout({ children }: { children: React.ReactNod
             ))}
           </ul>
         </nav>
-        <div style={{ flex: 1, minWidth: 0 }}>{children}</div>
+        <div className="admin-sidebar-content">{children}</div>
       </div>
     </div>
   );

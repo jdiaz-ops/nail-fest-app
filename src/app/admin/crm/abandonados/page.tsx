@@ -46,8 +46,8 @@ export default async function AbandonedCartsPage() {
           vale la pena contactarlos por un canal fuera de este flujo de
           consentimiento automático — no es un botón de "enviar correo de
           recuperación" automatizado. */}
-      <div style={{ border: "1px solid #e3e1dc", borderRadius: 10, overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+      <div className="admin-table-wrap" style={{ border: "1px solid #e3e1dc", borderRadius: 10 }}>
+        <table style={{ borderCollapse: "collapse", fontSize: 14 }}>
           <thead>
             <tr style={{ textAlign: "left", background: "#faf9f7" }}>
               <th style={{ padding: "10px 12px" }}>Correo</th>

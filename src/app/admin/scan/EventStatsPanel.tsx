@@ -94,8 +94,8 @@ export default async function EventStatsPanel({ eventId }: { eventId: string }) 
       {byTicketType.length > 0 && (
         <>
           <h2 style={{ fontSize: 15 }}>Por tipo de entrada</h2>
-          <div style={{ border: "1px solid #e3e1dc", borderRadius: 10, overflow: "hidden", marginBottom: 24 }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+          <div className="admin-table-wrap" style={{ border: "1px solid #e3e1dc", borderRadius: 10, marginBottom: 24 }}>
+            <table style={{ borderCollapse: "collapse", fontSize: 13 }}>
               <thead>
                 <tr style={{ textAlign: "left", background: "#faf9f7" }}>
                   <th style={{ padding: "8px 12px" }}>Tipo</th>
@@ -137,8 +137,8 @@ export default async function EventStatsPanel({ eventId }: { eventId: string }) 
           .map((r) => `${RESULT_LABEL[r]}: ${scansByResult.get(r) ?? 0}`)
           .join(" · ")}
       </p>
-      <div style={{ border: "1px solid #e3e1dc", borderRadius: 10, overflow: "hidden" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+      <div className="admin-table-wrap" style={{ border: "1px solid #e3e1dc", borderRadius: 10 }}>
+        <table style={{ borderCollapse: "collapse", fontSize: 13 }}>
           <thead>
             <tr style={{ textAlign: "left", background: "#faf9f7" }}>
               <th style={{ padding: "8px 12px" }}>Hora</th>
