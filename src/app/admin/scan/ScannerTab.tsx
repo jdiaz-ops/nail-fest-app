@@ -4,11 +4,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import jsQR from "jsqr";
 import { formatDateInTz } from "@/lib/dateFormat";
 import { useScanApp } from "./ScanAppContext";
+import { playSoundForResult } from "@/lib/scanSounds";
 import type { DisplayKind, DisplayOutcome } from "@/lib/useOfflineScanEngine";
 
 const RESULT_COPY: Record<DisplayKind, { emoji: string; label: string; color: string }> = {
-  VALID_FIRST: { emoji: "✅", label: "Entrada válida", color: "#1f7a5c" },
-  VALID_REENTRY: { emoji: "🔁", label: "Reingreso — ya había entrado", color: "#b8791a" },
+  VALID_FIRST: { emoji: "✅", label: "Bienvenida", color: "#1f7a5c" },
+  VALID_REENTRY: { emoji: "🔁", label: "Bienvenida de vuelta", color: "#b8791a" },
   WRONG_EVENT: { emoji: "⚠️", label: "Boleto de OTRO evento", color: "#b8791a" },
   INVALID_TOKEN: { emoji: "❌", label: "Código inválido", color: "#c2185b" },
   NOT_FOUND: { emoji: "❌", label: "No existe ese registro", color: "#c2185b" },
@@ -16,7 +17,8 @@ const RESULT_COPY: Record<DisplayKind, { emoji: string; label: string; color: st
   // NOT the same claim as INVALID_TOKEN/NOT_FOUND (which mean the server
   // itself checked and rejected it). It might just be a registration
   // newer than the last download. Never read this as "reject at the
-  // door" — see the copy in the card itself.
+  // door" — see the copy in the card itself, and why it shares the
+  // reentry/warning sound below, not the error one.
   OFFLINE_UNKNOWN: { emoji: "🕓", label: "No reconocido sin conexión", color: "#b8791a" },
   REQUEST_ERROR: { emoji: "⚠️", label: "Error técnico — no se pudo verificar", color: "#c2185b" },
 };
@@ -24,6 +26,12 @@ const RESULT_COPY: Record<DisplayKind, { emoji: string; label: string; color: st
 // Same-token re-scans while the QR is still sitting in frame shouldn't fire
 // the API twice — the decode loop runs many times a second.
 const RESCAN_COOLDOWN_MS = 2500;
+// How long the color/name takeover stays on screen before clearing itself
+// — long enough to read a name, short enough to never feel like it's
+// blocking the line. Never a manual "next" button: the camera keeps
+// decoding underneath the whole time, so if the next person's QR is
+// already in frame it just works.
+const OUTCOME_DISPLAY_MS = 2000;
 
 export default function ScannerTab() {
   const { submitToken, timezone, language, authError } = useScanApp();
@@ -39,16 +47,27 @@ export default function ScannerTab() {
   const lastScanRef = useRef<{ token: string; at: number } | null>(null);
   const checkingRef = useRef(checking);
   checkingRef.current = checking;
+  const outcomeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const submit = useCallback(
     async (token: string) => {
       setChecking(true);
       const result = await submitToken(token);
-      setOutcome(result);
       setChecking(false);
+
+      playSoundForResult(result.kind);
+      setOutcome(result);
+      if (outcomeTimeoutRef.current) clearTimeout(outcomeTimeoutRef.current);
+      outcomeTimeoutRef.current = setTimeout(() => setOutcome(null), OUTCOME_DISPLAY_MS);
     },
     [submitToken]
   );
+
+  useEffect(() => {
+    return () => {
+      if (outcomeTimeoutRef.current) clearTimeout(outcomeTimeoutRef.current);
+    };
+  }, []);
 
   const handleDecoded = useCallback(
     (token: string) => {
@@ -166,6 +185,12 @@ export default function ScannerTab() {
         </p>
       )}
 
+      {/* The camera view itself turns into the result — green/ámbar/rojo,
+          nombre incluido — durante OUTCOME_DISPLAY_MS, y luego vuelve sola
+          a la cámara en vivo. Nunca hay un botón "siguiente": el lector
+          sigue decodificando por debajo todo el tiempo, así que si la
+          siguiente persona ya tiene su QR en cuadro, ya quedó registrada
+          para cuando se lea el nombre anterior. */}
       <div style={{ position: "relative", background: "#000", borderRadius: 12, overflow: "hidden", aspectRatio: "3 / 4" }}>
         <video ref={videoRef} playsInline muted style={{ width: "100%", height: "100%", objectFit: "cover" }} />
         <canvas ref={canvasRef} style={{ display: "none" }} />
@@ -174,63 +199,62 @@ export default function ScannerTab() {
             {cameraError}
           </div>
         )}
-      </div>
 
-      {outcome && copy && (
-        <div
-          style={{
-            marginTop: 16,
-            padding: "20px 16px",
-            borderRadius: 12,
-            background: copy.color,
-            color: "#fff",
-            textAlign: "center",
-          }}
-        >
-          {outcome.offline && (
-            <div
-              style={{
-                display: "inline-block",
-                fontSize: 11,
-                fontWeight: 700,
-                letterSpacing: "0.04em",
-                textTransform: "uppercase",
-                background: "rgba(255,255,255,0.25)",
-                padding: "3px 10px",
-                borderRadius: 999,
-                marginBottom: 8,
-              }}
-            >
-              Sin conexión — pendiente de confirmar
-            </div>
-          )}
-          <div style={{ fontSize: 40, lineHeight: 1 }}>{copy.emoji}</div>
-          <div style={{ fontSize: 18, fontWeight: 600, marginTop: 8 }}>{copy.label}</div>
-          {outcome.personName && <div style={{ fontSize: 15, marginTop: 4 }}>{outcome.personName}</div>}
-          {outcome.ticketTypeName && <div style={{ fontSize: 13, marginTop: 2, opacity: 0.9 }}>{outcome.ticketTypeName}</div>}
-          {outcome.kind === "OFFLINE_UNKNOWN" && (
-            <div style={{ fontSize: 13, marginTop: 4, opacity: 0.9 }}>
-              No está en los datos descargados — puede ser un registro muy reciente. No lo rechaces solo por esto;
-              apunta el nombre y verifica cuando vuelva la señal.
-            </div>
-          )}
-          {outcome.kind === "WRONG_EVENT" && outcome.actualEventName && (
-            <div style={{ fontSize: 13, marginTop: 4, opacity: 0.9 }}>Su boleto es para: {outcome.actualEventName}</div>
-          )}
-          {outcome.kind === "VALID_REENTRY" && outcome.previousScanAt && (
-            <div style={{ fontSize: 13, marginTop: 4, opacity: 0.9 }}>
-              Primera entrada: {formatDateInTz(new Date(outcome.previousScanAt), { timeStyle: "short" }, timezone, language)}
-            </div>
-          )}
-          <button
-            type="button"
-            onClick={() => setOutcome(null)}
-            style={{ marginTop: 12, padding: "8px 16px", borderRadius: 8, border: "none", background: "rgba(255,255,255,0.25)", color: "#fff" }}
+        {outcome && copy && (
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              textAlign: "center",
+              padding: 24,
+              background: copy.color,
+              color: "#fff",
+            }}
           >
-            Escanear siguiente
-          </button>
-        </div>
-      )}
+            {outcome.offline && (
+              <div
+                style={{
+                  display: "inline-block",
+                  fontSize: 11,
+                  fontWeight: 700,
+                  letterSpacing: "0.04em",
+                  textTransform: "uppercase",
+                  background: "rgba(255,255,255,0.25)",
+                  padding: "3px 10px",
+                  borderRadius: 999,
+                  marginBottom: 10,
+                }}
+              >
+                Sin conexión — pendiente de confirmar
+              </div>
+            )}
+            <div style={{ fontSize: 48, lineHeight: 1 }}>{copy.emoji}</div>
+            <div style={{ fontSize: 22, fontWeight: 700, marginTop: 10 }}>
+              {copy.label}
+              {outcome.personName ? `, ${outcome.personName}` : ""}
+            </div>
+            {outcome.ticketTypeName && <div style={{ fontSize: 14, marginTop: 4, opacity: 0.9 }}>{outcome.ticketTypeName}</div>}
+            {outcome.kind === "OFFLINE_UNKNOWN" && (
+              <div style={{ fontSize: 13, marginTop: 8, opacity: 0.9, maxWidth: 280 }}>
+                No está en los datos descargados — puede ser un registro muy reciente. No lo rechaces solo por esto;
+                apunta el nombre y verifica cuando vuelva la señal.
+              </div>
+            )}
+            {outcome.kind === "WRONG_EVENT" && outcome.actualEventName && (
+              <div style={{ fontSize: 13, marginTop: 8, opacity: 0.9 }}>Su boleto es para: {outcome.actualEventName}</div>
+            )}
+            {outcome.kind === "VALID_REENTRY" && outcome.previousScanAt && (
+              <div style={{ fontSize: 13, marginTop: 8, opacity: 0.9 }}>
+                Primera entrada: {formatDateInTz(new Date(outcome.previousScanAt), { timeStyle: "short" }, timezone, language)}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {checking && !outcome && <p style={{ marginTop: 12, fontSize: 14, color: "#5b5f6b" }}>Verificando…</p>}
 

@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useScanApp } from "./ScanAppContext";
 import { CheckCircleIcon, SearchIcon } from "./icons";
+import { playSoundForResult } from "@/lib/scanSounds";
 
 // The real fallback for "their QR won't scan" — a phone with a dead
 // screen, a photo of the ticket too blurry to decode, someone who lost
@@ -35,6 +36,7 @@ export default function DoorlistTab() {
     setBusyToken(entry.token);
     const outcome = await submitToken(entry.token);
     setBusyToken(null);
+    playSoundForResult(outcome.kind);
     const label =
       outcome.kind === "VALID_FIRST"
         ? "Entrada registrada"
