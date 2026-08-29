@@ -6,8 +6,8 @@
 // queued scan syncs. Everything here is either "what to show someone at
 // the door right now" or "what to send once there's a connection again".
 //
-// Plain functions, no React — ScanClient.tsx owns the state/reactivity,
-// this owns localStorage. Every function no-ops safely if window/
+// Plain functions, no React — useOfflineScanEngine.ts owns the state/
+// reactivity, this owns localStorage. Every function no-ops safely if window/
 // localStorage isn't available (SSR, or a browser blocking storage),
 // since a scan attempt must never crash just because it couldn't cache.
 
@@ -104,7 +104,7 @@ export function loadRoster(eventId: string): Roster | null {
 export type LocalPreview =
   | { kind: "valid_first"; personName?: string; ticketTypeName?: string }
   | { kind: "valid_reentry"; personName?: string; ticketTypeName?: string }
-  | { kind: "unknown" }; // not in the downloaded roster — could be genuinely invalid, or just a registration newer than the last download; NEVER presented as a confident rejection, see ScanClient.tsx
+  | { kind: "unknown" }; // not in the downloaded roster — could be genuinely invalid, or just a registration newer than the last download; NEVER presented as a confident rejection, see ScannerTab.tsx and DoorlistTab.tsx
 
 /** Read-only preview — does NOT mutate localCheckIns. Call bumpLocalCheckIn
  * separately, once the scan is actually being queued (not on every decode

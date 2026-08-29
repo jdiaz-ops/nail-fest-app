@@ -1,8 +1,9 @@
 import { db } from "@/lib/db";
-import { requirePageUser } from "@/lib/auth/guard";
-import ScanTabs from "../ScanTabs";
 
-export const dynamic = "force-dynamic";
+// The Dashboard tab's content, admin-only — see [eventId]/page.tsx, which
+// redirects STAFF straight to Escanear instead of rendering this at all.
+// Real numbers only, straight from the same tables the rest of the CRM
+// reads — no separate/approximated counters.
 
 const RESULT_LABEL: Record<string, string> = {
   VALID_FIRST: "Entrada válida",
@@ -12,51 +13,7 @@ const RESULT_LABEL: Record<string, string> = {
   NOT_FOUND: "No existe",
 };
 
-export default async function ScanStatsPage({ searchParams }: { searchParams: { eventId?: string } }) {
-  await requirePageUser(["ADMIN"]);
-
-  const events = await db.event.findMany({ orderBy: { startsAt: "desc" }, select: { id: true, slug: true, name: true, city: true } });
-  const eventId = searchParams.eventId || events[0]?.id;
-  const event = eventId ? events.find((e) => e.id === eventId) : undefined;
-
-  return (
-    <div>
-      <ScanTabs active="stats" />
-
-      {/* Plain GET form, no client JS — a Server Component page can't hand
-          out an onChange handler (not serializable), and a whole client
-          component just to auto-submit on change isn't worth it for one
-          dropdown. */}
-      <form method="get" style={{ display: "flex", gap: 8, marginBottom: 20 }}>
-        <select name="eventId" defaultValue={eventId} style={{ flex: 1 }}>
-          {events.map((ev) => (
-            <option key={ev.id} value={ev.id}>
-              {ev.name} · {ev.city}
-            </option>
-          ))}
-        </select>
-        <button className="primary" type="submit">
-          Ver
-        </button>
-      </form>
-
-      {!event ? (
-        <p style={{ color: "#5b5f6b" }}>Aún no hay eventos.</p>
-      ) : (
-        <>
-          <EventStats eventId={event.id} />
-          <p style={{ marginTop: 24, fontSize: 12, color: "#5b5f6b" }}>
-            Respaldo de emergencia — si el celular o la app fallan por completo (no solo la conexión):{" "}
-            <a href={`/api/admin/scan/export?eventId=${event.id}`}>descargar lista en CSV</a> para verificar
-            manualmente en la puerta.
-          </p>
-        </>
-      )}
-    </div>
-  );
-}
-
-async function EventStats({ eventId }: { eventId: string }) {
+export default async function EventStatsPanel({ eventId }: { eventId: string }) {
   const [event, ticketAgg, byTicketType, checkedInAgg, scanCounts, recentScans, abandonedCount] = await Promise.all([
     db.event.findUnique({ where: { id: eventId } }),
     db.registration.aggregate({ where: { eventId, status: "CONFIRMED" }, _sum: { ticketCount: true } }),
@@ -167,6 +124,12 @@ async function EventStats({ eventId }: { eventId: string }) {
           </tbody>
         </table>
       </div>
+
+      <p style={{ marginTop: 24, fontSize: 12, color: "#5b5f6b" }}>
+        Respaldo de emergencia — si el celular o la app fallan por completo (no solo la conexión):{" "}
+        <a href={`/api/admin/scan/export?eventId=${eventId}`}>descargar lista en CSV</a> para verificar manualmente
+        en la puerta.
+      </p>
     </div>
   );
 }
