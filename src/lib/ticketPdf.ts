@@ -30,7 +30,6 @@ const TEAL = "#00beb5";
 const TEAL_DARK_TEXT = "#0b2e2c";
 const INK = "#1a1a1a";
 const MUTED = "#5b5f6b";
-const FAINT = "#8a8478";
 
 export async function renderTicketPdfBuffer(data: TicketPdfData): Promise<Buffer> {
   const qrPng = await renderQrPngBuffer(data.qrToken);
@@ -53,18 +52,29 @@ export async function renderTicketPdfBuffer(data: TicketPdfData): Promise<Buffer
     doc.on("error", reject);
 
     const pageWidth = doc.page.width;
+    const headerTextWidth = pageWidth - 100;
+    const tagline = "Donde se reúne el mundo de las uñas";
 
-    // Header band.
-    doc.rect(0, 0, pageWidth, 92).fill(TEAL);
-    doc
-      .fillColor(TEAL_DARK_TEXT)
-      .font("Helvetica-Bold")
-      .fontSize(10)
-      .text("TU ENTRADA", 50, 28, { characterSpacing: 1 });
-    doc.fontSize(20).text(data.eventName, 50, 44, { width: pageWidth - 100 });
+    // Header band — measure text heights first (font/fontSize calls only
+    // set state, nothing renders until .text()) so the teal band itself
+    // can be drawn BEHIND the text at the right height, however many
+    // lines the event name wraps to.
+    const labelY = 24;
+    const titleY = labelY + 18;
+    doc.font("Helvetica-Bold").fontSize(20);
+    const titleHeight = doc.heightOfString(data.eventName, { width: headerTextWidth });
+    const taglineY = titleY + titleHeight + 6;
+    doc.font("Helvetica").fontSize(11);
+    const taglineHeight = doc.heightOfString(tagline, { width: headerTextWidth });
+    const bandHeight = taglineY + taglineHeight + 20;
+
+    doc.rect(0, 0, pageWidth, bandHeight).fill(TEAL);
+    doc.fillColor(TEAL_DARK_TEXT).font("Helvetica-Bold").fontSize(10).text("TU ENTRADA", 50, labelY, { characterSpacing: 1 });
+    doc.fontSize(20).text(data.eventName, 50, titleY, { width: headerTextWidth });
+    doc.font("Helvetica").fontSize(11).text(tagline, 50, taglineY, { width: headerTextWidth });
 
     // Event details.
-    let y = 125;
+    let y = bandHeight + 33;
     const labelX = 50;
     const valueX = 150;
     const valueWidth = pageWidth - valueX - 50;
@@ -83,10 +93,17 @@ export async function renderTicketPdfBuffer(data: TicketPdfData): Promise<Buffer
     row("Asistente", attendeeName);
     if (ticketTypeLine) row("Entrada", ticketTypeLine);
 
+    // Instruction — bigger, above the QR (was a small line below it).
+    const instruction = "Presenta este código QR (impreso o digital) en la entrada del evento.";
+    doc.fillColor(INK).font("Helvetica-Bold").fontSize(13);
+    const instructionHeight = doc.heightOfString(instruction, { align: "center", width: pageWidth - 150 });
+    const instructionY = y + 20;
+    doc.text(instruction, 75, instructionY, { align: "center", width: pageWidth - 150 });
+
     // QR block, centered.
     const qrSize = 220;
     const qrX = (pageWidth - qrSize) / 2;
-    const qrY = y + 20;
+    const qrY = instructionY + instructionHeight + 20;
     doc.image(qrPng, qrX, qrY, { width: qrSize, height: qrSize });
 
     doc
@@ -94,17 +111,6 @@ export async function renderTicketPdfBuffer(data: TicketPdfData): Promise<Buffer
       .font("Helvetica-Bold")
       .fontSize(10)
       .text(`CÓDIGO ${data.confirmationCode}`, 0, qrY + qrSize + 14, { align: "center", width: pageWidth });
-
-    doc
-      .fillColor(FAINT)
-      .font("Helvetica")
-      .fontSize(9)
-      .text(
-        "Presenta este código QR en la entrada. Puedes reingresar las veces que necesites durante el evento.",
-        75,
-        qrY + qrSize + 34,
-        { align: "center", width: pageWidth - 150 }
-      );
 
     doc.end();
   });
