@@ -3,13 +3,17 @@ import { getOrderedProfessionOptions } from "@/lib/professions";
 import { resolveSegment, type SegmentFilter } from "@/lib/segments/builder";
 import SegmentComposer from "@/components/SegmentComposer";
 import DeleteSegmentButton from "@/components/DeleteSegmentButton";
+import CrmPageHeader from "../CrmPageHeader";
+import StatCard from "../StatCard";
 
 export const dynamic = "force-dynamic";
 
-const STATUS_LABEL: Record<string, string> = {
-  PENDING: "⏳ pendiente (aún no corrió el cron)",
-  OK: "✅ sincronizado",
-  ERROR: "⚠️ error",
+// Same status-pill convention as everywhere else in the CRM (StageBadge,
+// registration Estado, broadcast Estado) — no emoji, a colored pill.
+const SYNC_STYLE: Record<string, { bg: string; ink: string; label: string }> = {
+  PENDING: { bg: "#f6f5f2", ink: "#5b5f6b", label: "Pendiente" },
+  OK: { bg: "#e8f6ef", ink: "#0e6b4c", label: "Sincronizado" },
+  ERROR: { bg: "#fbe9ea", ink: "#a3212b", label: "Error" },
 };
 
 export default async function SegmentsPage() {
@@ -32,61 +36,84 @@ export default async function SegmentsPage() {
       memberCount: (await resolveSegment(s.filter as unknown as SegmentFilter)).length,
     }))
   );
+  const syncedCount = segments.filter((s) => s.metaSync?.status === "OK").length;
 
   return (
     <div>
-      <h1>Segmentos</h1>
-      <p style={{ color: "#5b5f6b" }}>
-        Cada segmento que guardes aquí se sincroniza con una Custom Audience en Meta (mismo
-        nombre) de inmediato al guardar, y luego se mantiene solo — nuevos registros entran casi
-        al instante, sin paso manual. Útil para audiencias por evento específico, ej.
-        &quot;registrados solo a Pereira 2026&quot;, que
-        luego puedes usar para retargeting o para excluirla de campañas de otros eventos.
-      </p>
+      <CrmPageHeader
+        title="Segmentos"
+        subtitle={
+          'Cada segmento que guardes aquí se sincroniza con una Custom Audience en Meta (mismo nombre) de inmediato al guardar, y luego se mantiene solo — nuevos registros entran casi al instante, sin paso manual. Útil para audiencias por evento específico, ej. "registrados solo a Pereira 2026", que luego puedes usar para retargeting o para excluirla de campañas de otros eventos. Los broadcasts (ver esa sección) siempre envían a uno de estos segmentos.'
+        }
+      />
+
+      <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 24 }}>
+        <StatCard label="Segmentos guardados" value={String(segments.length)} />
+        <StatCard label="Sincronizados con Meta" value={String(syncedCount)} />
+      </div>
 
       <SegmentComposer events={events} professionOptions={professionOptions} />
 
-      <h2 style={{ marginTop: 40 }}>Segmentos guardados</h2>
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
-        <thead>
-          <tr style={{ textAlign: "left", borderBottom: "1px solid #e3e1dc" }}>
-            <th style={{ padding: 8 }}>Nombre</th>
-            <th style={{ padding: 8 }}>Personas</th>
-            <th style={{ padding: 8 }}>Sync con Meta</th>
-            <th style={{ padding: 8 }}>Última sincronización</th>
-            <th style={{ padding: 8 }}></th>
-          </tr>
-        </thead>
-        <tbody>
-          {segments.map((s) => (
-            <tr key={s.id} style={{ borderBottom: "1px solid #f0efec" }}>
-              <td style={{ padding: 8 }}>{s.name}</td>
-              <td style={{ padding: 8 }}>{s.memberCount}</td>
-              <td style={{ padding: 8 }}>
-                {s.metaSync ? STATUS_LABEL[s.metaSync.status] : "—"}
-                {s.metaSync?.lastError && (
-                  <div style={{ color: "#c2185b", fontSize: 12, marginTop: 4 }}>
-                    {s.metaSync.lastError}
-                  </div>
-                )}
-              </td>
-              <td style={{ padding: 8 }}>
-                {s.metaSync?.lastSyncedAt ? s.metaSync.lastSyncedAt.toLocaleString("es-CO") : "—"}
-              </td>
-              <td style={{ padding: 8 }}>
-                <DeleteSegmentButton id={s.id} />
-              </td>
+      <h2 style={{ fontSize: 16, marginTop: 40 }}>Segmentos guardados</h2>
+      <div style={{ border: "1px solid #e3e1dc", borderRadius: 10, overflow: "hidden" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+          <thead>
+            <tr style={{ textAlign: "left", background: "#faf9f7" }}>
+              <th style={{ padding: "10px 12px" }}>Nombre</th>
+              <th style={{ padding: "10px 12px" }}>Personas</th>
+              <th style={{ padding: "10px 12px" }}>Sync con Meta</th>
+              <th style={{ padding: "10px 12px" }}>Última sincronización</th>
+              <th style={{ padding: "10px 12px" }}></th>
             </tr>
-          ))}
-          {segments.length === 0 && (
-            <tr>
-              <td colSpan={5} style={{ padding: 8, color: "#5b5f6b" }}>
-                Aún no hay segmentos guardados.
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {segments.map((s) => {
+              const syncStyle = s.metaSync ? SYNC_STYLE[s.metaSync.status] : null;
+              return (
+                <tr key={s.id} style={{ borderTop: "1px solid #f0efec" }}>
+                  <td style={{ padding: "10px 12px", fontWeight: 600 }}>{s.name}</td>
+                  <td style={{ padding: "10px 12px" }}>{s.memberCount}</td>
+                  <td style={{ padding: "10px 12px" }}>
+                    {syncStyle ? (
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          padding: "4px 12px",
+                          borderRadius: 999,
+                          fontSize: 12,
+                          fontWeight: 600,
+                          background: syncStyle.bg,
+                          color: syncStyle.ink,
+                        }}
+                      >
+                        {syncStyle.label}
+                      </span>
+                    ) : (
+                      <span style={{ color: "#5b5f6b" }}>—</span>
+                    )}
+                    {s.metaSync?.lastError && (
+                      <div style={{ color: "#a3212b", fontSize: 12, marginTop: 4 }}>{s.metaSync.lastError}</div>
+                    )}
+                  </td>
+                  <td style={{ padding: "10px 12px", color: "#5b5f6b" }}>
+                    {s.metaSync?.lastSyncedAt ? s.metaSync.lastSyncedAt.toLocaleString("es-CO") : "—"}
+                  </td>
+                  <td style={{ padding: "10px 12px" }}>
+                    <DeleteSegmentButton id={s.id} />
+                  </td>
+                </tr>
+              );
+            })}
+            {segments.length === 0 && (
+              <tr>
+                <td colSpan={5} style={{ padding: "10px 12px", color: "#5b5f6b" }}>
+                  Aún no hay segmentos guardados.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

@@ -59,6 +59,98 @@ export interface PersonProfile {
   consents: { purpose: string; granted: boolean; at: Date }[];
 }
 
+// Shared by getPersonProfile (one person, full detail) and
+// getLifecycleStagesBulk (many people, list view) — one place for the
+// actual rule, so the list's "Etapa" column can never disagree with what
+// the person's own profile page says.
+function computeLifecycleStage(input: {
+  registrationsCount: number;
+  distinctEventsRegistered: number;
+  distinctEventsAttended: number;
+  lastActivityAt: Date | null;
+}): LifecycleStage {
+  let stage: LifecycleStage;
+  if (input.registrationsCount === 0) {
+    stage = "LEAD";
+  } else if (input.distinctEventsRegistered >= 2 || input.distinctEventsAttended >= 2) {
+    stage = "RECURRENTE";
+  } else if (input.distinctEventsAttended >= 1) {
+    stage = "ASISTIO";
+  } else {
+    stage = "REGISTRADO";
+  }
+  if (stage !== "LEAD" && input.lastActivityAt) {
+    const daysSince = (Date.now() - input.lastActivityAt.getTime()) / 86_400_000;
+    if (daysSince > INACTIVE_AFTER_DAYS) stage = "INACTIVO";
+  }
+  return stage;
+}
+
+// Bulk, list-view version of the same computation getPersonProfile does
+// for one person — batched into a handful of queries total instead of
+// getPersonProfile's five-queries-per-person (which would mean 1000+
+// queries for a 200-row list). Real numbers, same rule, just fetched
+// efficiently: no per-row approximation that could disagree with what
+// the person's own detail page says.
+export async function getLifecycleStagesBulk(personIds: string[]): Promise<Map<string, LifecycleStage>> {
+  if (personIds.length === 0) return new Map();
+
+  const [registrations, scans] = await Promise.all([
+    db.registration.findMany({
+      where: { personId: { in: personIds } },
+      select: { personId: true, eventId: true, createdAt: true },
+    }),
+    db.scanLog.findMany({
+      where: { result: { in: ["VALID_FIRST", "VALID_REENTRY"] }, registration: { personId: { in: personIds } } },
+      select: { scannedForEventId: true, scannedAt: true, registration: { select: { personId: true } } },
+    }),
+  ]);
+
+  const byPerson = new Map<
+    string,
+    { registeredEvents: Set<string>; attendedEvents: Set<string>; lastActivityAt: Date | null }
+  >();
+  const ensure = (id: string) => {
+    let entry = byPerson.get(id);
+    if (!entry) {
+      entry = { registeredEvents: new Set(), attendedEvents: new Set(), lastActivityAt: null };
+      byPerson.set(id, entry);
+    }
+    return entry;
+  };
+  const bump = (entry: { lastActivityAt: Date | null }, at: Date) => {
+    if (!entry.lastActivityAt || at > entry.lastActivityAt) entry.lastActivityAt = at;
+  };
+
+  for (const r of registrations) {
+    const entry = ensure(r.personId);
+    entry.registeredEvents.add(r.eventId);
+    bump(entry, r.createdAt);
+  }
+  for (const s of scans) {
+    const personId = s.registration?.personId;
+    if (!personId) continue;
+    const entry = ensure(personId);
+    if (s.scannedForEventId) entry.attendedEvents.add(s.scannedForEventId);
+    bump(entry, s.scannedAt);
+  }
+
+  const result = new Map<string, LifecycleStage>();
+  for (const id of personIds) {
+    const entry = byPerson.get(id);
+    result.set(
+      id,
+      computeLifecycleStage({
+        registrationsCount: entry?.registeredEvents.size ?? 0,
+        distinctEventsRegistered: entry?.registeredEvents.size ?? 0,
+        distinctEventsAttended: entry?.attendedEvents.size ?? 0,
+        lastActivityAt: entry?.lastActivityAt ?? null,
+      })
+    );
+  }
+  return result;
+}
+
 export async function getPersonProfile(personId: string): Promise<PersonProfile | null> {
   const person = await db.person.findUnique({ where: { id: personId } });
   if (!person) return null;
@@ -155,21 +247,12 @@ export async function getPersonProfile(personId: string): Promise<PersonProfile 
   const distinctEventsRegistered = new Set(registrations.map((r) => r.eventId));
   const distinctEventsAttended = new Set(validScans.map((s) => s.scannedForEventId).filter(Boolean));
   const lastActivityAt = timeline[0]?.at ?? null;
-
-  let stage: LifecycleStage;
-  if (registrations.length === 0) {
-    stage = "LEAD";
-  } else if (distinctEventsRegistered.size >= 2 || distinctEventsAttended.size >= 2) {
-    stage = "RECURRENTE";
-  } else if (distinctEventsAttended.size >= 1) {
-    stage = "ASISTIO";
-  } else {
-    stage = "REGISTRADO";
-  }
-  if (stage !== "LEAD" && lastActivityAt) {
-    const daysSince = (Date.now() - lastActivityAt.getTime()) / 86_400_000;
-    if (daysSince > INACTIVE_AFTER_DAYS) stage = "INACTIVO";
-  }
+  const stage = computeLifecycleStage({
+    registrationsCount: registrations.length,
+    distinctEventsRegistered: distinctEventsRegistered.size,
+    distinctEventsAttended: distinctEventsAttended.size,
+    lastActivityAt,
+  });
 
   return {
     id: person.id,

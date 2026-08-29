@@ -1,44 +1,55 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
+import { getLifecycleStagesBulk } from "@/lib/personTimeline";
+import CrmPageHeader from "../CrmPageHeader";
+import StatCard from "../StatCard";
+import StageBadge from "../StageBadge";
 
 export const dynamic = "force-dynamic";
 
-// Cheap, count-only stage approximation for the list view — the real
-// lifecycle computation (getPersonProfile, used on the detail page) also
-// needs ScanLog joined per person, which is fine for one profile but not
-// for scanning hundreds of rows here. "2+ registros" undercounts real
-// "Recurrente" (someone who attended the same event twice counts as 1
-// registration) — good enough for a list to scan, not for the real badge.
-function approxStageLabel(registrationsCount: number): string {
-  if (registrationsCount === 0) return "Lead";
-  if (registrationsCount >= 2) return "Recurrente";
-  return "Registrado";
-}
+const THIRTY_DAYS_AGO = () => new Date(Date.now() - 30 * 86_400_000);
 
 export default async function PersonasPage({ searchParams }: { searchParams: { q?: string } }) {
   const q = searchParams.q?.trim();
-  const people = await db.person.findMany({
-    where: q
-      ? {
-          OR: [
-            { firstName: { contains: q, mode: "insensitive" } },
-            { lastName: { contains: q, mode: "insensitive" } },
-            { email: { contains: q, mode: "insensitive" } },
-            { city: { contains: q, mode: "insensitive" } },
-          ],
-        }
-      : undefined,
-    include: { _count: { select: { registrations: true } } },
-    orderBy: { createdAt: "desc" },
-    take: 200,
-  });
+
+  const [people, totalPeople, newLast30Days] = await Promise.all([
+    db.person.findMany({
+      where: q
+        ? {
+            OR: [
+              { firstName: { contains: q, mode: "insensitive" } },
+              { lastName: { contains: q, mode: "insensitive" } },
+              { email: { contains: q, mode: "insensitive" } },
+              { city: { contains: q, mode: "insensitive" } },
+            ],
+          }
+        : undefined,
+      include: { _count: { select: { registrations: true } } },
+      orderBy: { createdAt: "desc" },
+      take: 200,
+    }),
+    db.person.count(),
+    db.person.count({ where: { createdAt: { gte: THIRTY_DAYS_AGO() } } }),
+  ]);
+
+  // Real stage per person, computed in a handful of batched queries — see
+  // getLifecycleStagesBulk's own comment for why this isn't the same
+  // per-row approximation an earlier version of this page used.
+  const stageByPerson = await getLifecycleStagesBulk(people.map((p) => p.id));
+  const recurrentesTotal = Array.from(stageByPerson.values()).filter((s) => s === "RECURRENTE").length;
 
   return (
     <div>
-      <h1 style={{ fontSize: 20, marginTop: 0 }}>Personas</h1>
-      <p style={{ color: "#5b5f6b", marginTop: 0, marginBottom: 16 }}>
-        Historial completo por contacto — registros, correos, escaneos de entrada y consentimientos en una sola línea de tiempo.
-      </p>
+      <CrmPageHeader
+        title="Personas"
+        subtitle="Historial completo por contacto — registros, correos, escaneos de entrada y consentimientos en una sola línea de tiempo."
+      />
+
+      <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 24 }}>
+        <StatCard label="Personas totales" value={String(totalPeople)} />
+        <StatCard label="Recurrentes (2+ eventos)" value={String(recurrentesTotal)} />
+        <StatCard label="Nuevas últimos 30 días" value={String(newLast30Days)} />
+      </div>
 
       <form style={{ marginBottom: 16 }}>
         <input
@@ -50,43 +61,47 @@ export default async function PersonasPage({ searchParams }: { searchParams: { q
         />
       </form>
 
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
-        <thead>
-          <tr style={{ textAlign: "left", borderBottom: "1px solid #e3e1dc" }}>
-            <th style={{ padding: 8 }}>Nombre</th>
-            <th style={{ padding: 8 }}>Correo</th>
-            <th style={{ padding: 8 }}>Ciudad</th>
-            <th style={{ padding: 8 }}>Registros</th>
-            <th style={{ padding: 8 }}>Etapa</th>
-            <th style={{ padding: 8 }}>Cliente desde</th>
-          </tr>
-        </thead>
-        <tbody>
-          {people.map((p) => (
-            <tr key={p.id} style={{ borderBottom: "1px solid #f0efec" }}>
-              <td style={{ padding: 8 }}>
-                <Link href={`/admin/crm/personas/${p.id}`} style={{ fontWeight: 600 }}>
-                  {[p.firstName, p.lastName].filter(Boolean).join(" ") || p.email}
-                </Link>
-              </td>
-              <td style={{ padding: 8, color: "#5b5f6b" }}>{p.email}</td>
-              <td style={{ padding: 8 }}>{p.city ?? "—"}</td>
-              <td style={{ padding: 8 }}>{p._count.registrations}</td>
-              <td style={{ padding: 8 }}>{approxStageLabel(p._count.registrations)}</td>
-              <td style={{ padding: 8, color: "#5b5f6b" }}>
-                {p.createdAt.toLocaleDateString("es-CO", { year: "numeric", month: "short", day: "numeric" })}
-              </td>
+      <div style={{ border: "1px solid #e3e1dc", borderRadius: 10, overflow: "hidden" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+          <thead>
+            <tr style={{ textAlign: "left", background: "#faf9f7" }}>
+              <th style={{ padding: "10px 12px" }}>Nombre</th>
+              <th style={{ padding: "10px 12px" }}>Correo</th>
+              <th style={{ padding: "10px 12px" }}>Ciudad</th>
+              <th style={{ padding: "10px 12px" }}>Registros</th>
+              <th style={{ padding: "10px 12px" }}>Etapa</th>
+              <th style={{ padding: "10px 12px" }}>Cliente desde</th>
             </tr>
-          ))}
-          {people.length === 0 && (
-            <tr>
-              <td colSpan={6} style={{ padding: 8, color: "#5b5f6b" }}>
-                {q ? "Nadie coincide con esa búsqueda." : "Aún no hay personas registradas."}
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {people.map((p) => (
+              <tr key={p.id} style={{ borderTop: "1px solid #f0efec" }}>
+                <td style={{ padding: "10px 12px" }}>
+                  <Link href={`/admin/crm/personas/${p.id}`} style={{ fontWeight: 600 }}>
+                    {[p.firstName, p.lastName].filter(Boolean).join(" ") || p.email}
+                  </Link>
+                </td>
+                <td style={{ padding: "10px 12px", color: "#5b5f6b" }}>{p.email}</td>
+                <td style={{ padding: "10px 12px" }}>{p.city ?? "—"}</td>
+                <td style={{ padding: "10px 12px" }}>{p._count.registrations}</td>
+                <td style={{ padding: "10px 12px" }}>
+                  <StageBadge stage={stageByPerson.get(p.id) ?? "LEAD"} />
+                </td>
+                <td style={{ padding: "10px 12px", color: "#5b5f6b" }}>
+                  {p.createdAt.toLocaleDateString("es-CO", { year: "numeric", month: "short", day: "numeric" })}
+                </td>
+              </tr>
+            ))}
+            {people.length === 0 && (
+              <tr>
+                <td colSpan={6} style={{ padding: "10px 12px", color: "#5b5f6b" }}>
+                  {q ? "Nadie coincide con esa búsqueda." : "Aún no hay personas registradas."}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

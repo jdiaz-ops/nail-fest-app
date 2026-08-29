@@ -1,16 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getPersonProfile, LIFECYCLE_LABEL, type LifecycleStage, type TimelineItem } from "@/lib/personTimeline";
+import { getPersonProfile, type TimelineItem } from "@/lib/personTimeline";
+import StageBadge from "../../StageBadge";
 
 export const dynamic = "force-dynamic";
-
-const STAGE_BADGE: Record<LifecycleStage, { bg: string; ink: string }> = {
-  LEAD: { bg: "#f6f5f2", ink: "#5b5f6b" },
-  REGISTRADO: { bg: "#f6f5f2", ink: "#5b5f6b" },
-  ASISTIO: { bg: "#e8f6ef", ink: "#0e6b4c" },
-  RECURRENTE: { bg: "#e3faf7", ink: "var(--accent-ink)" },
-  INACTIVO: { bg: "#fdf1e6", ink: "#8a5a1f" },
-};
 
 const TYPE_ICON: Record<TimelineItem["type"], { bg: string; ink: string }> = {
   REGISTRATION: { bg: "#e3faf7", ink: "var(--accent-ink)" },
@@ -123,7 +116,6 @@ export default async function PersonaPage({ params }: { params: { id: string } }
   const name = [profile.firstName, profile.lastName].filter(Boolean).join(" ") || profile.email;
   const initials =
     (profile.firstName?.charAt(0) || profile.email.charAt(0)).toUpperCase() + (profile.lastName?.charAt(0) ?? "").toUpperCase();
-  const badge = STAGE_BADGE[profile.stage];
 
   return (
     <div>
@@ -152,19 +144,7 @@ export default async function PersonaPage({ params }: { params: { id: string } }
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <h1 style={{ fontSize: 24, margin: 0 }}>{name}</h1>
-            <span
-              style={{
-                display: "inline-flex",
-                padding: "4px 12px",
-                borderRadius: 999,
-                fontSize: 12,
-                fontWeight: 600,
-                background: badge.bg,
-                color: badge.ink,
-              }}
-            >
-              {LIFECYCLE_LABEL[profile.stage]}
-            </span>
+            <StageBadge stage={profile.stage} />
           </div>
           <div style={{ fontSize: 14, color: "#5b5f6b", marginTop: 2 }}>
             {profile.email}

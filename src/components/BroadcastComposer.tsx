@@ -1,49 +1,43 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
-interface Props {
-  events: { slug: string; name: string }[];
-  professionOptions: string[];
+interface SegmentOption {
+  id: string;
+  name: string;
+  memberCount: number;
 }
 
-export default function BroadcastComposer({ events, professionOptions }: Props) {
-  const [includeEvent, setIncludeEvent] = useState("");
-  const [includeAttended, setIncludeAttended] = useState("");
-  const [includeCity, setIncludeCity] = useState("");
-  const [includeProfession, setIncludeProfession] = useState("");
-  const [excludeEvent, setExcludeEvent] = useState("");
-  const [excludeAttended, setExcludeAttended] = useState("");
+interface Props {
+  segments: SegmentOption[];
+}
+
+// A broadcast targets an EXISTING, named segment from /admin/crm/segments
+// — this used to have its own full copy of the Incluir/Excluir filter
+// builder (duplicating SegmentComposer.tsx) and silently created a brand
+// new, never-synced-to-Meta SegmentDefinition named after the email
+// subject on every single send. Now it just picks one already-built,
+// already Meta-synced segment — same audience-definition source of truth
+// as the rest of the CRM.
+export default function BroadcastComposer({ segments }: Props) {
+  const [segmentId, setSegmentId] = useState(segments[0]?.id ?? "");
   const [subject, setSubject] = useState("");
   const [bodyText, setBodyText] = useState("");
   const [result, setResult] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+
+  const selected = segments.find((s) => s.id === segmentId);
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
     setSending(true);
     setResult(null);
 
-    const include = [
-      includeEvent ? { field: "event", eventSlug: includeEvent } : null,
-      includeAttended ? { field: "attended", eventSlug: includeAttended } : null,
-      includeCity ? { field: "city", city: includeCity } : null,
-      includeProfession ? { field: "profession", profession: includeProfession } : null,
-    ].filter(Boolean);
-    const exclude = [
-      excludeEvent ? { field: "event", eventSlug: excludeEvent } : null,
-      excludeAttended ? { field: "attended", eventSlug: excludeAttended } : null,
-    ].filter(Boolean);
-
     const res = await fetch("/api/broadcasts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: subject,
-        filter: { include, exclude },
-        subject,
-        bodyText,
-      }),
+      body: JSON.stringify({ segmentId, subject, bodyText }),
     });
     const body = await res.json();
     setSending(false);
@@ -56,95 +50,38 @@ export default function BroadcastComposer({ events, professionOptions }: Props) 
     }
   }
 
+  if (segments.length === 0) {
+    return (
+      <div style={{ border: "1px solid #e3e1dc", borderRadius: 10, padding: 24, maxWidth: 900 }}>
+        <h2 style={{ marginTop: 0, fontSize: 16 }}>Nuevo broadcast</h2>
+        <p style={{ color: "#5b5f6b", marginBottom: 0 }}>
+          Todavía no tienes ningún segmento guardado — un broadcast siempre envía a un segmento
+          real (nunca a un filtro improvisado), así que primero{" "}
+          <Link href="/admin/crm/segments">créalo en Segmentos</Link>.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <form onSubmit={handleSend} style={{ maxWidth: 900 }}>
-      <h2>Nuevo broadcast</h2>
+      <h2 style={{ fontSize: 16 }}>Nuevo broadcast</h2>
 
-      <fieldset style={{ marginBottom: 16, border: "1px solid #e3e1dc", borderRadius: 8, padding: 16 }}>
-        <legend>Segmento</legend>
-
-        {/* Incluir / Excluir side by side — they're two independent halves
-            of the same filter (see api/broadcasts), so this is the actual
-            shape of the data, not just a wider layout for its own sake. */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: "#5b5f6b", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>
-              Incluir
-            </div>
-            <div className="field">
-              <label>Registrados a este evento</label>
-              <select value={includeEvent} onChange={(e) => setIncludeEvent(e.target.value)}>
-                <option value="">(cualquiera)</option>
-                {events.map((ev) => (
-                  <option key={ev.slug} value={ev.slug}>
-                    {ev.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="field">
-              <label>Asistió (check-in real) a este evento</label>
-              <select value={includeAttended} onChange={(e) => setIncludeAttended(e.target.value)}>
-                <option value="">(cualquiera)</option>
-                {events.map((ev) => (
-                  <option key={ev.slug} value={ev.slug}>
-                    {ev.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="field">
-              <label>Ciudad</label>
-              <input value={includeCity} onChange={(e) => setIncludeCity(e.target.value)} placeholder="Bogotá" />
-            </div>
-            <div className="field">
-              <label>Profesión</label>
-              <select value={includeProfession} onChange={(e) => setIncludeProfession(e.target.value)}>
-                <option value="">(cualquiera)</option>
-                {professionOptions.map((p) => (
-                  <option key={p} value={p}>
-                    {p}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: "#5b5f6b", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>
-              Excluir
-            </div>
-            <div className="field">
-              <label>Registrados a este evento</label>
-              <select value={excludeEvent} onChange={(e) => setExcludeEvent(e.target.value)}>
-                <option value="">(ninguno)</option>
-                {events.map((ev) => (
-                  <option key={ev.slug} value={ev.slug}>
-                    {ev.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="field">
-              <label>Asistió (check-in real) a este evento</label>
-              <select value={excludeAttended} onChange={(e) => setExcludeAttended(e.target.value)}>
-                <option value="">(ninguno)</option>
-                {events.map((ev) => (
-                  <option key={ev.slug} value={ev.slug}>
-                    {ev.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <p style={{ fontSize: 12, color: "#5b5f6b", marginTop: 8, marginBottom: 0 }}>
-          Ej: profesión = Manicurista, excluir asistió = Cali 2025 → &quot;manicuristas que no
-          fueron a Cali 2025&quot; (usa asistencia real, no solo registro). Solo recibe quien dio
-          consentimiento de marketing.
+      <div className="field">
+        <label htmlFor="segmentId">Segmento</label>
+        <select id="segmentId" value={segmentId} onChange={(e) => setSegmentId(e.target.value)} required>
+          {segments.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name} — {s.memberCount} {s.memberCount === 1 ? "persona" : "personas"}
+            </option>
+          ))}
+        </select>
+        <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>
+          {selected ? `${selected.memberCount} personas coinciden hoy con este segmento` : ""} — solo recibe
+          quien dio consentimiento de marketing. ¿Necesitas otro filtro?{" "}
+          <Link href="/admin/crm/segments">Créalo en Segmentos</Link>.
         </p>
-      </fieldset>
+      </div>
 
       <div className="field">
         <label>Asunto</label>

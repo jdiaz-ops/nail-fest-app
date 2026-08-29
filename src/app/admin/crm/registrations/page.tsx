@@ -1,88 +1,91 @@
 import { db } from "@/lib/db";
+import CrmPageHeader from "../CrmPageHeader";
+import StatCard from "../StatCard";
 
 export const dynamic = "force-dynamic";
 
+const STATUS_STYLE: Record<string, { bg: string; ink: string; label: string }> = {
+  CONFIRMED: { bg: "#e8f6ef", ink: "#0e6b4c", label: "Confirmado" },
+  STARTED: { bg: "#f6f5f2", ink: "#5b5f6b", label: "Iniciado" },
+  CANCELLED: { bg: "#fbe9ea", ink: "#a3212b", label: "Cancelado" },
+};
+
 export default async function RegistrationsPage() {
-  const [registrations, events, aforo] = await Promise.all([
+  const [registrations, distinctEvents] = await Promise.all([
     db.registration.findMany({
       orderBy: { createdAt: "desc" },
       take: 200,
       include: { person: true, event: true },
     }),
-    db.event.findMany({ select: { id: true, name: true } }),
-    db.registration.groupBy({
-      by: ["eventId"],
-      _count: { _all: true },
-      _sum: { ticketCount: true, checkedInCount: true },
-    }),
+    db.registration.groupBy({ by: ["eventId"] }),
   ]);
-  const eventNameById = new Map(events.map((e) => [e.id, e.name]));
 
   return (
     <div>
-      <h1>Inscritos ({registrations.length})</h1>
+      <CrmPageHeader
+        title={`Inscritos (${registrations.length})`}
+        subtitle="Cada inscripción individual, con su fuente de tráfico — para el cupo/aforo por evento, ve a Eventos."
+      />
 
-      <h2 style={{ fontSize: 16, marginTop: 0 }}>Aforo por evento</h2>
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14, marginBottom: 32 }}>
-        <thead>
-          <tr style={{ textAlign: "left", borderBottom: "1px solid #e3e1dc" }}>
-            <th style={{ padding: 8 }}>Evento</th>
-            <th style={{ padding: 8 }}>Contactos registrados</th>
-            <th style={{ padding: 8 }}>Boletas emitidas</th>
-            <th style={{ padding: 8 }}>Entraron (aforo real)</th>
-          </tr>
-        </thead>
-        <tbody>
-          {aforo.map((row) => (
-            <tr key={row.eventId} style={{ borderBottom: "1px solid #f0efec" }}>
-              <td style={{ padding: 8 }}>{eventNameById.get(row.eventId) ?? row.eventId}</td>
-              <td style={{ padding: 8 }}>{row._count._all}</td>
-              <td style={{ padding: 8 }}>{row._sum.ticketCount ?? 0}</td>
-              <td style={{ padding: 8 }}>{row._sum.checkedInCount ?? 0}</td>
-            </tr>
-          ))}
-          {aforo.length === 0 && (
-            <tr>
-              <td colSpan={4} style={{ padding: 8, color: "#5b5f6b" }}>
-                Aún no hay registros.
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-      <p style={{ fontSize: 12, color: "#5b5f6b", marginTop: -20, marginBottom: 32 }}>
-        &quot;Entraron&quot; cuenta boletas escaneadas (incluye acompañantes sin datos propios), no
-        solo contactos identificados — es el número real de personas que pasaron por la puerta.
-      </p>
+      <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 24 }}>
+        <StatCard label="Inscripciones (últimas 200)" value={String(registrations.length)} />
+        <StatCard label="Eventos con inscritos" value={String(distinctEvents.length)} />
+      </div>
 
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
-        <thead>
-          <tr style={{ textAlign: "left", borderBottom: "1px solid #e3e1dc" }}>
-            <th style={{ padding: 8 }}>Nombre</th>
-            <th style={{ padding: 8 }}>Correo</th>
-            <th style={{ padding: 8 }}>Ciudad</th>
-            <th style={{ padding: 8 }}>Profesión</th>
-            <th style={{ padding: 8 }}>Evento</th>
-            <th style={{ padding: 8 }}>Fuente</th>
-            <th style={{ padding: 8 }}>Estado</th>
-          </tr>
-        </thead>
-        <tbody>
-          {registrations.map((r) => (
-            <tr key={r.id} style={{ borderBottom: "1px solid #f0efec" }}>
-              <td style={{ padding: 8 }}>
-                {r.person.firstName} {r.person.lastName}
-              </td>
-              <td style={{ padding: 8 }}>{r.person.email}</td>
-              <td style={{ padding: 8 }}>{r.person.city}</td>
-              <td style={{ padding: 8 }}>{r.person.profession ?? "—"}</td>
-              <td style={{ padding: 8 }}>{r.event.name}</td>
-              <td style={{ padding: 8 }}>{r.utmSource ?? "orgánico"}</td>
-              <td style={{ padding: 8 }}>{r.status}</td>
+      <div style={{ border: "1px solid #e3e1dc", borderRadius: 10, overflow: "hidden" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+          <thead>
+            <tr style={{ textAlign: "left", background: "#faf9f7" }}>
+              <th style={{ padding: "10px 12px" }}>Nombre</th>
+              <th style={{ padding: "10px 12px" }}>Correo</th>
+              <th style={{ padding: "10px 12px" }}>Ciudad</th>
+              <th style={{ padding: "10px 12px" }}>Profesión</th>
+              <th style={{ padding: "10px 12px" }}>Evento</th>
+              <th style={{ padding: "10px 12px" }}>Fuente</th>
+              <th style={{ padding: "10px 12px" }}>Estado</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {registrations.map((r) => {
+              const statusStyle = STATUS_STYLE[r.status] ?? { bg: "#f6f5f2", ink: "#5b5f6b", label: r.status };
+              return (
+                <tr key={r.id} style={{ borderTop: "1px solid #f0efec" }}>
+                  <td style={{ padding: "10px 12px" }}>
+                    {r.person.firstName} {r.person.lastName}
+                  </td>
+                  <td style={{ padding: "10px 12px", color: "#5b5f6b" }}>{r.person.email}</td>
+                  <td style={{ padding: "10px 12px" }}>{r.person.city}</td>
+                  <td style={{ padding: "10px 12px" }}>{r.person.profession ?? "—"}</td>
+                  <td style={{ padding: "10px 12px" }}>{r.event.name}</td>
+                  <td style={{ padding: "10px 12px", color: "#5b5f6b" }}>{r.utmSource ?? "orgánico"}</td>
+                  <td style={{ padding: "10px 12px" }}>
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        padding: "4px 12px",
+                        borderRadius: 999,
+                        fontSize: 12,
+                        fontWeight: 600,
+                        background: statusStyle.bg,
+                        color: statusStyle.ink,
+                      }}
+                    >
+                      {statusStyle.label}
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
+            {registrations.length === 0 && (
+              <tr>
+                <td colSpan={7} style={{ padding: "10px 12px", color: "#5b5f6b" }}>
+                  Aún no hay registros.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

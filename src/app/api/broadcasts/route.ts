@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { resolveSegment, type SegmentFilter } from "@/lib/segments/builder";
-import { filterSchema } from "@/lib/segments/schema";
 import { hasActiveConsent } from "@/lib/consent";
 import { emailProvider } from "@/lib/email";
 import { broadcastEmail } from "@/lib/email/templates";
@@ -15,9 +14,16 @@ import { buildUnsubscribeUrl } from "@/lib/unsubscribe";
 // CAPI batching note in the brief review) — the code is structured so
 // that swap only touches this route, not the segment/email/consent logic.
 
+// A broadcast targets an EXISTING, named segment (built once in
+// /admin/crm/segments, synced to Meta, reusable) — it used to accept a
+// raw filter and silently create a brand-new, one-off SegmentDefinition
+// named after the email subject on every single send, which meant (a) no
+// Meta sync for that "segment" ever happened, and (b) sending the same
+// audience twice meant rebuilding the filter from scratch instead of
+// picking it from a list. Segmentos owns audience definitions now;
+// Broadcasts only consumes them.
 const bodySchema = z.object({
-  name: z.string().min(1),
-  filter: filterSchema,
+  segmentId: z.string().min(1),
   subject: z.string().min(1),
   bodyText: z.string().min(1),
 });
@@ -29,14 +35,17 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: "invalid_body", issues: parsed.error.issues }, { status: 400 });
   }
-  const { name, filter, subject, bodyText } = parsed.data;
+  const { segmentId, subject, bodyText } = parsed.data;
 
-  const segment = await db.segmentDefinition.create({ data: { name, filter } });
+  const segment = await db.segmentDefinition.findUnique({ where: { id: segmentId } });
+  if (!segment) {
+    return NextResponse.json({ error: "segment_not_found" }, { status: 404 });
+  }
   const broadcast = await db.emailBroadcast.create({
     data: { segmentId: segment.id, subject, bodyText, status: "SENDING" },
   });
 
-  const people = await resolveSegment(filter as SegmentFilter);
+  const people = await resolveSegment(segment.filter as unknown as SegmentFilter);
 
   let sent = 0;
   let skippedNoConsent = 0;
