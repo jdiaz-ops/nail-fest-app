@@ -87,11 +87,11 @@ password from `/admin/settings/users` won't reset it back.
 - (Optional, once Meta is configured) confirm events land in Meta Events
   Manager's Test Events tab.
 
-## Ongoing: the two background crons
+## Ongoing: the background crons
 
-Both are declared in `vercel.json`'s `crons` array, so there's nothing to
-click in the Vercel dashboard — they're created automatically on deploy as
-long as `CRON_SECRET` is set (see the env var table above):
+All three are declared in `vercel.json`'s `crons` array, so there's nothing
+to click in the Vercel dashboard — they're created automatically on deploy
+as long as `CRON_SECRET` is set (see the env var table above):
 
 - **`/api/meta/retry`** — retries failed Meta CAPI sends with backoff.
 - **`/api/meta/sync-audiences`** — keeps every Meta Custom Audience
@@ -99,16 +99,27 @@ long as `CRON_SECRET` is set (see the env var table above):
   Checkout started, Purchasers) and resyncs Purchasers' member list, then
   resolves and resyncs every segment linked from `/admin/segments`. No
   manual "sync now" step anywhere in this flow by design.
+- **`/api/broadcasts/send-due`** — sends every scheduled event broadcast
+  (from an event's "Correos del evento" section) whose real send time,
+  fixed or relative to the event's own start/end, has arrived.
 
-Default schedule is once daily (`0 3 * * *` / `0 4 * * *`) — that's the
-fastest interval Vercel's free/Hobby tier allows for cron jobs. **If you're
-on Vercel Pro**, tighten both in `vercel.json` for fresher data: `*/5 * * *
-*` for `retry` (matches the backoff design) and something like `0 */6 * * *`
-for `sync-audiences` (these don't need real-time freshness — a full resync
-is cheap since Meta dedupes the hashed upload, so shorter is safe too, just
-not necessary).
+Default schedule is once daily (`0 3 * * *` / `0 4 * * *` / `0 5 * * *`) —
+that's the fastest interval Vercel's free/Hobby tier allows for cron jobs.
+**Every cron in `vercel.json` has to respect that limit, not just one of
+them** — Vercel rejects the whole deploy if any single entry exceeds what
+the plan allows, it doesn't just skip or throttle that one cron. (This bit
+the `send-due` cron once already: it shipped as `*/15 * * * *` on the
+assumption an over-frequent schedule would just run slower, and instead it
+silently broke every deploy until it was caught and dropped back to
+once/day — if a deploy ever seems stuck on an old commit, check this file
+first.) **If you're on Vercel Pro**, tighten these in `vercel.json` for
+fresher data: `*/5 * * *` for `retry` (matches the backoff design),
+`0 */6 * * *` for `sync-audiences` (a full resync is cheap since Meta
+dedupes the hashed upload, so shorter is safe too, just not necessary), and
+something like `*/15 * * * *` for `send-due` if event broadcasts need to
+land closer to their exact scheduled time.
 
-Both routes still accept a manual `POST` for on-demand testing without
+All three routes still accept a manual `POST` for on-demand testing without
 waiting for the schedule:
 
 ```bash

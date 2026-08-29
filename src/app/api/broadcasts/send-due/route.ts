@@ -7,15 +7,20 @@ import { sendDueEventBroadcasts } from "@/lib/broadcasts";
 // see lib/broadcastSchedule.ts) has arrived. POST also works for manual
 // testing: curl -X POST .../api/broadcasts/send-due -H "x-cron-secret: <INTERNAL_CRON_SECRET>"
 //
-// IMPORTANT for whoever deploys this: this cron needs to run more often
-// than this app's existing daily crons (/api/meta/retry, /api/meta/sync-
-// audiences) for "send a reminder 2 hours before doors open" to actually
-// mean something — vercel.json asks for every 15 minutes, which needs a
-// Vercel plan that allows sub-daily cron schedules (the Hobby plan is
-// capped at once/day). If that's not available, this still runs safely
-// at whatever cadence Vercel actually grants it — a broadcast just goes
-// out somewhat later than its exact scheduled time, never early and
-// never silently dropped.
+// Scheduled once/day (0 5 * * *) in vercel.json, same as this app's other
+// two crons — see docs/DEPLOY.md, "Ongoing: the background crons". This
+// project is on Vercel's Hobby plan, which only allows daily cron
+// schedules; an earlier version of this file declared "*/15 * * * *" on
+// the assumption Vercel would just run it at whatever cadence it could —
+// instead Vercel REJECTS THE WHOLE DEPLOY when any cron in vercel.json
+// exceeds the plan's allowed frequency, which silently broke every deploy
+// after that commit. Don't repeat that: on Hobby, every cron in
+// vercel.json must be once/day or the deploy fails outright, not just
+// this one. A broadcast still never goes out early and never gets
+// silently dropped — it just isn't checked more than once a day, so
+// "2 hours before doors open" can land up to ~24h later than intended.
+// If this project moves to Vercel Pro, tighten this to something like
+// "*/15 * * * *" for real precision.
 async function handle(req: NextRequest) {
   if (!isAuthorizedCronRequest(req)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
