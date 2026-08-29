@@ -62,28 +62,55 @@ export default function ScannerTab() {
     [submit]
   );
 
-  // Camera + decode loop.
+  // Camera + decode loop. The black square by itself (no video, no error
+  // text) is the one failure mode this used to leave completely silent —
+  // it happens if getUserMedia's own permission prompt never resolves
+  // (dismissed without a real allow/deny, or the browser/WebView just
+  // never shows it — common inside an in-app browser like WhatsApp's or
+  // Instagram's) or if the <video> ref wasn't there yet when the stream
+  // came back. Both now surface a real message instead of hanging.
   useEffect(() => {
     let stream: MediaStream | null = null;
     let cancelled = false;
 
+    // Immediately visible instead of a silent black box while the
+    // permission prompt (native OS/browser UI, outside our control) is
+    // still pending — and a hard ceiling in case that prompt never
+    // resolves at all, which getUserMedia itself has no timeout for.
+    setCameraError("Solicitando acceso a la cámara…");
+    const stallTimeout = setTimeout(() => {
+      if (!cancelled) {
+        setCameraError(
+          "La cámara no respondió. Revisa si tu navegador está pidiendo permiso (a veces aparece arriba, fuera de esta pantalla) y acéptalo, o usa la casilla de código manual abajo. Si abriste este enlace desde WhatsApp o Instagram, ábrelo en Chrome/Safari en su lugar — esos navegadores internos suelen bloquear la cámara."
+        );
+      }
+    }, 10_000);
+
     async function start() {
       if (!navigator.mediaDevices?.getUserMedia) {
-        setCameraError("Este navegador no da acceso a la cámara aquí (¿estás en HTTP en vez de HTTPS?).");
+        clearTimeout(stallTimeout);
+        setCameraError("Este navegador no da acceso a la cámara aquí (¿estás en HTTP en vez de HTTPS, o dentro del navegador interno de otra app?).");
         return;
       }
       try {
         stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        clearTimeout(stallTimeout);
         if (cancelled) {
           stream.getTracks().forEach((t) => t.stop());
           return;
         }
         const video = videoRef.current;
-        if (!video) return;
+        if (!video) {
+          setCameraError("No se pudo mostrar la cámara en esta pantalla. Recarga la página e intenta de nuevo.");
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
         video.srcObject = stream;
         await video.play();
+        setCameraError(null);
         loop();
       } catch (err) {
+        clearTimeout(stallTimeout);
         setCameraError(
           err instanceof Error && err.name === "NotAllowedError"
             ? "Permiso de cámara denegado. Actívalo en los ajustes del navegador para este sitio."
@@ -113,6 +140,7 @@ export default function ScannerTab() {
     start();
     return () => {
       cancelled = true;
+      clearTimeout(stallTimeout);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       stream?.getTracks().forEach((t) => t.stop());
     };
