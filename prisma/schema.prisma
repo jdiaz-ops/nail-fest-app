@@ -440,12 +440,26 @@ model EmailLog {
   personId    String?
   toEmail     String
   sesMessageId String?
+  // `status` stays the simple "furthest stage reached" field (already had
+  // OPENED/CLICKED/BOUNCED/COMPLAINED in its enum, just never driven by
+  // anything until now) — good enough for a list view. The timestamps
+  // below are what the person timeline actually reads from, since "cuándo"
+  // matters there and a single status can't carry multiple event times.
+  // Populated by /api/webhooks/ses (see docs/SES_EVENT_TRACKING.md) —
+  // null until that SNS→SES event destination is wired up in AWS, at
+  // which point existing rows just start filling in going forward.
   status      EmailLogStatus  @default(QUEUED)
+  deliveredAt    DateTime?
+  openedAt       DateTime?
+  firstClickedAt DateTime?
+  bouncedAt      DateTime?
+  complainedAt   DateTime?
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 
   @@index([broadcastId, status])
   @@index([toEmail])
+  @@index([sesMessageId])
 }
 
 // ---------------------------------------------------------------------------

@@ -6,7 +6,10 @@ import { usePathname } from "next/navigation";
 // Same mechanism as SettingsNavLink one level up — the coral active pill.
 export default function CrmNavLink({ href, label }: { href: string; label: string }) {
   const pathname = usePathname();
-  const active = pathname === href;
+  // Prefix match, not exact — /admin/crm/personas/[id] (the profile
+  // detail page) still needs "Personas" highlighted, same reasoning as
+  // AdminNavLink one level up.
+  const active = pathname === href || pathname?.startsWith(`${href}/`);
   return (
     <Link
       href={href}
