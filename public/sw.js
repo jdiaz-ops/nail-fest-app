@@ -62,7 +62,21 @@ self.addEventListener("fetch", (event) => {
         }
         return fresh;
       } catch {
-        const cached = await cache.match(req);
+        // ignoreVary: true is deliberate, not an oversight. Next.js sets
+        // Vary: RSC, Next-Router-State-Tree, Next-Router-Prefetch on every
+        // page response, to tell caches an RSC/client-router fetch and a
+        // plain full-page request for the SAME URL are different things.
+        // That's correct for Next's own purposes, but wrong for us: this
+        // cache exists purely so a genuine browser-level reload (which
+        // sends none of those headers) has *something* to fall back to,
+        // and a strict Vary match means an entry written by Next's own
+        // client-side router (which does send them) never matches that
+        // reload's request — a confirmed real miss, not a hypothetical
+        // one (verified directly: the same URL, same person, comes back
+        // 200 with one header set and 500 with the RSC set). Any
+        // previously-cached copy of this URL is strictly better than the
+        // "never cached" fallback below, so ignore Vary entirely here.
+        const cached = await cache.match(req, { ignoreVary: true });
         if (cached) return cached;
         if (req.mode === "navigate") {
           // Only reachable for a URL genuinely never visited while
