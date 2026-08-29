@@ -12,6 +12,12 @@
   --accent-ink: #0b2e2c;
   --accent-secondary: #ffc5a8;
   --accent-secondary-ink: #1c1310;
+  /* A deeper shade of the same teal, used ONLY for text links on light
+     backgrounds — the bright --accent reads great as a solid button fill
+     (paired with the dark --accent-ink text) but as small text on --bg/
+     --surface it only hits ~2.2:1 contrast, borderline unreadable ("casi
+     no se lee"). This shade hits ~5:1. */
+  --link: #007a74;
   /* Kept as the old brand rose — deliberately NOT changed to teal. Error
      text, delete actions and required-field markers need a color that
      reads as "danger", separate from the brand accent (see dataviz
@@ -32,7 +38,7 @@ body {
 }
 
 a {
-  color: var(--accent);
+  color: var(--link);
 }
 
 input,
