@@ -14,6 +14,7 @@ export async function sendTicketEmail(params: {
     name: string;
     city: string;
     startsAt: Date;
+    endsAt?: Date | null;
     venueName?: string | null;
     venueAddress?: string | null;
     imageUrl?: string | null;
@@ -32,7 +33,6 @@ export async function sendTicketEmail(params: {
     // reasoning in the original /api/register comment: most inboxes drop
     // inline data: images.
     const qrImageUrl = `${process.env.APP_BASE_URL || ""}/api/ticket-qr/${params.qrToken}`;
-    const venue = [params.event.venueName, params.event.venueAddress].filter(Boolean).join(" — ") || undefined;
     const ticketType = params.registration?.ticketTypeId
       ? await db.ticketType.findUnique({ where: { id: params.registration.ticketTypeId } })
       : null;
@@ -45,8 +45,10 @@ export async function sendTicketEmail(params: {
       lastName: params.person.lastName ?? undefined,
       eventName: params.event.name,
       eventCity: params.event.city,
-      venue,
+      venueName: params.event.venueName ?? undefined,
+      venueAddress: params.event.venueAddress ?? undefined,
       startsAt: params.event.startsAt,
+      endsAt: params.event.endsAt ?? undefined,
       qrImageUrl,
       eventImageUrl: params.event.imageUrl ?? undefined,
       ticketTypeName: ticketType?.name,

@@ -14,10 +14,20 @@ export function confirmationEmail(params: {
   lastName?: string;
   eventName: string;
   eventCity: string;
-  /** From Event.venueName/.venueAddress (see /admin/events) — omitted from
-   * both text and html when the organizer hasn't set a venue yet. */
-  venue?: string;
+  /** Event.venueName/.venueAddress — kept as two separate fields (not
+   * pre-joined into one string) so each can sit on its own line: a long
+   * address squeezed into one run-on line next to the date, or crammed
+   * into a narrow half-width column, reads as clutter and wraps badly. */
+  venueName?: string;
+  venueAddress?: string;
   startsAt: Date;
+  /** Event.endsAt — Nail Fest events routinely run Saturday→Sunday, so
+   * when this is set the ticket shows BOTH dates as a range, same as the
+   * public event page's own eventWhen (see [eventSlug]/page.tsx). Without
+   * this, a two-day event's ticket only showed the Saturday date, which
+   * reads as "this code only works for one day" — it doesn't, entry is
+   * valid the whole event, this was just a display gap. */
+  endsAt?: Date;
   qrImageUrl: string;
   /** Event.imageUrl (Vercel Blob) — a real https URL, so it renders in
    * inboxes the same way the QR does. Omitted from the ticket card when
@@ -41,17 +51,24 @@ export function confirmationEmail(params: {
   language?: string;
 }): { subject: string; text: string; html: string } {
   const orgName = params.orgName || "Nail Fest";
-  const when = formatDateInTz(
-    params.startsAt,
-    { dateStyle: "full", timeStyle: "short" },
-    params.timezone || "America/Bogota",
-    params.language || "es"
-  );
+  const tz = params.timezone || "America/Bogota";
+  const lang = params.language || "es";
+  const dateOpts = { dateStyle: "full" as const, timeStyle: "short" as const };
+  // Same range logic as [eventSlug]/page.tsx's own eventWhen — always show
+  // both ends when endsAt is set, so a Sat→Sun event never reads as
+  // single-day only. Kept in sync deliberately rather than importing one
+  // from the other: the page builds a JSX-ready string, this builds a
+  // plain one embedded in both an HTML table cell and a text email.
+  const when = [
+    formatDateInTz(params.startsAt, dateOpts, tz, lang),
+    params.endsAt ? ` – ${formatDateInTz(params.endsAt, dateOpts, tz, lang)}` : "",
+  ].join("");
   const attendeeName = [params.firstName, params.lastName].filter(Boolean).join(" ").trim();
   const ticketTypeLine =
     params.ticketTypeName && (params.ticketCount ?? 1) > 1
       ? `${params.ticketTypeName} · x${params.ticketCount}`
       : params.ticketTypeName;
+  const venueLine = [params.venueName, params.venueAddress].filter(Boolean).join(" — ") || undefined;
 
   const subject = `Tu entrada para ${params.eventName}`;
   const text = [
@@ -59,7 +76,7 @@ export function confirmationEmail(params: {
     ``,
     `Tu registro para ${params.eventName} (${params.eventCity}) quedó confirmado.`,
     `Fecha: ${when}`,
-    ...(params.venue ? [`Lugar: ${params.venue}`] : []),
+    ...(venueLine ? [`Lugar: ${venueLine}`] : []),
     ...(attendeeName ? [`A nombre de: ${attendeeName}`] : []),
     ...(ticketTypeLine ? [`Entrada: ${ticketTypeLine}`] : []),
     `Código de confirmación: ${params.confirmationCode}`,
@@ -101,19 +118,22 @@ export function confirmationEmail(params: {
                     </td>
                   </tr>
                   <tr>
-                    <td style="padding:20px 24px 4px;">
-                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                        <tr>
-                          <td style="font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#8a8478;">Fecha</td>
-                          ${params.venue ? `<td align="right" style="font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#8a8478;">Lugar</td>` : ""}
-                        </tr>
-                        <tr>
-                          <td style="padding-top:2px;font-size:14px;font-weight:600;color:${INK};">${escapeHtml(when)}</td>
-                          ${params.venue ? `<td align="right" style="padding-top:2px;font-size:14px;font-weight:600;color:${INK};">${escapeHtml(params.venue)}</td>` : ""}
-                        </tr>
-                      </table>
+                    <td style="padding:20px 24px 0;">
+                      <p style="margin:0;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#8a8478;">Fecha</p>
+                      <p style="margin:2px 0 0;font-size:14px;font-weight:600;color:${INK};">${escapeHtml(when)}</p>
                     </td>
                   </tr>
+                  ${
+                    venueLine
+                      ? `<tr>
+                          <td style="padding:14px 24px 0;">
+                            <p style="margin:0;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#8a8478;">Lugar</p>
+                            ${params.venueName ? `<p style="margin:2px 0 0;font-size:14px;font-weight:600;color:${INK};">${escapeHtml(params.venueName)}</p>` : ""}
+                            ${params.venueAddress ? `<p style="margin:2px 0 0;font-size:13px;color:${INK_MUTED};">${escapeHtml(params.venueAddress)}</p>` : ""}
+                          </td>
+                        </tr>`
+                      : ""
+                  }
                   <tr>
                     <td style="padding:20px 24px 0;">
                       <div style="border-top:2px dashed ${BORDER};"></div>
