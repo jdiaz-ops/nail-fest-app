@@ -1,4 +1,6 @@
 import AdminNavLink from "./AdminNavLink";
+import LogoutButton from "./LogoutButton";
+import { requirePageUser } from "@/lib/auth/guard";
 
 // Full-width dark top bar, matching Ticket Tailor's dashboard shell — the
 // nav items are our real sections (no Orders/Products/Promote stand-ins;
@@ -14,7 +16,20 @@ const NAV: { href: string; label: string }[] = [
   { href: "/admin/settings", label: "Configuración" },
 ];
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+// Every /admin/* page inherits this layout, so this is where "must be
+// logged in" is enforced once for the whole section — see
+// lib/auth/guard.ts's own comment on why this can't also be middleware
+// (Prisma can't run on the Edge runtime this app's middleware used to run
+// on; the real DB-backed check has to live in a Node-runtime layout or
+// route handler instead). Role-SPECIFIC restrictions (e.g. only ADMIN may
+// see Resumen/Eventos/CRM/Configuración) live one level deeper, in each of
+// those section's own layout/page — this outer layout only cares "is
+// anyone logged in at all", and hides the nav entirely for STAFF, whose
+// only reachable page is /admin/scan.
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  const user = await requirePageUser();
+  const isAdmin = user.role === "ADMIN";
+
   return (
     <div>
       <header style={{ background: "#14141c" }}>
@@ -28,9 +43,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           }}
         >
           <span style={{ color: "#fff", fontWeight: 700, marginRight: 20, whiteSpace: "nowrap" }}>Nail Fest</span>
-          {NAV.map((item) => (
-            <AdminNavLink key={item.href} href={item.href} label={item.label} />
-          ))}
+          {isAdmin && NAV.map((item) => <AdminNavLink key={item.href} href={item.href} label={item.label} />)}
+          <div style={{ flex: 1 }} />
+          <span style={{ color: "#8a8478", fontSize: 13, whiteSpace: "nowrap" }}>{user.name || user.username}</span>
+          <LogoutButton />
         </nav>
       </header>
       <div style={{ padding: "24px 32px" }}>{children}</div>

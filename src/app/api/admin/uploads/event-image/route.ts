@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { put } from "@vercel/blob";
 import { randomUUID } from "crypto";
+import { requireUser } from "@/lib/auth/guard";
 
-// Protected by middleware (same Basic Auth as the rest of /admin). Not
-// tied to a specific event id — EventForm.tsx uploads the file the
+// Not tied to a specific event id — EventForm.tsx uploads the file the
 // moment it's picked (before a brand-new event even has an id) and just
 // carries the resulting URL in its own form state until Save.
 const MAX_BYTES = 5 * 1024 * 1024; // 5MB — plenty for a hero image, small enough to stay cheap on Blob storage
 
 export async function POST(req: NextRequest) {
+  const auth = await requireUser(["ADMIN"]);
+  if ("response" in auth) return auth.response;
+
   if (!process.env.BLOB_READ_WRITE_TOKEN) {
     // Real, distinct error — not "something went wrong" — so the admin
     // form can say exactly what's missing instead of a generic failure.

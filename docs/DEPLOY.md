@@ -28,7 +28,7 @@ below):
 | `APP_BASE_URL` | Your Vercel deployment URL (e.g. `https://nail-fest-app.vercel.app`), update if you add a custom domain later |
 | `DEFAULT_CURRENCY` | `COP` |
 | `META_PURCHASE_PLACEHOLDER_VALUE` | `1` (placeholder — see the Meta brief discussion) |
-| `ADMIN_USERNAME` / `ADMIN_PASSWORD` | Whatever you want — gates `/admin/*` |
+| `ADMIN_USERNAME` / `ADMIN_PASSWORD` | Whatever you want — used ONCE, by step 4 below, to create your first real admin login. Not checked on every request the way it used to be (see the real login system in `/admin/settings/users`) — safe to leave set afterward. |
 | `INTERNAL_CRON_SECRET` | Any random string — gates the cron routes (manual `curl` testing) and the one-time seed endpoint below |
 | `CRON_SECRET` | Same value as `INTERNAL_CRON_SECRET` (simplest) — Vercel auto-attaches this as a Bearer token when it triggers the crons declared in `vercel.json`, see below |
 
@@ -56,13 +56,33 @@ curl -X POST https://<your-deployment-url>/api/admin/seed \
 Safe to call more than once — every write is an upsert. After this,
 `https://<your-deployment-url>/bogota-2026` has the seeded test event live.
 
+## 4b. Create your first admin login (once)
+
+The app has real per-person accounts now (`/admin/settings/users` — admin
+and staff roles), not a single shared password. This turns the
+`ADMIN_USERNAME`/`ADMIN_PASSWORD` you set above into that first real
+account, so you have a way in:
+
+```bash
+curl -X POST https://<your-deployment-url>/api/admin/bootstrap-admin \
+  -H "x-cron-secret: <your INTERNAL_CRON_SECRET value>"
+```
+
+Safe to call more than once — it never touches an account that already
+exists under that username, so re-running it after you've changed your
+password from `/admin/settings/users` won't reset it back.
+
 ## 5. Verify
 
 - Visit `/bogota-2026` — the landing/registration form should load.
 - Register with a real email.
-- Visit `/admin/registrations` — browser will prompt for the
-  `ADMIN_USERNAME`/`ADMIN_PASSWORD` you set — the registration should show
-  up there.
+- Visit `/login`, sign in with the account from step 4b — you land on
+  `/admin`. From `/admin/crm/registrations` the registration from the step
+  above should show up.
+- From `/admin/settings/users`, create a real STAFF account for each door
+  person — they log in at `/login` too, and land straight on `/admin/scan`
+  (event picker + scanner, nothing else). `/admin/scan` itself has a
+  "Descargar la app" QR they can scan with their own phone.
 - (Optional, once SES is production-approved) confirm the QR email arrives.
 - (Optional, once Meta is configured) confirm events land in Meta Events
   Manager's Test Events tab.

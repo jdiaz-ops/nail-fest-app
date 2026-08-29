@@ -602,3 +602,48 @@ model CheckoutQuestion {
 
   @@index([order])
 }
+
+// ---------------------------------------------------------------------------
+// Admin auth — real per-person login, replacing the old shared
+// ADMIN_USERNAME/ADMIN_PASSWORD HTTP Basic Auth (see middleware.ts's own
+// history: that was "enough until real roles" from Slice 1, this is that).
+// ---------------------------------------------------------------------------
+
+enum AdminRole {
+  ADMIN // full dashboard: Resumen, Eventos, CRM, Configuración, Escáner + Estadísticas
+  STAFF // door staff — can only select an event and scan, nothing else
+}
+
+model AdminUser {
+  id           String    @id @default(cuid())
+  username     String    @unique
+  passwordHash String
+  role         AdminRole
+  name         String?
+  // Soft-disable instead of deleting — keeps ScanLog/etc. history
+  // attributable to a real name instead of "deleted user", and lets an
+  // admin instantly cut off someone who left without losing their record.
+  active       Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  lastLoginAt  DateTime?
+  sessions     AdminSession[]
+}
+
+// One row per logged-in device — the actual session token. The cookie only
+// ever holds a random opaque value; this table holds its SHA-256 hash, so a
+// DB leak alone can't be replayed as a live session (same reasoning as
+// Registration.qrToken vs. lib/ticket.ts's signed token). Deliberately
+// long-lived (see lib/auth/session.ts's SESSION_DAYS) — "once a phone logs
+// into the scanner app, it stays logged in" was an explicit ask, not an
+// oversight.
+model AdminSession {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  user      AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+  userAgent String?
+
+  @@index([userId])
+}

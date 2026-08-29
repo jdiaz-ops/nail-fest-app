@@ -1,5 +1,6 @@
 import { createHmac } from "crypto";
 import QRCode from "qrcode";
+import { QR_RENDER_OPTS } from "@/lib/qr";
 
 // The QR encodes a signed token, not raw data — so a photo of someone
 // else's ticket can't be edited/forged to claim a different registration.
@@ -29,8 +30,6 @@ export function verifyQrToken(token: string): { valid: boolean; registrationId?:
   if (signature !== expected) return { valid: false };
   return { valid: true, registrationId };
 }
-
-const QR_RENDER_OPTS = { errorCorrectionLevel: "M" as const, margin: 1, width: 480 };
 
 /** Used by the "view my ticket" style pages, if/when one exists — not the
  * confirmation email, which needs a real image URL (see renderQrPngBuffer

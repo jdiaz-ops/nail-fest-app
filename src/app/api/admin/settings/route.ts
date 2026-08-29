@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getOrgSettings, updateOrgSettings } from "@/lib/settings";
+import { requireUser } from "@/lib/auth/guard";
 
 // Shared by all six /admin/settings/* forms — each one POSTs only the
 // field(s) it owns, so this stays a partial update, never a full replace.
@@ -19,10 +20,16 @@ const patchSchema = z
   .partial();
 
 export async function GET() {
+  const auth = await requireUser(["ADMIN"]);
+  if ("response" in auth) return auth.response;
+
   return NextResponse.json(await getOrgSettings());
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireUser(["ADMIN"]);
+  if ("response" in auth) return auth.response;
+
   const parsed = patchSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: "invalid_body", issues: parsed.error.issues }, { status: 400 });

@@ -6,6 +6,7 @@ import { hasActiveConsent } from "@/lib/consent";
 import { emailProvider } from "@/lib/email";
 import { broadcastEmail } from "@/lib/email/templates";
 import { buildUnsubscribeUrl } from "@/lib/unsubscribe";
+import { requireUser } from "@/lib/auth/guard";
 
 // KNOWN LIMITATION (flagged, not hidden): this sends synchronously inside
 // one request, in small concurrency-limited batches. Fine for testing
@@ -31,6 +32,14 @@ const bodySchema = z.object({
 const CONCURRENCY = 10;
 
 export async function POST(req: NextRequest) {
+  // This route sits under /api/broadcasts, NOT /api/admin/* — the old
+  // Basic Auth middleware's matcher only covered /admin/:path* and
+  // /api/admin/:path*, so this endpoint (send a real marketing email to a
+  // real segment) was reachable with no auth at all. Caught while
+  // rebuilding the auth system from scratch; fixed here rather than left.
+  const auth = await requireUser(["ADMIN"]);
+  if ("response" in auth) return auth.response;
+
   const parsed = bodySchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: "invalid_body", issues: parsed.error.issues }, { status: 400 });

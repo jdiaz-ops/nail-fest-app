@@ -3,8 +3,8 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { filterSchema } from "@/lib/segments/schema";
 import { syncSegmentAudience } from "@/lib/meta/audiences";
+import { requireUser } from "@/lib/auth/guard";
 
-// Protected by middleware (same Basic Auth as the rest of /admin/api).
 // Creates a named, reusable segment AND links it for automatic Meta sync
 // in one step — there's no separate "enable sync" toggle. Also fires the
 // FIRST sync immediately (awaited, not left for the cron) so the audience
@@ -17,6 +17,9 @@ const bodySchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  const auth = await requireUser(["ADMIN"]);
+  if ("response" in auth) return auth.response;
+
   const parsed = bodySchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: "invalid_body", issues: parsed.error.issues }, { status: 400 });
@@ -37,6 +40,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const auth = await requireUser(["ADMIN"]);
+  if ("response" in auth) return auth.response;
+
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");
   if (!id) return NextResponse.json({ error: "missing_id" }, { status: 400 });

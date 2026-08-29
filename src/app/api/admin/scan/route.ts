@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { recordScan } from "@/lib/scan";
+import { requireUser } from "@/lib/auth/guard";
 
-// Under /api/admin/:path* — same Basic Auth gate as the rest of /admin (see
-// middleware.ts). No separate device auth for the MVP: whoever is holding a
-// phone logged into /admin can scan, same trust level as everything else there.
-
+// Both roles: this is the endpoint the scanner PWA itself calls on every
+// decode, and STAFF's whole job is scanning — see /admin/scan/page.tsx.
 const bodySchema = z.object({
   token: z.string().min(1),
   eventId: z.string().min(1),
@@ -13,6 +12,9 @@ const bodySchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  const auth = await requireUser(["ADMIN", "STAFF"]);
+  if ("response" in auth) return auth.response;
+
   const parsed = bodySchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: "invalid_body" }, { status: 400 });

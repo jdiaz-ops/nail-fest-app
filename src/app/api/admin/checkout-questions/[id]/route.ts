@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { updateQuestion, deleteQuestion, TYPES_WITH_OPTIONS } from "@/lib/checkoutForm";
+import { requireUser } from "@/lib/auth/guard";
 
 const patchSchema = z.object({
   label: z.string().min(1).optional(),
@@ -14,6 +15,9 @@ const patchSchema = z.object({
 });
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+  const auth = await requireUser(["ADMIN"]);
+  if ("response" in auth) return auth.response;
+
   const parsed = patchSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: "invalid_body", issues: parsed.error.issues }, { status: 400 });
@@ -38,6 +42,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+  const auth = await requireUser(["ADMIN"]);
+  if ("response" in auth) return auth.response;
+
   try {
     await deleteQuestion(params.id);
     return NextResponse.json({ ok: true });

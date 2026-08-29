@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { getOrgSettings } from "@/lib/settings";
 import { formatDateInTz } from "@/lib/dateFormat";
+import { requirePageUser } from "@/lib/auth/guard";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +10,8 @@ function daysUntil(date: Date): number {
 }
 
 export default async function OverviewPage() {
+  await requirePageUser(["ADMIN"]);
+
   // Every count on this dashboard is scoped to CONFIRMED registrations —
   // a STARTED row is an abandoned-cart draft (see /api/register/draft),
   // not a real registration, and must not inflate "Inscritos", "Emitidas",

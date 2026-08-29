@@ -1,5 +1,6 @@
 import { Fraunces } from "next/font/google";
 import CrmNavLink from "./CrmNavLink";
+import { requirePageUser } from "@/lib/auth/guard";
 
 // Groups the contact-database-facing sections behind one top-level "CRM"
 // tab, same pattern as Configuración: a nested sidebar instead of four
@@ -15,7 +16,8 @@ const NAV: { href: string; label: string }[] = [
   { href: "/admin/crm/segments", label: "Segmentos" },
 ];
 
-export default function CrmLayout({ children }: { children: React.ReactNode }) {
+export default async function CrmLayout({ children }: { children: React.ReactNode }) {
+  await requirePageUser(["ADMIN"]);
   return (
     <div>
       <h1 className={fraunces.className} style={{ fontWeight: 900, fontSize: 28, marginBottom: 24 }}>

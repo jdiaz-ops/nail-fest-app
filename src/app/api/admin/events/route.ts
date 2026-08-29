@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createEvent, DEFAULT_REGISTER_BUTTON_LABEL } from "@/lib/events";
+import { requireUser } from "@/lib/auth/guard";
 
-// Protected by middleware (same Basic Auth as the rest of /admin).
 const bodySchema = z.object({
   name: z.string().min(1),
   city: z.string().min(1),
@@ -19,6 +19,9 @@ const bodySchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  const auth = await requireUser(["ADMIN"]);
+  if ("response" in auth) return auth.response;
+
   const parsed = bodySchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: "invalid_body", issues: parsed.error.issues }, { status: 400 });

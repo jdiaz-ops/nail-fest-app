@@ -3,8 +3,8 @@ import { randomUUID } from "crypto";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
+import { requireUser } from "@/lib/auth/guard";
 
-// Protected by middleware (same Basic Auth as the rest of /admin/api).
 //
 // Bulk-writes an already-parsed, already-deduped person list (produced
 // client-side by lib/import/ticketTailorDoorlist.ts — see /admin/import)
@@ -63,6 +63,9 @@ function chunk<T>(arr: T[], size: number): T[][] {
 const BATCH_SIZE = 1000;
 
 export async function POST(req: NextRequest) {
+  const auth = await requireUser(["ADMIN"]);
+  if ("response" in auth) return auth.response;
+
   const parsed = bodySchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: "invalid_body", issues: parsed.error.issues }, { status: 400 });

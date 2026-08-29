@@ -1,5 +1,6 @@
 import { Fraunces } from "next/font/google";
 import SettingsNavLink from "./SettingsNavLink";
+import { requirePageUser } from "@/lib/auth/guard";
 
 // Ticket Tailor's "Box office settings" — nivel 1 (cuenta completa), as
 // opposed to any single event's own settings (nivel 2, still to come).
@@ -21,6 +22,7 @@ const EDIT_NAV: { href: string; label: string }[] = [
 ];
 
 const MANAGE_NAV: { href: string; label: string }[] = [
+  { href: "/admin/settings/users", label: "Usuarios" },
   { href: "/admin/settings/integrations", label: "Integraciones" },
 ];
 
@@ -31,7 +33,8 @@ const MANAGE_NAV: { href: string; label: string }[] = [
 // the infra-audit doc, just inline here.
 const MANAGE_PLACEHOLDERS = ["API", "Dominio propio"];
 
-export default function SettingsLayout({ children }: { children: React.ReactNode }) {
+export default async function SettingsLayout({ children }: { children: React.ReactNode }) {
+  await requirePageUser(["ADMIN"]);
   return (
     <div>
       <h1 className={fraunces.className} style={{ fontWeight: 900, fontSize: 28, marginBottom: 24 }}>

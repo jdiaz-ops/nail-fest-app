@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createCustomQuestion, TYPES_WITH_OPTIONS } from "@/lib/checkoutForm";
+import { requireUser } from "@/lib/auth/guard";
 
-// Protected by middleware (same Basic Auth as the rest of /admin).
 // No MARKETING_OPT_IN type — see the CheckoutQuestionType enum's own
 // comment in schema.prisma for why that one specifically isn't offered.
 const bodySchema = z.object({
@@ -13,6 +13,9 @@ const bodySchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  const auth = await requireUser(["ADMIN"]);
+  if ("response" in auth) return auth.response;
+
   const parsed = bodySchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: "invalid_body", issues: parsed.error.issues }, { status: 400 });
