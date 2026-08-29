@@ -394,12 +394,16 @@ export default function RegistrationForm({
       </label>
 
       <p style={{ fontSize: 12, color: "#5b5f6b" }}>
-        Al hacer clic en &ldquo;{submitLabel}&rdquo; aceptas nuestra{" "}
+        Al hacer clic en &ldquo;{submitLabel}&rdquo; aceptas nuestros{" "}
+        <a href="/terminos" target="_blank" rel="noreferrer">
+          términos y condiciones
+        </a>{" "}
+        y nuestra{" "}
         <a href="/privacidad" target="_blank" rel="noreferrer">
           política de privacidad
-        </a>{" "}
-        y autorizas el tratamiento de tus datos para enviarte tu entrada y la información operativa
-        de este evento.
+        </a>
+        , y autorizas el tratamiento de tus datos para enviarte tu entrada y la información
+        operativa de este evento.
       </p>
 
       {errorMessage && <p style={{ color: "#c2185b" }}>{errorMessage}</p>}

@@ -485,6 +485,13 @@ model OrgSettings {
   // registration form's consent section.
   privacyPolicyText String?
 
+  // Terms and conditions — rendered at /terminos, linked alongside the
+  // privacy policy from the same implicit-acceptance line (no separate
+  // checkbox: accepting the site's terms is a condition of registering at
+  // all, same reasoning as LOGISTICS consent — unlike MARKETING/
+  // ADVERTISING, which stay their own explicit opt-in checkbox).
+  termsAndConditionsText String?
+
   // Emails blocked from registering at all — checked in /api/register.
   bannedEmails String[] @default([])
 

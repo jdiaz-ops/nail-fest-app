@@ -11,6 +11,7 @@ const patchSchema = z
     language: z.enum(["es", "en"]),
     replyToEmail: z.string().email().or(z.literal("")),
     privacyPolicyText: z.string(),
+    termsAndConditionsText: z.string(),
     bannedEmails: z.array(z.string().email()),
     cookieConsentEnabled: z.boolean(),
     selfServeResendEnabled: z.boolean(),

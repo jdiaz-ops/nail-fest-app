@@ -8,6 +8,7 @@ export interface OrgSettingsValue {
   language: string;
   replyToEmail: string | null;
   privacyPolicyText: string | null;
+  termsAndConditionsText: string | null;
   bannedEmails: string[];
   cookieConsentEnabled: boolean;
   selfServeResendEnabled: boolean;
@@ -19,6 +20,7 @@ const DEFAULTS: OrgSettingsValue = {
   language: "es",
   replyToEmail: null,
   privacyPolicyText: null,
+  termsAndConditionsText: null,
   bannedEmails: [],
   cookieConsentEnabled: false,
   selfServeResendEnabled: true,
@@ -36,6 +38,7 @@ export async function getOrgSettings(): Promise<OrgSettingsValue> {
     language: row.language,
     replyToEmail: row.replyToEmail,
     privacyPolicyText: row.privacyPolicyText,
+    termsAndConditionsText: row.termsAndConditionsText,
     bannedEmails: row.bannedEmails,
     cookieConsentEnabled: row.cookieConsentEnabled,
     selfServeResendEnabled: row.selfServeResendEnabled,
@@ -54,6 +57,7 @@ export async function updateOrgSettings(patch: Partial<OrgSettingsValue>): Promi
     language: row.language,
     replyToEmail: row.replyToEmail,
     privacyPolicyText: row.privacyPolicyText,
+    termsAndConditionsText: row.termsAndConditionsText,
     bannedEmails: row.bannedEmails,
     cookieConsentEnabled: row.cookieConsentEnabled,
     selfServeResendEnabled: row.selfServeResendEnabled,
