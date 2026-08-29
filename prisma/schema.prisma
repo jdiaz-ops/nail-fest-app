@@ -606,6 +606,14 @@ model OrgSettings {
   // real fallback chain (event -> global -> hand-built default).
   confirmationEmailHtml String?
 
+  // Ticket Tailor's own "Attach ticket vouchers as a PDF" checkbox — global
+  // on/off for the printable PDF ticket (lib/ticketPdf.ts) attached to
+  // every confirmation email. Defaults to true (matches what the user
+  // actually asked for: "que llegue un PDF"). Unlike
+  // confirmationEmailHtml above, this has no per-event override — one
+  // account-wide switch, same as Ticket Tailor's own single checkbox.
+  attachTicketPdf Boolean @default(true)
+
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
 }

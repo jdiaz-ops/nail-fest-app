@@ -20,6 +20,9 @@ const patchSchema = z
     // "" means "clear it, revert to the original hand-built design" — see
     // lib/confirmationTemplate.ts's fallback chain.
     confirmationEmailHtml: z.string(),
+    // Ticket Tailor's "Attach ticket vouchers as a PDF" checkbox — see
+    // OrgSettings.attachTicketPdf's own schema comment.
+    attachTicketPdf: z.boolean(),
   })
   .partial();
 

@@ -13,6 +13,7 @@ export interface OrgSettingsValue {
   cookieConsentEnabled: boolean;
   selfServeResendEnabled: boolean;
   confirmationEmailHtml: string | null;
+  attachTicketPdf: boolean;
 }
 
 const DEFAULTS: OrgSettingsValue = {
@@ -26,6 +27,7 @@ const DEFAULTS: OrgSettingsValue = {
   cookieConsentEnabled: false,
   selfServeResendEnabled: true,
   confirmationEmailHtml: null,
+  attachTicketPdf: true,
 };
 
 // No row exists until the first save from /admin/settings — reads never
@@ -45,6 +47,7 @@ export async function getOrgSettings(): Promise<OrgSettingsValue> {
     cookieConsentEnabled: row.cookieConsentEnabled,
     selfServeResendEnabled: row.selfServeResendEnabled,
     confirmationEmailHtml: row.confirmationEmailHtml,
+    attachTicketPdf: row.attachTicketPdf,
   };
 }
 
@@ -65,5 +68,6 @@ export async function updateOrgSettings(patch: Partial<OrgSettingsValue>): Promi
     cookieConsentEnabled: row.cookieConsentEnabled,
     selfServeResendEnabled: row.selfServeResendEnabled,
     confirmationEmailHtml: row.confirmationEmailHtml,
+    attachTicketPdf: row.attachTicketPdf,
   };
 }

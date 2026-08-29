@@ -1,6 +1,7 @@
 import { getOrgSettings } from "@/lib/settings";
 import ConfirmationTemplateEditor from "../../events/ConfirmationTemplateEditor";
 import SaveConfirmationClient from "./SaveConfirmationClient";
+import AttachPdfForm from "./AttachPdfForm";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,7 @@ export default async function GlobalConfirmationSettingsPage() {
         propio en su propia página; esta es la plantilla que se usa cuando un evento no la reemplaza.
       </p>
       <SaveConfirmationClient initialHtml={orgSettings.confirmationEmailHtml} />
+      <AttachPdfForm initialEnabled={orgSettings.attachTicketPdf} />
     </div>
   );
 }

@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { emailProvider } from "@/lib/email";
 import { confirmationEmail } from "@/lib/email/templates";
 import { renderConfirmationFromTemplate } from "@/lib/confirmationTemplate";
-import { renderQrPngBuffer } from "@/lib/ticket";
+import { renderTicketPdfBuffer } from "@/lib/ticketPdf";
 import { getOrgSettings } from "@/lib/settings";
 
 // Shared by /api/register (first send + resend-on-resubmit), /api/resend-
@@ -91,13 +91,39 @@ export async function sendTicketEmail(params: {
           timezone: orgSettings.timezone,
           language: orgSettings.language,
         });
-    const qrAttachment = await renderQrPngBuffer(params.qrToken);
+    // A real, self-contained ticket (event name/date/venue, attendee,
+    // ticket type, the QR itself) instead of the old bare QR-only PNG — a
+    // lone QR image, saved or printed on its own, carries no event or
+    // attendee info once separated from the email body. Ticket Tailor's
+    // own "Attach ticket vouchers as a PDF" checkbox (OrgSettings.
+    // attachTicketPdf, /admin/settings/confirmation) decides whether this
+    // gets built at all — off means no attachment, not a fallback to the
+    // old bare-QR PNG.
+    const pdfAttachment = orgSettings.attachTicketPdf
+      ? await renderTicketPdfBuffer({
+          firstName: params.person.firstName ?? "",
+          lastName: params.person.lastName ?? undefined,
+          eventName: params.event.name,
+          venueName: params.event.venueName ?? undefined,
+          venueAddress: params.event.venueAddress ?? undefined,
+          startsAt: params.event.startsAt,
+          endsAt: params.event.endsAt ?? undefined,
+          ticketTypeName: ticketType?.name,
+          ticketCount: params.registration?.ticketCount ?? undefined,
+          confirmationCode,
+          qrToken: params.qrToken,
+          timezone: orgSettings.timezone,
+          language: orgSettings.language,
+        })
+      : null;
     const sent = await emailProvider.sendTransactional({
       to: params.person.email,
       subject,
       text,
       html,
-      attachments: [{ filename: "entrada-nailfest.png", content: qrAttachment, contentType: "image/png" }],
+      attachments: pdfAttachment
+        ? [{ filename: "entrada-nailfest.pdf", content: pdfAttachment, contentType: "application/pdf" }]
+        : undefined,
     });
     await db.emailLog.create({
       data: {
