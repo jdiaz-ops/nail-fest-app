@@ -121,9 +121,13 @@ export async function getPublicTicketTypes(eventId: string, now: Date = new Date
   });
   if (visible.length === 0) return [];
 
+  // Only CONFIRMED registrations count as real demand against inventory —
+  // a STARTED row (an abandoned-cart draft, see /api/register/draft) never
+  // reached a real submit and must not shrink availability for everyone
+  // else.
   const sold = await db.registration.groupBy({
     by: ["ticketTypeId"],
-    where: { ticketTypeId: { in: visible.map((t) => t.id) }, status: { not: "CANCELLED" } },
+    where: { ticketTypeId: { in: visible.map((t) => t.id) }, status: "CONFIRMED" },
     _sum: { ticketCount: true },
   });
   const soldByType = new Map(sold.map((s) => [s.ticketTypeId, s._sum.ticketCount ?? 0]));

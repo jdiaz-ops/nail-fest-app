@@ -13,7 +13,9 @@ const fraunces = Fraunces({ subsets: ["latin"], weight: ["600", "900"] });
 export default async function EventsPage() {
   const [events, aforo, orgSettings] = await Promise.all([
     db.event.findMany({ orderBy: { startsAt: "desc" } }),
-    db.registration.groupBy({ by: ["eventId"], _sum: { ticketCount: true } }),
+    // CONFIRMED only — a STARTED row is an abandoned-cart draft (see
+    // /api/register/draft), not a real issued ticket.
+    db.registration.groupBy({ by: ["eventId"], where: { status: "CONFIRMED" }, _sum: { ticketCount: true } }),
     getOrgSettings(),
   ]);
 

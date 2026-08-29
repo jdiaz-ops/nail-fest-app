@@ -119,6 +119,52 @@ export default function RegistrationForm({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [countryCode, setCountryCode] = useState("+57");
 
+  // Real abandoned-cart tracking: the first moment we know who someone is,
+  // before they've necessarily finished (or even started) the rest of the
+  // form. Fire-and-forget, same pattern as tracking.ts's track() — never
+  // blocks or errors the visible form. Whatever else is already filled in
+  // (name, phone, city, profession) rides along too, best-effort, so a
+  // draft that never gets a second look still carries something useful.
+  // Never touches consent, never sends the ticket email, never fires Meta
+  // CAPI — see /api/register/draft's own comment on why.
+  function handleEmailBlur(e: React.FocusEvent<HTMLInputElement>) {
+    const emailValue = e.currentTarget.value.trim();
+    if (!emailValue || !emailValue.includes("@")) return; // not worth a round trip yet
+    const form = e.currentTarget.form;
+    if (!form) return;
+
+    const fd = new FormData(form);
+    const fullNameQuestion = questions.find((q) => q.key === "fullName");
+    const usesFirstLast = fullNameQuestion?.nameFormat === "FIRST_LAST";
+    const localPhone = String(fd.get("phone") ?? "").replace(/[^0-9]/g, "");
+    const attribution = attributionFromSearchParams(searchParams);
+
+    const body = {
+      eventSlug,
+      email: emailValue,
+      phone: localPhone ? `${countryCode}${localPhone}` : undefined,
+      fullName: usesFirstLast ? undefined : String(fd.get("field_fullName") ?? "").trim() || undefined,
+      firstName: usesFirstLast ? String(fd.get("field_firstName") ?? "").trim() || undefined : undefined,
+      lastName: usesFirstLast ? String(fd.get("field_lastName") ?? "").trim() || undefined : undefined,
+      city: String(fd.get("field_city") ?? "").trim() || undefined,
+      profession: String(fd.get("field_profession") ?? "").trim() || undefined,
+      ticketTypeId,
+      ticketCount,
+      utmSource: attribution?.utmSource,
+      utmMedium: attribution?.utmMedium,
+      utmCampaign: attribution?.utmCampaign,
+    };
+
+    fetch("/api/register/draft", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      keepalive: true,
+    }).catch(() => {
+      /* swallowed on purpose — see /api/register/draft's own comment */
+    });
+  }
+
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setErrorMessage(null);
@@ -246,7 +292,7 @@ export default function RegistrationForm({
             {email.label}
             <Req required />
           </label>
-          <input id="field_email" name="field_email" type="email" autoComplete="email" required />
+          <input id="field_email" name="field_email" type="email" autoComplete="email" required onBlur={handleEmailBlur} />
         </div>
       )}
 

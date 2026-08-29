@@ -9,11 +9,17 @@ function daysUntil(date: Date): number {
 }
 
 export default async function OverviewPage() {
+  // Every count on this dashboard is scoped to CONFIRMED registrations —
+  // a STARTED row is an abandoned-cart draft (see /api/register/draft),
+  // not a real registration, and must not inflate "Inscritos", "Emitidas",
+  // or the recent-activity feed. Drafts have their own view at
+  // /admin/crm/abandonados.
   const [nextEvent, totalRegistrations, checkedInAgg, recentRegistrations, events, aforo, orgSettings] = await Promise.all([
     db.event.findFirst({ where: { startsAt: { gt: new Date() } }, orderBy: { startsAt: "asc" } }),
-    db.registration.count(),
-    db.registration.aggregate({ _sum: { checkedInCount: true } }),
+    db.registration.count({ where: { status: "CONFIRMED" } }),
+    db.registration.aggregate({ where: { status: "CONFIRMED" }, _sum: { checkedInCount: true } }),
     db.registration.findMany({
+      where: { status: "CONFIRMED" },
       orderBy: { createdAt: "desc" },
       take: 15,
       include: { person: true, event: true },
@@ -21,6 +27,7 @@ export default async function OverviewPage() {
     db.event.findMany({ orderBy: { startsAt: "desc" } }),
     db.registration.groupBy({
       by: ["eventId"],
+      where: { status: "CONFIRMED" },
       _sum: { ticketCount: true, checkedInCount: true },
     }),
     getOrgSettings(),

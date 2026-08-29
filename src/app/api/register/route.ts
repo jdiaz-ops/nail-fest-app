@@ -160,10 +160,13 @@ export async function POST(req: NextRequest) {
     if (ticketCount < ticketType.minPerOrder || ticketCount > ticketType.maxPerOrder) {
       return NextResponse.json({ error: "invalid_ticket_quantity" }, { status: 400 });
     }
+    // Only CONFIRMED registrations compete for real inventory — a STARTED
+    // draft from someone who abandoned checkout (see /api/register/draft)
+    // must not block a real buyer from the last spot.
     const sold = await db.registration.aggregate({
       where: {
         ticketTypeId: input.ticketTypeId,
-        status: { not: "CANCELLED" },
+        status: "CONFIRMED",
         id: existingRegistrationForCapacityCheck ? { not: existingRegistrationForCapacityCheck.id } : undefined,
       },
       _sum: { ticketCount: true },
@@ -203,16 +206,30 @@ export async function POST(req: NextRequest) {
   // second `create()` here would throw instead of quietly duplicating —
   // reuse the existing registration and treat this as "resend my ticket",
   // which is what they actually want, rather than surfacing a DB error.
+  //
+  // The existing row can also be a STARTED draft (an abandoned-cart row —
+  // see /api/register/draft) that never reached this real submit before.
+  // That's not a resend, it's a first real confirmation, so it's tracked
+  // separately from "was this row already CONFIRMED" below — that's the
+  // question that actually matters for the Meta Purchase CAPI gate further
+  // down, not merely "did some row already exist".
   const existingRegistration = await db.registration.findUnique({
     where: { personId_eventId: { personId: person.id, eventId: event.id } },
   });
   const isResend = Boolean(existingRegistration);
+  const wasAlreadyConfirmed = existingRegistration?.status === "CONFIRMED";
 
   const customFields = input.customFields;
   const registration = existingRegistration
     ? await db.registration.update({
         where: { id: existingRegistration.id },
-        data: { customFields, ticketTypeId: input.ticketTypeId ?? null, ticketCount },
+        data: {
+          customFields,
+          ticketTypeId: input.ticketTypeId ?? null,
+          ticketCount,
+          status: "CONFIRMED",
+          confirmedAt: existingRegistration.confirmedAt ?? new Date(),
+        },
       })
     : await db.registration.create({
         data: {
@@ -271,10 +288,12 @@ export async function POST(req: NextRequest) {
 
   // --- Purchase → Meta CAPI, gated by the ADVERTISING consent, not just
   // "did they register". Sharing hashed identifiers with Meta is a distinct
-  // purpose under Ley 1581 and needs its own opt-in. Skipped on a resend —
-  // it's the same registration, not a second purchase; firing it again
-  // would inflate the conversion count Meta uses for ad optimization. ---
-  if (!isResend && (await hasActiveConsent(person.id, "ADVERTISING"))) {
+  // purpose under Ley 1581 and needs its own opt-in. Skipped only when the
+  // row was ALREADY CONFIRMED before this request (a real resend — same
+  // registration, not a second purchase; firing it again would inflate the
+  // conversion count Meta uses for ad optimization). A STARTED→CONFIRMED
+  // graduation is a first real purchase and must still fire. ---
+  if (!wasAlreadyConfirmed && (await hasActiveConsent(person.id, "ADVERTISING"))) {
     await queueMetaEvent({
       eventId: input.purchaseEventId ?? randomUUID(),
       eventName: "Purchase",

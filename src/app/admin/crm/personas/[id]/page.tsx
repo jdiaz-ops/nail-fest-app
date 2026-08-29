@@ -7,6 +7,9 @@ export const dynamic = "force-dynamic";
 
 const TYPE_ICON: Record<TimelineItem["type"], { bg: string; ink: string }> = {
   REGISTRATION: { bg: "#e3faf7", ink: "var(--accent-ink)" },
+  // Neutral, not accent — an incomplete attempt isn't the same kind of
+  // event as a real registration, so it shouldn't share its color.
+  REGISTRATION_STARTED: { bg: "#f6f5f2", ink: "#5b5f6b" },
   SCAN: { bg: "#e8f6ef", ink: "#0e6b4c" },
   CONSENT: { bg: "#f6f5f2", ink: "#5b5f6b" },
   META_EVENT: { bg: "#f6f5f2", ink: "#5b5f6b" },
@@ -28,6 +31,13 @@ function TimelineIcon({ type }: { type: TimelineItem["type"] }) {
         <svg {...common}>
           <circle cx="12" cy="12" r="9" />
           <path d="M8.5 12.5l2.5 2.5 5-5" />
+        </svg>
+      );
+    case "REGISTRATION_STARTED":
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="12" r="9" strokeDasharray="3 3" />
+          <path d="M12 8v4l2.5 2.5" />
         </svg>
       );
     case "SCAN":

@@ -11,20 +11,26 @@ const STATUS_STYLE: Record<string, { bg: string; ink: string; label: string }> =
 };
 
 export default async function RegistrationsPage() {
+  // STARTED rows are abandoned-cart drafts (someone typed their email and
+  // left, see /api/register/draft) — they never reached a real submit, so
+  // they don't belong in "Inscritos"; they have their own list at
+  // /admin/crm/abandonados. CONFIRMED and CANCELLED both represent a real
+  // completed registration attempt and stay here.
   const [registrations, distinctEvents] = await Promise.all([
     db.registration.findMany({
+      where: { status: { not: "STARTED" } },
       orderBy: { createdAt: "desc" },
       take: 200,
       include: { person: true, event: true },
     }),
-    db.registration.groupBy({ by: ["eventId"] }),
+    db.registration.groupBy({ by: ["eventId"], where: { status: { not: "STARTED" } } }),
   ]);
 
   return (
     <div>
       <CrmPageHeader
         title={`Inscritos (${registrations.length})`}
-        subtitle="Cada inscripción individual, con su fuente de tráfico — para el cupo/aforo por evento, ve a Eventos."
+        subtitle="Cada inscripción individual, con su fuente de tráfico — para el cupo/aforo por evento, ve a Eventos. Los carritos abandonados están en Abandonados."
       />
 
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 24 }}>

@@ -9,6 +9,7 @@ import { db } from "@/lib/db";
 
 export type TimelineItemType =
   | "REGISTRATION"
+  | "REGISTRATION_STARTED"
   | "SCAN"
   | "CONSENT"
   | "META_EVENT"
@@ -96,8 +97,11 @@ export async function getLifecycleStagesBulk(personIds: string[]): Promise<Map<s
   if (personIds.length === 0) return new Map();
 
   const [registrations, scans] = await Promise.all([
+    // CONFIRMED only — a STARTED row is an abandoned-cart draft (see
+    // /api/register/draft) and must not count as "registered" for stage
+    // purposes; a draft-only person correctly stays LEAD.
     db.registration.findMany({
-      where: { personId: { in: personIds } },
+      where: { personId: { in: personIds }, status: "CONFIRMED" },
       select: { personId: true, eventId: true, createdAt: true },
     }),
     db.scanLog.findMany({
@@ -186,12 +190,26 @@ export async function getPersonProfile(personId: string): Promise<PersonProfile 
     const ticketLabel = r.ticketType
       ? `${r.ticketType.name}${r.ticketCount > 1 ? ` ×${r.ticketCount}` : ""}`
       : undefined;
-    timeline.push({
-      type: "REGISTRATION",
-      at: r.createdAt,
-      title: `Se registró para ${r.event.name}`,
-      detail: ticketLabel,
-    });
+    // A row's current status decides which entry it gets — a STARTED
+    // draft that later graduates to CONFIRMED (see /api/register's
+    // resend/graduation branch) is still just one row, so it naturally
+    // becomes a normal "Se registró" entry with no leftover "iniciado"
+    // entry sitting alongside it.
+    if (r.status === "STARTED") {
+      timeline.push({
+        type: "REGISTRATION_STARTED",
+        at: r.createdAt,
+        title: `Inició un registro para ${r.event.name}, no lo completó`,
+        detail: ticketLabel,
+      });
+    } else {
+      timeline.push({
+        type: "REGISTRATION",
+        at: r.createdAt,
+        title: `Se registró para ${r.event.name}`,
+        detail: ticketLabel,
+      });
+    }
   }
 
   const validScans = scans.filter((s) => s.result === "VALID_FIRST" || s.result === "VALID_REENTRY");
@@ -244,11 +262,18 @@ export async function getPersonProfile(personId: string): Promise<PersonProfile 
 
   timeline.sort((a, b) => b.at.getTime() - a.at.getTime());
 
-  const distinctEventsRegistered = new Set(registrations.map((r) => r.eventId));
+  // Stage/stat computation only ever looks at CONFIRMED registrations — a
+  // STARTED row is an abandoned-cart draft, not a real registration (it
+  // still shows in the timeline above, just as its own honestly-labeled
+  // entry type). lastActivityAt stays based on the WHOLE timeline,
+  // including drafts — "when did we last hear from this person at all" is
+  // useful admin signal even when what we heard was an incomplete attempt.
+  const confirmedRegistrations = registrations.filter((r) => r.status === "CONFIRMED");
+  const distinctEventsRegistered = new Set(confirmedRegistrations.map((r) => r.eventId));
   const distinctEventsAttended = new Set(validScans.map((s) => s.scannedForEventId).filter(Boolean));
   const lastActivityAt = timeline[0]?.at ?? null;
   const stage = computeLifecycleStage({
-    registrationsCount: registrations.length,
+    registrationsCount: confirmedRegistrations.length,
     distinctEventsRegistered: distinctEventsRegistered.size,
     distinctEventsAttended: distinctEventsAttended.size,
     lastActivityAt,
@@ -265,7 +290,7 @@ export async function getPersonProfile(personId: string): Promise<PersonProfile 
     createdAt: person.createdAt,
     stage,
     eventsAttended: distinctEventsAttended.size,
-    registrationsTotal: registrations.length,
+    registrationsTotal: confirmedRegistrations.length,
     lastActivityAt,
     timeline,
     consents: consents.map((c) => ({ purpose: c.purpose, granted: c.granted && !c.revokedAt, at: c.revokedAt ?? c.grantedAt })),
