@@ -269,7 +269,22 @@ model ScanLog {
   // Free-text, e.g. "Puerta 1 - celular de Juan" — no device auth for the
   // MVP, just enough to tell scanners apart in the log.
   scannerLabel   String?
+  // The real/claimed moment of the physical scan — for an offline scan
+  // (see lib/offlineScan.ts) this is the phone's own clock at scan time,
+  // NOT when it reached the server. recordedAt below is the complement:
+  // when the server actually wrote this row. They're equal for a normal
+  // live scan and diverge only for something synced late — that gap is
+  // itself useful signal ("this check-in was recorded 40 minutes after
+  // the fact", visible on /admin/scan/stats).
   scannedAt      DateTime      @default(now())
+  recordedAt     DateTime      @default(now())
+  // Idempotency key, generated client-side per scan attempt (both the
+  // live path and the offline queue use it) — a dropped connection can
+  // mean the client never learns whether its request actually landed
+  // before retrying/syncing it; matching on this instead of blindly
+  // re-inserting is what stops that from double-counting a check-in.
+  // Null for anything scanned before this existed.
+  clientScanId   String?       @unique
 
   @@index([registrationId])
   @@index([scannedForEventId, scannedAt])

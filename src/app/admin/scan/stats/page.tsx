@@ -43,7 +43,14 @@ export default async function ScanStatsPage({ searchParams }: { searchParams: { 
       {!event ? (
         <p style={{ color: "#5b5f6b" }}>Aún no hay eventos.</p>
       ) : (
-        <EventStats eventId={event.id} />
+        <>
+          <EventStats eventId={event.id} />
+          <p style={{ marginTop: 24, fontSize: 12, color: "#5b5f6b" }}>
+            Respaldo de emergencia — si el celular o la app fallan por completo (no solo la conexión):{" "}
+            <a href={`/api/admin/scan/export?eventId=${event.id}`}>descargar lista en CSV</a> para verificar
+            manualmente en la puerta.
+          </p>
+        </>
       )}
     </div>
   );
