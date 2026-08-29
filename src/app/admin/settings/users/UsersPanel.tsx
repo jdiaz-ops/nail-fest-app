@@ -19,9 +19,24 @@ const ERROR_LABEL: Record<string, string> = {
   cannot_delete_self: "No puedes borrar tu propia cuenta.",
 };
 
+interface ApiErrorBody {
+  error?: string;
+  // From zod's safeParse — server validation failures (username with
+  // espacios, contraseña muy corta, etc.) come back with the SPECIFIC
+  // reason here; showing a generic "algo salió mal" for these was itself
+  // a real usability bug, not just an unpolished message.
+  issues?: { path: (string | number)[]; message: string }[];
+}
+
 function errorMessage(body: unknown): string {
-  const error = (body as { error?: string } | null)?.error;
-  return (error && ERROR_LABEL[error]) || "Algo salió mal. Intenta de nuevo.";
+  const parsed = body as ApiErrorBody | null;
+  if (parsed?.error === "invalid_body" && parsed.issues?.[0]) {
+    const issue = parsed.issues[0];
+    const field = issue.path[0];
+    const fieldLabel = field === "username" ? "Usuario" : field === "password" ? "Contraseña" : String(field ?? "");
+    return fieldLabel ? `${fieldLabel}: ${issue.message}` : issue.message;
+  }
+  return (parsed?.error && ERROR_LABEL[parsed.error]) || "Algo salió mal. Intenta de nuevo.";
 }
 
 function relativeDate(iso: string | null): string {
