@@ -40,6 +40,7 @@ model Person {
 
   registrations Registration[]
   consents      Consent[]
+  whatsappConversations WhatsAppConversation[]
 
   @@index([phone])
   @@index([city])
@@ -117,6 +118,7 @@ model Event {
   scans         ScanLog[]
   ticketTypes   TicketType[]
   broadcasts    EmailBroadcast[]
+  whatsappBroadcasts WhatsAppBroadcast[]
 
   @@index([city])
   @@index([status])
@@ -177,6 +179,7 @@ model TicketType {
 
   registrations Registration[]
   broadcasts    EmailBroadcast[]
+  whatsappBroadcasts WhatsAppBroadcast[]
 
   @@index([eventId])
 }
@@ -306,8 +309,11 @@ enum ConsentPurpose {
   ADVERTISING // sharing hashed identifiers with Meta/TikTok/Google for audiences
   // Separate from MARKETING on purpose — Meta's WhatsApp policy and Ley 1581
   // both treat WhatsApp opt-in as its own thing, not a checkbox someone
-  // already ticked for email. No form checkbox wired up for this yet — see
-  // docs/WHATCHIMP_SETUP.md; the module is prepared, not activated.
+  // already ticked for email. Granted the same way LOGISTICS/MARKETING/
+  // ADVERTISING are now (implicit in submitting the registration form, see
+  // RegistrationForm.tsx's acceptance line) rather than a separate
+  // checkbox — kept as its own purpose here so it stays independently
+  // revocable. See docs/WHATSAPP_SETUP.md.
   WHATSAPP
 }
 
@@ -402,6 +408,7 @@ model SegmentDefinition {
   createdAt DateTime @default(now())
 
   broadcasts EmailBroadcast[]
+  whatsappBroadcasts WhatsAppBroadcast[]
   metaSync   SegmentMetaSync?
 }
 
@@ -541,6 +548,190 @@ model EmailLog {
   @@index([broadcastId, status])
   @@index([toEmail])
   @@index([sesMessageId])
+}
+
+// ---------------------------------------------------------------------------
+// WhatsApp — CRM → WhatsApp. Direct integration against Meta's WhatsApp
+// Cloud API (Graph API), same shape as the Meta ads module above: a
+// connection row with an app-layer-encrypted token (lib/crypto.ts), a
+// synced read-only mirror of what's approved in Meta's own WhatsApp
+// Manager, a broadcast log reusing the same segment engine as email, and
+// an inbox (conversation + message) for replying within the 24h customer
+// service window. Supersedes the WhatChimp scaffolding in
+// lib/whatsapp/whatchimp.ts — see docs/WHATSAPP_SETUP.md.
+// ---------------------------------------------------------------------------
+
+// Singleton-ish, same pattern as MetaConnection (a table of rows, most
+// recent wins) rather than a true singleton — a future token rotation
+// gets an audit trail instead of silently overwriting.
+model WhatsAppConnection {
+  id             String   @id @default(cuid())
+  wabaId         String // WhatsApp Business Account ID
+  phoneNumberId  String // the Cloud API "Phone number ID", not the phone number itself
+  // Cached from Meta on save/sync, display-only — lets the Conexión page
+  // show "conectado como +57 3xx..." without decrypting the token to ask.
+  displayPhoneNumber String?
+  // Encrypted at the application layer — see lib/crypto.ts. Same posture
+  // as MetaConnection.systemUserTokenEnc: never stored in plaintext.
+  accessTokenEnc String
+  // Shared secret for the webhook GET verification handshake (Meta's
+  // hub.verify_token challenge) — set here, then pasted into the same
+  // field in the Meta App dashboard's Webhooks config. Not itself
+  // sensitive enough to need encryption (it authorizes nothing on its
+  // own, same posture as SES_WEBHOOK_SECRET), just needs to match.
+  webhookVerifyToken String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// Meta's own real template categories/statuses — mirrored exactly so
+// syncing never has to invent a mapping.
+enum WhatsAppTemplateCategory {
+  MARKETING
+  UTILITY
+  AUTHENTICATION
+}
+
+enum WhatsAppTemplateStatus {
+  APPROVED
+  PENDING
+  REJECTED
+  PAUSED
+  DISABLED
+}
+
+// Read-only mirror of what's approved in Meta's own WhatsApp Manager —
+// templates are authored and submitted for approval THERE, never
+// reinvented in this app (Meta reviews template content directly; there's
+// no API for "create and instantly use" without that review anyway). This
+// table exists so the broadcast composer can list what's actually usable
+// today without an extra round trip to Meta on every page load — kept
+// current by the Sync button / a cron hitting lib/whatsapp/templates.ts.
+model WhatsAppTemplate {
+  id            String                   @id @default(cuid())
+  metaTemplateId String                  @unique // Meta's own template id
+  name          String
+  language      String // Meta's language code, e.g. "es" or "es_CO"
+  category      WhatsAppTemplateCategory
+  status        WhatsAppTemplateStatus
+  // The approved body text, placeholders and all (e.g. "Hola {{1}}, tu
+  // entrada para {{2}} ya está confirmada.") — shown in the composer so
+  // an admin can see what they're mapping variables into.
+  bodyText      String?
+  variableCount Int                      @default(0)
+  lastSyncedAt  DateTime                 @default(now())
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+
+  broadcasts WhatsAppBroadcast[]
+  messages   WhatsAppMessage[]
+
+  @@unique([name, language])
+}
+
+model WhatsAppBroadcast {
+  id           String                @id @default(cuid())
+  // Same "exactly one of segmentId/eventId, never both, never neither"
+  // convention as EmailBroadcast, enforced in application code
+  // (lib/whatsapp/broadcasts.ts), not the DB.
+  segment      SegmentDefinition?    @relation(fields: [segmentId], references: [id])
+  segmentId    String?
+  event        Event?                @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId      String?
+  ticketType   TicketType?           @relation(fields: [ticketTypeId], references: [id], onDelete: SetNull)
+  ticketTypeId String?
+  template     WhatsAppTemplate      @relation(fields: [templateId], references: [id])
+  templateId   String
+  // Which merge tag fills each numbered placeholder in the template body
+  // — e.g. {"1": "firstName", "2": "eventName"}. See
+  // lib/whatsapp/mergeTags.ts for the fixed set of tags this can reference
+  // (mirrors lib/confirmationTemplate.ts's merge-tag approach for email).
+  variableMapping Json               @default("{}")
+  status       BroadcastStatus       @default(DRAFT)
+  scheduleKind BroadcastScheduleKind @default(IMMEDIATE)
+  scheduledAt  DateTime?
+  scheduleOffsetMinutes Int?
+  createdAt    DateTime              @default(now())
+  sentAt       DateTime?
+
+  messages WhatsAppMessage[]
+
+  @@index([status, scheduleKind])
+}
+
+enum WhatsAppMessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+// TEMPLATE = outbound, business-initiated, pre-approved template (a
+// broadcast send, or the future confirmation-message hookup).
+// FREEFORM = outbound plain text, only legal within the 24h window after
+// a contact's last inbound message — an inbox reply.
+// INBOUND = a real message received from the contact.
+enum WhatsAppMessageKind {
+  TEMPLATE
+  FREEFORM
+  INBOUND
+}
+
+enum WhatsAppMessageStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
+
+// One row per phone number with any WhatsApp activity — the inbox's
+// thread list. Kept even when personId is null (an inbound message from a
+// number that doesn't match any known Person by phone yet) so a real
+// contact reaching out is never silently dropped for not matching CRM
+// data — see lib/whatsapp/inbox.ts.
+model WhatsAppConversation {
+  id             String    @id @default(cuid())
+  person         Person?   @relation(fields: [personId], references: [id])
+  personId       String?
+  phone          String    @unique // E.164
+  // The 24h "customer service window" Meta enforces for FREEFORM sends —
+  // always recomputed from this, never cached as a boolean, so it can
+  // never go stale mid-conversation.
+  lastInboundAt  DateTime?
+  lastOutboundAt DateTime?
+  unreadCount    Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  messages WhatsAppMessage[]
+
+  @@index([personId])
+}
+
+model WhatsAppMessage {
+  id             String                   @id @default(cuid())
+  conversation   WhatsAppConversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId String
+  direction      WhatsAppMessageDirection
+  kind           WhatsAppMessageKind
+  // Set only for an OUTBOUND TEMPLATE message sent from a broadcast — this
+  // doubles as that broadcast's own EmailLog-equivalent send log.
+  broadcast      WhatsAppBroadcast?       @relation(fields: [broadcastId], references: [id])
+  broadcastId    String?
+  template       WhatsAppTemplate?        @relation(fields: [templateId], references: [id])
+  templateId     String?
+  // The rendered text: the template body with variables filled in for
+  // TEMPLATE, the plain text for FREEFORM/INBOUND.
+  body           String?
+  providerMessageId String?               @unique
+  status         WhatsAppMessageStatus    @default(QUEUED)
+  errorMessage   String?
+  sentAt         DateTime?
+  deliveredAt    DateTime?
+  readAt         DateTime?
+  createdAt      DateTime                 @default(now())
+
+  @@index([conversationId, createdAt])
+  @@index([broadcastId, status])
 }
 
 // ---------------------------------------------------------------------------

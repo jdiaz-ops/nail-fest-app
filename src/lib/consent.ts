@@ -7,7 +7,7 @@ import { db } from "@/lib/db";
 // gate the broadcast composer / Meta audience sync respectively.
 
 export const REQUIRED_CONSENTS: ConsentPurpose[] = ["LOGISTICS"];
-export const OPTIONAL_CONSENTS: ConsentPurpose[] = ["MARKETING", "ADVERTISING"];
+export const OPTIONAL_CONSENTS: ConsentPurpose[] = ["MARKETING", "ADVERTISING", "WHATSAPP"];
 
 export async function recordConsents(params: {
   personId: string;

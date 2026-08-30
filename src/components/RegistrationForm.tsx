@@ -35,7 +35,7 @@ export interface RegisterPayload {
   city: string;
   profession: string;
   customFields: Record<string, string>;
-  consents: { logistics: boolean; marketing: boolean; advertising: boolean };
+  consents: { logistics: boolean; marketing: boolean; advertising: boolean; whatsapp: boolean };
   attribution?: {
     utmSource?: string;
     utmMedium?: string;
@@ -214,18 +214,19 @@ export default function RegistrationForm({
       city: String(form.get("field_city") ?? ""),
       profession: String(form.get("field_profession") ?? ""),
       customFields,
-      // No consent checkboxes at all anymore — LOGISTICS, MARKETING and
-      // ADVERTISING are all implicit in submitting the form, covered by
-      // the acceptance line below the button (which spells out the
-      // marketing/ads authorization explicitly, not just "terms" in the
-      // abstract). Still sent as three distinct consents/Consent rows
-      // server-side — unchanged plumbing, only the UI got simpler — so
-      // /api/unsubscribe can still revoke MARKETING on its own later
-      // without touching ADVERTISING.
+      // No consent checkboxes at all anymore — LOGISTICS, MARKETING,
+      // ADVERTISING and now WHATSAPP are all implicit in submitting the
+      // form, covered by the acceptance line below the button (which
+      // spells out the marketing/ads/WhatsApp authorization explicitly,
+      // not just "terms" in the abstract). Still sent as four distinct
+      // consents/Consent rows server-side — unchanged plumbing, only the
+      // UI got simpler — so /api/unsubscribe can still revoke MARKETING
+      // on its own later without touching ADVERTISING or WHATSAPP.
       consents: {
         logistics: true,
         marketing: true,
         advertising: true,
+        whatsapp: true,
       },
       attribution: attributionFromSearchParams(searchParams),
       fbc: readCookie("_fbc"),
@@ -492,13 +493,14 @@ export default function RegistrationForm({
       })}
 
       {/* Ningún checkbox de consentimiento ya — ni logística, ni
-          marketing/publicidad. Todo queda implícito en la propia acción de
-          enviar el formulario, cubierto por esta misma línea (que menciona
-          explícitamente la autorización de marketing/publicidad, no solo
-          "términos" en abstracto — ese texto también debe reflejarse en el
-          contenido real de /terminos y /privacidad que se edita desde el
-          admin). Sigue enviando tres consentimientos distintos al servidor
-          (ver handleSubmit) — solo cambió la UI, no el modelo de datos. */}
+          marketing/publicidad, ni WhatsApp. Todo queda implícito en la
+          propia acción de enviar el formulario, cubierto por esta misma
+          línea (que menciona explícitamente la autorización de
+          marketing/publicidad/WhatsApp, no solo "términos" en abstracto —
+          ese texto también debe reflejarse en el contenido real de
+          /terminos y /privacidad que se edita desde el admin). Sigue
+          enviando cuatro consentimientos distintos al servidor (ver
+          handleSubmit) — solo cambió la UI, no el modelo de datos. */}
       <p style={{ fontSize: 12, color: "#5b5f6b" }}>
         Al hacer clic en &ldquo;{submitLabel}&rdquo; aceptas nuestros{" "}
         <a href="/terminos" target="_blank" rel="noreferrer">
@@ -509,8 +511,9 @@ export default function RegistrationForm({
           política de privacidad
         </a>
         ; autorizas el tratamiento de tus datos para enviarte tu entrada y la información operativa
-        de este evento; y autorizas recibir novedades de futuros eventos de Nail Fest y que te
-        mostremos publicidad relevante en Meta con tus datos (de forma cifrada).
+        de este evento (incluyendo por WhatsApp al número que registraste); y autorizas recibir
+        novedades de futuros eventos de Nail Fest y que te mostremos publicidad relevante en Meta
+        con tus datos (de forma cifrada).
       </p>
 
       {errorMessage && <p style={{ color: "#c2185b" }}>{errorMessage}</p>}

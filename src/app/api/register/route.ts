@@ -45,6 +45,7 @@ const bodySchema = z.object({
     logistics: z.literal(true), // required — can't register without it
     marketing: z.boolean().default(false),
     advertising: z.boolean().default(false),
+    whatsapp: z.boolean().default(false),
   }),
   attribution: z
     .object({
@@ -278,6 +279,7 @@ export async function POST(req: NextRequest) {
       LOGISTICS: input.consents.logistics,
       MARKETING: input.consents.marketing,
       ADVERTISING: input.consents.advertising,
+      WHATSAPP: input.consents.whatsapp,
     },
   });
 

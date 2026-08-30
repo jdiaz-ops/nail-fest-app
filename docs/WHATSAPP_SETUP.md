@@ -1,0 +1,116 @@
+# WhatsApp — CRM → WhatsApp (direct Meta connection)
+
+**Status: built, not yet verified against a real account.** This was built
+overnight without real Meta credentials (see the commit this file shipped
+with) — the request/response shapes in `lib/whatsapp/meta.ts` follow Meta's
+own Cloud API reference exactly, and every part of the app that DOESN'T
+require a real Meta call (the schema, the admin UI, the segment-targeting
+and consent logic, the webhook's inbound-message processing and phone
+matching, the 24h-window enforcement) has been exercised end-to-end
+against a real local Postgres + a real running server. What has NOT been
+exercised: an actual `sendTemplate`/`sendFreeform`/`listApprovedTemplates`
+call reaching Meta's servers and getting a real 2xx back. Confirm that the
+first time you connect a real account — see "First real send" below.
+
+## Why direct to Meta, not another BSP (Business Solution Provider)
+
+You were on WhatChimp (see the now-superseded `docs/WHATCHIMP_SETUP.md`
+and `lib/whatsapp/whatchimp.ts`, kept for reference) — paying WhatChimp
+monthly for the platform/inbox, and Meta directly for broadcast credits.
+Moving off WhatChimp to a direct Cloud API connection:
+
+- Drops the WhatChimp subscription entirely — you already pay Meta per
+  message either way.
+- Keeps everything that actually matters on a BSP switch: your verified
+  phone number, its quality rating, its messaging limits, and any
+  HIGH-QUALITY approved templates all transfer automatically — Meta ties
+  those to the number/WABA, not to WhatChimp specifically.
+- Does NOT keep: your WhatChimp chat history (starts fresh in the new
+  Bandeja here) and any PENDING/REJECTED templates (recreate those
+  directly in Meta's WhatsApp Manager if you still want them).
+
+## What's built
+
+- **Conexión** (`/admin/crm/whatsapp/conexion`) — stores your WABA ID,
+  Phone Number ID and access token (encrypted at rest, same
+  `lib/crypto.ts` AES-256-GCM as the Meta ads connection) plus a webhook
+  verify token.
+- **Plantillas** (`/admin/crm/whatsapp/plantillas`) — read-only mirror of
+  what's approved in Meta's own WhatsApp Manager. Templates are authored
+  and submitted for review THERE, not reinvented in this app — Meta
+  reviews template content directly and there's no API shortcut around
+  that. Sync pulls the current list in.
+- **Difusiones** (`/admin/crm/whatsapp/difusiones`) — sends an approved
+  template to an existing, named segment (same segment engine as email
+  broadcasts — `resolveSegment()`), with a merge-tag mapping UI for the
+  template's `{{1}}`, `{{2}}`, ... variables and a live text preview.
+  Only sends to people with an active `WHATSAPP` consent AND a phone
+  number on file.
+- **Bandeja** (`/admin/crm/whatsapp/bandeja`) — inbox: a thread per phone
+  number, matched to a CRM `Person` by phone when possible (last-10-digit
+  match, so it's tolerant of the leading `+`/country code either way).
+  Reply is free text, enforced server-side to Meta's real 24h customer
+  service window (measured from the contact's last inbound message) — a
+  closed window shows why and points at Difusiones instead of silently
+  failing.
+- **Consent**: `WHATSAPP` is its own `ConsentPurpose` (independently
+  revocable from `MARKETING`/`ADVERTISING`), granted the same implicit way
+  those are now — see `RegistrationForm.tsx`'s acceptance line — rather
+  than a separate checkbox, to match how consent already works on this
+  form for the other three purposes.
+- **Webhook** (`/api/webhooks/whatsapp`) — GET handles Meta's verification
+  handshake (`hub.verify_token` checked against what you saved in
+  Conexión); POST receives inbound messages and delivery-status updates,
+  signature-verified against `META_APP_SECRET` (`X-Hub-Signature-256`,
+  HMAC-SHA256 over the raw body) before anything is processed.
+- **Cron** (`/api/whatsapp/send-due`, `vercel.json`) — sends any QUEUED,
+  non-IMMEDIATE broadcast whose scheduled time has arrived, same
+  once/day cadence as `/api/broadcasts/send-due` for the same Vercel
+  Hobby-plan reason (see that route's own comment).
+
+## Setup, start to finish
+
+1. In [Meta App Dashboard](https://developers.facebook.com/apps) → your
+   app → **WhatsApp → API Setup**: copy the **Phone number ID** and the
+   **WhatsApp Business Account ID**.
+2. Generate a **permanent** token (not the 24h temporary one shown by
+   default): Business Settings → **Users → System Users** → your System
+   User (or create one) → Add Assets → assign it the WABA above with
+   management access → **Generate New Token**, checking
+   `whatsapp_business_messaging` and `whatsapp_business_management`.
+3. In **WhatsApp → Configuration → Webhook**: paste
+   `https://<your-domain>/api/webhooks/whatsapp` and a verify token of your
+   choosing (anything long and random), then subscribe to the `messages`
+   field — without this, Bandeja never receives anything.
+4. Paste the token, WABA ID, Phone Number ID and the same verify token
+   into `/admin/crm/whatsapp/conexion` and save.
+5. Create your first template directly in Meta's WhatsApp Manager (e.g. a
+   simple confirmation message), wait for approval, then hit
+   "Sincronizar con Meta" on `/admin/crm/whatsapp/plantillas`.
+6. Make sure `META_APP_SECRET` is set in your environment (it already is
+   if the Meta ads/CAPI module is connected — same Meta App) — the
+   webhook signature check fails closed without it.
+
+## First real send
+
+Send yourself a test broadcast from Difusiones (a segment of just you)
+before sending anything wider. If `lib/whatsapp/meta.ts`'s request shape
+turns out to need adjusting against your real account, that file — and
+only that file — is where to fix it; nothing else in the app (the
+broadcast/inbox logic, the UI, the consent gating) depends on the exact
+Graph API payload shape.
+
+## Not built
+
+- **Header/button template variables** — `meta.ts`'s `sendTemplate` only
+  fills BODY `{{n}}` variables (this app's own templates only need that);
+  a template with a dynamic header or a dynamic URL button would need
+  `components` extended to cover those too.
+- **Media messages** (images, PDFs) in either direction — text only, both
+  inbound and outbound.
+- **Event-scoped broadcasts** ("everyone registered for event X", like
+  `EventBroadcastComposer.tsx`'s email equivalent) — the schema supports
+  it (`WhatsAppBroadcast.eventId`), but Difusiones only has the
+  segment-picker composer today; build a segment for that event's
+  registrants in Segmentos as the workaround until a second composer
+  surface is built.

@@ -1,8 +1,14 @@
 import type { WhatsAppProvider, WhatsAppTemplateMessage } from "./provider";
 
-// NOT WIRED IN YET — no route calls this. Prepared ahead of time so
-// activating it later is "add the API key and call sendTemplate()", not
-// "start from zero". See docs/WHATCHIMP_SETUP.md.
+// SUPERSEDED — kept for reference only, nothing imports this anymore. The
+// app moved off WhatChimp to a direct Meta Cloud API connection (see
+// lib/whatsapp/meta.ts and docs/WHATSAPP_SETUP.md) — lib/whatsapp/index.ts
+// exports metaWhatsAppProvider now, not this. Also no longer satisfies the
+// full WhatsAppProvider interface (that gained sendFreeform/
+// listApprovedTemplates, which WhatChimp's API never needed since its own
+// inbox/template UI covered those) — left un-exported from index.ts
+// deliberately rather than updated, since there's no reason to keep it
+// buildable as a drop-in swap once you're off WhatChimp for good.
 //
 // The exact request shape below (endpoint path, payload keys) is built
 // from WhatChimp's published API pattern (Bearer token auth, template name
@@ -47,4 +53,9 @@ async function sendTemplate(input: WhatsAppTemplateMessage): Promise<{ providerM
   return { providerMessageId };
 }
 
-export const whatchimpProvider: WhatsAppProvider = { sendTemplate };
+// No longer typed as `: WhatsAppProvider` — the interface gained
+// sendFreeform/listApprovedTemplates (see this file's own header
+// comment), which WhatChimp's API never needed. Kept buildable as its own
+// standalone shape rather than deleted or forced to satisfy an interface
+// it's not actually plugged into anymore.
+export const whatchimpProvider: Pick<WhatsAppProvider, "sendTemplate"> = { sendTemplate };

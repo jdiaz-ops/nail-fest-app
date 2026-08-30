@@ -14,6 +14,7 @@ const NAV: { href: string; label: string }[] = [
   { href: "/admin/crm/abandonados", label: "Abandonados" },
   { href: "/admin/crm/import", label: "Importar" },
   { href: "/admin/crm/broadcasts", label: "Broadcasts" },
+  { href: "/admin/crm/whatsapp", label: "WhatsApp" },
   { href: "/admin/crm/segments", label: "Segmentos" },
 ];
 
