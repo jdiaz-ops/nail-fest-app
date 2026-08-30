@@ -2,11 +2,27 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { normalizeFilter, type SegmentFilter } from "@/lib/segments/normalize";
+
+// What editing an existing segment needs from the caller — the raw stored
+// filter (either shape; normalizeFilter below handles pre-multi-select
+// segments the same way the rest of the segment code already does) plus
+// enough identity to PATCH the right row and show the right heading.
+export interface EditingSegment {
+  id: string;
+  name: string;
+  filter: unknown;
+}
 
 interface Props {
   events: { slug: string; name: string }[];
   professionOptions: string[];
   cityOptions: string[];
+  // Present = edit an existing segment instead of creating a new one.
+  // Caller (SegmentsAdminClient) owns which segment is being edited and
+  // clears this back to undefined on cancel/save.
+  editingSegment?: EditingSegment | null;
+  onDone?: () => void;
 }
 
 // A checkbox list, not a native <select multiple> — ctrl/cmd-click to
@@ -52,7 +68,27 @@ function MultiCheckList({
   );
 }
 
-export default function SegmentComposer({ events, professionOptions, cityOptions }: Props) {
+// Pulls one field's values out of a normalized filter's include/exclude
+// list — a segment only ever has at most one condition per field (see
+// the `filter` useMemo below), so this is just "find it or return []".
+function extract(conditions: SegmentFilter["include"], field: string, key: string): string[] {
+  const found = conditions.find((c) => c.field === field) as Record<string, unknown> | undefined;
+  return (found?.[key] as string[] | undefined) ?? [];
+}
+
+const emptyForm = {
+  name: "",
+  includeEvent: [] as string[],
+  includeAttended: [] as string[],
+  includeCity: [] as string[],
+  includeProfession: [] as string[],
+  excludeEvent: [] as string[],
+  excludeAttended: [] as string[],
+  excludeCity: [] as string[],
+  excludeProfession: [] as string[],
+};
+
+export default function SegmentComposer({ events, professionOptions, cityOptions, editingSegment, onDone }: Props) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [includeEvent, setIncludeEvent] = useState<string[]>([]);
@@ -65,6 +101,38 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
   const [excludeProfession, setExcludeProfession] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState<string | null>(null);
+  const isEditing = !!editingSegment;
+
+  // Pre-fill the form when the caller sets (or switches) which segment is
+  // being edited — and reset back to blank when it clears (Cancelar, or
+  // after a successful save). Runs off editingSegment.id specifically, not
+  // the whole object, so it doesn't re-run on every parent re-render.
+  useEffect(() => {
+    if (!editingSegment) {
+      setName(emptyForm.name);
+      setIncludeEvent(emptyForm.includeEvent);
+      setIncludeAttended(emptyForm.includeAttended);
+      setIncludeCity(emptyForm.includeCity);
+      setIncludeProfession(emptyForm.includeProfession);
+      setExcludeEvent(emptyForm.excludeEvent);
+      setExcludeAttended(emptyForm.excludeAttended);
+      setExcludeCity(emptyForm.excludeCity);
+      setExcludeProfession(emptyForm.excludeProfession);
+      return;
+    }
+    const normalized = normalizeFilter(editingSegment.filter as SegmentFilter);
+    setName(editingSegment.name);
+    setIncludeEvent(extract(normalized.include, "event", "eventSlugs"));
+    setIncludeAttended(extract(normalized.include, "attended", "eventSlugs"));
+    setIncludeCity(extract(normalized.include, "city", "cities"));
+    setIncludeProfession(extract(normalized.include, "profession", "professions"));
+    setExcludeEvent(extract(normalized.exclude, "event", "eventSlugs"));
+    setExcludeAttended(extract(normalized.exclude, "attended", "eventSlugs"));
+    setExcludeCity(extract(normalized.exclude, "city", "cities"));
+    setExcludeProfession(extract(normalized.exclude, "profession", "professions"));
+    setResult(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingSegment?.id]);
 
   // Within one condition (e.g. varias ciudades) the values are OR'd — a
   // real SQL IN — since that's a single field's own condition. Across
@@ -122,30 +190,41 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
     setSaving(true);
     setResult(null);
 
-    const res = await fetch("/api/admin/segments", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, filter }),
-    });
+    const res = isEditing
+      ? await fetch("/api/admin/segments", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: editingSegment!.id, name, filter }),
+        })
+      : await fetch("/api/admin/segments", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, filter }),
+        });
     const body = await res.json().catch(() => ({}));
     setSaving(false);
     if (res.ok) {
-      const first = body.firstSync;
+      const sync = isEditing ? body.resync : body.firstSync;
+      const verb = isEditing ? "actualizado" : "guardado";
       setResult(
-        first?.status === "OK"
-          ? `Segmento guardado y sincronizado con Meta de una vez — ${first.memberCount} personas ahora mismo. De aquí en adelante se mantiene solo (nuevos registros entran al toque; el cron reconcilia el resto).`
-          : `Segmento guardado. La primera sincronización con Meta no se pudo completar ahora (${first?.error ?? "revisa /admin/settings/integrations"}) — el cron lo reintenta solo.`
+        sync?.status === "OK" || "memberCount" in (sync ?? {})
+          ? `Segmento ${verb} y sincronizado con Meta de una vez — ${sync.memberCount} personas ahora mismo. De aquí en adelante se mantiene solo (nuevos registros entran al toque; el cron reconcilia el resto).`
+          : `Segmento ${verb}. La sincronización con Meta no se pudo completar ahora (${sync?.error ?? "revisa /admin/settings/integrations"}) — el cron lo reintenta solo.`
       );
-      setName("");
-      setIncludeEvent([]);
-      setIncludeAttended([]);
-      setIncludeCity([]);
-      setIncludeProfession([]);
-      setExcludeEvent([]);
-      setExcludeAttended([]);
-      setExcludeCity([]);
-      setExcludeProfession([]);
       setPreviewCount(null);
+      if (isEditing) {
+        onDone?.();
+      } else {
+        setName("");
+        setIncludeEvent([]);
+        setIncludeAttended([]);
+        setIncludeCity([]);
+        setIncludeProfession([]);
+        setExcludeEvent([]);
+        setExcludeAttended([]);
+        setExcludeCity([]);
+        setExcludeProfession([]);
+      }
       router.refresh();
     } else {
       setResult("Error al guardar — revisa la consola.");
@@ -158,7 +237,14 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
 
   return (
     <form onSubmit={handleSave} style={{ maxWidth: 900 }}>
-      <h2>Nuevo segmento</h2>
+      <h2>{isEditing ? `Editar segmento: ${editingSegment!.name}` : "Nuevo segmento"}</h2>
+      {isEditing && (
+        <p style={{ fontSize: 13, color: "#5b5f6b", marginTop: -8, marginBottom: 16 }}>
+          Los cambios se sincronizan con la Custom Audience en Meta de inmediato al guardar — si cambia el filtro,
+          cambia quién está en la audiencia; si cambia el nombre, se renombra la misma audiencia en Meta (no se crea
+          una nueva).
+        </p>
+      )}
 
       <div className="field">
         <label>Nombre</label>
@@ -258,9 +344,25 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
         reconcilia en segundo plano.
       </p>
 
-      <button className="primary" type="submit" disabled={saving} style={{ width: "auto", padding: "10px 24px" }}>
-        {saving ? "Guardando..." : "Guardar segmento"}
-      </button>
+      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+        <button className="primary" type="submit" disabled={saving} style={{ width: "auto", padding: "10px 24px" }}>
+          {saving ? "Guardando..." : isEditing ? "Guardar cambios" : "Guardar segmento"}
+        </button>
+        {isEditing && (
+          <button
+            type="button"
+            className="secondary"
+            disabled={saving}
+            onClick={() => {
+              setResult(null);
+              onDone?.();
+            }}
+            style={{ width: "auto", padding: "10px 24px" }}
+          >
+            Cancelar
+          </button>
+        )}
+      </div>
       {result && <p style={{ marginTop: 12 }}>{result}</p>}
     </form>
   );

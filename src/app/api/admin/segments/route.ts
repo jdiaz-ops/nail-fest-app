@@ -39,6 +39,52 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ ok: true, segmentId: segment.id, firstSync });
 }
 
+// Editing an already-created (and possibly already Meta-synced) segment —
+// SegmentComposer.tsx's edit mode. Re-syncs immediately on save, same
+// reasoning as the first sync on create: the whole point of editing is
+// that the audience's real membership should reflect the new criteria
+// right away, not after up to a day's wait for the cron. Renaming is
+// safe — see ensureCustomerListAudience's own comment on why this reuses
+// the audience id already on file instead of a name-based lookup.
+const patchSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  filter: filterSchema,
+});
+
+export async function PATCH(req: NextRequest) {
+  const auth = await requireUser(["ADMIN"]);
+  if ("response" in auth) return auth.response;
+
+  const parsed = patchSchema.safeParse(await req.json().catch(() => null));
+  if (!parsed.success) {
+    return NextResponse.json({ error: "invalid_body", issues: parsed.error.issues }, { status: 400 });
+  }
+  const { id, name, filter } = parsed.data;
+
+  try {
+    await db.segmentDefinition.update({ where: { id }, data: { name, filter } });
+  } catch {
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
+  }
+
+  // A segment created before Meta sync existed, or one whose first sync
+  // never ran, might have no SegmentMetaSync row yet — create it now
+  // rather than erroring, same as if it were a brand-new segment.
+  await db.segmentMetaSync.upsert({
+    where: { segmentId: id },
+    create: { segmentId: id },
+    update: {},
+  });
+
+  const resync = await syncSegmentAudience(id).catch((err) => ({
+    status: "ERROR" as const,
+    error: err instanceof Error ? err.message : String(err),
+  }));
+
+  return NextResponse.json({ ok: true, segmentId: id, resync });
+}
+
 export async function DELETE(req: NextRequest) {
   const auth = await requireUser(["ADMIN"]);
   if ("response" in auth) return auth.response;

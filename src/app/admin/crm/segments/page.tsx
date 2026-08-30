@@ -1,20 +1,11 @@
 import { db } from "@/lib/db";
 import { getOrderedProfessionOptions } from "@/lib/professions";
 import { resolveSegment, type SegmentFilter } from "@/lib/segments/builder";
-import SegmentComposer from "@/components/SegmentComposer";
-import DeleteSegmentButton from "@/components/DeleteSegmentButton";
+import SegmentsAdminClient from "@/components/SegmentsAdminClient";
 import CrmPageHeader from "../CrmPageHeader";
 import StatCard from "../StatCard";
 
 export const dynamic = "force-dynamic";
-
-// Same status-pill convention as everywhere else in the CRM (StageBadge,
-// registration Estado, broadcast Estado) — no emoji, a colored pill.
-const SYNC_STYLE: Record<string, { bg: string; ink: string; label: string }> = {
-  PENDING: { bg: "#f6f5f2", ink: "#5b5f6b", label: "Pendiente" },
-  OK: { bg: "#e8f6ef", ink: "#0e6b4c", label: "Sincronizado" },
-  ERROR: { bg: "#fbe9ea", ink: "#a3212b", label: "Error" },
-};
 
 export default async function SegmentsPage() {
   const [events, professionOptions, cityRows, segmentRows] = await Promise.all([
@@ -60,68 +51,7 @@ export default async function SegmentsPage() {
         <StatCard label="Sincronizados con Meta" value={String(syncedCount)} />
       </div>
 
-      <SegmentComposer events={events} professionOptions={professionOptions} cityOptions={cityOptions} />
-
-      <h2 style={{ fontSize: 16, marginTop: 40 }}>Segmentos guardados</h2>
-      <div className="admin-table-wrap" style={{ border: "1px solid #e3e1dc", borderRadius: 10 }}>
-        <table style={{ borderCollapse: "collapse", fontSize: 14 }}>
-          <thead>
-            <tr style={{ textAlign: "left", background: "#faf9f7" }}>
-              <th style={{ padding: "10px 12px" }}>Nombre</th>
-              <th style={{ padding: "10px 12px" }}>Personas</th>
-              <th style={{ padding: "10px 12px" }}>Sync con Meta</th>
-              <th style={{ padding: "10px 12px" }}>Última sincronización</th>
-              <th style={{ padding: "10px 12px" }}></th>
-            </tr>
-          </thead>
-          <tbody>
-            {segments.map((s) => {
-              const syncStyle = s.metaSync ? SYNC_STYLE[s.metaSync.status] : null;
-              return (
-                <tr key={s.id} style={{ borderTop: "1px solid #f0efec" }}>
-                  <td style={{ padding: "10px 12px", fontWeight: 600 }}>{s.name}</td>
-                  <td style={{ padding: "10px 12px" }}>{s.memberCount}</td>
-                  <td style={{ padding: "10px 12px" }}>
-                    {syncStyle ? (
-                      <span
-                        style={{
-                          display: "inline-flex",
-                          padding: "4px 12px",
-                          borderRadius: 999,
-                          fontSize: 12,
-                          fontWeight: 600,
-                          background: syncStyle.bg,
-                          color: syncStyle.ink,
-                        }}
-                      >
-                        {syncStyle.label}
-                      </span>
-                    ) : (
-                      <span style={{ color: "#5b5f6b" }}>—</span>
-                    )}
-                    {s.metaSync?.lastError && (
-                      <div style={{ color: "#a3212b", fontSize: 12, marginTop: 4 }}>{s.metaSync.lastError}</div>
-                    )}
-                  </td>
-                  <td style={{ padding: "10px 12px", color: "#5b5f6b" }}>
-                    {s.metaSync?.lastSyncedAt ? s.metaSync.lastSyncedAt.toLocaleString("es-CO") : "—"}
-                  </td>
-                  <td style={{ padding: "10px 12px" }}>
-                    <DeleteSegmentButton id={s.id} />
-                  </td>
-                </tr>
-              );
-            })}
-            {segments.length === 0 && (
-              <tr>
-                <td colSpan={5} style={{ padding: "10px 12px", color: "#5b5f6b" }}>
-                  Aún no hay segmentos guardados.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <SegmentsAdminClient events={events} professionOptions={professionOptions} cityOptions={cityOptions} segments={segments} />
     </div>
   );
 }

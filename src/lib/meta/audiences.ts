@@ -135,12 +135,32 @@ export async function ensureWebsiteAudience(params: {
  * builder): NOT auto-populated — this is the one that needs an explicit
  * batch upload of hashed identifiers. Meta dedupes on ingest as long as
  * hashing is normalized consistently (see lib/hashing.ts).
+ *
+ * `existingAudienceId` — pass the id already stored locally (e.g.
+ * SegmentMetaSync.metaAudienceId) when one exists, instead of relying on
+ * the name-lookup fallback below. This matters for editing a segment: if
+ * the admin RENAMES it, a name-based lookup would find nothing under the
+ * new name and silently create a SECOND Meta audience, orphaning the
+ * original (still there, still "Populating", just untracked from here on
+ * out) — passing the real id renames that same audience in place instead.
+ * The name-lookup path stays as the fallback for the case with no stored
+ * id yet (first sync ever, or the seed audiences in ensureSeedAudiences).
  */
 export async function ensureCustomerListAudience(params: {
   name: string;
   retentionDays: number;
+  existingAudienceId?: string | null;
 }): Promise<string> {
   const conn = await getConnection();
+
+  if (params.existingAudienceId) {
+    // Rename in place — cheap no-op if the name didn't actually change.
+    await graphFetch(params.existingAudienceId, conn.token, {
+      method: "POST",
+      body: JSON.stringify({ name: params.name }),
+    });
+    return params.existingAudienceId;
+  }
 
   const existing = await graphFetch(
     `act_${conn.adAccountId}/customaudiences?fields=id,name&limit=200`,
@@ -332,6 +352,7 @@ export async function syncSegmentAudience(
     const audienceId = await ensureCustomerListAudience({
       name: `Nail Fest — ${link.segment.name}`,
       retentionDays: 180,
+      existingAudienceId: link.metaAudienceId,
     });
     await syncPeopleToAudience(audienceId, consented);
     await db.segmentMetaSync.update({

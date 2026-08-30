@@ -24,49 +24,14 @@ import type { Person } from "@prisma/client";
  * before — an exclude list is a blocklist: match ANY of it and you're out.
  */
 
-export type SegmentCondition =
-  | { field: "event"; eventSlugs: string[] }
-  | { field: "attended"; eventSlugs: string[] }
-  | { field: "city"; cities: string[] }
-  | { field: "profession"; professions: string[] };
-
-export interface SegmentFilter {
-  include: SegmentCondition[];
-  exclude: SegmentCondition[];
-}
-
-/**
- * Segments saved before multi-select existed are still sitting in the DB
- * with the old shape — one scalar value per condition (`eventSlug`/
- * `city`/`profession`, singular). Normalizing on every read here means
- * every consumer (resolveSegment below, and the Meta fast-path in
- * lib/meta/audiences.ts) keeps working on old AND new segments forever,
- * with no migration script and no risk of one silently mis-rewriting a
- * real saved filter. `raw` is deliberately untyped — it's whatever shape
- * actually landed in the JSON column, old or new.
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function normalizeCondition(raw: any): SegmentCondition {
-  switch (raw?.field) {
-    case "event":
-      return { field: "event", eventSlugs: raw.eventSlugs ?? (raw.eventSlug ? [raw.eventSlug] : []) };
-    case "attended":
-      return { field: "attended", eventSlugs: raw.eventSlugs ?? (raw.eventSlug ? [raw.eventSlug] : []) };
-    case "city":
-      return { field: "city", cities: raw.cities ?? (raw.city ? [raw.city] : []) };
-    case "profession":
-      return { field: "profession", professions: raw.professions ?? (raw.profession ? [raw.profession] : []) };
-    default:
-      throw new Error(`Unknown segment condition field: ${raw?.field}`);
-  }
-}
-
-export function normalizeFilter(raw: SegmentFilter): SegmentFilter {
-  return {
-    include: raw.include.map(normalizeCondition),
-    exclude: raw.exclude.map(normalizeCondition),
-  };
-}
+// Types + normalizeFilter live in normalize.ts now (no `db` import there,
+// so SegmentComposer.tsx — a client component — can use them for its edit
+// mode) — re-exported here so every existing `from
+// "@/lib/segments/builder"` import keeps working unchanged.
+import type { SegmentCondition, SegmentFilter } from "./normalize";
+import { normalizeFilter } from "./normalize";
+export type { SegmentCondition, SegmentFilter } from "./normalize";
+export { normalizeFilter } from "./normalize";
 
 async function matchingPersonIds(condition: SegmentCondition): Promise<Set<string>> {
   switch (condition.field) {
