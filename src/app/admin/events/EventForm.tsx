@@ -66,6 +66,7 @@ export default function EventForm({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isEdit = Boolean(initial.id);
+  const [urlCopied, setUrlCopied] = useState(false);
 
   function set<K extends keyof EventFormValues>(key: K, value: EventFormValues[K]) {
     setValues((v) => ({ ...v, [key]: value }));
@@ -246,17 +247,14 @@ export default function EventForm({
         </Section>
 
         <Section title="Configuración">
-          <Row columns="1fr 1fr 1fr">
-            <div className="field" style={{ marginBottom: 0 }}>
-              <label>Cupo (opcional)</label>
-              <input
-                type="number"
-                min={1}
-                value={values.capacity}
-                onChange={(e) => set("capacity", e.target.value)}
-                placeholder="Sin límite"
-              />
-            </div>
+          {/* Cupo (opcional) quitado — nunca limitó nada de verdad (solo
+              alimentaba un número de "cupos restantes" en el admin), y ya
+              no se muestra en ningún lado público desde que se quitó
+              "Entrada gratuita. Cupo limitado" de la landing del evento.
+              Eventos que ya tenían un valor guardado lo conservan (no se
+              borra al guardar otros cambios), simplemente ya no se puede
+              ver ni editar desde aquí. */}
+          <Row>
             <div className="field" style={{ marginBottom: 0 }}>
               <label>Estado</label>
               <select value={values.status} onChange={(e) => set("status", e.target.value as EventStatus)}>
@@ -269,9 +267,40 @@ export default function EventForm({
               <input value={values.slug} onChange={(e) => set("slug", e.target.value)} placeholder="cali-2026" />
             </div>
           </Row>
-          <p style={{ fontSize: 12, color: "#5b5f6b", marginTop: 10, marginBottom: 0 }}>
-            {baseUrl}/{values.slug.trim() || (isEdit ? initial.slug : "se-genera-del-nombre")}
-          </p>
+          {(() => {
+            const fullUrl = `${baseUrl}/${values.slug.trim() || (isEdit ? initial.slug : "se-genera-del-nombre")}`;
+            return (
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
+                <a
+                  href={fullUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ fontSize: 12, color: "var(--link)", wordBreak: "break-all" }}
+                >
+                  {fullUrl} ↗
+                </a>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await navigator.clipboard.writeText(fullUrl);
+                    setUrlCopied(true);
+                    setTimeout(() => setUrlCopied(false), 1500);
+                  }}
+                  style={{
+                    fontSize: 12,
+                    padding: "3px 10px",
+                    borderRadius: 999,
+                    border: "1px solid #e3e1dc",
+                    background: "#fff",
+                    cursor: "pointer",
+                    color: "#1c1310",
+                  }}
+                >
+                  {urlCopied ? "Copiado ✓" : "Copiar"}
+                </button>
+              </div>
+            );
+          })()}
         </Section>
 
         <Section title="Página del evento" last>

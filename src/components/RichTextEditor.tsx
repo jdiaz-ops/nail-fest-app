@@ -184,7 +184,7 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, { value: string; onChang
             if (v === "p") editor.chain().focus().setParagraph().run();
             else editor.chain().focus().toggleHeading({ level: Number(v.slice(1)) as 1 | 2 | 3 }).run();
           }}
-          style={{ fontSize: 13, border: "1px solid #e3e1dc", borderRadius: 6 }}
+          style={{ fontSize: 13, border: "1px solid #e3e1dc", borderRadius: 6, width: "auto", maxWidth: 128 }}
         >
           <option value="p">Párrafo</option>
           <option value="h1">Título grande</option>
@@ -217,7 +217,7 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, { value: string; onChang
             if (v) (editor.chain().focus() as any).setFontSize(v).run();
             else (editor.chain().focus() as any).unsetFontSize().run();
           }}
-          style={{ fontSize: 13, border: "1px solid #e3e1dc", borderRadius: 6 }}
+          style={{ fontSize: 13, border: "1px solid #e3e1dc", borderRadius: 6, width: "auto", maxWidth: 128 }}
         >
           {FONT_SIZES.map((f) => (
             <option key={f.label} value={f.value}>
@@ -237,7 +237,7 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, { value: string; onChang
           title="Alineación"
           value={["left", "center", "right", "justify"].find((a) => editor.isActive({ textAlign: a })) || "left"}
           onChange={(e) => editor.chain().focus().setTextAlign(e.target.value).run()}
-          style={{ fontSize: 13, border: "1px solid #e3e1dc", borderRadius: 6 }}
+          style={{ fontSize: 13, border: "1px solid #e3e1dc", borderRadius: 6, width: "auto", maxWidth: 128 }}
         >
           <option value="left">Izquierda</option>
           <option value="center">Centro</option>
