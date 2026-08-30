@@ -32,9 +32,19 @@ export default function AttachPdfForm({ initialEnabled }: { initialEnabled: bool
         Un PDF de una sola página con el evento, el asistente y el código QR — más fácil de imprimir, guardar o
         compartir que solo la imagen del QR.
       </p>
-      <button type="submit" style={saveButtonStyle} disabled={status === "saving"}>
-        {status === "saving" ? "Guardando…" : "Guardar"}
-      </button>
+      <a
+        href="/api/admin/preview-ticket-pdf"
+        target="_blank"
+        rel="noreferrer"
+        style={{ display: "inline-block", fontSize: 13, marginBottom: 16 }}
+      >
+        Ver ejemplo del PDF ↗
+      </a>
+      <div>
+        <button type="submit" style={saveButtonStyle} disabled={status === "saving"}>
+          {status === "saving" ? "Guardando…" : "Guardar"}
+        </button>
+      </div>
       {status === "saved" && <span style={{ marginLeft: 12, color: "#12966b", fontSize: 14 }}>Guardado ✓</span>}
       {status === "error" && <span style={{ marginLeft: 12, color: "#c2185b", fontSize: 14 }}>Error al guardar</span>}
     </form>
