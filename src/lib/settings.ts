@@ -14,6 +14,9 @@ export interface OrgSettingsValue {
   selfServeResendEnabled: boolean;
   confirmationEmailHtml: string | null;
   attachTicketPdf: boolean;
+  homepageImageUrl: string | null;
+  homepageTagline: string | null;
+  homepageCtaLabel: string;
 }
 
 const DEFAULTS: OrgSettingsValue = {
@@ -28,6 +31,9 @@ const DEFAULTS: OrgSettingsValue = {
   selfServeResendEnabled: true,
   confirmationEmailHtml: null,
   attachTicketPdf: true,
+  homepageImageUrl: null,
+  homepageTagline: null,
+  homepageCtaLabel: "Conseguir entrada gratis",
 };
 
 // No row exists until the first save from /admin/settings — reads never
@@ -48,6 +54,9 @@ export async function getOrgSettings(): Promise<OrgSettingsValue> {
     selfServeResendEnabled: row.selfServeResendEnabled,
     confirmationEmailHtml: row.confirmationEmailHtml,
     attachTicketPdf: row.attachTicketPdf,
+    homepageImageUrl: row.homepageImageUrl,
+    homepageTagline: row.homepageTagline,
+    homepageCtaLabel: row.homepageCtaLabel,
   };
 }
 
@@ -69,5 +78,8 @@ export async function updateOrgSettings(patch: Partial<OrgSettingsValue>): Promi
     selfServeResendEnabled: row.selfServeResendEnabled,
     confirmationEmailHtml: row.confirmationEmailHtml,
     attachTicketPdf: row.attachTicketPdf,
+    homepageImageUrl: row.homepageImageUrl,
+    homepageTagline: row.homepageTagline,
+    homepageCtaLabel: row.homepageCtaLabel,
   };
 }

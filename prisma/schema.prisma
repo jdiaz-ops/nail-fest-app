@@ -614,6 +614,19 @@ model OrgSettings {
   // account-wide switch, same as Ticket Tailor's own single checkbox.
   attachTicketPdf Boolean @default(true)
 
+  // The nailfest.co homepage (src/app/page.tsx) — editable via
+  // /admin/homepage. The "next city and dates" block itself is NOT stored
+  // here: it's computed live from Event (the published event with the
+  // soonest future startsAt), same reasoning as everywhere else in this
+  // app — nothing here should be able to drift from real data. These
+  // three fields are only the parts an admin actually authors: the hero
+  // background (null = the brand teal solid color, no image required to
+  // launch), an optional line under the event name/date, and the CTA
+  // button's label.
+  homepageImageUrl String?
+  homepageTagline  String?
+  homepageCtaLabel String  @default("Conseguir entrada gratis")
+
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
 }

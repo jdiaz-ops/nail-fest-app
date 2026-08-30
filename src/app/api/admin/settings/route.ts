@@ -23,6 +23,14 @@ const patchSchema = z
     // Ticket Tailor's "Attach ticket vouchers as a PDF" checkbox — see
     // OrgSettings.attachTicketPdf's own schema comment.
     attachTicketPdf: z.boolean(),
+    // nailfest.co homepage (/admin/homepage) — see OrgSettings.
+    // homepageImageUrl's own schema comment. "" on the image/tagline
+    // means "clear it", same reasoning as confirmationEmailHtml above;
+    // the CTA label can't be saved blank, it's always shown as a real
+    // button.
+    homepageImageUrl: z.string(),
+    homepageTagline: z.string(),
+    homepageCtaLabel: z.string().min(1),
   })
   .partial();
 
@@ -43,13 +51,15 @@ export async function POST(req: NextRequest) {
   }
   // "" from an empty optional email input means "clear it", not "set it to
   // an empty string that fails email validation on the next read".
-  const { replyToEmail, confirmationEmailHtml, ...rest } = parsed.data;
+  const { replyToEmail, confirmationEmailHtml, homepageImageUrl, homepageTagline, ...rest } = parsed.data;
   const updated = await updateOrgSettings({
     ...rest,
     ...(replyToEmail !== undefined ? { replyToEmail: replyToEmail || null } : {}),
     ...(confirmationEmailHtml !== undefined
       ? { confirmationEmailHtml: confirmationEmailHtml ? sanitizeEventDescription(confirmationEmailHtml) : null }
       : {}),
+    ...(homepageImageUrl !== undefined ? { homepageImageUrl: homepageImageUrl || null } : {}),
+    ...(homepageTagline !== undefined ? { homepageTagline: homepageTagline || null } : {}),
   });
   return NextResponse.json({ ok: true, settings: updated });
 }

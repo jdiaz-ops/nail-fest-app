@@ -9,6 +9,7 @@ const NAV: { href: string; label: string }[] = [
   { href: "/admin/events", label: "Eventos" },
   { href: "/admin/crm", label: "CRM" },
   { href: "/admin/scan", label: "Escáner" },
+  { href: "/admin/homepage", label: "Editar homepage" },
   { href: "/admin/settings", label: "Configuración" },
 ];
 
