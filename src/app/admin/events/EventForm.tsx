@@ -373,5 +373,9 @@ function Section({ title, children, last }: { title: string; children: React.Rea
 }
 
 function Row({ children, columns = "1fr 1fr" }: { children: React.ReactNode; columns?: string }) {
-  return <div style={{ display: "grid", gridTemplateColumns: columns, gap: 24 }}>{children}</div>;
+  return (
+    <div className="form-row" style={{ display: "grid", gridTemplateColumns: columns, gap: 24 }}>
+      {children}
+    </div>
+  );
 }

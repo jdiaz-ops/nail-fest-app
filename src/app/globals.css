@@ -153,6 +153,22 @@ button.primary:disabled {
   min-width: 100%;
 }
 
+/* Two/three-field-wide form rows (EventForm.tsx's fechas/ubicación pairs,
+   RegistrationForm.tsx's own field pairs) — side by side on wider
+   screens, stacked on a phone. Both components keep their own inline
+   `display: grid` / `gridTemplateColumns` / `gap` (2 columns here, 3
+   there) — this only overrides the column count at the breakpoint,
+   `!important` because a plain inline style otherwise always wins over a
+   class (same reasoning as .admin-sidebar-nav above). Datetime-local
+   inputs in particular can't shrink below a real minimum width, so two
+   of them side by side on a ~360px phone genuinely overflow the screen —
+   the bug this fixes. */
+@media (max-width: 480px) {
+  .form-row {
+    grid-template-columns: 1fr !important;
+  }
+}
+
 /* Rendered output of RichTextEditor.tsx's TipTap description (see
    [eventSlug]/page.tsx) — needs its embedded media to stay inside the
    480px event page column instead of overflowing it. */

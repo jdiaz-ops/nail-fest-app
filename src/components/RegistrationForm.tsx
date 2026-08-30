@@ -512,5 +512,9 @@ export default function RegistrationForm({
 // this form only has to spare now that Detalles has the modal's full
 // width to itself (see EventRegistration.tsx).
 function Row({ children }: { children: React.ReactNode }) {
-  return <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>{children}</div>;
+  return (
+    <div className="form-row" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+      {children}
+    </div>
+  );
 }
