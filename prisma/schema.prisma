@@ -467,6 +467,13 @@ model EmailBroadcast {
   // for the event, regardless of type.
   ticketType   TicketType?      @relation(fields: [ticketTypeId], references: [id], onDelete: SetNull)
   ticketTypeId String?
+  // Per-broadcast, unlike OrgSettings.attachTicketPdf (which is the
+  // account-wide default for the original confirmation email only) — a
+  // marketing broadcast is usually just an announcement, not a ticket
+  // resend, so this defaults OFF and the admin opts in per send from
+  // EventBroadcastComposer.tsx when they actually want recipients to get
+  // their entrada attached again (e.g. a reminder broadcast).
+  attachTicketPdf Boolean       @default(false)
   subject     String
   // Plain text — the original /admin/crm/broadcasts flow (escaped +
   // newline-to-<br/> at send time, see lib/email/templates.ts's

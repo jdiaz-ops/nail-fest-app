@@ -4,6 +4,8 @@ import { hasActiveConsent } from "@/lib/consent";
 import { emailProvider } from "@/lib/email";
 import { broadcastEmailHtml } from "@/lib/email/templates";
 import { buildUnsubscribeUrl } from "@/lib/unsubscribe";
+import { renderTicketPdfBuffer } from "@/lib/ticketPdf";
+import { getOrgSettings } from "@/lib/settings";
 
 // KNOWN LIMITATION (flagged, not hidden — same reasoning as the original
 // /api/broadcasts route this was extended from): sends synchronously in
@@ -16,26 +18,63 @@ const CONCURRENCY = 10;
  * due time arrives (see lib/broadcastSchedule.ts). Same real send path
  * both times, not two copies that could drift. */
 export async function sendEventBroadcast(broadcastId: string): Promise<{ sent: number; skippedNoConsent: number }> {
-  const broadcast = await db.emailBroadcast.findUniqueOrThrow({ where: { id: broadcastId } });
-  if (!broadcast.eventId) throw new Error("sendEventBroadcast called on a non-event broadcast");
+  const broadcast = await db.emailBroadcast.findUniqueOrThrow({ where: { id: broadcastId }, include: { event: true } });
+  if (!broadcast.eventId || !broadcast.event) throw new Error("sendEventBroadcast called on a non-event broadcast");
   if (!broadcast.bodyHtml) throw new Error("sendEventBroadcast called on a broadcast with no bodyHtml");
 
   await db.emailBroadcast.update({ where: { id: broadcast.id }, data: { status: "SENDING" } });
 
-  const people = await resolveEventBroadcastRecipients(broadcast.eventId, broadcast.ticketTypeId);
+  const recipients = await resolveEventBroadcastRecipients(broadcast.eventId, broadcast.ticketTypeId);
+
+  // Resolved once, up front, only if the "adjuntar entrada" checkbox is on
+  // (see EventBroadcastComposer.tsx) — recipients can hold different
+  // ticket types even within "all buyers", so each PDF needs its own
+  // ticketTypeName looked up by that recipient's own registration, not
+  // the broadcast's (optional) narrowing ticketTypeId.
+  const orgSettings = broadcast.attachTicketPdf ? await getOrgSettings() : null;
+  const ticketTypeIds = [...new Set(recipients.map((r) => r.registration.ticketTypeId).filter((id): id is string => !!id))];
+  const ticketTypeNames = ticketTypeIds.length
+    ? new Map((await db.ticketType.findMany({ where: { id: { in: ticketTypeIds } } })).map((t) => [t.id, t.name]))
+    : new Map<string, string>();
 
   let sent = 0;
   let skippedNoConsent = 0;
-  for (let i = 0; i < people.length; i += CONCURRENCY) {
-    const chunk = people.slice(i, i + CONCURRENCY);
+  for (let i = 0; i < recipients.length; i += CONCURRENCY) {
+    const chunk = recipients.slice(i, i + CONCURRENCY);
     await Promise.allSettled(
-      chunk.map(async (person) => {
+      chunk.map(async ({ person, registration }) => {
         if (!(await hasActiveConsent(person.id, "MARKETING"))) {
           skippedNoConsent++;
           return;
         }
         const unsubscribeUrl = buildUnsubscribeUrl(person.id);
         const content = broadcastEmailHtml({ subject: broadcast.subject, bodyHtml: broadcast.bodyHtml!, unsubscribeUrl });
+        // Same "never let a PDF problem block the whole send" reasoning as
+        // sendTicketEmail.ts — a recipient with no qrToken (shouldn't
+        // happen for a CONFIRMED registration, but not guaranteed by the
+        // schema) just gets the broadcast without the attachment rather
+        // than failing their send entirely.
+        const pdfAttachment =
+          orgSettings && registration.qrToken
+            ? await renderTicketPdfBuffer({
+                firstName: person.firstName ?? "",
+                lastName: person.lastName ?? undefined,
+                eventName: broadcast.event!.name,
+                venueName: broadcast.event!.venueName ?? undefined,
+                venueAddress: broadcast.event!.venueAddress ?? undefined,
+                startsAt: broadcast.event!.startsAt,
+                endsAt: broadcast.event!.endsAt ?? undefined,
+                ticketTypeName: registration.ticketTypeId ? ticketTypeNames.get(registration.ticketTypeId) : undefined,
+                ticketCount: registration.ticketCount,
+                confirmationCode: registration.id.slice(-8).toUpperCase(),
+                qrToken: registration.qrToken,
+                timezone: orgSettings.timezone,
+                language: orgSettings.language,
+              }).catch((err) => {
+                console.error("broadcast ticket PDF render failed", person.email, err);
+                return null;
+              })
+            : null;
         try {
           const result = await emailProvider.sendMarketing({
             to: person.email,
@@ -43,6 +82,9 @@ export async function sendEventBroadcast(broadcastId: string): Promise<{ sent: n
             text: content.text,
             html: content.html,
             listUnsubscribeHeader: `<${unsubscribeUrl}>`,
+            attachments: pdfAttachment
+              ? [{ filename: "entrada-nailfest.pdf", content: pdfAttachment, contentType: "application/pdf" }]
+              : undefined,
           });
           await db.emailLog.create({
             data: {

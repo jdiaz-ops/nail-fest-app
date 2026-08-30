@@ -21,6 +21,7 @@ export default function EventBroadcastComposer({
   const [ticketTypeId, setTicketTypeId] = useState("");
   const [subject, setSubject] = useState("");
   const [bodyHtml, setBodyHtml] = useState("");
+  const [attachTicketPdf, setAttachTicketPdf] = useState(false);
   const [scheduleKind, setScheduleKind] = useState<ScheduleKind>("IMMEDIATE");
   const [scheduledAtLocal, setScheduledAtLocal] = useState("");
   const [offsetValue, setOffsetValue] = useState(2);
@@ -59,6 +60,7 @@ export default function EventBroadcastComposer({
       ticketTypeId: ticketTypeId || null,
       subject,
       bodyHtml,
+      attachTicketPdf,
       scheduleKind,
     };
     if (scheduleKind === "AT_DATETIME") {
@@ -114,6 +116,24 @@ export default function EventBroadcastComposer({
       <div className="field">
         <label>Mensaje</label>
         <RichTextEditor value={bodyHtml} onChange={setBodyHtml} />
+      </div>
+
+      <div className="field">
+        <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <input type="checkbox" checked={attachTicketPdf} onChange={(e) => setAttachTicketPdf(e.target.checked)} />
+          <span>Adjuntar la entrada en PDF</span>
+        </label>
+        <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>
+          Cada destinatario recibe su propia entrada (con su código QR real), no un ejemplo genérico.
+        </p>
+        <a
+          href="/api/admin/preview-ticket-pdf"
+          target="_blank"
+          rel="noreferrer"
+          style={{ display: "inline-block", fontSize: 13, marginTop: 6 }}
+        >
+          Ver ejemplo del PDF ↗
+        </a>
       </div>
 
       <div className="field">
