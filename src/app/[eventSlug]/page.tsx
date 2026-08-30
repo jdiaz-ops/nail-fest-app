@@ -84,12 +84,15 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
         <EventRegistration
           eventSlug={event.slug}
           eventName={event.name}
+          eventCity={event.city}
           eventWhen={eventWhen}
           eventVenue={eventVenue}
           professionOptions={professionOptions}
           questions={questions}
           ticketTypes={ticketTypes}
           registerButtonLabel={event.registerButtonLabel || "Registrarme GRATIS"}
+          brandName={orgSettings.name}
+          supportEmail={orgSettings.replyToEmail}
         />
       </Suspense>
 

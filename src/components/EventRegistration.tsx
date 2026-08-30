@@ -1,8 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Fraunces } from "next/font/google";
 import RegistrationForm, { type QuestionView, type RegisterPayload } from "./RegistrationForm";
 import { track, ensureFbcCookie } from "./tracking";
+
+// Same face the admin already uses for its own brand/celebratory moments
+// (EventForm.tsx, the CRM/Settings section headers) — one display font for
+// "this is a brand moment" across the whole app, not a second one just for
+// this screen.
+const fraunces = Fraunces({ subsets: ["latin"], weight: ["800", "900"] });
+
+const INSTAGRAM_URL = "https://www.instagram.com/nailfest_co";
 
 export interface PublicTicketTypeView {
   id: string;
@@ -16,12 +25,23 @@ export interface PublicTicketTypeView {
 interface Props {
   eventSlug: string;
   eventName: string;
+  eventCity: string;
   eventWhen: string; // pre-formatted "Sáb 5 sep 2026, 10:00 a. m. - dom 6 sep 2026, 5:00 p. m."
   eventVenue: string; // pre-formatted "Lugar — Dirección", or "" if neither is set
   professionOptions: string[];
   questions: QuestionView[];
   ticketTypes: PublicTicketTypeView[];
   registerButtonLabel: string;
+  // OrgSettings.name — "Nail Fest" by default, but admin-editable, so the
+  // confirmation wordmark stays correct if that ever changes instead of
+  // hardcoding the brand name here.
+  brandName: string;
+  // OrgSettings.replyToEmail (/admin/settings/contact) — the real address
+  // people's email replies already land on. Reused here as the "¿ese
+  // correo no es tuyo?" escape hatch instead of inventing a new contact
+  // channel; the link is hidden entirely when this isn't configured
+  // rather than rendering a dead mailto:.
+  supportEmail: string | null;
 }
 
 // One combined checkout step (Shopify-style, per the admin's own call —
@@ -35,16 +55,24 @@ type Step = "checkout" | "resumen";
 export default function EventRegistration({
   eventSlug,
   eventName,
+  eventCity,
   eventWhen,
   eventVenue,
   professionOptions,
   questions,
   ticketTypes,
   registerButtonLabel,
+  brandName,
+  supportEmail,
 }: Props) {
   const hasTicketTypes = ticketTypes.length > 0;
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<Step>("checkout");
+  // The real email just submitted — shown back on the confirmation screen
+  // so the person knows exactly where to look for their QR (and, if it's
+  // wrong, that they typed it wrong). Cleared whenever the modal is
+  // reopened for a fresh attempt (see openModal below).
+  const [submittedEmail, setSubmittedEmail] = useState<string | null>(null);
   // Only pre-select when there's exactly one type AND it actually has
   // stock — a single sold-out type must NOT default to a nonzero
   // quantity, or the submit button would wrongly enable with nothing
@@ -141,6 +169,7 @@ export default function EventRegistration({
 
     setSubmitting(false);
     if (res.ok) {
+      setSubmittedEmail(payload.email);
       setStep("resumen");
     } else {
       const body = await res.json().catch(() => ({}));
@@ -315,10 +344,163 @@ export default function EventRegistration({
               )}
 
               {step === "resumen" && (
-                <div style={{ textAlign: "center", padding: "24px 0" }}>
-                  <h2>¡Listo!</h2>
-                  <p>Revisa tu correo — ahí va tu entrada con el código QR.</p>
-                  <button type="button" className="primary" onClick={closeModal} style={{ maxWidth: 240, margin: "16px auto 0" }}>
+                <div style={{ position: "relative", textAlign: "center", padding: "8px 0 16px", overflow: "hidden" }}>
+                  {/* A few brand-colored confetti dots, not a full animation —
+                      the celebratory touch the plain "¡Listo!" was missing,
+                      kept to the brand's own two colors (teal + peach) per
+                      the ask to keep this turquesa, not a rainbow. */}
+                  <span aria-hidden="true" style={{ position: "absolute", left: "8%", top: "2%", width: 7, height: 12, background: "var(--accent-secondary)", borderRadius: 2, transform: "rotate(16deg)", opacity: 0.85 }} />
+                  <span aria-hidden="true" style={{ position: "absolute", left: "85%", top: 0, width: 6, height: 6, borderRadius: "50%", background: "var(--accent)" }} />
+                  <span aria-hidden="true" style={{ position: "absolute", left: "20%", top: "16%", width: 5, height: 5, borderRadius: "50%", background: "var(--accent)" }} />
+                  <span aria-hidden="true" style={{ position: "absolute", left: "76%", top: "10%", width: 6, height: 6, borderRadius: "50%", background: "var(--accent-secondary)", opacity: 0.9 }} />
+                  <span aria-hidden="true" style={{ position: "absolute", left: "93%", top: "18%", width: 6, height: 10, background: "var(--accent)", borderRadius: 2, transform: "rotate(-20deg)", opacity: 0.8 }} />
+
+                  <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--link)", margin: "0 0 10px", position: "relative" }}>
+                    {brandName}
+                  </p>
+
+                  <div style={{ position: "relative", display: "flex", justifyContent: "center", margin: "0 0 14px" }}>
+                    <div
+                      style={{
+                        width: 122,
+                        height: 122,
+                        borderRadius: "50%",
+                        background: "#fff",
+                        border: "2.5px dashed var(--accent)",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        transform: "rotate(-5deg)",
+                        boxShadow: "0 12px 26px -12px rgba(0,190,181,0.5)",
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: 30,
+                          height: 30,
+                          borderRadius: "50%",
+                          background: "var(--accent)",
+                          color: "var(--accent-ink)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: 16,
+                          fontWeight: 900,
+                          marginBottom: 5,
+                        }}
+                      >
+                        ✓
+                      </span>
+                      <b className={fraunces.className} style={{ fontSize: 12.5, lineHeight: 1.2, textAlign: "center" }}>
+                        YA ESTÁS
+                        <br />
+                        REGISTRADA
+                      </b>
+                    </div>
+                  </div>
+
+                  <h2 className={fraunces.className} style={{ fontSize: 21, fontWeight: 900, margin: "0 0 10px", position: "relative" }}>
+                    ¡Nos vemos en {brandName} {eventCity}!
+                  </h2>
+
+                  <p style={{ fontSize: 13.5, color: "#5b5f6b", margin: "0 0 10px", position: "relative" }}>
+                    Tu entrada con el <strong>código QR</strong> ya va camino a tu correo:
+                  </p>
+
+                  {submittedEmail && (
+                    <div
+                      style={{
+                        position: "relative",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 7,
+                        background: "#e6f9f7",
+                        border: "1px solid #b7e8e3",
+                        borderRadius: 10,
+                        padding: "8px 12px",
+                        maxWidth: "100%",
+                      }}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-ink)" strokeWidth="2" style={{ width: 15, height: 15, flex: "0 0 auto" }}>
+                        <rect x="3" y="5" width="18" height="14" rx="2.5" />
+                        <path d="M3.5 6.5l8.5 6.5 8.5-6.5" />
+                      </svg>
+                      <span style={{ fontSize: 12.5, fontWeight: 700, color: "var(--accent-ink)", wordBreak: "break-all" }}>{submittedEmail}</span>
+                    </div>
+                  )}
+
+                  {supportEmail && (
+                    <p style={{ fontSize: 11, color: "#8a8f9c", margin: "8px 0 0", position: "relative" }}>
+                      ¿Ese correo no es tuyo?{" "}
+                      <a
+                        href={`mailto:${supportEmail}?subject=${encodeURIComponent(`Corregir mi correo — ${eventName}`)}&body=${encodeURIComponent(
+                          `Hola, me registré a ${eventName} pero creo que escribí mal mi correo (quedó como: ${submittedEmail ?? ""}).\n\nMi nombre:\nMi teléfono:\nMi correo correcto:`
+                        )}`}
+                        style={{ color: "var(--link)", fontWeight: 700 }}
+                      >
+                        Escríbenos
+                      </a>
+                    </p>
+                  )}
+
+                  <div
+                    style={{
+                      position: "relative",
+                      marginTop: 18,
+                      background: "#fff",
+                      border: "1.5px solid var(--accent)",
+                      borderRadius: 16,
+                      padding: "12px 14px",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 11,
+                      textAlign: "left",
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: 11,
+                        flex: "0 0 auto",
+                        background: "var(--accent)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-ink)" strokeWidth="1.8" style={{ width: 19, height: 19 }}>
+                        <rect x="2" y="2" width="20" height="20" rx="6" />
+                        <circle cx="12" cy="12" r="4.2" />
+                        <circle cx="17.4" cy="6.6" r="1.1" fill="var(--accent-ink)" stroke="none" />
+                      </svg>
+                    </span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontSize: 12.5, fontWeight: 800, margin: 0 }}>@nailfest_co</p>
+                      <p style={{ fontSize: 11, color: "#5b5f6b", margin: "1px 0 0" }}>Síguenos para más noticias del evento</p>
+                    </div>
+                    <a
+                      href={INSTAGRAM_URL}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        flex: "0 0 auto",
+                        fontSize: 11.5,
+                        fontWeight: 700,
+                        color: "var(--accent-ink)",
+                        background: "var(--accent)",
+                        borderRadius: 999,
+                        padding: "7px 13px",
+                        whiteSpace: "nowrap",
+                        textDecoration: "none",
+                      }}
+                    >
+                      Seguir
+                    </a>
+                  </div>
+
+                  <button type="button" className="secondary" onClick={closeModal} style={{ maxWidth: 200, margin: "18px auto 0", position: "relative" }}>
                     Cerrar
                   </button>
                 </div>
