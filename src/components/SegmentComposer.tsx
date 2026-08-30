@@ -6,41 +6,97 @@ import { useRouter } from "next/navigation";
 interface Props {
   events: { slug: string; name: string }[];
   professionOptions: string[];
+  cityOptions: string[];
 }
 
-export default function SegmentComposer({ events, professionOptions }: Props) {
+// A checkbox list, not a native <select multiple> — ctrl/cmd-click to
+// multi-select is not something most admins here would discover on their
+// own, checkboxes are unambiguous. Used 8 times below (event/attended/
+// city/profession × incluir/excluir), one shared component instead of
+// repeating the markup.
+function MultiCheckList({
+  options,
+  selected,
+  onChange,
+  emptyLabel,
+}: {
+  options: { value: string; label: string }[];
+  selected: string[];
+  onChange: (next: string[]) => void;
+  emptyLabel: string;
+}) {
+  function toggle(value: string) {
+    onChange(selected.includes(value) ? selected.filter((v) => v !== value) : [...selected, value]);
+  }
+  if (options.length === 0) {
+    return <p style={{ fontSize: 13, color: "#8a8478", margin: "4px 0" }}>{emptyLabel}</p>;
+  }
+  return (
+    <div
+      style={{
+        maxHeight: 140,
+        overflowY: "auto",
+        border: "1px solid #e3e1dc",
+        borderRadius: 8,
+        padding: 8,
+        background: "#fff",
+      }}
+    >
+      {options.map((opt) => (
+        <label key={opt.value} style={{ display: "flex", alignItems: "center", gap: 8, padding: "3px 4px", fontSize: 13, cursor: "pointer" }}>
+          <input type="checkbox" checked={selected.includes(opt.value)} onChange={() => toggle(opt.value)} />
+          {opt.label}
+        </label>
+      ))}
+    </div>
+  );
+}
+
+export default function SegmentComposer({ events, professionOptions, cityOptions }: Props) {
   const router = useRouter();
   const [name, setName] = useState("");
-  const [includeEvent, setIncludeEvent] = useState("");
-  const [includeAttended, setIncludeAttended] = useState("");
-  const [includeCity, setIncludeCity] = useState("");
-  const [includeProfession, setIncludeProfession] = useState("");
-  const [excludeEvent, setExcludeEvent] = useState("");
-  const [excludeAttended, setExcludeAttended] = useState("");
+  const [includeEvent, setIncludeEvent] = useState<string[]>([]);
+  const [includeAttended, setIncludeAttended] = useState<string[]>([]);
+  const [includeCity, setIncludeCity] = useState<string[]>([]);
+  const [includeProfession, setIncludeProfession] = useState<string[]>([]);
+  const [excludeEvent, setExcludeEvent] = useState<string[]>([]);
+  const [excludeAttended, setExcludeAttended] = useState<string[]>([]);
+  const [excludeCity, setExcludeCity] = useState<string[]>([]);
+  const [excludeProfession, setExcludeProfession] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState<string | null>(null);
 
+  // Within one condition (e.g. varias ciudades) the values are OR'd — a
+  // real SQL IN — since that's a single field's own condition. Across
+  // DIFFERENT fields in "incluir" they're AND'd (unchanged): "ciudad =
+  // Bogotá o Pereira" Y "profesión = Manicurista o Estudiante" is
+  // genuinely two separate conditions, intersected. "excluir" stays a
+  // flat blocklist — match ANY excluded condition, of any field, and
+  // you're out.
   const filter = useMemo(() => {
     const include = [
-      includeEvent ? { field: "event", eventSlug: includeEvent } : null,
-      includeAttended ? { field: "attended", eventSlug: includeAttended } : null,
-      includeCity ? { field: "city", city: includeCity } : null,
-      includeProfession ? { field: "profession", profession: includeProfession } : null,
+      includeEvent.length ? { field: "event", eventSlugs: includeEvent } : null,
+      includeAttended.length ? { field: "attended", eventSlugs: includeAttended } : null,
+      includeCity.length ? { field: "city", cities: includeCity } : null,
+      includeProfession.length ? { field: "profession", professions: includeProfession } : null,
     ].filter(Boolean);
     const exclude = [
-      excludeEvent ? { field: "event", eventSlug: excludeEvent } : null,
-      excludeAttended ? { field: "attended", eventSlug: excludeAttended } : null,
+      excludeEvent.length ? { field: "event", eventSlugs: excludeEvent } : null,
+      excludeAttended.length ? { field: "attended", eventSlugs: excludeAttended } : null,
+      excludeCity.length ? { field: "city", cities: excludeCity } : null,
+      excludeProfession.length ? { field: "profession", professions: excludeProfession } : null,
     ].filter(Boolean);
     return { include, exclude };
-  }, [includeEvent, includeAttended, includeCity, includeProfession, excludeEvent, excludeAttended]);
+  }, [includeEvent, includeAttended, includeCity, includeProfession, excludeEvent, excludeAttended, excludeCity, excludeProfession]);
 
   const hasAnyFilter = filter.include.length > 0 || filter.exclude.length > 0;
   const [previewCount, setPreviewCount] = useState<number | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
 
-  // Live count as the filter changes — debounced so typing a city name
-  // doesn't fire a request per keystroke. Same resolveSegment() the real
-  // sync uses, so this is the actual count, not an estimate.
+  // Live count as the filter changes — debounced so ticking several
+  // checkboxes in a row doesn't fire a request per click. Same
+  // resolveSegment() the real sync uses, so this is the actual count, not
+  // an estimate.
   useEffect(() => {
     if (!hasAnyFilter) {
       setPreviewCount(null);
@@ -81,18 +137,24 @@ export default function SegmentComposer({ events, professionOptions }: Props) {
           : `Segmento guardado. La primera sincronización con Meta no se pudo completar ahora (${first?.error ?? "revisa /admin/settings/integrations"}) — el cron lo reintenta solo.`
       );
       setName("");
-      setIncludeEvent("");
-      setIncludeAttended("");
-      setIncludeCity("");
-      setIncludeProfession("");
-      setExcludeEvent("");
-      setExcludeAttended("");
+      setIncludeEvent([]);
+      setIncludeAttended([]);
+      setIncludeCity([]);
+      setIncludeProfession([]);
+      setExcludeEvent([]);
+      setExcludeAttended([]);
+      setExcludeCity([]);
+      setExcludeProfession([]);
       setPreviewCount(null);
       router.refresh();
     } else {
       setResult("Error al guardar — revisa la consola.");
     }
   }
+
+  const eventOptions = events.map((ev) => ({ value: ev.slug, label: ev.name }));
+  const professionCheckOptions = professionOptions.map((p) => ({ value: p, label: p }));
+  const cityCheckOptions = cityOptions.map((c) => ({ value: c, label: c }));
 
   return (
     <form onSubmit={handleSave} style={{ maxWidth: 900 }}>
@@ -110,6 +172,10 @@ export default function SegmentComposer({ events, professionOptions }: Props) {
 
       <fieldset style={{ marginTop: 12, marginBottom: 16, border: "1px solid #e3e1dc", borderRadius: 8, padding: 16 }}>
         <legend>Filtro</legend>
+        <p style={{ fontSize: 12, color: "#5b5f6b", marginTop: 0, marginBottom: 16 }}>
+          Marca varias opciones en un mismo campo para un &quot;o&quot; entre ellas (ej. Bogotá o Pereira). Entre
+          campos distintos es un &quot;y&quot; (ej. esa ciudad Y esa profesión).
+        </p>
 
         {/* Incluir / Excluir side by side — same reasoning as BroadcastComposer. */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
@@ -118,41 +184,20 @@ export default function SegmentComposer({ events, professionOptions }: Props) {
               Incluir
             </div>
             <div className="field">
-              <label>Registrados a este evento</label>
-              <select value={includeEvent} onChange={(e) => setIncludeEvent(e.target.value)}>
-                <option value="">(cualquiera)</option>
-                {events.map((ev) => (
-                  <option key={ev.slug} value={ev.slug}>
-                    {ev.name}
-                  </option>
-                ))}
-              </select>
+              <label>Registrados a estos eventos</label>
+              <MultiCheckList options={eventOptions} selected={includeEvent} onChange={setIncludeEvent} emptyLabel="No hay eventos todavía." />
             </div>
             <div className="field">
-              <label>Asistió (check-in real) a este evento</label>
-              <select value={includeAttended} onChange={(e) => setIncludeAttended(e.target.value)}>
-                <option value="">(cualquiera)</option>
-                {events.map((ev) => (
-                  <option key={ev.slug} value={ev.slug}>
-                    {ev.name}
-                  </option>
-                ))}
-              </select>
+              <label>Asistió (check-in real) a estos eventos</label>
+              <MultiCheckList options={eventOptions} selected={includeAttended} onChange={setIncludeAttended} emptyLabel="No hay eventos todavía." />
             </div>
             <div className="field">
               <label>Ciudad</label>
-              <input value={includeCity} onChange={(e) => setIncludeCity(e.target.value)} placeholder="Bogotá" />
+              <MultiCheckList options={cityCheckOptions} selected={includeCity} onChange={setIncludeCity} emptyLabel="Todavía no hay ciudades registradas." />
             </div>
             <div className="field">
               <label>Profesión</label>
-              <select value={includeProfession} onChange={(e) => setIncludeProfession(e.target.value)}>
-                <option value="">(cualquiera)</option>
-                {professionOptions.map((p) => (
-                  <option key={p} value={p}>
-                    {p}
-                  </option>
-                ))}
-              </select>
+              <MultiCheckList options={professionCheckOptions} selected={includeProfession} onChange={setIncludeProfession} emptyLabel="No hay profesiones configuradas." />
             </div>
           </div>
 
@@ -161,33 +206,28 @@ export default function SegmentComposer({ events, professionOptions }: Props) {
               Excluir
             </div>
             <div className="field">
-              <label>Registrados a este evento</label>
-              <select value={excludeEvent} onChange={(e) => setExcludeEvent(e.target.value)}>
-                <option value="">(ninguno)</option>
-                {events.map((ev) => (
-                  <option key={ev.slug} value={ev.slug}>
-                    {ev.name}
-                  </option>
-                ))}
-              </select>
+              <label>Registrados a estos eventos</label>
+              <MultiCheckList options={eventOptions} selected={excludeEvent} onChange={setExcludeEvent} emptyLabel="No hay eventos todavía." />
             </div>
             <div className="field">
-              <label>Asistió (check-in real) a este evento</label>
-              <select value={excludeAttended} onChange={(e) => setExcludeAttended(e.target.value)}>
-                <option value="">(ninguno)</option>
-                {events.map((ev) => (
-                  <option key={ev.slug} value={ev.slug}>
-                    {ev.name}
-                  </option>
-                ))}
-              </select>
+              <label>Asistió (check-in real) a estos eventos</label>
+              <MultiCheckList options={eventOptions} selected={excludeAttended} onChange={setExcludeAttended} emptyLabel="No hay eventos todavía." />
+            </div>
+            <div className="field">
+              <label>Ciudad</label>
+              <MultiCheckList options={cityCheckOptions} selected={excludeCity} onChange={setExcludeCity} emptyLabel="Todavía no hay ciudades registradas." />
+            </div>
+            <div className="field">
+              <label>Profesión</label>
+              <MultiCheckList options={professionCheckOptions} selected={excludeProfession} onChange={setExcludeProfession} emptyLabel="No hay profesiones configuradas." />
             </div>
           </div>
         </div>
 
         <p style={{ fontSize: 12, color: "#5b5f6b", marginTop: 8, marginBottom: 0 }}>
-          Ej: profesión = Manicurista, excluir asistió = Cali 2025 → &quot;manicuristas que no
-          fueron a Cali 2025&quot; (usa asistencia real, no solo registro).
+          Ej: incluir ciudad = Bogotá o Pereira, incluir profesión = Manicurista o Estudiante, excluir asistió = Cali
+          2025 → &quot;manicuristas o estudiantes de Bogotá o Pereira que no fueron a Cali 2025&quot; (usa
+          asistencia real, no solo registro).
         </p>
       </fieldset>
 

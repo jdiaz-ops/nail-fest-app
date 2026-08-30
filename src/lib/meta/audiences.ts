@@ -2,7 +2,7 @@ import type { ConsentPurpose } from "@prisma/client";
 import { db } from "@/lib/db";
 import { decryptSecret } from "@/lib/crypto";
 import { hashEmail, hashPhone } from "@/lib/hashing";
-import { resolveSegment, type SegmentFilter } from "@/lib/segments/builder";
+import { resolveSegment, normalizeFilter, type SegmentFilter } from "@/lib/segments/builder";
 
 const GRAPH_VERSION = "v21.0";
 
@@ -398,12 +398,13 @@ export async function pushNewRegistrantToEventAudiences(
     });
 
     for (const link of links) {
-      const filter = link.segment.filter as unknown as SegmentFilter;
+      const filter = normalizeFilter(link.segment.filter as unknown as SegmentFilter);
       const isSimpleEventMatch =
         filter.exclude.length === 0 &&
         filter.include.length === 1 &&
         filter.include[0]?.field === "event" &&
-        filter.include[0].eventSlug === eventSlug;
+        filter.include[0].eventSlugs.length === 1 &&
+        filter.include[0].eventSlugs[0] === eventSlug;
       if (!isSimpleEventMatch || !link.metaAudienceId) continue;
 
       await syncPeopleToAudience(link.metaAudienceId, [person]);

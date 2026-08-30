@@ -17,14 +17,22 @@ const SYNC_STYLE: Record<string, { bg: string; ink: string; label: string }> = {
 };
 
 export default async function SegmentsPage() {
-  const [events, professionOptions, segmentRows] = await Promise.all([
+  const [events, professionOptions, cityRows, segmentRows] = await Promise.all([
     db.event.findMany({ orderBy: { startsAt: "asc" } }),
     getOrderedProfessionOptions(),
+    // Real distinct city values already on file, not a free-text guess —
+    // avoids the typo mismatch a free-text multi-value input would have
+    // ("Bogota" vs "Bogotá" silently matching nobody).
+    db.person.findMany({ where: { city: { not: null } }, select: { city: true }, distinct: ["city"] }),
     db.segmentDefinition.findMany({
       orderBy: { createdAt: "desc" },
       include: { metaSync: true },
     }),
   ]);
+  const cityOptions = cityRows
+    .map((r) => r.city)
+    .filter((c): c is string => !!c && c.trim().length > 0)
+    .sort((a, b) => a.localeCompare(b, "es"));
 
   // Current CRM match count per segment — not the same as "how many are in
   // the Meta audience right now" (that's ADVERTISING-consent-filtered and
@@ -52,7 +60,7 @@ export default async function SegmentsPage() {
         <StatCard label="Sincronizados con Meta" value={String(syncedCount)} />
       </div>
 
-      <SegmentComposer events={events} professionOptions={professionOptions} />
+      <SegmentComposer events={events} professionOptions={professionOptions} cityOptions={cityOptions} />
 
       <h2 style={{ fontSize: 16, marginTop: 40 }}>Segmentos guardados</h2>
       <div className="admin-table-wrap" style={{ border: "1px solid #e3e1dc", borderRadius: 10 }}>
