@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import WhatsAppTemplateSyncButton from "@/components/WhatsAppTemplateSyncButton";
+import WhatsAppTemplateCreateForm from "@/components/WhatsAppTemplateCreateForm";
 import CrmPageHeader from "../../CrmPageHeader";
 
 export const dynamic = "force-dynamic";
@@ -19,10 +20,13 @@ export default async function WhatsAppTemplatesPage() {
     <div>
       <CrmPageHeader
         title="Plantillas"
-        subtitle="Las plantillas se crean y se aprueban en el WhatsApp Manager de Meta directamente — acá solo se reflejan, de solo lectura, para usarlas en Difusiones."
+        subtitle="Créalas acá y se envían directo a Meta para revisión — o créalas en el WhatsApp Manager y sincronízalas. El estado (pendiente/aprobada/rechazada) se actualiza al sincronizar."
       />
 
-      <WhatsAppTemplateSyncButton />
+      <div style={{ display: "flex", gap: 12, alignItems: "flex-start", flexWrap: "wrap" }}>
+        <WhatsAppTemplateCreateForm />
+        <WhatsAppTemplateSyncButton />
+      </div>
 
       <div className="admin-table-wrap" style={{ border: "1px solid #e3e1dc", borderRadius: 10, marginTop: 24 }}>
         <table style={{ borderCollapse: "collapse", fontSize: 14, width: "100%" }}>
@@ -57,8 +61,8 @@ export default async function WhatsAppTemplatesPage() {
             {templates.length === 0 && (
               <tr>
                 <td colSpan={6} style={{ padding: "10px 12px", color: "#5b5f6b" }}>
-                  Aún no hay plantillas sincronizadas — crea al menos una en el WhatsApp Manager de Meta y dale a
-                  &quot;Sincronizar con Meta&quot; arriba.
+                  Aún no hay ninguna plantilla — créala arriba, o créala en el WhatsApp Manager de Meta y dale a
+                  &quot;Sincronizar con Meta&quot;.
                 </td>
               </tr>
             )}

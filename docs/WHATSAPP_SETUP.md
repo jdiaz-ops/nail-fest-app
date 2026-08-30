@@ -35,11 +35,16 @@ Moving off WhatChimp to a direct Cloud API connection:
   Phone Number ID and access token (encrypted at rest, same
   `lib/crypto.ts` AES-256-GCM as the Meta ads connection) plus a webhook
   verify token.
-- **Plantillas** (`/admin/crm/whatsapp/plantillas`) — read-only mirror of
-  what's approved in Meta's own WhatsApp Manager. Templates are authored
-  and submitted for review THERE, not reinvented in this app — Meta
-  reviews template content directly and there's no API shortcut around
-  that. Sync pulls the current list in.
+- **Plantillas** (`/admin/crm/whatsapp/plantillas`) — create a template
+  (name, language, category, body with `{{1}}`/`{{2}}`/... variables +
+  required examples, optional footer) and it's submitted straight to
+  Meta for review, same as using the WhatsApp Manager directly — MARKETING
+  and UTILITY only (AUTHENTICATION has a fixed OTP-only shape Meta
+  enforces, not built here; create one of those directly in Meta if you
+  need it). Mirrors what's in Meta either way — "Sincronizar" pulls in
+  anything created in Meta's own WhatsApp Manager, and is what picks up a
+  PENDING → APPROVED/REJECTED transition after review (no webhook for
+  that here; re-sync to see the current status).
 - **Difusiones** (`/admin/crm/whatsapp/difusiones`) — sends an approved
   template to an existing, named segment (same segment engine as email
   broadcasts — `resolveSegment()`), with a merge-tag mapping UI for the

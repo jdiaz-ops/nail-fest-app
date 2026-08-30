@@ -1,4 +1,5 @@
 import type {
+  CreateWhatsAppTemplateInput,
   RemoteWhatsAppTemplate,
   WhatsAppFreeformMessage,
   WhatsAppProvider,
@@ -84,7 +85,7 @@ async function sendFreeform(input: WhatsAppFreeformMessage): Promise<{ providerM
   return { providerMessageId };
 }
 
-async function listApprovedTemplates(): Promise<RemoteWhatsAppTemplate[]> {
+async function listTemplates(): Promise<RemoteWhatsAppTemplate[]> {
   const conn = await getWhatsAppConnection();
   const templates: RemoteWhatsAppTemplate[] = [];
   // Paginated — a growing template library shouldn't silently truncate at
@@ -136,4 +137,41 @@ function toGraphPhone(e164: string): string {
   return e164.replace(/[^\d]/g, "");
 }
 
-export const metaWhatsAppProvider: WhatsAppProvider = { sendTemplate, sendFreeform, listApprovedTemplates };
+async function createTemplate(
+  input: CreateWhatsAppTemplateInput
+): Promise<{ metaTemplateId: string; status: RemoteWhatsAppTemplate["status"] }> {
+  const conn = await getWhatsAppConnection();
+
+  const components: Record<string, unknown>[] = [
+    {
+      type: "BODY",
+      text: input.bodyText,
+      // Meta rejects a template with unfilled {{n}} variables and no
+      // example — one example set covering every placeholder, same
+      // order they appear in the body.
+      ...(input.bodyExamples.length > 0 ? { example: { body_text: [input.bodyExamples] } } : {}),
+    },
+  ];
+  if (input.footerText) {
+    components.push({ type: "FOOTER", text: input.footerText });
+  }
+
+  const json = await graphFetch(`${conn.wabaId}/message_templates`, conn.token, {
+    method: "POST",
+    body: JSON.stringify({
+      name: input.name,
+      language: input.language,
+      category: input.category,
+      components,
+    }),
+  });
+
+  const metaTemplateId = json?.id;
+  if (!metaTemplateId) throw new Error("WhatsApp Cloud API did not return a template id");
+  // Meta returns the initial review status right away — always PENDING in
+  // practice, but read it rather than assume, in case that ever changes.
+  const status = (["APPROVED", "PENDING", "REJECTED", "PAUSED", "DISABLED"].includes(json.status) ? json.status : "PENDING") as RemoteWhatsAppTemplate["status"];
+  return { metaTemplateId, status };
+}
+
+export const metaWhatsAppProvider: WhatsAppProvider = { sendTemplate, sendFreeform, listTemplates, createTemplate };

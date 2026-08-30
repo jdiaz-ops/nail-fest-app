@@ -25,7 +25,11 @@ export interface WhatsAppFreeformMessage {
 
 /** What Meta's own template list API returns per template — see
  * lib/whatsapp/templates.ts's syncTemplates(), which maps this onto the
- * WhatsAppTemplate table. */
+ * WhatsAppTemplate table. Despite the old name (listApprovedTemplates),
+ * this was never filtered to APPROVED only — it lists every template
+ * regardless of status, which is exactly what lets the sync button pick
+ * up a PENDING → APPROVED/REJECTED transition later. Renamed to
+ * listTemplates to stop that name lying. */
 export interface RemoteWhatsAppTemplate {
   metaTemplateId: string;
   name: string;
@@ -36,8 +40,27 @@ export interface RemoteWhatsAppTemplate {
   variableCount: number;
 }
 
+// Only MARKETING/UTILITY are creatable from this app's form — an
+// AUTHENTICATION template has a fundamentally different required shape
+// in Meta's API (a fixed OTP body plus a COPY_CODE/ONE_TAP button, not a
+// free-text BODY component), not worth building blind without a real
+// account to verify against. Create those directly in Meta's WhatsApp
+// Manager if you need one — they'll still show up here on the next sync.
+export interface CreateWhatsAppTemplateInput {
+  name: string; // Meta's naming rule: lowercase letters, digits, underscores only
+  language: string; // e.g. "es" or "es_CO"
+  category: "MARKETING" | "UTILITY";
+  bodyText: string; // with {{1}}, {{2}}, ... placeholders, sequential from 1
+  /** One example value per placeholder, same order — Meta requires a
+   * real example for every variable before it will even queue a
+   * template for review. */
+  bodyExamples: string[];
+  footerText?: string;
+}
+
 export interface WhatsAppProvider {
   sendTemplate(input: WhatsAppTemplateMessage): Promise<{ providerMessageId: string }>;
   sendFreeform(input: WhatsAppFreeformMessage): Promise<{ providerMessageId: string }>;
-  listApprovedTemplates(): Promise<RemoteWhatsAppTemplate[]>;
+  listTemplates(): Promise<RemoteWhatsAppTemplate[]>;
+  createTemplate(input: CreateWhatsAppTemplateInput): Promise<{ metaTemplateId: string; status: RemoteWhatsAppTemplate["status"] }>;
 }
