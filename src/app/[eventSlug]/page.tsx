@@ -69,13 +69,29 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
         />
       )}
 
-      <p style={{ textTransform: "uppercase", letterSpacing: "0.08em", fontSize: 12, color: "#5b5f6b" }}>
-        {orgSettings.name} · {event.city}
-      </p>
       <h1 style={{ marginTop: 4 }}>{event.name}</h1>
-      <p>{eventWhen}</p>
       {eventVenue && <p style={{ color: "#5b5f6b" }}>{eventVenue}</p>}
-      <p>Entrada gratuita. Cupo limitado{event.capacity ? ` a ${event.capacity} personas` : ""}.</p>
+
+      {/* The registration flow — an inline "Registrarme GRATIS" button
+          right here (below the venue), then the SAME button again as a
+          floating one once this inline button scrolls out of view (see
+          EventRegistration.tsx's own IntersectionObserver) + the
+          Entradas/Detalles/Resumen modal. Placed here, before the
+          description, so the CTA is the first thing after the venue, not
+          buried under it — wrapped in Suspense because it (via
+          RegistrationForm) reads useSearchParams() for UTM attribution. */}
+      <Suspense>
+        <EventRegistration
+          eventSlug={event.slug}
+          eventName={event.name}
+          eventWhen={eventWhen}
+          eventVenue={eventVenue}
+          professionOptions={professionOptions}
+          questions={questions}
+          ticketTypes={ticketTypes}
+          registerButtonLabel={event.registerButtonLabel || "Registrarme GRATIS"}
+        />
+      </Suspense>
 
       {event.description && (
         // Sanitized server-side before it was ever stored (lib/sanitizeHtml.ts,
@@ -90,23 +106,6 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
           ¿Ya te registraste y perdiste el correo? <a href="/reenviar">Reenviar mi entrada</a>
         </p>
       )}
-
-      {/* The registration flow itself — floating "Registrarme GRATIS"
-          button + the Entradas/Detalles/Resumen modal — see
-          EventRegistration.tsx. Wrapped in Suspense because it (via
-          RegistrationForm) reads useSearchParams() for UTM attribution. */}
-      <Suspense>
-        <EventRegistration
-          eventSlug={event.slug}
-          eventName={event.name}
-          eventWhen={eventWhen}
-          eventVenue={eventVenue}
-          professionOptions={professionOptions}
-          questions={questions}
-          ticketTypes={ticketTypes}
-          registerButtonLabel={event.registerButtonLabel || "Registrarme GRATIS"}
-        />
-      </Suspense>
     </main>
   );
 }

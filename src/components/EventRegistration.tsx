@@ -55,6 +55,16 @@ export default function EventRegistration({
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const firedCheckoutStart = useRef(false);
+  const inlineButtonRef = useRef<HTMLDivElement>(null);
+  // Floating CTA only appears once the inline one (right after the venue,
+  // in [eventSlug]/page.tsx's own layout) has scrolled out of view — the
+  // user's own instruction after seeing it float the whole time regardless
+  // of scroll position, sitting on top of content the entire page. Real
+  // scroll-position tracking, not a fixed delay/pixel guess: an
+  // IntersectionObserver on the inline button itself, so this stays
+  // correct regardless of how tall the venue/description content above
+  // and around it ends up being for any given event.
+  const [showFloating, setShowFloating] = useState(false);
 
   useEffect(() => {
     // Reconstruct _fbc from ?fbclid= BEFORE the first track() call, since
@@ -63,6 +73,14 @@ export default function EventRegistration({
     ensureFbcCookie();
     track("PageView");
     track("ViewContent");
+  }, []);
+
+  useEffect(() => {
+    const el = inlineButtonRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(([entry]) => entry && setShowFloating(!entry.isIntersecting));
+    observer.observe(el);
+    return () => observer.disconnect();
   }, []);
 
   function openModal() {
@@ -146,10 +164,19 @@ export default function EventRegistration({
 
   return (
     <>
-      {/* Floating CTA — always visible regardless of scroll position,
-          centered within the page's own column instead of pinned to the
-          raw viewport edge so it doesn't drift off on a wide screen. */}
-      {!open && (
+      {/* Inline CTA — sits in normal page flow right after the venue (see
+          [eventSlug]/page.tsx). The ref is what the floating CTA below
+          watches to know when to take over. */}
+      <div ref={inlineButtonRef} style={{ margin: "20px 0" }}>
+        <button type="button" className="primary" onClick={openModal}>
+          {registerButtonLabel}
+        </button>
+      </div>
+
+      {/* Floating CTA — only once the inline one above has scrolled out of
+          view, centered within the page's own column instead of pinned to
+          the raw viewport edge so it doesn't drift off on a wide screen. */}
+      {!open && showFloating && (
         <div style={{ position: "fixed", left: 0, right: 0, bottom: 16, display: "flex", justifyContent: "center", zIndex: 40, padding: "0 20px" }}>
           <div style={{ width: "100%", maxWidth: 440 }}>
             <button
