@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { updateEvent, setEventStatus } from "@/lib/events";
+import { updateEvent, setEventStatus, deleteEvent, EventHasRegistrationsError } from "@/lib/events";
 import { requireUser } from "@/lib/auth/guard";
 
 const patchSchema = z.object({
@@ -66,6 +66,32 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ ok: true, event });
   } catch (err) {
     console.error("update event failed", err);
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
+  }
+}
+
+// "Borrar evento" (EventModuleShell.tsx's Acciones sidebar) — see
+// deleteEvent's own comment for why this only ever succeeds on an event
+// that never had a real registration.
+export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+  const auth = await requireUser(["ADMIN"]);
+  if ("response" in auth) return auth.response;
+
+  try {
+    await deleteEvent(params.id);
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    if (err instanceof EventHasRegistrationsError) {
+      return NextResponse.json(
+        {
+          error: "has_registrations",
+          count: err.count,
+          message: `Este evento tiene ${err.count} inscripción(es) real(es) — no se puede borrar. Cámbialo a Borrador si quieres ocultarlo.`,
+        },
+        { status: 409 }
+      );
+    }
+    console.error("delete event failed", err);
     return NextResponse.json({ error: "not_found" }, { status: 404 });
   }
 }

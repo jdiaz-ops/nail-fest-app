@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import DuplicateEventButton from "./DuplicateEventButton";
+import DeleteEventButton from "./DeleteEventButton";
 
 // The per-event "module" — Ticket Tailor's own left-nav-scoped-to-one-event
 // pattern, which the user walked through screenshot by screenshot before
@@ -125,6 +126,7 @@ export default function EventModuleShell({
               Acciones
             </div>
             <DuplicateEventButton eventId={eventId} />
+            <DeleteEventButton eventId={eventId} />
           </div>
         </nav>
 

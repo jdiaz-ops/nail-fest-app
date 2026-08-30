@@ -9,14 +9,16 @@ import { Section, EmptyNote, ScrollBox, BarList, StatCard } from "../StatsUI";
 // Real numbers only, straight from the same tables the rest of the CRM
 // reads — no separate/approximated counters.
 //
-// Deliberately OPERATIONAL only — numbers an admin checks live, parked at
-// the door, the day of the event: check-in progress, hourly traffic,
-// re-entries, the raw scan log. Planning numbers (growth curve, where
-// registrations come from, sales funnel, audience) live instead in
+// Live, door-side numbers — check-in progress, hourly traffic, re-entries,
+// the raw scan log. Planning numbers (growth curve, where registrations
+// come from, sales funnel, audience) live instead in
 // src/app/admin/events/EventDecisionStats.tsx, on the event's own admin
-// page — those are pre/post-event decisions, not something you'd check
-// standing in line at the door. See that file's own comment; this split
-// was an explicit ask, not an oversight duplicating half the old panel.
+// page. The door-day SUMMARY numbers (check-in count/rate, re-entries,
+// franja horaria, tipo de entrada) are shown on BOTH pages — same
+// queries as here, so they never drift — since they're useful live at
+// the door AND for the post-event report. What stays exclusively here is
+// the live per-scan log (persona por persona, en vivo) and the emergency
+// CSV export — not something a report needs.
 
 const RESULT_LABEL: Record<string, string> = {
   VALID_FIRST: "Entrada válida",

@@ -162,3 +162,38 @@ export async function duplicateEvent(sourceId: string): Promise<Event> {
   }
   return copy;
 }
+
+/** Thrown by deleteEvent when the event has real people attached to it —
+ * the caller (the API route) turns this into a 409 with a message the
+ * admin actually understands, instead of a raw DB foreign-key error. */
+export class EventHasRegistrationsError extends Error {
+  constructor(public count: number) {
+    super(`event has ${count} registration(s), refusing to delete`);
+  }
+}
+
+/** "Borrar evento" — deliberately narrow: only ever deletes an event that
+ * has NEVER had a real person register for it (CONFIRMED or even just
+ * STARTED an abandoned cart) — Registration has no onDelete cascade in
+ * the schema on purpose (see prisma/schema.prisma), so this is the one
+ * real safety net against a click wiping out attendee/check-in history.
+ * An event with people should be set to Draft (hides it, keeps the
+ * data) instead — see setEventStatus above — not deleted.
+ *
+ * TicketType and EmailBroadcast rows DO cascade automatically (schema-
+ * level onDelete: Cascade) since they carry no person data of their own.
+ * ScanLog doesn't cascade (nullable scannedForEventId, not owned by the
+ * event the way ticket types are) but with zero registrations there's
+ * nothing meaningful left in it for this event besides invalid-scan
+ * noise (WRONG_EVENT/NOT_FOUND rows logged while a scanner happened to
+ * be set to this event) — cleared explicitly so the delete doesn't fail
+ * on a leftover FK reference to rows nobody would ever look at again. */
+export async function deleteEvent(id: string): Promise<void> {
+  const registrationCount = await db.registration.count({ where: { eventId: id } });
+  if (registrationCount > 0) throw new EventHasRegistrationsError(registrationCount);
+
+  await db.$transaction([
+    db.scanLog.deleteMany({ where: { scannedForEventId: id } }),
+    db.event.delete({ where: { id } }),
+  ]);
+}
