@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { getOrgSettings } from "@/lib/settings";
 import { getNextEvent } from "@/lib/nextEvent";
-import { formatDateInTz } from "@/lib/dateFormat";
 
 export const dynamic = "force-dynamic";
 
@@ -13,12 +12,6 @@ export const dynamic = "force-dynamic";
 export default async function HomePage() {
   const [orgSettings, nextEvent] = await Promise.all([getOrgSettings(), getNextEvent()]);
 
-  const eventWhen = nextEvent
-    ? [
-        formatDateInTz(nextEvent.startsAt, { dateStyle: "long" }, orgSettings.timezone, orgSettings.language),
-        nextEvent.endsAt ? ` – ${formatDateInTz(nextEvent.endsAt, { dateStyle: "long" }, orgSettings.timezone, orgSettings.language)}` : "",
-      ].join("")
-    : "";
   const eventPlace = nextEvent ? [nextEvent.city, nextEvent.venueName].filter(Boolean).join(" — ") : "";
 
   return (
@@ -71,8 +64,7 @@ export default async function HomePage() {
             <h1 style={{ fontSize: "clamp(32px, 8vw, 56px)", lineHeight: 1.05, margin: "0 0 12px", fontWeight: 800 }}>
               {nextEvent.name}
             </h1>
-            <p style={{ fontSize: 16, margin: "0 0 4px", fontWeight: 600 }}>{eventPlace}</p>
-            <p style={{ fontSize: 16, margin: "0 0 20px", opacity: 0.9 }}>{eventWhen}</p>
+            <p style={{ fontSize: 16, margin: "0 0 20px", fontWeight: 600 }}>{eventPlace}</p>
             {orgSettings.homepageTagline && (
               <p style={{ fontSize: 15, margin: "0 0 24px", opacity: 0.85, maxWidth: 460 }}>{orgSettings.homepageTagline}</p>
             )}
