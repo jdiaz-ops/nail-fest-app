@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { attributionFromSearchParams } from "@/lib/utm";
+import CityAutocomplete from "./CityAutocomplete";
+import { isKnownCityLabel } from "@/lib/cityMatch";
 
 export interface QuestionView {
   key: string;
@@ -240,6 +242,18 @@ export default function RegistrationForm({
       return;
     }
 
+    // City must be a real, selected municipality — CityAutocomplete only
+    // ever WANTS one selected, but nothing stops someone from typing
+    // something close-but-not-exact and submitting before picking a
+    // suggestion. Caught here too (not just in the component's own inline
+    // message) so it actually blocks the submit, and again server-side in
+    // /api/register — belt and suspenders, same reasoning as the email-
+    // confirm check above.
+    if (byKey(questions, "city") && payload.city.trim() && !isKnownCityLabel(payload.city)) {
+      setErrorMessage("Elige tu ciudad de la lista de sugerencias — revisa el campo Ciudad.");
+      return;
+    }
+
     onSubmitPayload(payload);
   }
 
@@ -364,7 +378,7 @@ export default function RegistrationForm({
                 {city.label}
                 <Req required={city.required} />
               </label>
-              <input id="field_city" name="field_city" autoComplete="address-level2" required={city.required} />
+              <CityAutocomplete id="field_city" name="field_city" required={city.required} />
             </div>
           )}
         </Row>

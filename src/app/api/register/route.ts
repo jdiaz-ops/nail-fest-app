@@ -11,6 +11,7 @@ import { clientIpFromHeaders, userAgentFromHeaders } from "@/lib/request";
 import { splitName } from "@/lib/name";
 import { getOrgSettings } from "@/lib/settings";
 import { getCheckoutQuestions, LOCKED_KEYS, type LockedKey } from "@/lib/checkoutForm";
+import { isKnownCityLabel } from "@/lib/cityMatch";
 
 const bodySchema = z.object({
   eventSlug: z.string(),
@@ -131,6 +132,17 @@ export async function POST(req: NextRequest) {
     (!input.emailConfirm || input.emailConfirm.trim().toLowerCase() !== input.email.trim().toLowerCase())
   ) {
     return NextResponse.json({ error: "email_mismatch" }, { status: 400 });
+  }
+
+  // City must be a real municipality from the canonical list (see
+  // CityAutocomplete.tsx and lib/cityMatch.ts) — checked here too, not
+  // just client-side, so a direct API call can't put free text back into
+  // Person.city and undo the whole point of this feature (clean city data
+  // for stats/segments going forward). Empty is fine when the question
+  // isn't required — that's already enforced by the missing-fields check
+  // above; this only rejects a NON-empty value that isn't a real city.
+  if (input.city.trim() && !isKnownCityLabel(input.city)) {
+    return NextResponse.json({ error: "invalid_city" }, { status: 400 });
   }
 
   // See /admin/settings/banned-emails — checked before touching the CRM at
