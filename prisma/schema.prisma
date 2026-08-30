@@ -41,6 +41,7 @@ model Person {
   registrations Registration[]
   consents      Consent[]
   whatsappConversations WhatsAppConversation[]
+  labels        Label[]
 
   @@index([phone])
   @@index([city])
@@ -607,6 +608,14 @@ enum WhatsAppTemplateStatus {
 // table exists so the broadcast composer can list what's actually usable
 // today without an extra round trip to Meta on every page load — kept
 // current by the Sync button / a cron hitting lib/whatsapp/templates.ts.
+// Only TEXT is built for the header (no image/video/document — that needs
+// uploading a sample media asset to Meta first, a separate feature not
+// built here). NONE is the common case.
+enum WhatsAppTemplateHeaderType {
+  NONE
+  TEXT
+}
+
 model WhatsAppTemplate {
   id            String                   @id @default(cuid())
   metaTemplateId String                  @unique // Meta's own template id
@@ -614,11 +623,19 @@ model WhatsAppTemplate {
   language      String // Meta's language code, e.g. "es" or "es_CO"
   category      WhatsAppTemplateCategory
   status        WhatsAppTemplateStatus
+  headerType    WhatsAppTemplateHeaderType @default(NONE)
+  headerText    String?
   // The approved body text, placeholders and all (e.g. "Hola {{1}}, tu
   // entrada para {{2}} ya está confirmada.") — shown in the composer so
   // an admin can see what they're mapping variables into.
   bodyText      String?
   variableCount Int                      @default(0)
+  footerText    String?
+  // Meta's real button component shape, kept exactly as sent/received —
+  // e.g. [{"type":"QUICK_REPLY","text":"Sí, voy"}] or
+  // [{"type":"URL","text":"Ver evento","url":"https://..."}]. Static only
+  // (no dynamic URL suffix) — this app's templates never need one.
+  buttons       Json?
   lastSyncedAt  DateTime                 @default(now())
   createdAt     DateTime                 @default(now())
   updatedAt     DateTime                 @updatedAt
@@ -647,6 +664,12 @@ model WhatsAppBroadcast {
   // lib/whatsapp/mergeTags.ts for the fixed set of tags this can reference
   // (mirrors lib/confirmationTemplate.ts's merge-tag approach for email).
   variableMapping Json               @default("{}")
+  // Tagged onto every Person who was actually SENT to (not skipped for
+  // consent/phone, not FAILED) once the send completes — WhatChimp's own
+  // "Assign label after broadcast", useful for excluding this batch from
+  // a future round. Null = don't tag anyone.
+  assignLabel  Label?                @relation(fields: [assignLabelId], references: [id])
+  assignLabelId String?
   status       BroadcastStatus       @default(DRAFT)
   scheduleKind BroadcastScheduleKind @default(IMMEDIATE)
   scheduledAt  DateTime?
@@ -699,12 +722,37 @@ model WhatsAppConversation {
   lastInboundAt  DateTime?
   lastOutboundAt DateTime?
   unreadCount    Int       @default(0)
+  // Which staff member owns replying to this thread — WhatChimp's own
+  // "Assigned Agent", useful once more than one admin works the inbox.
+  // Null = unassigned, visible to everyone (today's default behavior
+  // unchanged).
+  assignedTo     AdminUser? @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
+  assignedToId   String?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
   messages WhatsAppMessage[]
+  notes    WhatsAppNote[]
 
   @@index([personId])
+  @@index([assignedToId])
+}
+
+// Internal, staff-only note on a conversation — never sent to WhatsApp.
+// WhatChimp's own Reply/Note tabs on the same thread; kept as its own
+// table (not a WhatsAppMessage kind) since a note has no direction, no
+// delivery status, and should never show up in the customer-facing
+// message list even by a rendering bug.
+model WhatsAppNote {
+  id             String               @id @default(cuid())
+  conversation   WhatsAppConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId String
+  author         AdminUser?           @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  authorId       String?
+  text           String
+  createdAt      DateTime             @default(now())
+
+  @@index([conversationId, createdAt])
 }
 
 model WhatsAppMessage {
@@ -931,6 +979,26 @@ model AdminUser {
   createdAt    DateTime  @default(now())
   lastLoginAt  DateTime?
   sessions     AdminSession[]
+  assignedConversations WhatsAppConversation[]
+  whatsappNotes         WhatsAppNote[]
+}
+
+// ---------------------------------------------------------------------------
+// Labels — freeform tags on a Person, WhatChimp's own concept (assign a
+// label after a broadcast, filter a segment by label). Kept generic (not
+// WhatsApp-specific) since a label is just a CRM concept that happens to
+// be surfaced first from the WhatsApp module — reusable as a segment
+// condition (lib/segments/normalize.ts's "label" field) the same way
+// city/profession already are.
+// ---------------------------------------------------------------------------
+
+model Label {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+
+  people     Person[]
+  broadcasts WhatsAppBroadcast[]
 }
 
 // One row per logged-in device — the actual session token. The cookie only

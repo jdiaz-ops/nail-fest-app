@@ -1,7 +1,10 @@
 import { db } from "@/lib/db";
 import { resolveSegment, type SegmentFilter } from "@/lib/segments/builder";
 import { WHATSAPP_MERGE_TAGS } from "@/lib/whatsapp/mergeTags";
+import { getBroadcastStats } from "@/lib/whatsapp/broadcasts";
+import { whatsappProvider } from "@/lib/whatsapp";
 import WhatsAppBroadcastComposer from "@/components/WhatsAppBroadcastComposer";
+import WhatsAppBroadcastRowActions from "@/components/WhatsAppBroadcastRowActions";
 import CrmPageHeader from "../../CrmPageHeader";
 
 export const dynamic = "force-dynamic";
@@ -12,8 +15,24 @@ const STATUS_STYLE: Record<string, { bg: string; ink: string }> = {
   DRAFT: { bg: "#f6f5f2", ink: "#5b5f6b" },
 };
 
+// One horizontal bar, WhatChimp's own Processed/Delivered/Opened style —
+// `count` out of `total`, with a fixed color per metric.
+function Bar({ label, count, total, color }: { label: string; count: number; total: number; color: string }) {
+  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+  return (
+    <div style={{ minWidth: 110 }}>
+      <div style={{ fontSize: 11, color: "#8a8478" }}>
+        {label} ({pct}%) {count}/{total}
+      </div>
+      <div style={{ height: 4, background: "#f0efec", borderRadius: 999, marginTop: 2 }}>
+        <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 999 }} />
+      </div>
+    </div>
+  );
+}
+
 export default async function WhatsAppDifusionesPage() {
-  const [segmentRows, templates, broadcasts] = await Promise.all([
+  const [segmentRows, templates, broadcasts, connection] = await Promise.all([
     db.segmentDefinition.findMany({ orderBy: { createdAt: "desc" } }),
     db.whatsAppTemplate.findMany({ orderBy: { name: "asc" } }),
     db.whatsAppBroadcast.findMany({
@@ -21,6 +40,7 @@ export default async function WhatsAppDifusionesPage() {
       take: 20,
       include: { segment: true, template: true, _count: { select: { messages: true } } },
     }),
+    db.whatsAppConnection.findFirst({ orderBy: { createdAt: "desc" } }),
   ]);
 
   const segments = await Promise.all(
@@ -31,11 +51,14 @@ export default async function WhatsAppDifusionesPage() {
     }))
   );
 
+  const stats = await Promise.all(broadcasts.map((b) => getBroadcastStats(b.id)));
+  const messagingLimitTier = connection ? (await whatsappProvider.getPhoneNumberStatus().catch(() => null))?.messagingLimitTier ?? null : null;
+
   return (
     <div>
       <CrmPageHeader title="Difusiones" subtitle="Envía una plantilla aprobada a un segmento ya guardado." />
 
-      <WhatsAppBroadcastComposer segments={segments} templates={templates} mergeTags={WHATSAPP_MERGE_TAGS} />
+      <WhatsAppBroadcastComposer segments={segments} templates={templates} mergeTags={WHATSAPP_MERGE_TAGS} messagingLimitTier={messagingLimitTier} />
 
       <h2 style={{ fontSize: 16, marginTop: 40 }}>Historial</h2>
       <div className="admin-table-wrap" style={{ border: "1px solid #e3e1dc", borderRadius: 10 }}>
@@ -45,12 +68,14 @@ export default async function WhatsAppDifusionesPage() {
               <th style={{ padding: "10px 12px" }}>Plantilla</th>
               <th style={{ padding: "10px 12px" }}>Segmento</th>
               <th style={{ padding: "10px 12px" }}>Estado</th>
-              <th style={{ padding: "10px 12px" }}>Enviados</th>
+              <th style={{ padding: "10px 12px" }}>Entrega</th>
+              <th style={{ padding: "10px 12px" }}></th>
             </tr>
           </thead>
           <tbody>
-            {broadcasts.map((b) => {
+            {broadcasts.map((b, i) => {
               const style = STATUS_STYLE[b.status] ?? { bg: "#f6f5f2", ink: "#5b5f6b" };
+              const s = stats[i]!;
               return (
                 <tr key={b.id} style={{ borderTop: "1px solid #f0efec" }}>
                   <td style={{ padding: "10px 12px" }}>{b.template.name}</td>
@@ -60,13 +85,26 @@ export default async function WhatsAppDifusionesPage() {
                       {b.status}
                     </span>
                   </td>
-                  <td style={{ padding: "10px 12px" }}>{b._count.messages}</td>
+                  <td style={{ padding: "10px 12px" }}>
+                    {s.processed > 0 ? (
+                      <div style={{ display: "flex", gap: 12 }}>
+                        <Bar label="Entregados" count={s.delivered} total={s.processed} color="#12966b" />
+                        <Bar label="Leídos" count={s.read} total={s.processed} color="#2f6fed" />
+                        <Bar label="Fallidos" count={s.failed} total={s.processed} color="#c2185b" />
+                      </div>
+                    ) : (
+                      <span style={{ color: "#8a8478" }}>—</span>
+                    )}
+                  </td>
+                  <td style={{ padding: "10px 12px" }}>
+                    <WhatsAppBroadcastRowActions id={b.id} hasFailed={s.failed > 0} />
+                  </td>
                 </tr>
               );
             })}
             {broadcasts.length === 0 && (
               <tr>
-                <td colSpan={4} style={{ padding: "10px 12px", color: "#5b5f6b" }}>
+                <td colSpan={5} style={{ padding: "10px 12px", color: "#5b5f6b" }}>
                   Aún no se ha enviado ninguna difusión.
                 </td>
               </tr>

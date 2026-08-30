@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { getOrderedProfessionOptions } from "@/lib/professions";
+import { listLabels } from "@/lib/labels";
 import { resolveSegment, type SegmentFilter } from "@/lib/segments/builder";
 import SegmentsAdminClient from "@/components/SegmentsAdminClient";
 import CrmPageHeader from "../CrmPageHeader";
@@ -8,18 +9,20 @@ import StatCard from "../StatCard";
 export const dynamic = "force-dynamic";
 
 export default async function SegmentsPage() {
-  const [events, professionOptions, cityRows, segmentRows] = await Promise.all([
+  const [events, professionOptions, cityRows, labels, segmentRows] = await Promise.all([
     db.event.findMany({ orderBy: { startsAt: "asc" } }),
     getOrderedProfessionOptions(),
     // Real distinct city values already on file, not a free-text guess —
     // avoids the typo mismatch a free-text multi-value input would have
     // ("Bogota" vs "Bogotá" silently matching nobody).
     db.person.findMany({ where: { city: { not: null } }, select: { city: true }, distinct: ["city"] }),
+    listLabels(),
     db.segmentDefinition.findMany({
       orderBy: { createdAt: "desc" },
       include: { metaSync: true },
     }),
   ]);
+  const labelOptions = labels.map((l) => l.name);
   const cityOptions = cityRows
     .map((r) => r.city)
     .filter((c): c is string => !!c && c.trim().length > 0)
@@ -51,7 +54,13 @@ export default async function SegmentsPage() {
         <StatCard label="Sincronizados con Meta" value={String(syncedCount)} />
       </div>
 
-      <SegmentsAdminClient events={events} professionOptions={professionOptions} cityOptions={cityOptions} segments={segments} />
+      <SegmentsAdminClient
+        events={events}
+        professionOptions={professionOptions}
+        cityOptions={cityOptions}
+        labelOptions={labelOptions}
+        segments={segments}
+      />
     </div>
   );
 }

@@ -1,13 +1,28 @@
 import { db } from "@/lib/db";
+import { whatsappProvider } from "@/lib/whatsapp";
 import WhatsAppConnectionForm from "@/components/WhatsAppConnectionForm";
 import CrmPageHeader from "../../CrmPageHeader";
 
 export const dynamic = "force-dynamic";
 
+// GREEN/YELLOW/RED — Meta's own quality-rating vocabulary, straight from
+// the Graph API (see lib/whatsapp/meta.ts's getPhoneNumberStatus).
+const QUALITY_STYLE: Record<string, { bg: string; ink: string; label: string }> = {
+  GREEN: { bg: "#e3f4ec", ink: "#12966b", label: "Alta" },
+  YELLOW: { bg: "#fdf1e6", ink: "#8a5a1f", label: "Media" },
+  RED: { bg: "#fbe9ea", ink: "#a3212b", label: "Baja" },
+};
+
 export default async function WhatsAppConexionPage() {
   const connection = await db.whatsAppConnection.findFirst({ orderBy: { createdAt: "desc" } });
   const baseUrl = process.env.APP_BASE_URL || "https://register.nailfest.co";
   const webhookUrl = `${baseUrl}/api/webhooks/whatsapp`;
+
+  // Fetched live, never cached — see WhatsAppPhoneNumberStatus's own
+  // comment. Best-effort: with no real Meta credentials yet, this fails
+  // and the page just shows the connection exists without the extra
+  // panel, rather than crashing the whole page over a status check.
+  const status = connection ? await whatsappProvider.getPhoneNumberStatus().catch(() => null) : null;
 
   return (
     <div>
@@ -32,6 +47,23 @@ export default async function WhatsAppConexionPage() {
       >
         {connection ? `Conectado${connection.displayPhoneNumber ? ` — ${connection.displayPhoneNumber}` : ""}` : "No conectado"}
       </div>
+
+      {connection && (
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 24, maxWidth: 700 }}>
+          <StatusCard label="Número verificado" value={status?.verifiedName || status?.displayPhoneNumber || "—"} />
+          <StatusCard
+            label="Calidad"
+            value={status ? QUALITY_STYLE[status.qualityRating]?.label ?? status.qualityRating : "—"}
+            pillStyle={status ? QUALITY_STYLE[status.qualityRating] : undefined}
+          />
+          <StatusCard label="Límite de mensajería" value={status?.messagingLimitTier ?? "—"} />
+        </div>
+      )}
+      {connection && !status && (
+        <p style={{ fontSize: 13, color: "#8a5a1f", marginTop: -16, marginBottom: 24 }}>
+          No se pudo consultar el estado real del número en Meta ahora mismo (revisa que el token sea válido).
+        </p>
+      )}
 
       <div style={{ maxWidth: 700 }}>
         <ol style={{ lineHeight: 1.9, paddingLeft: 20, color: "#3d3a35" }}>
@@ -58,6 +90,32 @@ export default async function WhatsAppConexionPage() {
 
         <WhatsAppConnectionForm webhookUrl={webhookUrl} />
       </div>
+    </div>
+  );
+}
+
+function StatusCard({ label, value, pillStyle }: { label: string; value: string; pillStyle?: { bg: string; ink: string } }) {
+  return (
+    <div style={{ border: "1px solid #e3e1dc", borderRadius: 10, padding: "16px 20px", minWidth: 160 }}>
+      <div style={{ fontSize: 12, color: "#5b5f6b", textTransform: "uppercase", letterSpacing: "0.04em" }}>{label}</div>
+      {pillStyle ? (
+        <span
+          style={{
+            display: "inline-flex",
+            marginTop: 6,
+            padding: "4px 12px",
+            borderRadius: 999,
+            fontSize: 14,
+            fontWeight: 600,
+            background: pillStyle.bg,
+            color: pillStyle.ink,
+          }}
+        >
+          {value}
+        </span>
+      ) : (
+        <div style={{ fontSize: 18, fontWeight: 700, marginTop: 4 }}>{value}</div>
+      )}
     </div>
   );
 }

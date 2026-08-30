@@ -28,6 +28,10 @@ interface Props {
   segments: SegmentOption[];
   templates: TemplateOption[];
   mergeTags: MergeTagOption[];
+  /** From Conexión's live phone-number status — shown as a reference note
+   * only (WhatChimp's own "Daily WABA conversation limit"); the app
+   * doesn't enforce it client-side, Meta itself rejects sends past it. */
+  messagingLimitTier?: string | null;
 }
 
 // Same "pick an existing named segment, never a one-off filter" posture
@@ -35,12 +39,13 @@ interface Props {
 // The one real difference from email: no free-text body — a WhatsApp
 // broadcast MUST use a pre-approved template, so this maps merge tags
 // onto the template's {{1}}, {{2}}, ... variables instead of writing copy.
-export default function WhatsAppBroadcastComposer({ segments, templates, mergeTags }: Props) {
+export default function WhatsAppBroadcastComposer({ segments, templates, mergeTags, messagingLimitTier }: Props) {
   const router = useRouter();
   const approvedTemplates = templates.filter((t) => t.status === "APPROVED");
   const [segmentId, setSegmentId] = useState(segments[0]?.id ?? "");
   const [templateId, setTemplateId] = useState(approvedTemplates[0]?.id ?? "");
   const [mapping, setMapping] = useState<Record<string, string>>({});
+  const [assignLabelName, setAssignLabelName] = useState("");
   const [result, setResult] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
 
@@ -69,7 +74,7 @@ export default function WhatsAppBroadcastComposer({ segments, templates, mergeTa
     const res = await fetch("/api/admin/whatsapp/broadcasts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ segmentId, templateId, variableMapping: mapping }),
+      body: JSON.stringify({ segmentId, templateId, variableMapping: mapping, assignLabelName: assignLabelName || undefined }),
     });
     const body = await res.json();
     setSending(false);
@@ -77,6 +82,7 @@ export default function WhatsAppBroadcastComposer({ segments, templates, mergeTa
       setResult(
         `Enviado a ${body.sent} de ${selectedSegment?.memberCount ?? "?"} en el segmento (${body.skippedNoConsent} sin consentimiento de WhatsApp, ${body.skippedNoPhone} sin celular, ${body.failed} fallidos).`
       );
+      setAssignLabelName("");
       router.refresh();
     } else {
       setResult(`Error al enviar: ${body?.error ?? "revisa la consola"}`);
@@ -167,6 +173,29 @@ export default function WhatsAppBroadcastComposer({ segments, templates, mergeTa
           {preview}
         </div>
       )}
+
+      <div className="field">
+        <label htmlFor="assignLabelName">Etiquetar a quien reciba esta difusión (opcional)</label>
+        <input
+          id="assignLabelName"
+          value={assignLabelName}
+          onChange={(e) => setAssignLabelName(e.target.value)}
+          placeholder="ej. contactado-cali-2026"
+        />
+        <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>
+          Útil para excluirlos de una próxima tanda desde Segmentos — se crea sola si no existe.
+        </p>
+      </div>
+
+      <div style={{ background: "#f0efec", borderRadius: 8, padding: "10px 14px", marginBottom: 16, fontSize: 13, color: "#5b5f6b" }}>
+        Se enviará a hasta <strong>{selectedSegment?.memberCount ?? 0}</strong> personas del segmento.
+        {messagingLimitTier && (
+          <>
+            {" "}
+            Límite diario de mensajería de esta cuenta: <strong>{messagingLimitTier}</strong>.
+          </>
+        )}
+      </div>
 
       <button className="primary" type="submit" disabled={sending} style={{ width: "auto", padding: "10px 24px" }}>
         {sending ? "Enviando..." : "Enviar difusión"}

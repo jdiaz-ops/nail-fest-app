@@ -23,6 +23,13 @@ export interface WhatsAppFreeformMessage {
   text: string;
 }
 
+// Meta's real button component shapes — static only (no dynamic URL
+// suffix parameter), which is all this app's templates need.
+export type WhatsAppTemplateButton =
+  | { type: "QUICK_REPLY"; text: string }
+  | { type: "URL"; text: string; url: string }
+  | { type: "PHONE_NUMBER"; text: string; phoneNumber: string };
+
 /** What Meta's own template list API returns per template — see
  * lib/whatsapp/templates.ts's syncTemplates(), which maps this onto the
  * WhatsAppTemplate table. Despite the old name (listApprovedTemplates),
@@ -36,8 +43,12 @@ export interface RemoteWhatsAppTemplate {
   language: string;
   category: "MARKETING" | "UTILITY" | "AUTHENTICATION";
   status: "APPROVED" | "PENDING" | "REJECTED" | "PAUSED" | "DISABLED";
+  headerType: "NONE" | "TEXT";
+  headerText: string | null;
   bodyText: string | null;
   variableCount: number;
+  footerText: string | null;
+  buttons: WhatsAppTemplateButton[];
 }
 
 // Only MARKETING/UTILITY are creatable from this app's form — an
@@ -50,12 +61,28 @@ export interface CreateWhatsAppTemplateInput {
   name: string; // Meta's naming rule: lowercase letters, digits, underscores only
   language: string; // e.g. "es" or "es_CO"
   category: "MARKETING" | "UTILITY";
+  headerText?: string; // plain text header only — no image/video/document
   bodyText: string; // with {{1}}, {{2}}, ... placeholders, sequential from 1
   /** One example value per placeholder, same order — Meta requires a
    * real example for every variable before it will even queue a
    * template for review. */
   bodyExamples: string[];
   footerText?: string;
+  /** Up to 3 buttons, all the same type — Meta doesn't allow mixing
+   * QUICK_REPLY with URL/PHONE_NUMBER in one template. */
+  buttons?: WhatsAppTemplateButton[];
+}
+
+/** Live status straight from Meta — the Conexión page's own "quality
+ * rating / messaging limit" panel (WhatChimp's own Business Accounts
+ * table). Fetched fresh on page load, never cached — a phone number's
+ * quality rating is exactly the kind of thing that shouldn't go stale in
+ * a database column. */
+export interface WhatsAppPhoneNumberStatus {
+  displayPhoneNumber: string;
+  verifiedName: string;
+  qualityRating: string; // e.g. "GREEN" | "YELLOW" | "RED" | "UNKNOWN"
+  messagingLimitTier: string | null; // e.g. "TIER_1K", "TIER_100K" — null if not yet tiered
 }
 
 export interface WhatsAppProvider {
@@ -63,4 +90,5 @@ export interface WhatsAppProvider {
   sendFreeform(input: WhatsAppFreeformMessage): Promise<{ providerMessageId: string }>;
   listTemplates(): Promise<RemoteWhatsAppTemplate[]>;
   createTemplate(input: CreateWhatsAppTemplateInput): Promise<{ metaTemplateId: string; status: RemoteWhatsAppTemplate["status"] }>;
+  getPhoneNumberStatus(): Promise<WhatsAppPhoneNumberStatus>;
 }

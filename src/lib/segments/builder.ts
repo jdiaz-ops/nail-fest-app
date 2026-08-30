@@ -67,6 +67,14 @@ async function matchingPersonIds(condition: SegmentCondition): Promise<Set<strin
       });
       return new Set(rows.map((r) => r.id));
     }
+    case "label": {
+      if (condition.labels.length === 0) return new Set();
+      const rows = await db.person.findMany({
+        where: { labels: { some: { name: { in: condition.labels } } } },
+        select: { id: true },
+      });
+      return new Set(rows.map((r) => r.id));
+    }
   }
 }
 

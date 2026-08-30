@@ -9,7 +9,8 @@ export type SegmentCondition =
   | { field: "event"; eventSlugs: string[] }
   | { field: "attended"; eventSlugs: string[] }
   | { field: "city"; cities: string[] }
-  | { field: "profession"; professions: string[] };
+  | { field: "profession"; professions: string[] }
+  | { field: "label"; labels: string[] };
 
 export interface SegmentFilter {
   include: SegmentCondition[];
@@ -38,6 +39,8 @@ function normalizeCondition(raw: any): SegmentCondition {
       return { field: "city", cities: raw.cities ?? (raw.city ? [raw.city] : []) };
     case "profession":
       return { field: "profession", professions: raw.professions ?? (raw.profession ? [raw.profession] : []) };
+    case "label":
+      return { field: "label", labels: raw.labels ?? [] };
     default:
       throw new Error(`Unknown segment condition field: ${raw?.field}`);
   }

@@ -2,7 +2,9 @@ import type {
   CreateWhatsAppTemplateInput,
   RemoteWhatsAppTemplate,
   WhatsAppFreeformMessage,
+  WhatsAppPhoneNumberStatus,
   WhatsAppProvider,
+  WhatsAppTemplateButton,
   WhatsAppTemplateMessage,
 } from "./provider";
 import { getWhatsAppConnection } from "./connection";
@@ -52,11 +54,12 @@ async function sendTemplate(input: WhatsAppTemplateMessage): Promise<{ providerM
         name: input.templateName,
         language: { code: input.languageCode },
         // Meta requires one "components" entry per template part that
-        // actually has variables — this app's templates only ever use a
-        // BODY with positional {{1}}, {{2}}, ... variables (see
-        // WhatsAppBroadcast.variableMapping's own comment), so this is
-        // deliberately just the one component, not a general renderer
-        // for header/button variables too.
+        // actually has variables — this app's templates only ever put
+        // variables in the BODY (see WhatsAppBroadcast.variableMapping's
+        // own comment), never in the header/buttons, so this stays just
+        // the one component regardless of whether the template also has
+        // a static header/footer/buttons — those don't need a components
+        // entry at send time unless THEY have a variable too.
         components:
           input.variables.length > 0
             ? [{ type: "body", parameters: input.variables.map((text) => ({ type: "text", text })) }]
@@ -107,7 +110,16 @@ async function listTemplates(): Promise<RemoteWhatsAppTemplate[]> {
 
 interface RawTemplateComponent {
   type: string;
+  format?: string;
   text?: string;
+  buttons?: { type: string; text: string; url?: string; phone_number?: string }[];
+}
+
+function mapRemoteButton(raw: { type: string; text: string; url?: string; phone_number?: string }): WhatsAppTemplateButton | null {
+  if (raw.type === "QUICK_REPLY") return { type: "QUICK_REPLY", text: raw.text };
+  if (raw.type === "URL" && raw.url) return { type: "URL", text: raw.text, url: raw.url };
+  if (raw.type === "PHONE_NUMBER" && raw.phone_number) return { type: "PHONE_NUMBER", text: raw.text, phoneNumber: raw.phone_number };
+  return null; // an unsupported button type (e.g. COPY_CODE/OTP-only ones) — dropped, not built
 }
 
 function mapRemoteTemplate(raw: {
@@ -118,17 +130,32 @@ function mapRemoteTemplate(raw: {
   language: string;
   components?: RawTemplateComponent[];
 }): RemoteWhatsAppTemplate {
+  const header = raw.components?.find((c) => c.type === "HEADER");
   const body = raw.components?.find((c) => c.type === "BODY");
+  const footer = raw.components?.find((c) => c.type === "FOOTER");
+  const buttonsComponent = raw.components?.find((c) => c.type === "BUTTONS");
+
   const bodyText = body?.text ?? null;
   const variableCount = bodyText ? new Set(Array.from(bodyText.matchAll(/\{\{(\d+)\}\}/g)).map((m) => m[1])).size : 0;
+  // Only a TEXT header maps cleanly onto this app's model — an
+  // IMAGE/VIDEO/DOCUMENT header (format !== "TEXT") shows as no header
+  // here rather than a broken one, since sending/creating those isn't
+  // built (see CreateWhatsAppTemplateInput's own comment).
+  const headerType = header && header.format === "TEXT" ? "TEXT" : "NONE";
+  const headerText = headerType === "TEXT" ? header?.text ?? null : null;
+
   return {
     metaTemplateId: raw.id,
     name: raw.name,
     language: raw.language,
     category: (["MARKETING", "UTILITY", "AUTHENTICATION"].includes(raw.category) ? raw.category : "UTILITY") as RemoteWhatsAppTemplate["category"],
     status: (["APPROVED", "PENDING", "REJECTED", "PAUSED", "DISABLED"].includes(raw.status) ? raw.status : "PENDING") as RemoteWhatsAppTemplate["status"],
+    headerType,
+    headerText,
     bodyText,
     variableCount,
+    footerText: footer?.text ?? null,
+    buttons: (buttonsComponent?.buttons ?? []).map(mapRemoteButton).filter((b): b is WhatsAppTemplateButton => b !== null),
   };
 }
 
@@ -137,23 +164,34 @@ function toGraphPhone(e164: string): string {
   return e164.replace(/[^\d]/g, "");
 }
 
+function buttonToPayload(btn: WhatsAppTemplateButton): Record<string, unknown> {
+  if (btn.type === "URL") return { type: "URL", text: btn.text, url: btn.url };
+  if (btn.type === "PHONE_NUMBER") return { type: "PHONE_NUMBER", text: btn.text, phone_number: btn.phoneNumber };
+  return { type: "QUICK_REPLY", text: btn.text };
+}
+
 async function createTemplate(
   input: CreateWhatsAppTemplateInput
 ): Promise<{ metaTemplateId: string; status: RemoteWhatsAppTemplate["status"] }> {
   const conn = await getWhatsAppConnection();
 
-  const components: Record<string, unknown>[] = [
-    {
-      type: "BODY",
-      text: input.bodyText,
-      // Meta rejects a template with unfilled {{n}} variables and no
-      // example — one example set covering every placeholder, same
-      // order they appear in the body.
-      ...(input.bodyExamples.length > 0 ? { example: { body_text: [input.bodyExamples] } } : {}),
-    },
-  ];
+  const components: Record<string, unknown>[] = [];
+  if (input.headerText) {
+    components.push({ type: "HEADER", format: "TEXT", text: input.headerText });
+  }
+  components.push({
+    type: "BODY",
+    text: input.bodyText,
+    // Meta rejects a template with unfilled {{n}} variables and no
+    // example — one example set covering every placeholder, same
+    // order they appear in the body.
+    ...(input.bodyExamples.length > 0 ? { example: { body_text: [input.bodyExamples] } } : {}),
+  });
   if (input.footerText) {
     components.push({ type: "FOOTER", text: input.footerText });
+  }
+  if (input.buttons && input.buttons.length > 0) {
+    components.push({ type: "BUTTONS", buttons: input.buttons.map(buttonToPayload) });
   }
 
   const json = await graphFetch(`${conn.wabaId}/message_templates`, conn.token, {
@@ -174,4 +212,21 @@ async function createTemplate(
   return { metaTemplateId, status };
 }
 
-export const metaWhatsAppProvider: WhatsAppProvider = { sendTemplate, sendFreeform, listTemplates, createTemplate };
+async function getPhoneNumberStatus(): Promise<WhatsAppPhoneNumberStatus> {
+  const conn = await getWhatsAppConnection();
+  const json = await graphFetch(`${conn.phoneNumberId}?fields=display_phone_number,verified_name,quality_rating,messaging_limit_tier`, conn.token);
+  return {
+    displayPhoneNumber: json.display_phone_number ?? "",
+    verifiedName: json.verified_name ?? "",
+    qualityRating: json.quality_rating ?? "UNKNOWN",
+    messagingLimitTier: json.messaging_limit_tier ?? null,
+  };
+}
+
+export const metaWhatsAppProvider: WhatsAppProvider = {
+  sendTemplate,
+  sendFreeform,
+  listTemplates,
+  createTemplate,
+  getPhoneNumberStatus,
+};

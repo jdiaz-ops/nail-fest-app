@@ -34,30 +34,51 @@ Moving off WhatChimp to a direct Cloud API connection:
 - **Conexión** (`/admin/crm/whatsapp/conexion`) — stores your WABA ID,
   Phone Number ID and access token (encrypted at rest, same
   `lib/crypto.ts` AES-256-GCM as the Meta ads connection) plus a webhook
-  verify token.
+  verify token. Also shows the number's live status straight from Meta —
+  verified name, quality rating (green/yellow/red), messaging limit tier
+  — fetched fresh on every page load (WhatChimp's own Business Accounts
+  panel), never cached.
 - **Plantillas** (`/admin/crm/whatsapp/plantillas`) — create a template
-  (name, language, category, body with `{{1}}`/`{{2}}`/... variables +
-  required examples, optional footer) and it's submitted straight to
-  Meta for review, same as using the WhatsApp Manager directly — MARKETING
-  and UTILITY only (AUTHENTICATION has a fixed OTP-only shape Meta
-  enforces, not built here; create one of those directly in Meta if you
-  need it). Mirrors what's in Meta either way — "Sincronizar" pulls in
-  anything created in Meta's own WhatsApp Manager, and is what picks up a
-  PENDING → APPROVED/REJECTED transition after review (no webhook for
-  that here; re-sync to see the current status).
+  (name, language, category, optional text header, body with
+  `{{1}}`/`{{2}}`/... variables + required examples, optional footer,
+  optional buttons — either up to 3 quick replies, or a URL button and/or
+  a call button) and it's submitted straight to Meta for review, same as
+  using the WhatsApp Manager directly — MARKETING and UTILITY only
+  (AUTHENTICATION has a fixed OTP-only shape Meta enforces, not built
+  here; create one of those directly in Meta if you need it; a media
+  header — image/video/document — also isn't built, text header only).
+  Mirrors what's in Meta either way — "Sincronizar" pulls in anything
+  created in Meta's own WhatsApp Manager, and is what picks up a PENDING
+  → APPROVED/REJECTED transition after review (no webhook for that here;
+  re-sync to see the current status).
 - **Difusiones** (`/admin/crm/whatsapp/difusiones`) — sends an approved
   template to an existing, named segment (same segment engine as email
-  broadcasts — `resolveSegment()`), with a merge-tag mapping UI for the
-  template's `{{1}}`, `{{2}}`, ... variables and a live text preview.
-  Only sends to people with an active `WHATSAPP` consent AND a phone
-  number on file.
+  broadcasts — `resolveSegment()`, including a `label` condition — see
+  Etiquetas below), with a merge-tag mapping UI for the template's
+  `{{1}}`, `{{2}}`, ... variables, a live text preview, and an optional
+  "etiquetar a quien reciba esta difusión" so you can exclude that batch
+  from a future round. Only sends to people with an active `WHATSAPP`
+  consent AND a phone number on file. The history table shows real
+  Processed/Delivered/Read/Failed bars per broadcast (from the same
+  message-status data the webhook keeps current) plus a "Reintentar
+  fallidos" action and delete.
 - **Bandeja** (`/admin/crm/whatsapp/bandeja`) — inbox: a thread per phone
   number, matched to a CRM `Person` by phone when possible (last-10-digit
   match, so it's tolerant of the leading `+`/country code either way).
   Reply is free text, enforced server-side to Meta's real 24h customer
-  service window (measured from the contact's last inbound message) — a
-  closed window shows why and points at Difusiones instead of silently
-  failing.
+  service window (measured from the contact's last inbound message,
+  shown as a live countdown) — a closed window shows why and points at
+  Difusiones instead of silently failing. A thread also has an internal
+  Nota tab (never sent to WhatsApp), an assignable agent (any active
+  `AdminUser`), the linked person's etiquetas, and a snapshot panel
+  (cliente desde, último mensaje, idioma/país/zona horaria, and the
+  contact's real acquisition UTM from their registration). The list has
+  Todos/No leídos/Asignados a mí filters.
+- **Etiquetas (Labels)** — a generic CRM tag (`Label`), not WhatsApp-
+  specific: usable as a `label` segment condition (Segmentos), assignable
+  after a Difusión send, and addable/removable from a person straight
+  from their Bandeja thread. Created on first use, same "type a name and
+  hit enter" UX as WhatChimp's own.
 - **Consent**: `WHATSAPP` is its own `ConsentPurpose` (independently
   revocable from `MARKETING`/`ADVERTISING`), granted the same implicit way
   those are now — see `RegistrationForm.tsx`'s acceptance line — rather
@@ -107,12 +128,21 @@ Graph API payload shape.
 
 ## Not built
 
-- **Header/button template variables** — `meta.ts`'s `sendTemplate` only
-  fills BODY `{{n}}` variables (this app's own templates only need that);
-  a template with a dynamic header or a dynamic URL button would need
-  `components` extended to cover those too.
-- **Media messages** (images, PDFs) in either direction — text only, both
-  inbound and outbound.
+- **The visual Flow Builder / chatbot automation engine** — WhatChimp's
+  actual core product (drag-and-drop message/condition/sequence blocks).
+  This app replaces WhatChimp's broadcast + inbox + template management,
+  not its automation builder — a deliberate scope call, not an oversight.
+  See the commit this note shipped with for the full reasoning.
+- **Media template headers** (image/video/document) — text header only.
+- **Dynamic header/button variables at send time** — `meta.ts`'s
+  `sendTemplate` only fills BODY `{{n}}` variables; a template whose
+  header or URL button itself has a `{{1}}` would need `components`
+  extended to cover those too (this app's own templates don't need one).
+- **Media messages** (images, PDFs, voice notes) in either direction —
+  text only, both inbound and outbound.
+- **Translation and canned/saved replies** in the inbox composer.
+- **Multiple WABAs/phone numbers** — one active connection at a time,
+  same as before.
 - **Event-scoped broadcasts** ("everyone registered for event X", like
   `EventBroadcastComposer.tsx`'s email equivalent) — the schema supports
   it (`WhatsAppBroadcast.eventId`), but Difusiones only has the

@@ -3,13 +3,21 @@ import { z } from "zod";
 import { requireUser } from "@/lib/auth/guard";
 import { createAndSubmitTemplate, TemplateValidationError } from "@/lib/whatsapp/templates";
 
+const buttonSchema = z.union([
+  z.object({ type: z.literal("QUICK_REPLY"), text: z.string().min(1) }),
+  z.object({ type: z.literal("URL"), text: z.string().min(1), url: z.string().url() }),
+  z.object({ type: z.literal("PHONE_NUMBER"), text: z.string().min(1), phoneNumber: z.string().min(1) }),
+]);
+
 const bodySchema = z.object({
   name: z.string().min(1),
   language: z.string().min(1),
   category: z.enum(["MARKETING", "UTILITY"]),
+  headerText: z.string().optional(),
   bodyText: z.string().min(1),
   bodyExamples: z.array(z.string()),
   footerText: z.string().optional(),
+  buttons: z.array(buttonSchema).optional(),
 });
 
 // Creates a template directly in Meta's WhatsApp Manager (submits it for

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth/guard";
 import { sendWhatsAppBroadcast } from "@/lib/whatsapp/broadcasts";
+import { getOrCreateLabel } from "@/lib/labels";
 
 // Segment-only, same scope as /api/broadcasts (email's own general CRM
 // broadcast route) — an event-scoped WhatsApp send (like
@@ -14,6 +15,11 @@ const bodySchema = z.object({
   segmentId: z.string().min(1),
   templateId: z.string().min(1),
   variableMapping: z.record(z.string()).default({}),
+  // A plain name, not an id — WhatChimp's own "type a name and hit
+  // enter" UX, same reasoning as getOrCreateLabel's own comment: created
+  // on first use so the composer never needs a separate "manage labels"
+  // step first.
+  assignLabelName: z.string().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -24,7 +30,7 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: "invalid_body", issues: parsed.error.issues }, { status: 400 });
   }
-  const { segmentId, templateId, variableMapping } = parsed.data;
+  const { segmentId, templateId, variableMapping, assignLabelName } = parsed.data;
 
   const [segment, template] = await Promise.all([
     db.segmentDefinition.findUnique({ where: { id: segmentId } }),
@@ -33,8 +39,16 @@ export async function POST(req: NextRequest) {
   if (!segment) return NextResponse.json({ error: "segment_not_found" }, { status: 404 });
   if (!template) return NextResponse.json({ error: "template_not_found" }, { status: 404 });
 
+  const assignLabel = assignLabelName ? await getOrCreateLabel(assignLabelName) : null;
+
   const broadcast = await db.whatsAppBroadcast.create({
-    data: { segmentId: segment.id, templateId: template.id, variableMapping, status: "SENDING" },
+    data: {
+      segmentId: segment.id,
+      templateId: template.id,
+      variableMapping,
+      assignLabelId: assignLabel?.id ?? null,
+      status: "SENDING",
+    },
   });
 
   try {

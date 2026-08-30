@@ -29,11 +29,13 @@ export default function SegmentsAdminClient({
   events,
   professionOptions,
   cityOptions,
+  labelOptions,
   segments,
 }: {
   events: { slug: string; name: string }[];
   professionOptions: string[];
   cityOptions: string[];
+  labelOptions: string[];
   segments: SegmentRow[];
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -58,6 +60,7 @@ export default function SegmentsAdminClient({
           events={events}
           professionOptions={professionOptions}
           cityOptions={cityOptions}
+          labelOptions={labelOptions}
           editingSegment={editingSegment}
           onDone={() => setEditingId(null)}
         />

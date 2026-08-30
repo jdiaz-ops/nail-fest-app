@@ -18,6 +18,7 @@ interface Props {
   events: { slug: string; name: string }[];
   professionOptions: string[];
   cityOptions: string[];
+  labelOptions: string[];
   // Present = edit an existing segment instead of creating a new one.
   // Caller (SegmentsAdminClient) owns which segment is being edited and
   // clears this back to undefined on cancel/save.
@@ -82,23 +83,27 @@ const emptyForm = {
   includeAttended: [] as string[],
   includeCity: [] as string[],
   includeProfession: [] as string[],
+  includeLabel: [] as string[],
   excludeEvent: [] as string[],
   excludeAttended: [] as string[],
   excludeCity: [] as string[],
   excludeProfession: [] as string[],
+  excludeLabel: [] as string[],
 };
 
-export default function SegmentComposer({ events, professionOptions, cityOptions, editingSegment, onDone }: Props) {
+export default function SegmentComposer({ events, professionOptions, cityOptions, labelOptions, editingSegment, onDone }: Props) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [includeEvent, setIncludeEvent] = useState<string[]>([]);
   const [includeAttended, setIncludeAttended] = useState<string[]>([]);
   const [includeCity, setIncludeCity] = useState<string[]>([]);
   const [includeProfession, setIncludeProfession] = useState<string[]>([]);
+  const [includeLabel, setIncludeLabel] = useState<string[]>([]);
   const [excludeEvent, setExcludeEvent] = useState<string[]>([]);
   const [excludeAttended, setExcludeAttended] = useState<string[]>([]);
   const [excludeCity, setExcludeCity] = useState<string[]>([]);
   const [excludeProfession, setExcludeProfession] = useState<string[]>([]);
+  const [excludeLabel, setExcludeLabel] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const isEditing = !!editingSegment;
@@ -114,10 +119,12 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
       setIncludeAttended(emptyForm.includeAttended);
       setIncludeCity(emptyForm.includeCity);
       setIncludeProfession(emptyForm.includeProfession);
+      setIncludeLabel(emptyForm.includeLabel);
       setExcludeEvent(emptyForm.excludeEvent);
       setExcludeAttended(emptyForm.excludeAttended);
       setExcludeCity(emptyForm.excludeCity);
       setExcludeProfession(emptyForm.excludeProfession);
+      setExcludeLabel(emptyForm.excludeLabel);
       return;
     }
     const normalized = normalizeFilter(editingSegment.filter as SegmentFilter);
@@ -126,10 +133,12 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
     setIncludeAttended(extract(normalized.include, "attended", "eventSlugs"));
     setIncludeCity(extract(normalized.include, "city", "cities"));
     setIncludeProfession(extract(normalized.include, "profession", "professions"));
+    setIncludeLabel(extract(normalized.include, "label", "labels"));
     setExcludeEvent(extract(normalized.exclude, "event", "eventSlugs"));
     setExcludeAttended(extract(normalized.exclude, "attended", "eventSlugs"));
     setExcludeCity(extract(normalized.exclude, "city", "cities"));
     setExcludeProfession(extract(normalized.exclude, "profession", "professions"));
+    setExcludeLabel(extract(normalized.exclude, "label", "labels"));
     setResult(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editingSegment?.id]);
@@ -147,15 +156,28 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
       includeAttended.length ? { field: "attended", eventSlugs: includeAttended } : null,
       includeCity.length ? { field: "city", cities: includeCity } : null,
       includeProfession.length ? { field: "profession", professions: includeProfession } : null,
+      includeLabel.length ? { field: "label", labels: includeLabel } : null,
     ].filter(Boolean);
     const exclude = [
       excludeEvent.length ? { field: "event", eventSlugs: excludeEvent } : null,
       excludeAttended.length ? { field: "attended", eventSlugs: excludeAttended } : null,
       excludeCity.length ? { field: "city", cities: excludeCity } : null,
       excludeProfession.length ? { field: "profession", professions: excludeProfession } : null,
+      excludeLabel.length ? { field: "label", labels: excludeLabel } : null,
     ].filter(Boolean);
     return { include, exclude };
-  }, [includeEvent, includeAttended, includeCity, includeProfession, excludeEvent, excludeAttended, excludeCity, excludeProfession]);
+  }, [
+    includeEvent,
+    includeAttended,
+    includeCity,
+    includeProfession,
+    includeLabel,
+    excludeEvent,
+    excludeAttended,
+    excludeCity,
+    excludeProfession,
+    excludeLabel,
+  ]);
 
   const hasAnyFilter = filter.include.length > 0 || filter.exclude.length > 0;
   const [previewCount, setPreviewCount] = useState<number | null>(null);
@@ -220,10 +242,12 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
         setIncludeAttended([]);
         setIncludeCity([]);
         setIncludeProfession([]);
+        setIncludeLabel([]);
         setExcludeEvent([]);
         setExcludeAttended([]);
         setExcludeCity([]);
         setExcludeProfession([]);
+        setExcludeLabel([]);
       }
       router.refresh();
     } else {
@@ -234,6 +258,7 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
   const eventOptions = events.map((ev) => ({ value: ev.slug, label: ev.name }));
   const professionCheckOptions = professionOptions.map((p) => ({ value: p, label: p }));
   const cityCheckOptions = cityOptions.map((c) => ({ value: c, label: c }));
+  const labelCheckOptions = labelOptions.map((l) => ({ value: l, label: l }));
 
   return (
     <form onSubmit={handleSave} style={{ maxWidth: 900 }}>
@@ -285,6 +310,10 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
               <label>Profesión</label>
               <MultiCheckList options={professionCheckOptions} selected={includeProfession} onChange={setIncludeProfession} emptyLabel="No hay profesiones configuradas." />
             </div>
+            <div className="field">
+              <label>Etiqueta</label>
+              <MultiCheckList options={labelCheckOptions} selected={includeLabel} onChange={setIncludeLabel} emptyLabel="Todavía no hay etiquetas creadas." />
+            </div>
           </div>
 
           <div>
@@ -306,6 +335,10 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
             <div className="field">
               <label>Profesión</label>
               <MultiCheckList options={professionCheckOptions} selected={excludeProfession} onChange={setExcludeProfession} emptyLabel="No hay profesiones configuradas." />
+            </div>
+            <div className="field">
+              <label>Etiqueta</label>
+              <MultiCheckList options={labelCheckOptions} selected={excludeLabel} onChange={setExcludeLabel} emptyLabel="Todavía no hay etiquetas creadas." />
             </div>
           </div>
         </div>

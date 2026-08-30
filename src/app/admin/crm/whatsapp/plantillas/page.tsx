@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import type { WhatsAppTemplateButton } from "@/lib/whatsapp/provider";
 import WhatsAppTemplateSyncButton from "@/components/WhatsAppTemplateSyncButton";
 import WhatsAppTemplateCreateForm from "@/components/WhatsAppTemplateCreateForm";
 import CrmPageHeader from "../../CrmPageHeader";
@@ -12,6 +13,12 @@ const STATUS_STYLE: Record<string, { bg: string; ink: string }> = {
   PAUSED: { bg: "#f6f5f2", ink: "#5b5f6b" },
   DISABLED: { bg: "#f6f5f2", ink: "#5b5f6b" },
 };
+
+function buttonLabel(b: WhatsAppTemplateButton): string {
+  if (b.type === "URL") return `🔗 ${b.text}`;
+  if (b.type === "PHONE_NUMBER") return `📞 ${b.text}`;
+  return `↩ ${b.text}`;
+}
 
 export default async function WhatsAppTemplatesPage() {
   const templates = await db.whatsAppTemplate.findMany({ orderBy: { name: "asc" } });
@@ -37,12 +44,13 @@ export default async function WhatsAppTemplatesPage() {
               <th style={{ padding: "10px 12px" }}>Categoría</th>
               <th style={{ padding: "10px 12px" }}>Estado</th>
               <th style={{ padding: "10px 12px" }}>Variables</th>
-              <th style={{ padding: "10px 12px" }}>Cuerpo</th>
+              <th style={{ padding: "10px 12px" }}>Contenido</th>
             </tr>
           </thead>
           <tbody>
             {templates.map((t) => {
               const style = STATUS_STYLE[t.status] ?? { bg: "#f6f5f2", ink: "#5b5f6b" };
+              const buttons = (t.buttons as unknown as WhatsAppTemplateButton[] | null) ?? [];
               return (
                 <tr key={t.id} style={{ borderTop: "1px solid #f0efec" }}>
                   <td style={{ padding: "10px 12px", fontWeight: 500 }}>{t.name}</td>
@@ -54,7 +62,20 @@ export default async function WhatsAppTemplatesPage() {
                     </span>
                   </td>
                   <td style={{ padding: "10px 12px", color: "#5b5f6b" }}>{t.variableCount}</td>
-                  <td style={{ padding: "10px 12px", color: "#5b5f6b", maxWidth: 360 }}>{t.bodyText ?? "—"}</td>
+                  <td style={{ padding: "10px 12px", color: "#5b5f6b", maxWidth: 360 }}>
+                    {t.headerType === "TEXT" && t.headerText && <div style={{ fontWeight: 600, color: "#1c1310" }}>{t.headerText}</div>}
+                    <div>{t.bodyText ?? "—"}</div>
+                    {t.footerText && <div style={{ fontSize: 12, color: "#8a8478" }}>{t.footerText}</div>}
+                    {buttons.length > 0 && (
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 6 }}>
+                        {buttons.map((b, i) => (
+                          <span key={i} style={{ fontSize: 12, background: "#f0efec", borderRadius: 999, padding: "2px 8px" }}>
+                            {buttonLabel(b)}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </td>
                 </tr>
               );
             })}

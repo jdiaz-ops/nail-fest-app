@@ -1,15 +1,29 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
+import { requirePageUser } from "@/lib/auth/guard";
 import CrmPageHeader from "../../CrmPageHeader";
 
 export const dynamic = "force-dynamic";
 
-export default async function WhatsAppBandejaPage() {
+type Filter = "all" | "unread" | "mine";
+
+const TABS: { key: Filter; label: string }[] = [
+  { key: "all", label: "Todos" },
+  { key: "unread", label: "No leídos" },
+  { key: "mine", label: "Asignados a mí" },
+];
+
+export default async function WhatsAppBandejaPage({ searchParams }: { searchParams: { filter?: string } }) {
+  const user = await requirePageUser(["ADMIN"]);
+  const filter: Filter = searchParams.filter === "unread" || searchParams.filter === "mine" ? searchParams.filter : "all";
+
   const conversations = await db.whatsAppConversation.findMany({
+    where: filter === "unread" ? { unreadCount: { gt: 0 } } : filter === "mine" ? { assignedToId: user.id } : undefined,
     orderBy: [{ lastInboundAt: "desc" }, { updatedAt: "desc" }],
     take: 100,
     include: {
       person: true,
+      assignedTo: true,
       messages: { orderBy: { createdAt: "desc" }, take: 1 },
     },
   });
@@ -20,6 +34,29 @@ export default async function WhatsAppBandejaPage() {
         title="Bandeja"
         subtitle="Conversaciones de WhatsApp — respuestas de texto libre solo dentro de las 24h después del último mensaje de la persona."
       />
+
+      <div style={{ display: "flex", gap: 4, marginBottom: 16 }}>
+        {TABS.map((tab) => {
+          const active = filter === tab.key;
+          return (
+            <Link
+              key={tab.key}
+              href={tab.key === "all" ? "/admin/crm/whatsapp/bandeja" : `/admin/crm/whatsapp/bandeja?filter=${tab.key}`}
+              style={{
+                padding: "6px 14px",
+                borderRadius: 999,
+                fontSize: 13,
+                textDecoration: "none",
+                color: active ? "#1c1310" : "#5b5f6b",
+                background: active ? "#f0efec" : "transparent",
+                fontWeight: active ? 600 : 400,
+              }}
+            >
+              {tab.label}
+            </Link>
+          );
+        })}
+      </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
         {conversations.map((c) => {
@@ -43,8 +80,13 @@ export default async function WhatsAppBandejaPage() {
               }}
             >
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontWeight: c.unreadCount > 0 ? 700 : 500 }}>
+                <div style={{ fontWeight: c.unreadCount > 0 ? 700 : 500, display: "flex", alignItems: "center", gap: 8 }}>
                   {c.person ? [c.person.firstName, c.person.lastName].filter(Boolean).join(" ") || c.person.email : "Contacto sin identificar"}
+                  {c.assignedTo && (
+                    <span style={{ fontSize: 11, fontWeight: 600, color: "#5b5f6b", background: "#f0efec", borderRadius: 999, padding: "1px 8px" }}>
+                      {c.assignedTo.name || c.assignedTo.username}
+                    </span>
+                  )}
                 </div>
                 <div style={{ fontSize: 13, color: "#5b5f6b" }}>{c.phone}</div>
                 {last?.body && (
@@ -68,7 +110,11 @@ export default async function WhatsAppBandejaPage() {
           );
         })}
         {conversations.length === 0 && (
-          <p style={{ color: "#5b5f6b" }}>Aún no hay conversaciones — aparecerán acá en cuanto alguien te escriba o reciba una difusión.</p>
+          <p style={{ color: "#5b5f6b" }}>
+            {filter === "all"
+              ? "Aún no hay conversaciones — aparecerán acá en cuanto alguien te escriba o reciba una difusión."
+              : "No hay conversaciones que coincidan con este filtro."}
+          </p>
         )}
       </div>
     </div>

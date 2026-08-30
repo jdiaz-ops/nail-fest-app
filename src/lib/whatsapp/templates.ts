@@ -15,6 +15,11 @@ export async function syncTemplates(): Promise<{ synced: number }> {
   const remote = await whatsappProvider.listTemplates();
   let synced = 0;
   for (const t of remote) {
+    // Prisma's Json column wants a JSON-serializable value, never
+    // `undefined` — [] for "no buttons" reads back the same as `[]`
+    // stored on create, unlike `null` (which JSON.parse would return for
+    // a JSON `null`), so an empty array is what round-trips cleanly.
+    const buttons = t.buttons as unknown as object;
     await db.whatsAppTemplate.upsert({
       where: { name_language: { name: t.name, language: t.language } },
       create: {
@@ -23,15 +28,23 @@ export async function syncTemplates(): Promise<{ synced: number }> {
         language: t.language,
         category: t.category,
         status: t.status,
+        headerType: t.headerType,
+        headerText: t.headerText,
         bodyText: t.bodyText,
         variableCount: t.variableCount,
+        footerText: t.footerText,
+        buttons,
       },
       update: {
         metaTemplateId: t.metaTemplateId,
         category: t.category,
         status: t.status,
+        headerType: t.headerType,
+        headerText: t.headerText,
         bodyText: t.bodyText,
         variableCount: t.variableCount,
+        footerText: t.footerText,
+        buttons,
         lastSyncedAt: new Date(),
       },
     });
@@ -60,6 +73,19 @@ function assertValidTemplateInput(input: CreateWhatsAppTemplateInput): void {
   if (distinctSorted.length !== input.bodyExamples.length || input.bodyExamples.some((e) => !e.trim())) {
     throw new TemplateValidationError("Hace falta un valor de ejemplo por cada variable — Meta no revisa una plantilla sin ejemplos.");
   }
+  if (input.buttons && input.buttons.length > 0) {
+    if (input.buttons.length > 3) {
+      throw new TemplateValidationError("Máximo 3 botones.");
+    }
+    const hasQuickReply = input.buttons.some((b) => b.type === "QUICK_REPLY");
+    const hasCta = input.buttons.some((b) => b.type === "URL" || b.type === "PHONE_NUMBER");
+    if (hasQuickReply && hasCta) {
+      throw new TemplateValidationError("Meta no permite mezclar respuestas rápidas con botones de acción (URL/llamar) en la misma plantilla.");
+    }
+    if (hasCta && input.buttons.length > 2) {
+      throw new TemplateValidationError("Máximo 2 botones de acción (uno de URL y uno de llamar).");
+    }
+  }
 }
 
 /** Submits a new template straight to Meta for review and stores it
@@ -75,6 +101,7 @@ export async function createAndSubmitTemplate(input: CreateWhatsAppTemplateInput
   assertValidTemplateInput(input);
 
   const result = await whatsappProvider.createTemplate(input);
+  const buttons = (input.buttons ?? []) as unknown as object;
 
   return db.whatsAppTemplate.upsert({
     where: { name_language: { name: input.name, language: input.language } },
@@ -84,15 +111,23 @@ export async function createAndSubmitTemplate(input: CreateWhatsAppTemplateInput
       language: input.language,
       category: input.category,
       status: result.status,
+      headerType: input.headerText ? "TEXT" : "NONE",
+      headerText: input.headerText ?? null,
       bodyText: input.bodyText,
       variableCount: input.bodyExamples.length,
+      footerText: input.footerText ?? null,
+      buttons,
     },
     update: {
       metaTemplateId: result.metaTemplateId,
       category: input.category,
       status: result.status,
+      headerType: input.headerText ? "TEXT" : "NONE",
+      headerText: input.headerText ?? null,
       bodyText: input.bodyText,
       variableCount: input.bodyExamples.length,
+      footerText: input.footerText ?? null,
+      buttons,
       lastSyncedAt: new Date(),
     },
   });
