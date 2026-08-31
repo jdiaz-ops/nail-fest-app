@@ -8,8 +8,8 @@ import TextAlign from "@tiptap/extension-text-align";
 import TextStyle from "@tiptap/extension-text-style";
 import Color from "@tiptap/extension-color";
 import Link from "@tiptap/extension-link";
-import Image from "@tiptap/extension-image";
 import Youtube from "@tiptap/extension-youtube";
+import { ImageWithControls } from "./RichTextEditorImage";
 
 // No official @tiptap/extension-font-size package exists for TipTap 2 —
 // this is the standard small custom extension for it: a `fontSize`
@@ -93,7 +93,7 @@ const RichTextEditor = forwardRef<RichTextEditorHandle, { value: string; onChang
       FontSize,
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       Link.configure({ openOnClick: false, autolink: true }),
-      Image,
+      ImageWithControls,
       Youtube.configure({ nocookie: true }),
     ],
     content: value,

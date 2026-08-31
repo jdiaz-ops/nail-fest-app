@@ -57,28 +57,39 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
   const eventVenue = [event.venueName, event.venueAddress].filter(Boolean).join(" — ");
 
   return (
-    <main style={{ maxWidth: 480, margin: "0 auto", padding: "40px 20px 120px" }}>
+    // .event-page: 480px column on mobile (unchanged — already optimized,
+    // see globals.css) widening to a real two-column layout with a sticky
+    // sidebar (see EventRegistration.tsx's own comment) past ~900px,
+    // closer to how Ticket Tailor's own event page reads on desktop
+    // instead of the same narrow mobile column just centered on a wide
+    // screen.
+    <main className="event-page">
       <MetaPixelScript pixelId={metaConnection?.pixelId ?? null} />
 
       {event.imageUrl && (
         // eslint-disable-next-line @next/next/no-img-element -- admin-uploaded Blob URL, not a build-time-known asset
-        <img
-          src={event.imageUrl}
-          alt={event.name}
-          style={{ width: "100%", maxHeight: 260, objectFit: "cover", borderRadius: 12, marginBottom: 20 }}
-        />
+        <img src={event.imageUrl} alt={event.name} className="event-page-hero" />
       )}
 
       <h1 style={{ marginTop: 4 }}>{event.name}</h1>
-      {eventVenue && <p style={{ color: "#5b5f6b" }}>{eventVenue}</p>}
+      {eventWhen && (
+        <p className="event-page-meta">
+          🕐 {eventWhen}
+        </p>
+      )}
+      {eventVenue && (
+        <p className="event-page-meta">
+          📍 {eventVenue}
+        </p>
+      )}
 
-      {/* The registration flow — an inline "Registrarme GRATIS" button
-          right here (below the venue), then the SAME button again as a
-          floating one once this inline button scrolls out of view (see
-          EventRegistration.tsx's own IntersectionObserver) + the
-          Entradas/Detalles/Resumen modal. Placed here, before the
-          description, so the CTA is the first thing after the venue, not
-          buried under it — wrapped in Suspense because it (via
+      {/* The registration flow — an inline "Registrarme GRATIS" button, the
+          same button again as a floating one on mobile once that scrolls
+          out of view (see EventRegistration.tsx's own IntersectionObserver),
+          a sticky sidebar copy on desktop, the Entradas/Detalles/Resumen
+          modal, AND the description below it — all one component now (see
+          its own comment on why) so the description and sidebar can share
+          one two-column grid. Wrapped in Suspense because it (via
           RegistrationForm) reads useSearchParams() for UTM attribution. */}
       <Suspense>
         <EventRegistration
@@ -93,16 +104,9 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
           registerButtonLabel={event.registerButtonLabel || "Registrarme GRATIS"}
           brandName={orgSettings.name}
           supportEmail={orgSettings.replyToEmail}
+          descriptionHtml={event.description}
         />
       </Suspense>
-
-      {event.description && (
-        // Sanitized server-side before it was ever stored (lib/sanitizeHtml.ts,
-        // used by lib/events.ts's createEvent/updateEvent) — this is the
-        // one place that sanitizing has to hold, since this renders on an
-        // unauthenticated public page.
-        <div className="event-description" dangerouslySetInnerHTML={{ __html: event.description }} />
-      )}
 
       {orgSettings.selfServeResendEnabled && (
         <p style={{ fontSize: 12, color: "#5b5f6b", marginTop: 24, textAlign: "center" }}>

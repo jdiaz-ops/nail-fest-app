@@ -42,6 +42,15 @@ interface Props {
   // channel; the link is hidden entirely when this isn't configured
   // rather than rendering a dead mailto:.
   supportEmail: string | null;
+  // Already-sanitized (sanitizeHtml.ts) event.description — rendered here
+  // rather than by [eventSlug]/page.tsx itself so the description and the
+  // sticky sidebar info card (desktop only, see globals.css's
+  // .event-page-body) can live in the same two-column grid: this
+  // component owns eventName/eventWhen/eventVenue/registerButtonLabel
+  // already, so the sidebar's own copy of that info renders from here
+  // too instead of needing that state lifted back up into the (server
+  // component) page.
+  descriptionHtml: string | null;
 }
 
 // One combined checkout step (Shopify-style, per the admin's own call —
@@ -64,6 +73,7 @@ export default function EventRegistration({
   registerButtonLabel,
   brandName,
   supportEmail,
+  descriptionHtml,
 }: Props) {
   const hasTicketTypes = ticketTypes.length > 0;
   const [open, setOpen] = useState(false);
@@ -193,20 +203,62 @@ export default function EventRegistration({
 
   return (
     <>
-      {/* Inline CTA — sits in normal page flow right after the venue (see
-          [eventSlug]/page.tsx). The ref is what the floating CTA below
-          watches to know when to take over. */}
-      <div ref={inlineButtonRef} style={{ margin: "20px 0" }}>
-        <button type="button" className="primary" onClick={openModal}>
-          {registerButtonLabel}
-        </button>
+      {/* Two-column body on desktop (see globals.css's .event-page-body) —
+          content (inline CTA + description) on the left, a sticky info
+          card repeating date/venue/CTA on the right, same shape as Ticket
+          Tailor's own event page. Below the ~900px breakpoint this
+          collapses to a single column and the sidebar is hidden entirely
+          (display:none) — the mobile experience is untouched, just the
+          inline CTA below and the floating one further down. */}
+      <div className="event-page-body">
+        <div className="event-page-content">
+          {/* Inline CTA — sits in normal page flow at the top of the
+              content column. The ref is what the floating CTA below
+              watches to know when to take over (mobile only). */}
+          <div ref={inlineButtonRef} className="event-inline-cta">
+            <button type="button" className="primary" onClick={openModal}>
+              {registerButtonLabel}
+            </button>
+          </div>
+
+          {descriptionHtml && (
+            // Sanitized server-side before it was ever stored
+            // (lib/sanitizeHtml.ts, used by lib/events.ts's
+            // createEvent/updateEvent) — this is the one place that
+            // sanitizing has to hold, since this renders on an
+            // unauthenticated public page.
+            <div className="event-description" dangerouslySetInnerHTML={{ __html: descriptionHtml }} />
+          )}
+        </div>
+
+        <aside className="event-page-sidebar">
+          <div className="event-page-sidebar-card">
+            <h2>{eventName}</h2>
+            {eventWhen && (
+              <p className="event-page-sidebar-meta">
+                <CalendarIcon /> {eventWhen}
+              </p>
+            )}
+            {eventVenue && (
+              <p className="event-page-sidebar-meta">
+                <PinIcon /> {eventVenue}
+              </p>
+            )}
+            <button type="button" className="primary" onClick={openModal} style={{ marginTop: 4 }}>
+              {registerButtonLabel}
+            </button>
+          </div>
+        </aside>
       </div>
 
-      {/* Floating CTA — only once the inline one above has scrolled out of
-          view, centered within the page's own column instead of pinned to
-          the raw viewport edge so it doesn't drift off on a wide screen. */}
+      {/* Floating CTA — mobile only (hidden ≥900px, see globals.css's
+          .event-floating-cta — the sidebar card above is always visible
+          on desktop, so a floating bar on top of it is redundant there).
+          Only once the inline one above has scrolled out of view,
+          centered within the page's own column instead of pinned to the
+          raw viewport edge so it doesn't drift off on a wide screen. */}
       {!open && showFloating && (
-        <div style={{ position: "fixed", left: 0, right: 0, bottom: 16, display: "flex", justifyContent: "center", zIndex: 40, padding: "0 20px" }}>
+        <div className="event-floating-cta">
           <div style={{ width: "100%", maxWidth: 440 }}>
             <button
               type="button"
@@ -510,6 +562,27 @@ export default function EventRegistration({
         </div>
       )}
     </>
+  );
+}
+
+// Small line icons for the sidebar info card's date/venue rows — same
+// inline-SVG style already used above for the resumen step's envelope and
+// Instagram icons, not emoji, to match the app's established look there.
+function CalendarIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" style={{ width: 15, height: 15, flex: "0 0 auto" }}>
+      <rect x="3" y="4.5" width="18" height="16" rx="2.5" />
+      <path d="M3 9.5h18M8 2.5v4M16 2.5v4" />
+    </svg>
+  );
+}
+
+function PinIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" style={{ width: 15, height: 15, flex: "0 0 auto" }}>
+      <path d="M12 21s7-6.5 7-11.5A7 7 0 0 0 5 9.5C5 14.5 12 21 12 21Z" />
+      <circle cx="12" cy="9.5" r="2.4" />
+    </svg>
   );
 }
 

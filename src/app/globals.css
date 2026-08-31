@@ -196,3 +196,147 @@ button.primary:disabled {
 .event-description ol {
   padding-left: 22px;
 }
+/* An image placed via RichTextEditorImage.tsx's position control — mirrors
+   the same inline styles that extension's editor NodeView already applies
+   live in the admin, so what you see while writing is what ships on the
+   public page. Every description saved before that feature shipped is a
+   bare <img> with no wrapping <figure>, so this only ever applies to
+   content actually created with a position set — nothing changes for
+   older events. */
+.event-description figure.tiptap-image {
+  margin: 10px 0;
+}
+.event-description figure.tiptap-image[data-align="center"] {
+  display: table;
+  margin: 10px auto;
+  max-width: 100%;
+}
+.event-description figure.tiptap-image[data-align="left"] {
+  float: left;
+  margin: 4px 16px 10px 0;
+  max-width: 55%;
+}
+.event-description figure.tiptap-image[data-align="right"] {
+  float: right;
+  margin: 4px 0 10px 16px;
+  max-width: 55%;
+}
+.event-description figure.tiptap-image figcaption {
+  font-size: 12px;
+  color: var(--ink-muted);
+  text-align: center;
+  margin-top: 4px;
+}
+
+/* Public event page layout ([eventSlug]/page.tsx + EventRegistration.tsx)
+   — a single 480px column on mobile (unchanged, already the "optimizada
+   para celulares" shape), widening past ~900px to a real two-column
+   layout with a sticky info-card sidebar next to the description, closer
+   to how Ticket Tailor's own event page reads on desktop instead of the
+   same narrow mobile column just centered on a wide screen. */
+.event-page {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 40px 20px 120px;
+}
+@media (min-width: 900px) {
+  .event-page {
+    max-width: 1080px;
+    padding: 56px 40px 140px;
+  }
+}
+
+.event-page-hero {
+  width: 100%;
+  max-height: 260px;
+  object-fit: cover;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  display: block;
+}
+@media (min-width: 900px) {
+  .event-page-hero {
+    max-height: 420px;
+  }
+}
+
+.event-page-meta {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--ink-muted);
+  font-size: 14px;
+  margin: 4px 0;
+}
+
+/* EventRegistration.tsx's own content+sidebar — a single column (sidebar
+   hidden) below ~900px, a real two-column grid above it. align-items:
+   start keeps the sidebar from stretching to the description's height,
+   which is what lets `position: sticky` on it actually do anything. */
+.event-page-body {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+@media (min-width: 900px) {
+  .event-page-body {
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 48px;
+    align-items: start;
+  }
+}
+
+.event-inline-cta {
+  margin: 16px 0 20px;
+}
+
+.event-page-sidebar {
+  display: none;
+}
+@media (min-width: 900px) {
+  .event-page-sidebar {
+    display: block;
+    position: sticky;
+    top: 24px;
+  }
+}
+.event-page-sidebar-card {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 24px;
+  background: var(--surface);
+}
+.event-page-sidebar-card h2 {
+  font-size: 19px;
+  margin: 0 0 14px;
+}
+.event-page-sidebar-meta {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 13.5px;
+  color: var(--ink-muted);
+  margin: 0 0 10px;
+}
+.event-page-sidebar-meta svg {
+  margin-top: 2px;
+}
+
+/* The mobile-only floating CTA (EventRegistration.tsx) — the sidebar
+   above is always visible on desktop already, so a bar floating on top
+   of it there would be redundant, not just unnecessary. */
+.event-floating-cta {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 16px;
+  display: flex;
+  justify-content: center;
+  z-index: 40;
+  padding: 0 20px;
+}
+@media (min-width: 900px) {
+  .event-floating-cta {
+    display: none;
+  }
+}

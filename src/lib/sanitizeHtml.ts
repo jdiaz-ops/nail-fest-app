@@ -28,6 +28,8 @@ export function sanitizeEventDescription(html: string): string {
       "hr",
       "span",
       "blockquote",
+      "figure",
+      "figcaption",
     ],
     allowedAttributes: {
       a: ["href", "target", "rel"],
@@ -35,6 +37,10 @@ export function sanitizeEventDescription(html: string): string {
       iframe: ["src", "width", "height", "allowfullscreen", "frameborder"],
       span: ["style"],
       p: ["style"],
+      // "data-align" is RichTextEditorImage.tsx's image position
+      // (none/left/center/right) — the public event page reads it via
+      // globals.css's `.event-description figure.tiptap-image[data-align=...]`.
+      figure: ["data-align"],
       "*": ["class"],
     },
     // Text alignment / color come through as inline style on span/p (see
