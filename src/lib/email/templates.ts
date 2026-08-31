@@ -196,24 +196,32 @@ export function broadcastEmail(params: {
 // confirmation email, not a plain textarea — so its content arrives here
 // as real (sanitized before storage — see EmailBroadcast.bodyHtml's own
 // schema comment) HTML to embed directly, not plain text to escape and
-// line-break. A no-unsubscribe-link variant isn't offered: every event
-// broadcast still only reaches people who gave marketing consent (see
-// the sending code's own hasActiveConsent gate), so the same real
-// unsubscribe path applies here too.
+// line-break.
+//
+// unsubscribeUrl is optional and, as of the LOGISTICS/TRANSACTIONAL
+// change in lib/broadcasts.ts, never actually passed by that call site
+// any more: an event-scoped broadcast is operational communication tied
+// to the person's own registration (LOGISTICS consent — required to
+// register at all, see lib/consent.ts's REQUIRED_CONSENTS), not a
+// marketing send, so there's no real "unsubscribe" action to offer —
+// showing a "darme de baja" link that silently does nothing (it only
+// ever revoked MARKETING consent, see /api/unsubscribe) would be a
+// broken promise. Kept optional rather than dropped outright in case a
+// future caller genuinely needs the marketing-consent footer back.
 export function broadcastEmailHtml(params: {
   subject: string;
   bodyHtml: string;
-  unsubscribeUrl: string;
+  unsubscribeUrl?: string;
 }): { subject: string; text: string; html: string } {
-  const text = `${htmlToPlainText(params.bodyHtml)}\n\n---\nDarse de baja de estos correos: ${params.unsubscribeUrl}`;
+  const footer = params.unsubscribeUrl
+    ? `Recibiste este correo porque diste tu consentimiento de marketing al registrarte en un evento de Nail Fest. <a href="${params.unsubscribeUrl}">Darme de baja</a>`
+    : `Recibiste este correo porque estás registrada/o en un evento de Nail Fest.`;
+  const text = `${htmlToPlainText(params.bodyHtml)}${params.unsubscribeUrl ? `\n\n---\nDarse de baja de estos correos: ${params.unsubscribeUrl}` : ""}`;
   const html = `
     <div style="font-family: -apple-system, Segoe UI, Roboto, sans-serif; max-width: 560px; margin: 0 auto; color:#1a1a1a;">
       ${params.bodyHtml}
       <hr style="border:none;border-top:1px solid #ddd; margin: 24px 0;" />
-      <p style="color:#888; font-size: 12px;">
-        Recibiste este correo porque diste tu consentimiento de marketing al registrarte en un evento de Nail Fest.
-        <a href="${params.unsubscribeUrl}">Darme de baja</a>
-      </p>
+      <p style="color:#888; font-size: 12px;">${footer}</p>
     </div>
   `;
   return { subject: params.subject, text, html };

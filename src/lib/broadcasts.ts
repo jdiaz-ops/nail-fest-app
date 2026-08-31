@@ -3,7 +3,6 @@ import { resolveEventBroadcastRecipients } from "@/lib/broadcastRecipients";
 import { hasActiveConsent } from "@/lib/consent";
 import { emailProvider } from "@/lib/email";
 import { broadcastEmailHtml } from "@/lib/email/templates";
-import { buildUnsubscribeUrl } from "@/lib/unsubscribe";
 import { renderTicketPdfBuffer } from "@/lib/ticketPdf";
 import { getOrgSettings } from "@/lib/settings";
 
@@ -43,12 +42,28 @@ export async function sendEventBroadcast(broadcastId: string): Promise<{ sent: n
     const chunk = recipients.slice(i, i + CONCURRENCY);
     await Promise.allSettled(
       chunk.map(async ({ person, registration }) => {
-        if (!(await hasActiveConsent(person.id, "MARKETING"))) {
+        // LOGISTICS, not MARKETING — an event-scoped broadcast is
+        // operational communication tied to this person's own
+        // registration (schedule changes, venue/logistics reminders,
+        // day-of info), same category as the ticket confirmation itself,
+        // not a cross-event promotional send. LOGISTICS is a REQUIRED
+        // consent to register at all (see lib/consent.ts's
+        // REQUIRED_CONSENTS), so this check is defensive rather than a
+        // real filter — it exists so a registration whose consent was
+        // manually revoked from the CRM doesn't still get mailed. Sending
+        // this channel gated on MARKETING consent instead used to be a
+        // real bug: /api/unsubscribe's own copy already promised "you'll
+        // keep receiving operational info about events you register
+        // for" — that promise only holds if this check is LOGISTICS.
+        if (!(await hasActiveConsent(person.id, "LOGISTICS"))) {
           skippedNoConsent++;
           return;
         }
-        const unsubscribeUrl = buildUnsubscribeUrl(person.id);
-        const content = broadcastEmailHtml({ subject: broadcast.subject, bodyHtml: broadcast.bodyHtml!, unsubscribeUrl });
+        // No unsubscribeUrl — see broadcastEmailHtml's own comment on why
+        // an event broadcast doesn't offer one: LOGISTICS can't be
+        // revoked while staying registered, so a "darme de baja" link
+        // here would be a broken promise, not a real opt-out.
+        const content = broadcastEmailHtml({ subject: broadcast.subject, bodyHtml: broadcast.bodyHtml! });
         // Same "never let a PDF problem block the whole send" reasoning as
         // sendTicketEmail.ts — a recipient with no qrToken (shouldn't
         // happen for a CONFIRMED registration, but not guaranteed by the
@@ -76,19 +91,18 @@ export async function sendEventBroadcast(broadcastId: string): Promise<{ sent: n
               })
             : null;
         try {
-          const result = await emailProvider.sendMarketing({
+          const result = await emailProvider.sendTransactional({
             to: person.email,
             subject: content.subject,
             text: content.text,
             html: content.html,
-            listUnsubscribeHeader: `<${unsubscribeUrl}>`,
             attachments: pdfAttachment
               ? [{ filename: "entrada-nailfest.pdf", content: pdfAttachment, contentType: "application/pdf" }]
               : undefined,
           });
           await db.emailLog.create({
             data: {
-              kind: "MARKETING",
+              kind: "TRANSACTIONAL",
               broadcastId: broadcast.id,
               personId: person.id,
               toEmail: person.email,
@@ -99,7 +113,7 @@ export async function sendEventBroadcast(broadcastId: string): Promise<{ sent: n
           sent++;
         } catch (err) {
           await db.emailLog.create({
-            data: { kind: "MARKETING", broadcastId: broadcast.id, personId: person.id, toEmail: person.email, status: "FAILED" },
+            data: { kind: "TRANSACTIONAL", broadcastId: broadcast.id, personId: person.id, toEmail: person.email, status: "FAILED" },
           });
           console.error("event broadcast send failed", person.email, err);
         }

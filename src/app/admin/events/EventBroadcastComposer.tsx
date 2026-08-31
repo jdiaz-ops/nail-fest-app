@@ -103,8 +103,8 @@ export default function EventBroadcastComposer({
           ))}
         </select>
         <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>
-          Se enviará a {recipientCount} {recipientCount === 1 ? "persona" : "personas"} — solo a quien dio
-          consentimiento de marketing.
+          Se enviará a {recipientCount} {recipientCount === 1 ? "persona" : "personas"} — es correo
+          operativo del evento (mismo canal que la entrada), no requiere consentimiento de marketing.
         </p>
       </div>
 

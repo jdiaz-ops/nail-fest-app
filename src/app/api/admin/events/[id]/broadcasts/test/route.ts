@@ -30,8 +30,11 @@ export async function POST(req: NextRequest) {
     ${safeHtml}
   </div>`;
 
+  // sendTransactional, not sendMarketing — matches the real channel a
+  // sent event broadcast now uses (see lib/broadcasts.ts's own comment),
+  // so this preview reflects the actual From address/Configuration Set.
   const results = await Promise.allSettled(
-    to.map((addr) => emailProvider.sendMarketing({ to: addr, subject: `[PRUEBA] ${subject}`, text: subject, html }))
+    to.map((addr) => emailProvider.sendTransactional({ to: addr, subject: `[PRUEBA] ${subject}`, text: subject, html }))
   );
   const sent = results.filter((r) => r.status === "fulfilled").length;
   const failed = results.length - sent;
