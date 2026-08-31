@@ -223,6 +223,25 @@ async function getPhoneNumberStatus(): Promise<WhatsAppPhoneNumberStatus> {
   };
 }
 
+// The "shadow delivery" gotcha: saving a connection (token + WABA ID +
+// phone number ID) is NOT enough for THIS app's webhook to receive
+// anything. A WABA only pushes events to apps in its own
+// `subscribed_apps` list — connecting via a System User's Add Assets
+// doesn't add this app to that list, so an already-existing WABA (one
+// that was already live with another BSP, e.g. WhatChimp) silently keeps
+// sending webhooks only to whichever app(s) were already subscribed. This
+// is additive, not exclusive — subscribing this app never removes
+// another one already on the list (WhatChimp keeps working exactly as
+// before). Called right after saving a new connection, and re-callable
+// any time from the Conexión page in case the first attempt failed or an
+// already-saved connection predates this fix.
+export async function subscribeAppToWaba(wabaId: string, token: string): Promise<void> {
+  const json = await graphFetch(`${wabaId}/subscribed_apps`, token, { method: "POST" });
+  if (!json?.success) {
+    throw new Error(`WhatsApp Cloud API did not confirm the subscription: ${JSON.stringify(json)}`);
+  }
+}
+
 export const metaWhatsAppProvider: WhatsAppProvider = {
   sendTemplate,
   sendFreeform,

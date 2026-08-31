@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { whatsappProvider } from "@/lib/whatsapp";
 import WhatsAppConnectionForm from "@/components/WhatsAppConnectionForm";
+import WhatsAppSubscribeAppButton from "@/components/WhatsAppSubscribeAppButton";
 import CrmPageHeader from "../../CrmPageHeader";
 
 export const dynamic = "force-dynamic";
@@ -63,6 +64,15 @@ export default async function WhatsAppConexionPage() {
         <p style={{ fontSize: 13, color: "#8a5a1f", marginTop: -16, marginBottom: 24 }}>
           No se pudo consultar el estado real del número en Meta ahora mismo (revisa que el token sea válido).
         </p>
+      )}
+
+      {connection && (
+        <div style={{ border: "1px solid #e3e1dc", borderRadius: 10, padding: 16, marginBottom: 24, maxWidth: 700 }}>
+          <p style={{ fontSize: 13, fontWeight: 600, margin: "0 0 8px" }}>
+            ¿La Bandeja no recibe mensajes reales aunque el webhook esté verificado?
+          </p>
+          <WhatsAppSubscribeAppButton />
+        </div>
       )}
 
       <div style={{ maxWidth: 700 }}>

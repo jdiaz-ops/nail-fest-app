@@ -6,6 +6,7 @@ import { useState } from "react";
 export default function WhatsAppConnectionForm({ webhookUrl }: { webhookUrl: string }) {
   const [status, setStatus] = useState<"idle" | "saving" | "done" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [subscribeWarning, setSubscribeWarning] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -27,7 +28,11 @@ export default function WhatsAppConnectionForm({ webhookUrl }: { webhookUrl: str
     });
 
     if (res.ok) {
+      const body = await res.json().catch(() => ({}));
       setStatus("done");
+      setSubscribeWarning(
+        body?.subscribed ? null : `Guardado, pero no se pudo suscribir esta app al WABA automáticamente${body?.subscribeError ? ` (${body.subscribeError})` : ""} — usa el botón de reintentar abajo.`
+      );
       formEl.reset();
     } else {
       const body = await res.json().catch(() => ({}));
@@ -74,6 +79,7 @@ export default function WhatsAppConnectionForm({ webhookUrl }: { webhookUrl: str
           Guardado. El token queda cifrado en la base de datos — esta pantalla no lo vuelve a mostrar.
         </p>
       )}
+      {subscribeWarning && <p style={{ color: "#b8791a", marginTop: 4, fontSize: 13 }}>{subscribeWarning}</p>}
       {status === "error" && errorMessage && <p style={{ color: "#c2185b", marginTop: 12 }}>{errorMessage}</p>}
     </form>
   );

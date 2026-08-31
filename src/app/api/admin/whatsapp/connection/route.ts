@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { encryptSecret } from "@/lib/crypto";
 import { requireUser } from "@/lib/auth/guard";
+import { subscribeAppToWaba } from "@/lib/whatsapp/meta";
 
 // Same "history of rows, most recent wins" pattern as
 // /api/admin/meta-connection — see lib/whatsapp/connection.ts.
@@ -34,5 +35,20 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  return NextResponse.json({ ok: true });
+  // Best-effort — see subscribeAppToWaba's own comment ("shadow
+  // delivery"). Never fails the save itself: the connection is real and
+  // usable for sending either way, this only affects whether inbound
+  // messages/status updates reach OUR webhook. Surfaced to the UI so a
+  // failure here isn't silent — a retry button covers it.
+  let subscribed = false;
+  let subscribeError: string | null = null;
+  try {
+    await subscribeAppToWaba(wabaId, accessToken);
+    subscribed = true;
+  } catch (err) {
+    subscribeError = err instanceof Error ? err.message : String(err);
+    console.error("whatsapp connection: failed to subscribe app to WABA", err);
+  }
+
+  return NextResponse.json({ ok: true, subscribed, subscribeError });
 }

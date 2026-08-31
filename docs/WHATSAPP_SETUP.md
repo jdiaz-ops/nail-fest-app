@@ -109,13 +109,43 @@ Moving off WhatChimp to a direct Cloud API connection:
    choosing (anything long and random), then subscribe to the `messages`
    field — without this, Bandeja never receives anything.
 4. Paste the token, WABA ID, Phone Number ID and the same verify token
-   into `/admin/crm/whatsapp/conexion` and save.
+   into `/admin/crm/whatsapp/conexion` and save — this also auto-runs
+   step 4b below; if it shows a warning that it failed, use the retry
+   button right there instead of redoing this step.
+4b. **"Shadow delivery" — do this even if step 4's save didn't warn
+    you.** A WABA only pushes webhook events to apps in its own
+    `subscribed_apps` list — an *already-existing* WABA (one that was
+    live with another BSP, e.g. WhatChimp, before you connected this
+    app) does **not** automatically add this app to that list just
+    because a System User has access to it. Without this, the webhook
+    stays "Verified" in Meta's dashboard and messages keep flowing —
+    just only to whichever app(s) were already subscribed (WhatChimp
+    keeps working exactly as before; this doesn't touch or remove
+    that). Symptom: you message the business number, it shows delivered
+    in WhatsApp/WhatChimp, but Bandeja stays empty. Fix: Conexión has a
+    "Suscribir esta app al WABA" button that does this automatically
+    (`POST /{waba-id}/subscribed_apps` via `lib/whatsapp/meta.ts`'s
+    `subscribeAppToWaba`) — or run it yourself once in [Graph API
+    Explorer](https://developers.facebook.com/tools/explorer):
+    method POST, path `<your WABA ID>/subscribed_apps`.
 5. Create your first template directly in Meta's WhatsApp Manager (e.g. a
    simple confirmation message), wait for approval, then hit
    "Sincronizar con Meta" on `/admin/crm/whatsapp/plantillas`.
 6. Make sure `META_APP_SECRET` is set in your environment (it already is
    if the Meta ads/CAPI module is connected — same Meta App) — the
    webhook signature check fails closed without it.
+7. **Payment method + Publish**: the Meta App Dashboard's WhatsApp use
+   case won't let you send business-initiated messages without a
+   payment method on file (Add use cases → WhatsApp → "Missing valid
+   payment method"), and won't deliver *any* production webhook data
+   (only manual test webhooks) until the app itself is Published (App
+   Dashboard → Publish — needs a real Privacy Policy URL set in App
+   Settings; `/admin/settings/privacy` on this app already has a page
+   for that, at `<your-domain>/privacidad`).
+8. **Verify end to end before trusting a real send**: message the
+   business number from your own phone and confirm it shows up in
+   Bandeja — that's the one test that actually proves the webhook is
+   wired correctly, not just "Verified" in Meta's dashboard.
 
 ## First real send
 
