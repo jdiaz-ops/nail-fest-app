@@ -58,6 +58,16 @@ const NAME_PATTERN = /^[a-z0-9_]+$/;
 // not skip a number (Meta rejects a submission that does either).
 const PLACEHOLDER_PATTERN = /\{\{(\d+)\}\}/g;
 
+// Meta's real button-text rule, confirmed live (error_subcode 2388060,
+// "Button Format is Incorrect" — "Buttons can't have any variables,
+// newlines, emojis, or formatting characters") — this is about the
+// button's visible TEXT specifically; a URL button's own `url` is still
+// allowed its "{{1}}" (see the urlExample check below, a separate rule).
+// \p{Extended_Pictographic} catches emoji broadly (Node's built-in
+// Unicode property escapes); *_~` are WhatsApp's own inline-formatting
+// markers.
+const BUTTON_TEXT_FORBIDDEN_PATTERN = /\n|[*_~`{}]|\p{Extended_Pictographic}/u;
+
 export class TemplateValidationError extends Error {}
 
 function assertValidTemplateInput(input: CreateWhatsAppTemplateInput): void {
@@ -84,6 +94,13 @@ function assertValidTemplateInput(input: CreateWhatsAppTemplateInput): void {
     }
     if (hasCta && input.buttons.length > 2) {
       throw new TemplateValidationError("Máximo 2 botones de acción (uno de URL y uno de llamar).");
+    }
+    for (const b of input.buttons) {
+      if (BUTTON_TEXT_FORBIDDEN_PATTERN.test(b.text)) {
+        throw new TemplateValidationError(
+          `El texto del botón "${b.text}" no puede tener emojis, saltos de línea ni caracteres de formato (*_~\`) — Meta lo rechaza (el enlace de un botón de URL sí puede tener {{1}}, pero su texto visible no).`
+        );
+      }
     }
     // A dynamic URL button (its url ends in "{{1}}") needs a real example
     // value before Meta will even queue it for review — same requirement
