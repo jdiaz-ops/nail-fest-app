@@ -37,6 +37,16 @@ export default function ImportComposer({ events }: Props) {
 
   const [marketingConsent, setMarketingConsent] = useState(true);
   const [advertisingConsent, setAdvertisingConsent] = useState(true);
+  // Checked by default per an explicit call made on /admin/crm/import's
+  // own page — NOT a formality: the original Ticket Tailor registration
+  // these historical rows came from never asked about WhatsApp
+  // specifically, so this is a real decision to treat that consent as
+  // covering it, with the risk (Meta quality-rating/spam-report exposure
+  // from messaging people who never opted into this exact channel, and
+  // the Ley 1581 "informed consent for the specific channel" question)
+  // spelled out to whoever's importing, every time, right above the
+  // checkbox — see the fieldset copy below.
+  const [whatsappConsent, setWhatsappConsent] = useState(true);
 
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<string | null>(null);
@@ -89,7 +99,7 @@ export default function ImportComposer({ events }: Props) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         event: eventPayload,
-        consent: { marketing: marketingConsent, advertising: advertisingConsent },
+        consent: { marketing: marketingConsent, advertising: advertisingConsent, whatsapp: whatsappConsent },
         people: preview.people,
       }),
     });
@@ -198,8 +208,7 @@ export default function ImportComposer({ events }: Props) {
       <fieldset style={{ marginBottom: 16, border: "1px solid #e3e1dc", borderRadius: 8, padding: 12 }}>
         <legend>Consentimiento a importar</legend>
         <p style={{ fontSize: 13, color: "#5b5f6b" }}>
-          LOGISTICS siempre se marca como otorgado (implícito al haberse registrado). WhatsApp no
-          se importa — no está activo todavía.
+          LOGISTICS siempre se marca como otorgado (implícito al haberse registrado).
         </p>
         <label style={{ display: "block" }}>
           <input type="checkbox" checked={marketingConsent} onChange={(e) => setMarketingConsent(e.target.checked)} />{" "}
@@ -213,6 +222,15 @@ export default function ImportComposer({ events }: Props) {
           />{" "}
           Publicidad (entrar a audiencias de Meta)
         </label>
+        <label style={{ display: "block", marginTop: 4 }}>
+          <input type="checkbox" checked={whatsappConsent} onChange={(e) => setWhatsappConsent(e.target.checked)} />{" "}
+          WhatsApp (recibir difusiones)
+        </label>
+        <p style={{ fontSize: 12, color: "#b8791a", margin: "6px 0 0" }}>
+          El registro original de Ticket Tailor nunca les preguntó específicamente por WhatsApp — al marcar esto
+          asumís que ese consentimiento general también cubre este canal. Riesgo real: si alguien reporta el mensaje
+          como spam, Meta puede bajar la calidad de tu número o suspenderlo.
+        </p>
       </fieldset>
 
       <button className="primary" onClick={handleImport} disabled={!preview || importing}>

@@ -50,6 +50,12 @@ const bodySchema = z.object({
   consent: z.object({
     marketing: z.boolean(),
     advertising: z.boolean(),
+    // Explicit business decision, not a default (see the composer's own
+    // comment on this field): the original Ticket Tailor registration
+    // never asked these people about WhatsApp specifically, so marking
+    // this granted on import is a real judgment call about scope, not a
+    // formality — the admin sees the risk spelled out before checking it.
+    whatsapp: z.boolean(),
   }),
   people: z.array(personSchema).min(1),
 });
@@ -180,7 +186,7 @@ export async function POST(req: NextRequest) {
   const consentsData: Array<{
     personId: string;
     registrationId: string;
-    purpose: "LOGISTICS" | "MARKETING" | "ADVERTISING";
+    purpose: "LOGISTICS" | "MARKETING" | "ADVERTISING" | "WHATSAPP";
     granted: boolean;
   }> = [];
   for (const r of newlyRegistered) {
@@ -190,6 +196,9 @@ export async function POST(req: NextRequest) {
     }
     if (consent.advertising) {
       consentsData.push({ personId: r.personId, registrationId: r.id, purpose: "ADVERTISING", granted: true });
+    }
+    if (consent.whatsapp) {
+      consentsData.push({ personId: r.personId, registrationId: r.id, purpose: "WHATSAPP", granted: true });
     }
   }
   for (const consentBatch of chunk(consentsData, BATCH_SIZE)) {
