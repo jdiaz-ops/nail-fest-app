@@ -13,6 +13,7 @@ type ConversationRow = {
   assignedToLabel: string | null;
   unreadCount: number;
   withinWindow: boolean;
+  waitingForHuman: boolean;
   lastMessage: { body: string | null; direction: "INBOUND" | "OUTBOUND"; createdAt: string } | null;
   lastActivityAt: string;
 };
@@ -215,6 +216,22 @@ export default function WhatsAppInboxList() {
                     }}
                   >
                     {c.assignedToLabel}
+                  </span>
+                )}
+                {c.waitingForHuman && (
+                  <span
+                    style={{
+                      display: "inline-block",
+                      marginTop: 3,
+                      fontSize: 10.5,
+                      fontWeight: 600,
+                      color: "#8a5a1f",
+                      background: "#fdf1e6",
+                      borderRadius: 999,
+                      padding: "1px 7px",
+                    }}
+                  >
+                    ⏳ Esperando agente
                   </span>
                 )}
               </div>

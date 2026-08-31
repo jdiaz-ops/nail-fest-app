@@ -15,6 +15,7 @@
     "meta:retry": "tsx scripts/retry-meta-events.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.122.0",
     "@aws-sdk/client-sesv2": "^3.658.1",
     "@prisma/client": "^5.20.0",
     "@tiptap/extension-color": "^2.27.2",
@@ -37,7 +38,7 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "sanitize-html": "^2.17.7",
-    "zod": "^3.23.8"
+    "zod": "^3.25.0"
   },
   "devDependencies": {
     "@types/node": "^20.14.15",

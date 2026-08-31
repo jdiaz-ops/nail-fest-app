@@ -59,6 +59,10 @@ export async function recordOutboundMessage(input: {
   providerMessageId?: string | null;
   status: WhatsAppMessageStatus;
   errorMessage?: string | null;
+  /** True for a reply the LLM agent wrote (lib/whatsapp/aiAgent.ts) — see
+   * WhatsAppMessage.generatedByAi's own schema comment. Every other
+   * caller (broadcasts, human replies) leaves this at its default. */
+  generatedByAi?: boolean;
 }) {
   const conversation = await getOrCreateConversation(input.phone);
   await db.whatsAppMessage.create({
@@ -72,6 +76,7 @@ export async function recordOutboundMessage(input: {
       providerMessageId: input.providerMessageId ?? null,
       status: input.status,
       errorMessage: input.errorMessage ?? null,
+      generatedByAi: input.generatedByAi ?? false,
       sentAt: input.status === "SENT" || input.status === "DELIVERED" || input.status === "READ" ? new Date() : null,
     },
   });
@@ -156,6 +161,24 @@ async function handleInboundMessage(msg: WebhookMessage): Promise<void> {
     where: { id: conversation.id },
     data: { lastInboundAt: new Date(), unreadCount: { increment: 1 } },
   });
+
+  // The LLM agent (lib/whatsapp/aiAgent.ts) — only for real text messages
+  // it can actually read, and only while this thread hasn't been escalated
+  // to a human (respondWithAi re-checks aiAutoReplyEnabled itself too,
+  // this is just the trigger point). Awaited, not fire-and-forget: the
+  // webhook route's own maxDuration is raised specifically so a real
+  // Claude round trip fits inside one request/response cycle instead of
+  // orphaning work after Meta's already gotten its 200. Wrapped in its
+  // own try/catch on top of respondWithAi's internal one — a failure
+  // here must never stop the webhook from returning 200 to Meta, or Meta
+  // backs off and eventually disables the whole subscription.
+  if (msg.type === "text" && body) {
+    // Dynamic import, not a top-level one: aiAgent.ts itself imports
+    // recordOutboundMessage from this file, so a static import here would
+    // be a circular dependency between the two modules.
+    const { respondWithAi } = await import("./aiAgent");
+    await respondWithAi(conversation.id).catch((err) => console.error("whatsapp webhook: ai agent failed", err));
+  }
 }
 
 async function handleStatusUpdate(status: WebhookStatus): Promise<void> {

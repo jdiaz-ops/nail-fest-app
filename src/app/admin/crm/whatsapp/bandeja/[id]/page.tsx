@@ -9,6 +9,7 @@ import WhatsAppAssignAgent from "@/components/WhatsAppAssignAgent";
 import WhatsAppPersonLabels from "@/components/WhatsAppPersonLabels";
 import WhatsAppPersonEditForm from "@/components/WhatsAppPersonEditForm";
 import WhatsAppSendTicketButton from "@/components/WhatsAppSendTicketButton";
+import WhatsAppAiToggle from "@/components/WhatsAppAiToggle";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +20,16 @@ const WINDOW_MS = 24 * 60 * 60 * 1000;
 // the conversation (and the team's own commentary on it) actually
 // happened, instead of two disconnected lists.
 type TimelineItem =
-  | { kind: "message"; id: string; createdAt: Date; direction: "INBOUND" | "OUTBOUND"; body: string | null; messageKind: string; status: string }
+  | {
+      kind: "message";
+      id: string;
+      createdAt: Date;
+      direction: "INBOUND" | "OUTBOUND";
+      body: string | null;
+      messageKind: string;
+      status: string;
+      generatedByAi: boolean;
+    }
   | { kind: "note"; id: string; createdAt: Date; text: string; authorName: string | null };
 
 // Renders inside bandeja/layout.tsx's right pane — no page header or
@@ -63,6 +73,7 @@ export default async function WhatsAppThreadPage({ params }: { params: { id: str
       body: m.body,
       messageKind: m.kind,
       status: m.status,
+      generatedByAi: m.generatedByAi,
     })),
     ...conversation.notes.map((n) => ({
       kind: "note" as const,
@@ -111,11 +122,29 @@ export default async function WhatsAppThreadPage({ params }: { params: { id: str
                 }}
               >
                 <div style={{ fontSize: 14, whiteSpace: "pre-wrap" }}>{item.body ?? "—"}</div>
-                <div style={{ fontSize: 11, color: "#8a8478", marginTop: 4, display: "flex", gap: 8 }}>
+                <div style={{ fontSize: 11, color: "#8a8478", marginTop: 4, display: "flex", alignItems: "center", gap: 8 }}>
                   <span>{new Date(item.createdAt).toLocaleString("es-CO")}</span>
                   {item.direction === "OUTBOUND" && (
                     <span>
                       {item.messageKind === "TEMPLATE" ? "Plantilla" : "Respuesta"} · {item.status}
+                    </span>
+                  )}
+                  {item.generatedByAi && (
+                    <span
+                      title="Respondido automáticamente por el agente de IA"
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 3,
+                        fontSize: 10,
+                        fontWeight: 700,
+                        color: "#5b3fa8",
+                        background: "#ece7fb",
+                        borderRadius: 999,
+                        padding: "1px 7px",
+                      }}
+                    >
+                      🤖 IA
                     </span>
                   )}
                 </div>
@@ -133,6 +162,10 @@ export default async function WhatsAppThreadPage({ params }: { params: { id: str
       <div style={{ width: 300, flexShrink: 0, borderLeft: "1px solid var(--border)", overflowY: "auto", padding: 14, display: "flex", flexDirection: "column", gap: 16 }}>
         <SidebarSection title="Ventana de mensajería">
           <WhatsAppWindowCountdown lastInboundAt={conversation.lastInboundAt?.toISOString() ?? null} />
+        </SidebarSection>
+
+        <SidebarSection title="Agente de IA">
+          <WhatsAppAiToggle conversationId={conversation.id} enabled={conversation.aiAutoReplyEnabled} />
         </SidebarSection>
 
         <SidebarSection title="Agente asignado">

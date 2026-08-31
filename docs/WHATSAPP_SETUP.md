@@ -95,6 +95,31 @@ Moving off WhatChimp to a direct Cloud API connection:
   active `AdminUser`), the linked person's etiquetas, and a snapshot
   panel (cliente desde, último mensaje, idioma/país/zona horaria, and the
   contact's real acquisition UTM from their registration).
+- **Agente de IA** — auto-replies to every new inbound text message with
+  a Claude Sonnet 5 agent (`lib/whatsapp/aiAgent.ts`), triggered
+  synchronously from the webhook handler right after the inbound message
+  is logged. Scope is deliberately narrow: answer questions about
+  published events using only real data pulled from the database (never
+  invented — the system prompt forbids it), and resend a confirmed
+  registration's ticket PDF via a `resend_ticket_pdf` tool. No chat-based
+  registration/booking — that stays a form-only flow. A second tool,
+  `escalate_to_human`, lets the model hand off itself whenever the
+  customer explicitly asks for a person, or the question is clearly out
+  of scope; a human sending a manual reply from Bandeja does the same
+  hand-off automatically (never talks over someone who already jumped
+  in). Either path flips `WhatsAppConversation.aiAutoReplyEnabled` to
+  `false`, which staff can also flip by hand from the "Agente de IA"
+  section of a thread's sidebar — the one control for all three paths.
+  A conversation waiting on a human with nobody assigned yet shows a "⏳
+  Esperando agente" badge in the Bandeja list. AI replies are logged as
+  ordinary outbound `FREEFORM` messages (WhatsApp itself has no concept
+  of "sent by a bot") with `WhatsAppMessage.generatedByAi = true`, shown
+  in Bandeja as a small 🤖 IA badge — internal-only, never sent to the
+  customer. Same 24h customer-service-window rule as a human reply
+  applies (the agent doesn't try to message outside it). Requires
+  `ANTHROPIC_API_KEY` — see "Agente de IA — configuración" below;
+  without it, auto-replies are skipped silently (logged server-side) and
+  every other WhatsApp feature keeps working normally.
 - **Etiquetas (Labels)** — a generic CRM tag (`Label`), not WhatsApp-
   specific: usable as a `label` segment condition (Segmentos), assignable
   after a Difusión send, and addable/removable from a person straight
@@ -224,6 +249,32 @@ Nothing else in the app depends on QStash — Conexión, Plantillas,
 Bandeja and an *immediate* Difusión all work exactly the same with or
 without it configured.
 
+## Agente de IA — configuración
+
+The auto-reply agent (see "Agente de IA" above) needs one environment
+variable to do anything — everything else about it (which events it
+knows about, which registrations it can resend) reads straight from this
+app's own database, nothing extra to configure there.
+
+**Setup:**
+1. Create (or reuse) an API key at
+   [console.anthropic.com](https://console.anthropic.com) → **API Keys**.
+2. Add `ANTHROPIC_API_KEY` in Vercel → your project → Settings →
+   Environment Variables, then **Redeploy** (same gotcha as
+   `META_APP_SECRET`/QStash above — a new env var doesn't touch an
+   already-running deployment).
+3. Message the business number something a published event's real data
+   can answer (a date, a price, a venue) and confirm the reply comes
+   back in Bandeja within a few seconds, tagged with the 🤖 IA badge.
+   Then test the hand-off: ask for "un asesor humano" and confirm the
+   thread's "Agente de IA" sidebar toggle flips to "En manos de un
+   humano" and a 🤖 note appears in Nota interna explaining why.
+
+Nothing else in the app depends on `ANTHROPIC_API_KEY` — Conexión,
+Plantillas, Difusiones and manual Bandeja replies all work exactly the
+same with or without it configured; a thread simply never gets an
+automatic reply until it's set.
+
 ## First real send
 
 Send yourself a test broadcast from Difusiones (a segment of just you)
@@ -256,3 +307,10 @@ Graph API payload shape.
   segment-picker composer today; build a segment for that event's
   registrants in Segmentos as the workaround until a second composer
   surface is built.
+- **Chat-based registration through the AI agent** — the agent answers
+  questions and resends a ticket PDF, both read-only against existing
+  data; it can't take someone from "interesado" to "inscrito" inside
+  WhatsApp. `RegistrationForm.tsx` stays the only way to register.
+- **Media replies from the AI agent** — same text-only constraint as
+  the rest of Bandeja; it can't send images beyond the one hardcoded
+  ticket-PDF attachment `resend_ticket_pdf` sends.

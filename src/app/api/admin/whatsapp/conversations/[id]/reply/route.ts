@@ -35,6 +35,13 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     );
   }
 
+  // A real staff member is replying by hand — stop the AI agent from also
+  // answering this thread going forward, same as an explicit escalation.
+  // Never let it talk over someone who already jumped in.
+  if (conversation.aiAutoReplyEnabled) {
+    await db.whatsAppConversation.update({ where: { id: conversation.id }, data: { aiAutoReplyEnabled: false } });
+  }
+
   try {
     const result = await whatsappProvider.sendFreeform({ to: conversation.phone, text: parsed.data.text });
     await recordOutboundMessage({

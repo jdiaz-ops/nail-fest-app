@@ -9,6 +9,13 @@ import { processWebhookPayload } from "@/lib/whatsapp/inbox";
 //    this URL + a verify token into the App dashboard's Webhooks config.
 //  - POST: the real event stream (inbound messages + delivery statuses)
 //    once verification succeeded, for the rest of this connection's life.
+//
+// maxDuration raised from the Vercel default: an inbound text message now
+// synchronously triggers the LLM agent (lib/whatsapp/aiAgent.ts) — a real
+// Claude round trip plus a WhatsApp send, comfortably under 30s in
+// practice but well past the platform default. Allowed even on the
+// Vercel Hobby plan (up to 60s via this export), no plan upgrade needed.
+export const maxDuration = 30;
 
 export async function GET(req: NextRequest) {
   const mode = req.nextUrl.searchParams.get("hub.mode");

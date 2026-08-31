@@ -739,6 +739,15 @@ model WhatsAppConversation {
   // unchanged).
   assignedTo     AdminUser? @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
   assignedToId   String?
+  // The WhatsApp LLM agent (lib/whatsapp/aiAgent.ts) auto-replies to a new
+  // inbound message on this thread only while this stays true. Flips to
+  // false the moment the agent itself decides to hand off (the customer
+  // asked for a human — see the escalate_to_human tool) OR a real staff
+  // member sends a manual reply from Bandeja (never let the agent talk
+  // over someone who already jumped in). Defaults true so newly-created
+  // conversations get an answer immediately, per how this was scoped —
+  // "automático a todo mensaje nuevo" — not opt-in per thread.
+  aiAutoReplyEnabled Boolean @default(true)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
@@ -788,6 +797,12 @@ model WhatsAppMessage {
   deliveredAt    DateTime?
   readAt         DateTime?
   createdAt      DateTime                 @default(now())
+  // Marks an OUTBOUND FREEFORM message as written by the LLM agent
+  // instead of a staff member — purely for the Bandeja thread UI (a
+  // small "IA" badge, so staff can tell at a glance what came from the
+  // bot vs. a human) and internal audit. Never shown to the customer —
+  // WhatsApp has no concept of this, it's an admin-only distinction.
+  generatedByAi  Boolean                  @default(false)
 
   @@index([conversationId, createdAt])
   @@index([broadcastId, status])
