@@ -3,6 +3,8 @@ import { resolveSegment, type SegmentFilter } from "@/lib/segments/builder";
 import { WHATSAPP_MERGE_TAGS } from "@/lib/whatsapp/mergeTags";
 import { getBroadcastStats } from "@/lib/whatsapp/broadcasts";
 import { whatsappProvider } from "@/lib/whatsapp";
+import { getOrgSettings } from "@/lib/settings";
+import { formatDateInTz } from "@/lib/dateFormat";
 import WhatsAppBroadcastComposer from "@/components/WhatsAppBroadcastComposer";
 import WhatsAppBroadcastRowActions from "@/components/WhatsAppBroadcastRowActions";
 import CrmPageHeader from "../../CrmPageHeader";
@@ -33,7 +35,7 @@ function Bar({ label, count, total, color }: { label: string; count: number; tot
 }
 
 export default async function WhatsAppDifusionesPage() {
-  const [segmentRows, templates, broadcasts, connection] = await Promise.all([
+  const [segmentRows, templates, broadcasts, connection, orgSettings] = await Promise.all([
     db.segmentDefinition.findMany({ orderBy: { createdAt: "desc" } }),
     db.whatsAppTemplate.findMany({ orderBy: { name: "asc" } }),
     db.whatsAppBroadcast.findMany({
@@ -42,6 +44,7 @@ export default async function WhatsAppDifusionesPage() {
       include: { segment: true, template: true, _count: { select: { messages: true } } },
     }),
     db.whatsAppConnection.findFirst({ orderBy: { createdAt: "desc" } }),
+    getOrgSettings(),
   ]);
 
   const segments = await Promise.all(
@@ -59,7 +62,13 @@ export default async function WhatsAppDifusionesPage() {
     <div>
       <CrmPageHeader title="Difusiones" subtitle="Envía una plantilla aprobada a un segmento ya guardado." />
 
-      <WhatsAppBroadcastComposer segments={segments} templates={templates} mergeTags={WHATSAPP_MERGE_TAGS} messagingLimitTier={messagingLimitTier} />
+      <WhatsAppBroadcastComposer
+        segments={segments}
+        templates={templates}
+        mergeTags={WHATSAPP_MERGE_TAGS}
+        messagingLimitTier={messagingLimitTier}
+        orgTimezone={orgSettings.timezone}
+      />
 
       <h2 style={{ fontSize: 16, marginTop: 40 }}>Historial</h2>
       <div className="admin-table-wrap" style={{ border: "1px solid #e3e1dc", borderRadius: 10 }}>
@@ -94,7 +103,15 @@ export default async function WhatsAppDifusionesPage() {
                         <Bar label="Fallidos" count={s.failed} total={s.processed} color="#c2185b" />
                       </div>
                     ) : b.status === "QUEUED" && b.scheduledAt ? (
-                      <span style={{ color: "#2f4ba8" }}>Programado para {new Date(b.scheduledAt).toLocaleString("es-CO")}</span>
+                      <span style={{ color: "#2f4ba8" }}>
+                        Programado para{" "}
+                        {formatDateInTz(
+                          b.scheduledAt,
+                          { dateStyle: "short", timeStyle: "short" },
+                          orgSettings.timezone,
+                          orgSettings.language
+                        )}
+                      </span>
                     ) : (
                       <span style={{ color: "#8a8478" }}>—</span>
                     )}

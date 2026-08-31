@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { zonedTimeToUtc, formatDateInTz } from "@/lib/dateFormat";
 
 interface EligibilityPreview {
   total: number;
@@ -41,6 +42,14 @@ interface Props {
    * only (WhatChimp's own "Daily WABA conversation limit"); the app
    * doesn't enforce it client-side, Meta itself rejects sends past it. */
   messagingLimitTier?: string | null;
+  /** OrgSettings' configured timezone (America/Bogota by default) — the
+   * "Fecha y hora" <input type="datetime-local"> below has to be read
+   * against THIS timezone, not whatever the browser's own is. Same
+   * reasoning as EventForm.tsx's zonedTimeToUtc: an admin scheduling
+   * from outside Colombia (or a server misconfigured to a different TZ)
+   * must never have "programar para las 10am" silently mean something
+   * else because their laptop's clock is set to a different zone. */
+  orgTimezone: string;
 }
 
 // Same "pick an existing named segment, never a one-off filter" posture
@@ -48,7 +57,7 @@ interface Props {
 // The one real difference from email: no free-text body — a WhatsApp
 // broadcast MUST use a pre-approved template, so this maps merge tags
 // onto the template's {{1}}, {{2}}, ... variables instead of writing copy.
-export default function WhatsAppBroadcastComposer({ segments, templates, mergeTags, messagingLimitTier }: Props) {
+export default function WhatsAppBroadcastComposer({ segments, templates, mergeTags, messagingLimitTier, orgTimezone }: Props) {
   const router = useRouter();
   const approvedTemplates = templates.filter((t) => t.status === "APPROVED");
   const [segmentId, setSegmentId] = useState(segments[0]?.id ?? "");
@@ -115,6 +124,14 @@ export default function WhatsAppBroadcastComposer({ segments, templates, mergeTa
       return;
     }
 
+    // Read the datetime-local value against the ORG's configured
+    // timezone, not the browser's own — an admin scheduling from
+    // outside Colombia (or any mismatch between their machine's clock
+    // and America/Bogota) must never have "programar para las 10am"
+    // silently become a different real instant. Same helper EventForm.tsx
+    // already uses for the same reason.
+    const scheduledAtUtc = scheduleKind === "AT_DATETIME" ? zonedTimeToUtc(scheduledAtLocal, orgTimezone) : null;
+
     setSending(true);
     const res = await fetch("/api/admin/whatsapp/broadcasts", {
       method: "POST",
@@ -125,7 +142,7 @@ export default function WhatsAppBroadcastComposer({ segments, templates, mergeTa
         variableMapping: mapping,
         assignLabelName: assignLabelName || undefined,
         scheduleKind,
-        scheduledAt: scheduleKind === "AT_DATETIME" ? new Date(scheduledAtLocal).toISOString() : undefined,
+        scheduledAt: scheduledAtUtc ? scheduledAtUtc.toISOString() : undefined,
       }),
     });
     const body = await res.json();
@@ -136,7 +153,8 @@ export default function WhatsAppBroadcastComposer({ segments, templates, mergeTa
       } else if (body.scheduleWarning) {
         setResult(body.scheduleWarning);
       } else {
-        setResult(`Programada para ${new Date(scheduledAtLocal).toLocaleString("es-CO")} — se enviará sola, exactamente a esa hora, no hace falta dejar esta pantalla abierta.`);
+        const when = scheduledAtUtc ? formatDateInTz(scheduledAtUtc, { dateStyle: "short", timeStyle: "short" }, orgTimezone, "es") : "";
+        setResult(`Programada para ${when} — se enviará sola, exactamente a esa hora, no hace falta dejar esta pantalla abierta.`);
       }
       setAssignLabelName("");
       setScheduleKind("IMMEDIATE");
