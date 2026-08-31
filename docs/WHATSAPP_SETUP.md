@@ -68,10 +68,14 @@ Moving off WhatChimp to a direct Cloud API connection:
   submitting `RegistrationForm.tsx`, same as `MARKETING`/`ADVERTISING`) —
   nothing backfills it retroactively for people who registered or were
   CSV-imported before this module existed, by design (Ley 1581 — you
-  can't silently opt someone into a channel they never agreed to). The
-  history table shows real Processed/Delivered/Read/Failed bars per
-  broadcast (from the same message-status data the webhook keeps
-  current) plus a "Reintentar fallidos" action and delete.
+  can't silently opt someone into a channel they never agreed to). Can be
+  sent immediately or scheduled for an exact future date/time (via
+  QStash — see "Envíos programados con precisión" below); the history
+  table shows real Processed/Delivered/Read/Failed bars per broadcast
+  (from the same message-status data the webhook keeps current), or
+  "Programado para: [fecha]" while a scheduled one is still waiting, plus
+  a "Reintentar fallidos" action and delete (also cancels a still-pending
+  scheduled send).
 - **Bandeja** (`/admin/crm/whatsapp/bandeja`) — inbox: a thread per phone
   number, matched to a CRM `Person` by phone when possible (last-10-digit
   match, so it's tolerant of the leading `+`/country code either way).
@@ -163,6 +167,50 @@ Moving off WhatChimp to a direct Cloud API connection:
    business number from your own phone and confirm it shows up in
    Bandeja — that's the one test that actually proves the webhook is
    wired correctly, not just "Verified" in Meta's dashboard.
+
+## Envíos programados con precisión (QStash)
+
+Difusiones' "A una fecha y hora programada" needs one more thing to fire
+at the *exact* minute you pick — without it, a scheduled broadcast still
+works, just up to ~24h late.
+
+**Why:** this app's own daily cron (`/api/whatsapp/send-due`,
+`vercel.json`) is a Vercel **Hobby plan** constraint — cron jobs on that
+tier can only run once a day, so "programar para las 3pm" could
+otherwise mean anywhere from 3pm to 3pm the next day. [Upstash
+QStash](https://upstash.com/docs/qstash) fixes this properly instead of
+just polling more often: you publish ONE message scheduled for an exact
+unix timestamp, and QStash calls this app back at that moment — no
+Vercel plan upgrade needed, since it's this app making an outbound HTTP
+call to QStash, not a Vercel-side cron running more frequently. The
+daily cron stays in place as a fallback (in case QStash isn't configured
+yet, or a publish call fails) — scheduling never *silently* degrades:
+if the exact-time schedule fails to set up, the composer shows a clear
+warning right there instead of pretending it worked.
+
+**Setup:**
+1. Create a free account at [console.upstash.com](https://console.upstash.com)
+   and open the **QStash** tab.
+2. Copy three values from there: **QSTASH_TOKEN** (top of the QStash
+   page), and under **Signing Keys**: **Current signing key** and **Next
+   signing key**.
+3. Add all three as environment variables in Vercel → your project →
+   Settings → Environment Variables:
+   - `QSTASH_TOKEN`
+   - `QSTASH_CURRENT_SIGNING_KEY`
+   - `QSTASH_NEXT_SIGNING_KEY`
+4. **Redeploy** (same gotcha as `META_APP_SECRET` earlier — a Vercel env
+   var change doesn't touch an already-running deployment).
+5. Schedule a test Difusión a few minutes out and confirm it actually
+   sends at that time, not just "eventually." If the composer shows "No
+   se pudo programar la hora exacta" after saving the three env vars
+   correctly, double check they were pasted into the right Vercel
+   environment (Production vs Preview) and that step 4's redeploy
+   actually happened.
+
+Nothing else in the app depends on QStash — Conexión, Plantillas,
+Bandeja and an *immediate* Difusión all work exactly the same with or
+without it configured.
 
 ## First real send
 

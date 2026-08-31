@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth/guard";
 import { sendWhatsAppBroadcast } from "@/lib/whatsapp/broadcasts";
 import { getOrCreateLabel } from "@/lib/labels";
+import { scheduleWhatsAppBroadcastSend } from "@/lib/qstash";
 
 // Segment-only, same scope as /api/broadcasts (email's own general CRM
 // broadcast route) — an event-scoped WhatsApp send (like
@@ -61,16 +62,31 @@ export async function POST(req: NextRequest) {
       assignLabelId: assignLabel?.id ?? null,
       scheduleKind,
       scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
-      // A scheduled one waits for /api/whatsapp/send-due (the daily
-      // cron) to pick it up — same QUEUED/SENDING split as the
-      // event-scoped email broadcasts (/api/admin/events/[id]/
-      // broadcasts), just never actually sent from inside this request.
+      // A scheduled one waits for QStash's exact-time callback (see
+      // lib/qstash.ts) — the daily /api/whatsapp/send-due cron only
+      // covers it as a fallback if that fails to get scheduled below.
+      // Same QUEUED/SENDING split as the event-scoped email broadcasts.
       status: scheduleKind === "IMMEDIATE" ? "SENDING" : "QUEUED",
     },
   });
 
   if (scheduleKind !== "IMMEDIATE") {
-    return NextResponse.json({ ok: true, broadcastId: broadcast.id, sentNow: false });
+    const qstashMessageId = await scheduleWhatsAppBroadcastSend(broadcast.id, new Date(scheduledAt!));
+    if (qstashMessageId) {
+      await db.whatsAppBroadcast.update({ where: { id: broadcast.id }, data: { qstashMessageId } });
+    }
+    return NextResponse.json({
+      ok: true,
+      broadcastId: broadcast.id,
+      sentNow: false,
+      // Surfaced by the composer as a warning — the broadcast still
+      // exists and will still go out (the daily cron is a real
+      // fallback, not a silent failure), just not at the exact minute
+      // requested if QStash didn't get configured/reachable.
+      scheduleWarning: qstashMessageId
+        ? null
+        : "No se pudo programar la hora exacta (revisa la configuración de QStash) — de todas formas saldrá dentro de las próximas 24h por el envío de respaldo diario.",
+    });
   }
 
   try {

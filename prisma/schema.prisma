@@ -674,6 +674,17 @@ model WhatsAppBroadcast {
   scheduleKind BroadcastScheduleKind @default(IMMEDIATE)
   scheduledAt  DateTime?
   scheduleOffsetMinutes Int?
+  // Set when an AT_DATETIME broadcast got a QStash message scheduled for
+  // its exact scheduledAt (see lib/qstash.ts) — the daily
+  // /api/whatsapp/send-due cron alone can be up to ~24h late (Vercel
+  // Hobby plan's cron frequency cap), which isn't "programar para una
+  // hora precisa" at all. Null either means IMMEDIATE/not yet scheduled,
+  // or QStash wasn't configured/reachable when this was created (the
+  // composer surfaces that as a warning) — either way the daily cron
+  // still covers it as a fallback, just without the precise timing.
+  // Used to cancel the pending QStash message if this broadcast gets
+  // deleted before it fires.
+  qstashMessageId String?
   createdAt    DateTime              @default(now())
   sentAt       DateTime?
 

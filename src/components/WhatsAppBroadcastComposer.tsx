@@ -133,8 +133,10 @@ export default function WhatsAppBroadcastComposer({ segments, templates, mergeTa
     if (res.ok) {
       if (body.sentNow) {
         setResult(body.failed > 0 ? `Enviado — ${body.sent} entregados, ${body.failed} fallidos.` : `Enviado a los ${body.sent} contactos elegibles.`);
+      } else if (body.scheduleWarning) {
+        setResult(body.scheduleWarning);
       } else {
-        setResult(`Programada para ${new Date(scheduledAtLocal).toLocaleString("es-CO")} — se enviará sola, no hace falta dejar esta pantalla abierta.`);
+        setResult(`Programada para ${new Date(scheduledAtLocal).toLocaleString("es-CO")} — se enviará sola, exactamente a esa hora, no hace falta dejar esta pantalla abierta.`);
       }
       setAssignLabelName("");
       setScheduleKind("IMMEDIATE");
@@ -262,7 +264,8 @@ export default function WhatsAppBroadcastComposer({ segments, templates, mergeTa
             required
           />
           <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>
-            Se revisa una vez al día — el envío puede salir hasta ~24h después de la hora elegida, no al minuto exacto.
+            Sale exactamente a esa hora. Si algo falla al programarlo verás un aviso acá abajo — igual queda
+            asegurado un envío de respaldo dentro de las siguientes 24h.
           </p>
         </div>
       )}
