@@ -234,11 +234,10 @@ export default function EventRegistration({
         <aside className="event-page-sidebar">
           <div className="event-page-sidebar-card">
             <h2>{eventName}</h2>
-            {eventWhen && (
-              <p className="event-page-sidebar-meta">
-                <CalendarIcon /> {eventWhen}
-              </p>
-            )}
+            {/* Fecha/hora deliberadamente NO se repite aquí — ya está
+                arriba del todo, en el header de la página (ver
+                [eventSlug]/page.tsx), y quedaba redundante en esta
+                tarjeta. La tarjeta mantiene el lugar + el CTA. */}
             {eventVenue && (
               <p className="event-page-sidebar-meta">
                 <PinIcon /> {eventVenue}
@@ -565,18 +564,9 @@ export default function EventRegistration({
   );
 }
 
-// Small line icons for the sidebar info card's date/venue rows — same
-// inline-SVG style already used above for the resumen step's envelope and
-// Instagram icons, not emoji, to match the app's established look there.
-function CalendarIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" style={{ width: 15, height: 15, flex: "0 0 auto" }}>
-      <rect x="3" y="4.5" width="18" height="16" rx="2.5" />
-      <path d="M3 9.5h18M8 2.5v4M16 2.5v4" />
-    </svg>
-  );
-}
-
+// Small line icon for the sidebar info card's venue row — same inline-SVG
+// style already used above for the resumen step's envelope and Instagram
+// icons, not emoji, to match the app's established look there.
 function PinIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" style={{ width: 15, height: 15, flex: "0 0 auto" }}>
