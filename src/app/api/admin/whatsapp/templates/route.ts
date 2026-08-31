@@ -5,7 +5,7 @@ import { createAndSubmitTemplate, TemplateValidationError } from "@/lib/whatsapp
 
 const buttonSchema = z.union([
   z.object({ type: z.literal("QUICK_REPLY"), text: z.string().min(1) }),
-  z.object({ type: z.literal("URL"), text: z.string().min(1), url: z.string().url() }),
+  z.object({ type: z.literal("URL"), text: z.string().min(1), url: z.string().url(), urlExample: z.string().min(1).optional() }),
   z.object({ type: z.literal("PHONE_NUMBER"), text: z.string().min(1), phoneNumber: z.string().min(1) }),
 ]);
 

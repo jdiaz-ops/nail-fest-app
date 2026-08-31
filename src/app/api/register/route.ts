@@ -7,6 +7,7 @@ import { pushNewRegistrantToEventAudiences } from "@/lib/meta/audiences";
 import { recordConsents, hasActiveConsent } from "@/lib/consent";
 import { issueQrToken } from "@/lib/ticket";
 import { sendTicketEmail } from "@/lib/sendTicketEmail";
+import { sendTicketLinkViaWhatsApp } from "@/lib/whatsapp/sendTicketLink";
 import { clientIpFromHeaders, userAgentFromHeaders } from "@/lib/request";
 import { splitName } from "@/lib/name";
 import { getOrgSettings } from "@/lib/settings";
@@ -305,6 +306,13 @@ export async function POST(req: NextRequest) {
     qrToken,
     registration: { id: registration.id, ticketTypeId: registration.ticketTypeId, ticketCount: registration.ticketCount },
   });
+
+  // --- Ticket link over WhatsApp, gated by the WHATSAPP consent — an
+  // extra channel on top of the email above, never a replacement for it.
+  // No-op until an admin turns it on (OrgSettings.
+  // ticketLinkWhatsAppTemplateId); never fails the registration itself,
+  // same swallow-and-log posture as sendTicketEmail. ---
+  await sendTicketLinkViaWhatsApp({ person, event, qrToken });
 
   // --- Purchase → Meta CAPI, gated by the ADVERTISING consent, not just
   // "did they register". Sharing hashed identifiers with Meta is a distinct

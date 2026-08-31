@@ -16,6 +16,13 @@ export interface WhatsAppTemplateMessage {
   languageCode: string; // e.g. "es" — must match the approved template's language exactly
   /** Positional {{1}}, {{2}}, ... body variables, in order. */
   variables: string[];
+  /** The per-recipient value for a dynamic URL button's own {{1}} suffix
+   * (e.g. a qrToken) — only meaningful when the template's one button is
+   * a URL button whose `url` ends in "{{1}}" (see WhatsAppTemplateButton
+   * below). Assumes that button is the template's first (and only) one —
+   * true for every template this app creates today. Omit for a template
+   * with no dynamic button. */
+  buttonUrlParam?: string;
 }
 
 export interface WhatsAppFreeformMessage {
@@ -36,11 +43,17 @@ export interface WhatsAppDocumentMessage {
   caption?: string;
 }
 
-// Meta's real button component shapes — static only (no dynamic URL
-// suffix parameter), which is all this app's templates need.
+// Meta's real button component shapes. A URL button can be dynamic — its
+// `url` ends in a literal "{{1}}" placeholder, filled per-recipient at
+// send time (WhatsAppTemplateMessage.buttonUrlParam) the same way Meta's
+// own examples do it (e.g. LATAM Airlines' "Ver tarjeta de embarque"
+// button, one link per passenger) — `urlExample` is the one real value
+// Meta requires at template-creation time to review a dynamic button, same
+// role as CreateWhatsAppTemplateInput.bodyExamples for a body variable.
+// Undefined `urlExample` means a plain static URL, same as before.
 export type WhatsAppTemplateButton =
   | { type: "QUICK_REPLY"; text: string }
-  | { type: "URL"; text: string; url: string }
+  | { type: "URL"; text: string; url: string; urlExample?: string }
   | { type: "PHONE_NUMBER"; text: string; phoneNumber: string };
 
 /** What Meta's own template list API returns per template — see

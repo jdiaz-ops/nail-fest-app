@@ -85,6 +85,14 @@ function assertValidTemplateInput(input: CreateWhatsAppTemplateInput): void {
     if (hasCta && input.buttons.length > 2) {
       throw new TemplateValidationError("Máximo 2 botones de acción (uno de URL y uno de llamar).");
     }
+    // A dynamic URL button (its url ends in "{{1}}") needs a real example
+    // value before Meta will even queue it for review — same requirement
+    // as a body variable's example, see bodyExamples above.
+    for (const b of input.buttons) {
+      if (b.type === "URL" && /\{\{\d+\}\}/.test(b.url) && !b.urlExample?.trim()) {
+        throw new TemplateValidationError("El botón de enlace dinámico necesita un ejemplo del enlace completo.");
+      }
+    }
   }
 }
 

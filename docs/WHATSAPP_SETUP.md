@@ -42,15 +42,42 @@ Moving off WhatChimp to a direct Cloud API connection:
   (name, language, category, optional text header, body with
   `{{1}}`/`{{2}}`/... variables + required examples, optional footer,
   optional buttons — either up to 3 quick replies, or a URL button and/or
-  a call button) and it's submitted straight to Meta for review, same as
-  using the WhatsApp Manager directly — MARKETING and UTILITY only
-  (AUTHENTICATION has a fixed OTP-only shape Meta enforces, not built
-  here; create one of those directly in Meta if you need it; a media
-  header — image/video/document — also isn't built, text header only).
-  Mirrors what's in Meta either way — "Sincronizar" pulls in anything
-  created in Meta's own WhatsApp Manager, and is what picks up a PENDING
-  → APPROVED/REJECTED transition after review (no webhook for that here;
-  re-sync to see the current status).
+  a call button, where the URL button can be marked "el enlace es
+  distinto para cada persona" so it ends in a `{{1}}` filled per-recipient
+  at send time, plus a real example so Meta will review it) and it's
+  submitted straight to Meta for review, same as using the WhatsApp
+  Manager directly — MARKETING and UTILITY only (AUTHENTICATION has a
+  fixed OTP-only shape Meta enforces, not built here; create one of those
+  directly in Meta if you need it; a media header — image/video/document
+  — also isn't built, text header only). Mirrors what's in Meta either
+  way — "Sincronizar" pulls in anything created in Meta's own WhatsApp
+  Manager, and is what picks up a PENDING → APPROVED/REJECTED transition
+  after review (no webhook for that here; re-sync to see the current
+  status).
+- **Enlace de la entrada al registrarse** — a small on/off setting at the
+  top of Plantillas: pick an APPROVED template with a dynamic URL button
+  and every new registration (and resend) gets it sent automatically,
+  right after the confirmation email — same UTILITY-category, "your own
+  link, not the same as everyone else's" pattern as an airline's WhatsApp
+  boarding-pass message (see the commit this feature shipped with for
+  the real example it's modeled on). The button's `{{1}}` gets filled
+  with that registration's own `qrToken`, so it opens the same
+  `/api/ticket-pdf/[token]` link `sendTicketPdfViaWhatsApp` (Bandeja's
+  "Reenviar PDF por WhatsApp") already uses — the difference is this one
+  works outside the 24h customer-service window, because it's a template
+  send, not a freeform document. Gated by the `WHATSAPP` consent, same as
+  everything else here; never a replacement for the email ticket, an
+  extra channel on top of it (`lib/whatsapp/sendTicketLink.ts`, called
+  from `/api/register`). Off by default (`OrgSettings.
+  ticketLinkWhatsAppTemplateId` is null) — nothing sends until you pick a
+  template. A **plantilla sugerida** to submit for review: body `Hola
+  {{1}}, tu entrada para {{2}} ya está lista. Tócala abajo para verla.`
+  (examples: `Maria`, `Nail Fest Bogotá`), footer `Nail Fest`, one URL
+  button `Ver mi entrada` → `https://<tu-dominio>/api/ticket-pdf/{{1}}`
+  (example: any real ticket link) — the body's two variables are a fixed
+  convention (`{{1}}` = nombre, `{{2}}` = nombre del evento), not a
+  configurable mapping, since this isn't a Difusión with its own
+  variable-mapping UI.
 - **Difusiones** (`/admin/crm/whatsapp/difusiones`) — sends an approved
   template to an existing, named segment (same segment engine as email
   broadcasts — `resolveSegment()`, including a `label` condition — see
@@ -292,10 +319,14 @@ Graph API payload shape.
   not its automation builder — a deliberate scope call, not an oversight.
   See the commit this note shipped with for the full reasoning.
 - **Media template headers** (image/video/document) — text header only.
-- **Dynamic header/button variables at send time** — `meta.ts`'s
-  `sendTemplate` only fills BODY `{{n}}` variables; a template whose
-  header or URL button itself has a `{{1}}` would need `components`
-  extended to cover those too (this app's own templates don't need one).
+- **Dynamic header variables at send time** — `meta.ts`'s `sendTemplate`
+  fills BODY `{{n}}` variables and, since "Enlace de la entrada al
+  registrarse" below, a single dynamic URL button's `{{1}}` — a template
+  whose TEXT header itself has a `{{1}}` would need `components` extended
+  further to cover that too (not built; this app's templates don't need
+  one). Multiple dynamic buttons on one template also aren't supported —
+  `sendTemplate` assumes the dynamic one is the template's first (and
+  only) button.
 - **Media messages** (images, PDFs, voice notes) in either direction —
   text only, both inbound and outbound.
 - **Translation and canned/saved replies** in the inbox composer.

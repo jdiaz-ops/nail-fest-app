@@ -23,6 +23,7 @@ interface WhatsAppTemplateButtonInput {
   type: "QUICK_REPLY" | "URL" | "PHONE_NUMBER";
   text: string;
   url?: string;
+  urlExample?: string;
   phoneNumber?: string;
 }
 
@@ -41,6 +42,8 @@ export default function WhatsAppTemplateCreateForm() {
   const [ctaUrlEnabled, setCtaUrlEnabled] = useState(false);
   const [ctaUrlText, setCtaUrlText] = useState("");
   const [ctaUrlValue, setCtaUrlValue] = useState("");
+  const [ctaUrlDynamic, setCtaUrlDynamic] = useState(false);
+  const [ctaUrlExample, setCtaUrlExample] = useState("");
   const [ctaPhoneEnabled, setCtaPhoneEnabled] = useState(false);
   const [ctaPhoneText, setCtaPhoneText] = useState("");
   const [ctaPhoneValue, setCtaPhoneValue] = useState("");
@@ -55,7 +58,14 @@ export default function WhatsAppTemplateCreateForm() {
     }
     if (buttonMode === "cta") {
       const buttons: WhatsAppTemplateButtonInput[] = [];
-      if (ctaUrlEnabled && ctaUrlText && ctaUrlValue) buttons.push({ type: "URL", text: ctaUrlText, url: ctaUrlValue });
+      if (ctaUrlEnabled && ctaUrlText && ctaUrlValue) {
+        buttons.push({
+          type: "URL",
+          text: ctaUrlText,
+          url: ctaUrlValue,
+          ...(ctaUrlDynamic && ctaUrlExample ? { urlExample: ctaUrlExample } : {}),
+        });
+      }
       if (ctaPhoneEnabled && ctaPhoneText && ctaPhoneValue) buttons.push({ type: "PHONE_NUMBER", text: ctaPhoneText, phoneNumber: ctaPhoneValue });
       return buttons;
     }
@@ -95,6 +105,8 @@ export default function WhatsAppTemplateCreateForm() {
       setCtaUrlEnabled(false);
       setCtaUrlText("");
       setCtaUrlValue("");
+      setCtaUrlDynamic(false);
+      setCtaUrlExample("");
       setCtaPhoneEnabled(false);
       setCtaPhoneText("");
       setCtaPhoneValue("");
@@ -245,9 +257,34 @@ export default function WhatsAppTemplateCreateForm() {
                 Botón de enlace
               </label>
               {ctaUrlEnabled && (
-                <div style={{ display: "flex", gap: 8 }}>
-                  <input value={ctaUrlText} onChange={(e) => setCtaUrlText(e.target.value)} placeholder="Ver evento" style={{ flex: 1 }} />
-                  <input value={ctaUrlValue} onChange={(e) => setCtaUrlValue(e.target.value)} placeholder="https://nailfest.co/..." style={{ flex: 2 }} />
+                <div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <input value={ctaUrlText} onChange={(e) => setCtaUrlText(e.target.value)} placeholder="Ver evento" style={{ flex: 1 }} />
+                    <input
+                      value={ctaUrlValue}
+                      onChange={(e) => setCtaUrlValue(e.target.value)}
+                      placeholder={ctaUrlDynamic ? "https://nailfest.co/api/ticket-pdf/{{1}}" : "https://nailfest.co/..."}
+                      style={{ flex: 2 }}
+                    />
+                  </div>
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 400, cursor: "pointer", marginTop: 8 }}>
+                    <input type="checkbox" checked={ctaUrlDynamic} onChange={(e) => setCtaUrlDynamic(e.target.checked)} />
+                    El enlace es distinto para cada persona (termina en {"{{1}}"}, ej. su propia entrada)
+                  </label>
+                  {ctaUrlDynamic && (
+                    <div className="field" style={{ marginTop: 6 }}>
+                      <label htmlFor="ctaUrlExample" style={{ fontSize: 12 }}>
+                        Ejemplo de enlace completo (obligatorio para que Meta la revise)
+                      </label>
+                      <input
+                        id="ctaUrlExample"
+                        value={ctaUrlExample}
+                        onChange={(e) => setCtaUrlExample(e.target.value)}
+                        placeholder="https://nailfest.co/api/ticket-pdf/abc123"
+                        required
+                      />
+                    </div>
+                  )}
                 </div>
               )}
             </div>

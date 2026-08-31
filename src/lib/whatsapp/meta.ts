@@ -45,6 +45,26 @@ async function graphFetch(path: string, token: string, init?: RequestInit) {
 
 async function sendTemplate(input: WhatsAppTemplateMessage): Promise<{ providerMessageId: string }> {
   const conn = await getWhatsAppConnection();
+  // Meta requires one "components" entry per template part that actually
+  // has a variable to fill — a static header/footer/buttons don't need
+  // one. This app's templates put variables in the BODY (see
+  // WhatsAppBroadcast.variableMapping's own comment) and, for the one
+  // dynamic-URL-button case (buttonUrlParam), in that button — never in
+  // the header, which stays unbuilt (see provider.ts's own comment).
+  const components: Record<string, unknown>[] = [];
+  if (input.variables.length > 0) {
+    components.push({ type: "body", parameters: input.variables.map((text) => ({ type: "text", text })) });
+  }
+  if (input.buttonUrlParam) {
+    // sub_type "url" + index "0" — assumes the dynamic button is the
+    // template's first (and only) one, see buttonUrlParam's own comment.
+    components.push({
+      type: "button",
+      sub_type: "url",
+      index: "0",
+      parameters: [{ type: "text", text: input.buttonUrlParam }],
+    });
+  }
   const json = await graphFetch(`${conn.phoneNumberId}/messages`, conn.token, {
     method: "POST",
     body: JSON.stringify({
@@ -54,17 +74,7 @@ async function sendTemplate(input: WhatsAppTemplateMessage): Promise<{ providerM
       template: {
         name: input.templateName,
         language: { code: input.languageCode },
-        // Meta requires one "components" entry per template part that
-        // actually has variables — this app's templates only ever put
-        // variables in the BODY (see WhatsAppBroadcast.variableMapping's
-        // own comment), never in the header/buttons, so this stays just
-        // the one component regardless of whether the template also has
-        // a static header/footer/buttons — those don't need a components
-        // entry at send time unless THEY have a variable too.
-        components:
-          input.variables.length > 0
-            ? [{ type: "body", parameters: input.variables.map((text) => ({ type: "text", text })) }]
-            : [],
+        components,
       },
     }),
   });
@@ -129,12 +139,23 @@ interface RawTemplateComponent {
   type: string;
   format?: string;
   text?: string;
-  buttons?: { type: string; text: string; url?: string; phone_number?: string }[];
+  buttons?: { type: string; text: string; url?: string; phone_number?: string; example?: string[] }[];
 }
 
-function mapRemoteButton(raw: { type: string; text: string; url?: string; phone_number?: string }): WhatsAppTemplateButton | null {
+function mapRemoteButton(raw: {
+  type: string;
+  text: string;
+  url?: string;
+  phone_number?: string;
+  example?: string[];
+}): WhatsAppTemplateButton | null {
   if (raw.type === "QUICK_REPLY") return { type: "QUICK_REPLY", text: raw.text };
-  if (raw.type === "URL" && raw.url) return { type: "URL", text: raw.text, url: raw.url };
+  // A dynamic URL button's `url` comes back from Meta with the literal
+  // "{{1}}" still in it, and its own `example` alongside — carried
+  // through as urlExample so a template created directly in Meta's
+  // WhatsApp Manager (then pulled in via "Sincronizar") is just as usable
+  // here as one this app created itself.
+  if (raw.type === "URL" && raw.url) return { type: "URL", text: raw.text, url: raw.url, urlExample: raw.example?.[0] };
   if (raw.type === "PHONE_NUMBER" && raw.phone_number) return { type: "PHONE_NUMBER", text: raw.text, phoneNumber: raw.phone_number };
   return null; // an unsupported button type (e.g. COPY_CODE/OTP-only ones) — dropped, not built
 }
@@ -182,7 +203,13 @@ function toGraphPhone(e164: string): string {
 }
 
 function buttonToPayload(btn: WhatsAppTemplateButton): Record<string, unknown> {
-  if (btn.type === "URL") return { type: "URL", text: btn.text, url: btn.url };
+  if (btn.type === "URL") {
+    // Meta wants the example as an array (same shape as a BODY
+    // component's `example.body_text`) even though a URL button can only
+    // ever carry the one {{1}} suffix — required for Meta to review a
+    // dynamic button at all, omitted entirely for a plain static URL.
+    return { type: "URL", text: btn.text, url: btn.url, ...(btn.urlExample ? { example: [btn.urlExample] } : {}) };
+  }
   if (btn.type === "PHONE_NUMBER") return { type: "PHONE_NUMBER", text: btn.text, phone_number: btn.phoneNumber };
   return { type: "QUICK_REPLY", text: btn.text };
 }
