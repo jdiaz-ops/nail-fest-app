@@ -23,6 +23,7 @@ export default function WhatsAppReplyBox({ conversationId, windowOpen }: { conve
     if (res.ok) {
       setText("");
       router.refresh();
+      window.dispatchEvent(new Event("whatsapp-inbox-refresh"));
     } else {
       const body = await res.json().catch(() => ({}));
       setError(body?.message ?? "No se pudo enviar.");

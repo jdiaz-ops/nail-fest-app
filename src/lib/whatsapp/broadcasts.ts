@@ -80,6 +80,35 @@ async function sendOneTemplateMessage(
   }
 }
 
+/** Same eligibility rules sendWhatsAppBroadcast enforces (consent, then
+ * phone), computed ahead of time so the composer can show the real
+ * breakdown BEFORE the send happens instead of only after — a segment
+ * can look like "12 personas" and still only reach 3 of them; finding
+ * that out after clicking Enviar is a bad surprise. Never sends
+ * anything itself. */
+export async function previewSegmentRecipients(
+  segmentId: string
+): Promise<{ total: number; eligible: number; noConsent: number; noPhone: number }> {
+  const segment = await db.segmentDefinition.findUniqueOrThrow({ where: { id: segmentId } });
+  const people = await resolveSegment(segment.filter as unknown as SegmentFilter);
+
+  let eligible = 0;
+  let noConsent = 0;
+  let noPhone = 0;
+  for (const person of people) {
+    if (!person.phone) {
+      noPhone++;
+      continue;
+    }
+    if (!(await hasActiveConsent(person.id, "WHATSAPP"))) {
+      noConsent++;
+      continue;
+    }
+    eligible++;
+  }
+  return { total: people.length, eligible, noConsent, noPhone };
+}
+
 export async function sendWhatsAppBroadcast(
   broadcastId: string
 ): Promise<{ sent: number; skippedNoConsent: number; skippedNoPhone: number; failed: number }> {

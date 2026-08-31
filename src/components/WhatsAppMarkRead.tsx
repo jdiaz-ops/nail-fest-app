@@ -7,7 +7,9 @@ import { useEffect } from "react";
 // this, so it's a tiny client component instead. Renders nothing.
 export default function WhatsAppMarkRead({ conversationId }: { conversationId: string }) {
   useEffect(() => {
-    fetch(`/api/admin/whatsapp/conversations/${conversationId}/read`, { method: "POST" }).catch(() => null);
+    fetch(`/api/admin/whatsapp/conversations/${conversationId}/read`, { method: "POST" })
+      .then(() => window.dispatchEvent(new Event("whatsapp-inbox-refresh")))
+      .catch(() => null);
   }, [conversationId]);
   return null;
 }

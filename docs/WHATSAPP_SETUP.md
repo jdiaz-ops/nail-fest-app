@@ -58,22 +58,39 @@ Moving off WhatChimp to a direct Cloud API connection:
   `{{1}}`, `{{2}}`, ... variables, a live text preview, and an optional
   "etiquetar a quien reciba esta difusión" so you can exclude that batch
   from a future round. Only sends to people with an active `WHATSAPP`
-  consent AND a phone number on file. The history table shows real
-  Processed/Delivered/Read/Failed bars per broadcast (from the same
-  message-status data the webhook keeps current) plus a "Reintentar
-  fallidos" action and delete.
+  consent AND a phone number on file — and the composer shows exactly who
+  that will and won't include BEFORE you send it (`previewSegmentRecipients`
+  in `lib/whatsapp/broadcasts.ts`, via `/api/admin/whatsapp/broadcasts/preview`):
+  "Le llegará a X de Y personas (Z sin consentimiento de WhatsApp, W sin
+  celular)", not just after the fact. Note this is a common surprise the
+  first time you use it on an older/imported contact list: `WHATSAPP`
+  consent is only ever granted at registration time (implicit in
+  submitting `RegistrationForm.tsx`, same as `MARKETING`/`ADVERTISING`) —
+  nothing backfills it retroactively for people who registered or were
+  CSV-imported before this module existed, by design (Ley 1581 — you
+  can't silently opt someone into a channel they never agreed to). The
+  history table shows real Processed/Delivered/Read/Failed bars per
+  broadcast (from the same message-status data the webhook keeps
+  current) plus a "Reintentar fallidos" action and delete.
 - **Bandeja** (`/admin/crm/whatsapp/bandeja`) — inbox: a thread per phone
   number, matched to a CRM `Person` by phone when possible (last-10-digit
   match, so it's tolerant of the leading `+`/country code either way).
-  Reply is free text, enforced server-side to Meta's real 24h customer
-  service window (measured from the contact's last inbound message,
-  shown as a live countdown) — a closed window shows why and points at
-  Difusiones instead of silently failing. A thread also has an internal
-  Nota tab (never sent to WhatsApp), an assignable agent (any active
-  `AdminUser`), the linked person's etiquetas, and a snapshot panel
-  (cliente desde, último mensaje, idioma/país/zona horaria, and the
-  contact's real acquisition UTM from their registration). The list has
-  Todos/No leídos/Asignados a mí filters.
+  Persistent split view, same shape as WhatChimp's own Shared Inbox — a
+  conversation list stays visible on the left (`bandeja/layout.tsx` +
+  `WhatsAppInboxList.tsx`, a client component polling its own
+  `/api/admin/whatsapp/conversations` endpoint) while the open thread and
+  a Chat-Actions-style sidebar fill the right (`bandeja/[id]/page.tsx`),
+  switching between conversations without ever losing the list — Next's
+  layout-persistence is what makes that free. Todos/No leídos/Asignados a
+  mí filters live client-side in the list now (no longer a `?filter=`
+  URL param). Reply is free text, enforced server-side to Meta's real 24h
+  customer service window (measured from the contact's last inbound
+  message, shown as a live countdown) — a closed window shows why and
+  points at Difusiones instead of silently failing. A thread also has an
+  internal Nota tab (never sent to WhatsApp), an assignable agent (any
+  active `AdminUser`), the linked person's etiquetas, and a snapshot
+  panel (cliente desde, último mensaje, idioma/país/zona horaria, and the
+  contact's real acquisition UTM from their registration).
 - **Etiquetas (Labels)** — a generic CRM tag (`Label`), not WhatsApp-
   specific: usable as a `label` segment condition (Segmentos), assignable
   after a Difusión send, and addable/removable from a person straight

@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import { db } from "@/lib/db";
 import { getOrgSettings } from "@/lib/settings";
 import WhatsAppThreadComposer from "@/components/WhatsAppThreadComposer";
@@ -7,7 +6,6 @@ import WhatsAppMarkRead from "@/components/WhatsAppMarkRead";
 import WhatsAppWindowCountdown from "@/components/WhatsAppWindowCountdown";
 import WhatsAppAssignAgent from "@/components/WhatsAppAssignAgent";
 import WhatsAppPersonLabels from "@/components/WhatsAppPersonLabels";
-import CrmPageHeader from "../../../CrmPageHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +19,12 @@ type TimelineItem =
   | { kind: "message"; id: string; createdAt: Date; direction: "INBOUND" | "OUTBOUND"; body: string | null; messageKind: string; status: string }
   | { kind: "note"; id: string; createdAt: Date; text: string; authorName: string | null };
 
+// Renders inside bandeja/layout.tsx's right pane — no page header or
+// "← Bandeja" back link anymore, since the conversation list stays
+// visible on the left the whole time (that was the point of the
+// redesign; see the layout's own comment). This fills the pane at
+// height: 100% with its own internal scroll for the message timeline,
+// composer pinned at the bottom, same as any real chat app.
 export default async function WhatsAppThreadPage({ params }: { params: { id: string } }) {
   const conversation = await db.whatsAppConversation.findUnique({
     where: { id: params.id },
@@ -70,89 +74,90 @@ export default async function WhatsAppThreadPage({ params }: { params: { id: str
     : "—";
 
   return (
-    <div>
+    <div style={{ height: "100%", display: "flex", minHeight: 0 }}>
       <WhatsAppMarkRead conversationId={conversation.id} />
-      <Link href="/admin/crm/whatsapp/bandeja" style={{ fontSize: 13, color: "#5b5f6b" }}>
-        ← Bandeja
-      </Link>
-      <CrmPageHeader
-        title={name}
-        subtitle={`${conversation.phone}${conversation.person ? "" : " — no coincide con ninguna persona del CRM"}`}
-      />
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 24, alignItems: "start" }}>
-        <div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 20 }}>
-            {timeline.map((item) =>
-              item.kind === "note" ? (
-                <div key={item.id} style={{ alignSelf: "center", maxWidth: "85%", background: "#fdf6e3", border: "1px dashed #e0c477", borderRadius: 8, padding: "8px 12px" }}>
-                  <div style={{ fontSize: 13, whiteSpace: "pre-wrap" }}>📝 {item.text}</div>
-                  <div style={{ fontSize: 11, color: "#8a8478", marginTop: 2 }}>
-                    Nota interna{item.authorName ? ` · ${item.authorName}` : ""} · {new Date(item.createdAt).toLocaleString("es-CO")}
-                  </div>
-                </div>
-              ) : (
-                <div
-                  key={item.id}
-                  style={{
-                    alignSelf: item.direction === "OUTBOUND" ? "flex-end" : "flex-start",
-                    maxWidth: "70%",
-                    background: item.direction === "OUTBOUND" ? "#ffe4d1" : "#f6f5f2",
-                    borderRadius: 12,
-                    padding: "10px 14px",
-                  }}
-                >
-                  <div style={{ fontSize: 14, whiteSpace: "pre-wrap" }}>{item.body ?? "—"}</div>
-                  <div style={{ fontSize: 11, color: "#8a8478", marginTop: 4, display: "flex", gap: 8 }}>
-                    <span>{new Date(item.createdAt).toLocaleString("es-CO")}</span>
-                    {item.direction === "OUTBOUND" && (
-                      <span>
-                        {item.messageKind === "TEMPLATE" ? "Plantilla" : "Respuesta"} · {item.status}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )
-            )}
-            {timeline.length === 0 && <p style={{ color: "#5b5f6b" }}>Sin mensajes todavía.</p>}
+      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+        <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
+          <div style={{ fontWeight: 700, fontSize: 15 }}>{name}</div>
+          <div style={{ fontSize: 12.5, color: "#8a8478" }}>
+            {conversation.phone}
+            {!conversation.person && " — no coincide con ninguna persona del CRM"}
           </div>
+        </div>
 
+        <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: 16, display: "flex", flexDirection: "column", gap: 10 }}>
+          {timeline.map((item) =>
+            item.kind === "note" ? (
+              <div key={item.id} style={{ alignSelf: "center", maxWidth: "85%", background: "#fdf6e3", border: "1px dashed #e0c477", borderRadius: 8, padding: "8px 12px" }}>
+                <div style={{ fontSize: 13, whiteSpace: "pre-wrap" }}>📝 {item.text}</div>
+                <div style={{ fontSize: 11, color: "#8a8478", marginTop: 2 }}>
+                  Nota interna{item.authorName ? ` · ${item.authorName}` : ""} · {new Date(item.createdAt).toLocaleString("es-CO")}
+                </div>
+              </div>
+            ) : (
+              <div
+                key={item.id}
+                style={{
+                  alignSelf: item.direction === "OUTBOUND" ? "flex-end" : "flex-start",
+                  maxWidth: "70%",
+                  background: item.direction === "OUTBOUND" ? "#ffe4d1" : "#f6f5f2",
+                  borderRadius: 12,
+                  padding: "10px 14px",
+                }}
+              >
+                <div style={{ fontSize: 14, whiteSpace: "pre-wrap" }}>{item.body ?? "—"}</div>
+                <div style={{ fontSize: 11, color: "#8a8478", marginTop: 4, display: "flex", gap: 8 }}>
+                  <span>{new Date(item.createdAt).toLocaleString("es-CO")}</span>
+                  {item.direction === "OUTBOUND" && (
+                    <span>
+                      {item.messageKind === "TEMPLATE" ? "Plantilla" : "Respuesta"} · {item.status}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )
+          )}
+          {timeline.length === 0 && <p style={{ color: "#5b5f6b" }}>Sin mensajes todavía.</p>}
+        </div>
+
+        <div style={{ borderTop: "1px solid var(--border)", padding: 12, flexShrink: 0 }}>
           <WhatsAppThreadComposer conversationId={conversation.id} windowOpen={withinWindow} />
         </div>
+      </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          <SidebarSection title="Ventana de mensajería">
-            <WhatsAppWindowCountdown lastInboundAt={conversation.lastInboundAt?.toISOString() ?? null} />
-          </SidebarSection>
+      <div style={{ width: 300, flexShrink: 0, borderLeft: "1px solid var(--border)", overflowY: "auto", padding: 14, display: "flex", flexDirection: "column", gap: 16 }}>
+        <SidebarSection title="Ventana de mensajería">
+          <WhatsAppWindowCountdown lastInboundAt={conversation.lastInboundAt?.toISOString() ?? null} />
+        </SidebarSection>
 
-          <SidebarSection title="Agente asignado">
-            <WhatsAppAssignAgent
-              conversationId={conversation.id}
-              agents={agents.map((a) => ({ id: a.id, label: a.name || a.username }))}
-              assignedToId={conversation.assignedToId}
-            />
-          </SidebarSection>
+        <SidebarSection title="Agente asignado">
+          <WhatsAppAssignAgent
+            conversationId={conversation.id}
+            agents={agents.map((a) => ({ id: a.id, label: a.name || a.username }))}
+            assignedToId={conversation.assignedToId}
+          />
+        </SidebarSection>
 
-          <SidebarSection title="Etiquetas">
-            {conversation.personId ? (
-              <WhatsAppPersonLabels conversationId={conversation.id} labels={conversation.person?.labels ?? []} />
-            ) : (
-              <span style={{ fontSize: 12, color: "#8a8478" }}>Sin contacto vinculado del CRM todavía.</span>
-            )}
-          </SidebarSection>
+        <SidebarSection title="Etiquetas">
+          {conversation.personId ? (
+            <WhatsAppPersonLabels conversationId={conversation.id} labels={conversation.person?.labels ?? []} />
+          ) : (
+            <span style={{ fontSize: 12, color: "#8a8478" }}>Sin contacto vinculado del CRM todavía.</span>
+          )}
+        </SidebarSection>
 
-          <SidebarSection title="Datos del contacto">
-            <SnapshotRow label="Cliente desde" value={new Date(conversation.createdAt).toLocaleDateString("es-CO")} />
-            <SnapshotRow
-              label="Último mensaje suyo"
-              value={conversation.lastInboundAt ? new Date(conversation.lastInboundAt).toLocaleString("es-CO") : "—"}
-            />
-            <SnapshotRow label="Idioma" value={orgSettings.language === "es" ? "Español" : orgSettings.language} />
-            <SnapshotRow label="País" value="Colombia" />
-            <SnapshotRow label="Zona horaria" value={orgSettings.timezone} />
-            <SnapshotRow label="Origen del contacto" value={optInSource} />
-          </SidebarSection>
-        </div>
+        <SidebarSection title="Datos del contacto">
+          <SnapshotRow label="Cliente desde" value={new Date(conversation.createdAt).toLocaleDateString("es-CO")} />
+          <SnapshotRow
+            label="Último mensaje suyo"
+            value={conversation.lastInboundAt ? new Date(conversation.lastInboundAt).toLocaleString("es-CO") : "—"}
+          />
+          <SnapshotRow label="Idioma" value={orgSettings.language === "es" ? "Español" : orgSettings.language} />
+          <SnapshotRow label="País" value="Colombia" />
+          <SnapshotRow label="Zona horaria" value={orgSettings.timezone} />
+          <SnapshotRow label="Origen del contacto" value={optInSource} />
+        </SidebarSection>
       </div>
     </div>
   );

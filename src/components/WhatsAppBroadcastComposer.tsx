@@ -1,8 +1,15 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+
+interface EligibilityPreview {
+  total: number;
+  eligible: number;
+  noConsent: number;
+  noPhone: number;
+}
 
 interface SegmentOption {
   id: string;
@@ -48,6 +55,8 @@ export default function WhatsAppBroadcastComposer({ segments, templates, mergeTa
   const [assignLabelName, setAssignLabelName] = useState("");
   const [result, setResult] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [eligibility, setEligibility] = useState<EligibilityPreview | null>(null);
+  const [eligibilityLoading, setEligibilityLoading] = useState(false);
 
   const selectedSegment = segments.find((s) => s.id === segmentId);
   const selectedTemplate = templates.find((t) => t.id === templateId);
@@ -66,6 +75,33 @@ export default function WhatsAppBroadcastComposer({ segments, templates, mergeTa
     return text;
   }, [selectedTemplate, variableSlots, mapping, mergeTags]);
 
+  // The real eligibility breakdown, fetched BEFORE any send happens — see
+  // previewSegmentRecipients' own comment. Shown above the button instead
+  // of only reporting "X sin consentimiento" after the fact, which used
+  // to be the only place this ever showed up.
+  useEffect(() => {
+    if (!segmentId) {
+      setEligibility(null);
+      return;
+    }
+    let cancelled = false;
+    setEligibilityLoading(true);
+    fetch(`/api/admin/whatsapp/broadcasts/preview?segmentId=${segmentId}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled) setEligibility(data);
+      })
+      .catch(() => {
+        if (!cancelled) setEligibility(null);
+      })
+      .finally(() => {
+        if (!cancelled) setEligibilityLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [segmentId]);
+
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
     setSending(true);
@@ -79,9 +115,7 @@ export default function WhatsAppBroadcastComposer({ segments, templates, mergeTa
     const body = await res.json();
     setSending(false);
     if (res.ok) {
-      setResult(
-        `Enviado a ${body.sent} de ${selectedSegment?.memberCount ?? "?"} en el segmento (${body.skippedNoConsent} sin consentimiento de WhatsApp, ${body.skippedNoPhone} sin celular, ${body.failed} fallidos).`
-      );
+      setResult(body.failed > 0 ? `Enviado — ${body.sent} entregados, ${body.failed} fallidos.` : `Enviado a los ${body.sent} contactos elegibles.`);
       setAssignLabelName("");
       router.refresh();
     } else {
@@ -188,7 +222,31 @@ export default function WhatsAppBroadcastComposer({ segments, templates, mergeTa
       </div>
 
       <div style={{ background: "#f0efec", borderRadius: 8, padding: "10px 14px", marginBottom: 16, fontSize: 13, color: "#5b5f6b" }}>
-        Se enviará a hasta <strong>{selectedSegment?.memberCount ?? 0}</strong> personas del segmento.
+        {eligibilityLoading && !eligibility && "Calculando a quién le llegará..."}
+        {eligibility && (
+          <>
+            Le llegará a <strong>{eligibility.eligible}</strong> de {eligibility.total}{" "}
+            {eligibility.total === 1 ? "persona" : "personas"} del segmento
+            {(eligibility.noConsent > 0 || eligibility.noPhone > 0) && (
+              <>
+                {" "}
+                (
+                {eligibility.noConsent > 0 && (
+                  <span style={{ color: "#b8791a", fontWeight: 600 }}>{eligibility.noConsent} sin consentimiento de WhatsApp</span>
+                )}
+                {eligibility.noConsent > 0 && eligibility.noPhone > 0 && ", "}
+                {eligibility.noPhone > 0 && <span style={{ color: "#b8791a", fontWeight: 600 }}>{eligibility.noPhone} sin celular</span>}
+                {" — no recibirán nada)"}
+              </>
+            )}
+            .
+          </>
+        )}
+        {!eligibilityLoading && !eligibility && (
+          <>
+            Se enviará a hasta <strong>{selectedSegment?.memberCount ?? 0}</strong> personas del segmento.
+          </>
+        )}
         {messagingLimitTier && (
           <>
             {" "}

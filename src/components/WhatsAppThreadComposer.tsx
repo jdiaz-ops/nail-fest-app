@@ -28,6 +28,7 @@ export default function WhatsAppThreadComposer({ conversationId, windowOpen }: {
     if (res.ok) {
       setNoteText("");
       router.refresh();
+      window.dispatchEvent(new Event("whatsapp-inbox-refresh"));
     }
   }
 

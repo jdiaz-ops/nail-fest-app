@@ -29,6 +29,7 @@ export default function WhatsAppAssignAgent({
     });
     setSaving(false);
     router.refresh();
+    window.dispatchEvent(new Event("whatsapp-inbox-refresh"));
   }
 
   return (
