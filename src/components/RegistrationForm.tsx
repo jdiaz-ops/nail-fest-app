@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { attributionFromSearchParams } from "@/lib/utm";
 import CityAutocomplete from "./CityAutocomplete";
 import { isKnownCityLabel } from "@/lib/cityMatch";
+import { COUNTRY_CODES } from "@/lib/countryCodes";
 
 export interface QuestionView {
   key: string;
@@ -68,22 +69,9 @@ interface Props {
   submitLabel: string;
 }
 
-// Matches the previous platform's forms this replaces — Colombia default since
-// that's effectively the whole audience today (see docs/IMPORT.md), with a
-// handful of other countries covered rather than forcing everyone else to
-// mistype a Colombian number.
-const COUNTRY_CODES = [
-  { code: "+57", label: "🇨🇴 +57" },
-  { code: "+52", label: "🇲🇽 +52" },
-  { code: "+51", label: "🇵🇪 +51" },
-  { code: "+593", label: "🇪🇨 +593" },
-  { code: "+507", label: "🇵🇦 +507" },
-  { code: "+58", label: "🇻🇪 +58" },
-  { code: "+56", label: "🇨🇱 +56" },
-  { code: "+54", label: "🇦🇷 +54" },
-  { code: "+34", label: "🇪🇸 +34" },
-  { code: "+1", label: "🇺🇸 +1" },
-];
+// Now shared with SegmentComposer.tsx's "País (código telefónico)" filter
+// — see src/lib/countryCodes.ts's own comment on why this moved out of
+// this file.
 
 function readCookie(name: string): string | undefined {
   const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
@@ -249,8 +237,10 @@ export default function RegistrationForm({
     // suggestion. Caught here too (not just in the component's own inline
     // message) so it actually blocks the submit, and again server-side in
     // /api/register — belt and suspenders, same reasoning as the email-
-    // confirm check above.
-    if (byKey(questions, "city") && payload.city.trim() && !isKnownCityLabel(payload.city)) {
+    // confirm check above. Only enforced for Colombia (+57) — that's the
+    // only country with a real municipality list to validate against; see
+    // the city field's own conditional render above.
+    if (countryCode === "+57" && byKey(questions, "city") && payload.city.trim() && !isKnownCityLabel(payload.city)) {
       setErrorMessage("Elige tu ciudad de la lista de sugerencias — revisa el campo Ciudad.");
       return;
     }
@@ -379,7 +369,15 @@ export default function RegistrationForm({
                 {city.label}
                 <Req required={city.required} />
               </label>
-              <CityAutocomplete id="field_city" name="field_city" required={city.required} />
+              {countryCode === "+57" ? (
+                <CityAutocomplete id="field_city" name="field_city" required={city.required} />
+              ) : (
+                // Outside Colombia there's no reliable municipality list to
+                // validate against (see this file's own comment on
+                // COUNTRY_CODES) — free text instead of forcing a match
+                // against a list that was never built for this country.
+                <input id="field_city" name="field_city" required={city.required} placeholder="Tu ciudad" />
+              )}
             </div>
           )}
         </Row>

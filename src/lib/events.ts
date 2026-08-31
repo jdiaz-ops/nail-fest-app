@@ -49,8 +49,8 @@ export interface EventInput {
   capacity: number | null;
   status: EventStatus;
   // Only used on create when the admin wants a specific URL instead of
-  // the auto-generated one (e.g. matching an already-promoted Ticket
-  // Tailor link) — left blank, the name is slugified instead.
+  // the auto-generated one (e.g. matching an already-promoted link from
+  // our previous ticketing platform) — left blank, the name is slugified instead.
   slug?: string;
 }
 

@@ -10,7 +10,15 @@ export type SegmentCondition =
   | { field: "attended"; eventSlugs: string[] }
   | { field: "city"; cities: string[] }
   | { field: "profession"; professions: string[] }
-  | { field: "label"; labels: string[] };
+  | { field: "label"; labels: string[] }
+  // Derived from Person.phone's own country code prefix (E.164, e.g.
+  // "+58..." for Venezuela) — there's no separate country column, the
+  // phone number a person actually registered with already carries this,
+  // and for a WhatsApp broadcast the phone's country is the one that
+  // actually matters (see RegistrationForm.tsx's COUNTRY_CODES for the
+  // same list this reuses). `codes` holds the raw prefixes ("+58"), not
+  // labels — OR'd together same as every other multi-select condition.
+  | { field: "phoneCountry"; codes: string[] };
 
 export interface SegmentFilter {
   include: SegmentCondition[];
@@ -41,6 +49,8 @@ function normalizeCondition(raw: any): SegmentCondition {
       return { field: "profession", professions: raw.professions ?? (raw.profession ? [raw.profession] : []) };
     case "label":
       return { field: "label", labels: raw.labels ?? [] };
+    case "phoneCountry":
+      return { field: "phoneCountry", codes: raw.codes ?? [] };
     default:
       throw new Error(`Unknown segment condition field: ${raw?.field}`);
   }

@@ -42,8 +42,8 @@ export default function MetaConnectionForm() {
         <label htmlFor="systemUserToken">System User Access Token</label>
         <input id="systemUserToken" name="systemUserToken" type="password" required autoComplete="off" />
       </div>
-      {/* Paired side by side — both are short IDs, same reasoning as Ticket
-          Tailor's own Date format / Time format row. The token above stays
+      {/* Paired side by side — both are short IDs, same reasoning as our
+          previous ticketing platform's own Date format / Time format row. The token above stays
           full-width alone: it's long and sensitive, pairing it with
           anything would just make both columns look cramped. */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>

@@ -205,8 +205,8 @@ export default function EventRegistration({
     <>
       {/* Two-column body on desktop (see globals.css's .event-page-body) —
           content (inline CTA + description) on the left, a sticky info
-          card repeating date/venue/CTA on the right, same shape as Ticket
-          Tailor's own event page. Below the ~900px breakpoint this
+          card repeating date/venue/CTA on the right, same shape as our
+          previous ticketing platform's own event page reads. Below the ~900px breakpoint this
           collapses to a single column and the sidebar is hidden entirely
           (display:none) — the mobile experience is untouched, just the
           inline CTA below and the floating one further down. */}

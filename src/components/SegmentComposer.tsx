@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { normalizeFilter, type SegmentFilter } from "@/lib/segments/normalize";
+import { COUNTRY_CODES } from "@/lib/countryCodes";
 
 // What editing an existing segment needs from the caller — the raw stored
 // filter (either shape; normalizeFilter below handles pre-multi-select
@@ -84,11 +85,13 @@ const emptyForm = {
   includeCity: [] as string[],
   includeProfession: [] as string[],
   includeLabel: [] as string[],
+  includePhoneCountry: [] as string[],
   excludeEvent: [] as string[],
   excludeAttended: [] as string[],
   excludeCity: [] as string[],
   excludeProfession: [] as string[],
   excludeLabel: [] as string[],
+  excludePhoneCountry: [] as string[],
 };
 
 export default function SegmentComposer({ events, professionOptions, cityOptions, labelOptions, editingSegment, onDone }: Props) {
@@ -99,11 +102,13 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
   const [includeCity, setIncludeCity] = useState<string[]>([]);
   const [includeProfession, setIncludeProfession] = useState<string[]>([]);
   const [includeLabel, setIncludeLabel] = useState<string[]>([]);
+  const [includePhoneCountry, setIncludePhoneCountry] = useState<string[]>([]);
   const [excludeEvent, setExcludeEvent] = useState<string[]>([]);
   const [excludeAttended, setExcludeAttended] = useState<string[]>([]);
   const [excludeCity, setExcludeCity] = useState<string[]>([]);
   const [excludeProfession, setExcludeProfession] = useState<string[]>([]);
   const [excludeLabel, setExcludeLabel] = useState<string[]>([]);
+  const [excludePhoneCountry, setExcludePhoneCountry] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const isEditing = !!editingSegment;
@@ -120,11 +125,13 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
       setIncludeCity(emptyForm.includeCity);
       setIncludeProfession(emptyForm.includeProfession);
       setIncludeLabel(emptyForm.includeLabel);
+      setIncludePhoneCountry(emptyForm.includePhoneCountry);
       setExcludeEvent(emptyForm.excludeEvent);
       setExcludeAttended(emptyForm.excludeAttended);
       setExcludeCity(emptyForm.excludeCity);
       setExcludeProfession(emptyForm.excludeProfession);
       setExcludeLabel(emptyForm.excludeLabel);
+      setExcludePhoneCountry(emptyForm.excludePhoneCountry);
       return;
     }
     const normalized = normalizeFilter(editingSegment.filter as SegmentFilter);
@@ -134,11 +141,13 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
     setIncludeCity(extract(normalized.include, "city", "cities"));
     setIncludeProfession(extract(normalized.include, "profession", "professions"));
     setIncludeLabel(extract(normalized.include, "label", "labels"));
+    setIncludePhoneCountry(extract(normalized.include, "phoneCountry", "codes"));
     setExcludeEvent(extract(normalized.exclude, "event", "eventSlugs"));
     setExcludeAttended(extract(normalized.exclude, "attended", "eventSlugs"));
     setExcludeCity(extract(normalized.exclude, "city", "cities"));
     setExcludeProfession(extract(normalized.exclude, "profession", "professions"));
     setExcludeLabel(extract(normalized.exclude, "label", "labels"));
+    setExcludePhoneCountry(extract(normalized.exclude, "phoneCountry", "codes"));
     setResult(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editingSegment?.id]);
@@ -157,6 +166,7 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
       includeCity.length ? { field: "city", cities: includeCity } : null,
       includeProfession.length ? { field: "profession", professions: includeProfession } : null,
       includeLabel.length ? { field: "label", labels: includeLabel } : null,
+      includePhoneCountry.length ? { field: "phoneCountry", codes: includePhoneCountry } : null,
     ].filter(Boolean);
     const exclude = [
       excludeEvent.length ? { field: "event", eventSlugs: excludeEvent } : null,
@@ -164,6 +174,7 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
       excludeCity.length ? { field: "city", cities: excludeCity } : null,
       excludeProfession.length ? { field: "profession", professions: excludeProfession } : null,
       excludeLabel.length ? { field: "label", labels: excludeLabel } : null,
+      excludePhoneCountry.length ? { field: "phoneCountry", codes: excludePhoneCountry } : null,
     ].filter(Boolean);
     return { include, exclude };
   }, [
@@ -172,11 +183,13 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
     includeCity,
     includeProfession,
     includeLabel,
+    includePhoneCountry,
     excludeEvent,
     excludeAttended,
     excludeCity,
     excludeProfession,
     excludeLabel,
+    excludePhoneCountry,
   ]);
 
   const hasAnyFilter = filter.include.length > 0 || filter.exclude.length > 0;
@@ -243,11 +256,13 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
         setIncludeCity([]);
         setIncludeProfession([]);
         setIncludeLabel([]);
+        setIncludePhoneCountry([]);
         setExcludeEvent([]);
         setExcludeAttended([]);
         setExcludeCity([]);
         setExcludeProfession([]);
         setExcludeLabel([]);
+        setExcludePhoneCountry([]);
       }
       router.refresh();
     } else {
@@ -259,6 +274,10 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
   const professionCheckOptions = professionOptions.map((p) => ({ value: p, label: p }));
   const cityCheckOptions = cityOptions.map((c) => ({ value: c, label: c }));
   const labelCheckOptions = labelOptions.map((l) => ({ value: l, label: l }));
+  // Static, not DB-driven like the others — every phone country a person
+  // could actually register with (see src/lib/countryCodes.ts) is a valid
+  // filter value regardless of whether anyone's used it yet.
+  const phoneCountryCheckOptions = COUNTRY_CODES.map((c) => ({ value: c.code, label: c.label }));
 
   return (
     <form onSubmit={handleSave} style={{ maxWidth: 900 }}>
@@ -314,6 +333,10 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
               <label>Etiqueta</label>
               <MultiCheckList options={labelCheckOptions} selected={includeLabel} onChange={setIncludeLabel} emptyLabel="Todavía no hay etiquetas creadas." />
             </div>
+            <div className="field">
+              <label>País (código telefónico)</label>
+              <MultiCheckList options={phoneCountryCheckOptions} selected={includePhoneCountry} onChange={setIncludePhoneCountry} emptyLabel="" />
+            </div>
           </div>
 
           <div>
@@ -339,6 +362,10 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
             <div className="field">
               <label>Etiqueta</label>
               <MultiCheckList options={labelCheckOptions} selected={excludeLabel} onChange={setExcludeLabel} emptyLabel="Todavía no hay etiquetas creadas." />
+            </div>
+            <div className="field">
+              <label>País (código telefónico)</label>
+              <MultiCheckList options={phoneCountryCheckOptions} selected={excludePhoneCountry} onChange={setExcludePhoneCountry} emptyLabel="" />
             </div>
           </div>
         </div>

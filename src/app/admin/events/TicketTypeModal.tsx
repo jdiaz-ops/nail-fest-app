@@ -6,8 +6,8 @@ type Status = "ON_SALE" | "HIDDEN" | "ACCESS_CODE_REQUIRED" | "SOLD_OUT" | "UNAV
 type Issuance = "INDIVIDUAL" | "GROUP";
 
 // Literal English copy throughout this modal — same choice already made
-// for CheckoutFormEditor.tsx's "Buyer question" modal: it mirrors Ticket
-// Tailor's own admin UI text verbatim, field for field, per the actual
+// for CheckoutFormEditor.tsx's "Buyer question" modal: it mirrors our
+// previous ticketing platform's own admin UI text verbatim, field for field, per the actual
 // screenshots this was built from.
 const STATUS_LABELS: Record<Status, string> = {
   ON_SALE: "On sale",

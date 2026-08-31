@@ -63,13 +63,13 @@ model ProfessionOption {
 }
 
 // Draft = not linkable/registerable yet (see the public event page's own
-// gate) — matches Ticket Tailor's own Draft/Published events. `@default
-// (PUBLISHED)` at the DB level is a migration-safety default, not a
-// product default: it backfills every event that existed before this
-// column did (already-live events people are actively registering for)
-// as still-live, rather than silently yanking them offline. The admin
-// create form (lib/events.ts's createEvent) is what actually defaults a
-// brand-new event to DRAFT, matching Ticket Tailor's real behavior.
+// gate) — matches our previous ticketing platform's own Draft/Published
+// events. `@default(PUBLISHED)` at the DB level is a migration-safety
+// default, not a product default: it backfills every event that existed
+// before this column did (already-live events people are actively
+// registering for) as still-live, rather than silently yanking them
+// offline. The admin create form (lib/events.ts's createEvent) is what
+// actually defaults a brand-new event to DRAFT, matching that platform's real behavior.
 enum EventStatus {
   DRAFT
   PUBLISHED
@@ -95,8 +95,8 @@ model Event {
   // admin uploads one; the public page and EventForm's preview both just
   // skip the hero image when this is null instead of showing a broken img.
   imageUrl     String?
-  // The public page's registration submit button — Ticket Tailor's own
-  // "Select tickets button label" field, renamed here since we have no
+  // The public page's registration submit button — our previous ticketing
+  // platform's own "Select tickets button label" field, renamed here since we have no
   // ticket-selection step (RegistrationForm.tsx just submits straight to
   // /api/register). Defaults to "Registrarme GRATIS" on create, not at
   // the DB level, so existing events keep whatever they already show
@@ -125,13 +125,13 @@ model Event {
   @@index([status])
 }
 
-// Ticket Tailor's own "ticket type" concept, kept even though every Nail
-// Fest event is free today (price defaults to, and in practice always
-// is, 0) — the admin explicitly wants the real structure to exist ahead
-// of any payment processor, not a placeholder for one. See
+// Our previous ticketing platform's own "ticket type" concept, kept even
+// though every Nail Fest event is free today (price defaults to, and in
+// practice always is, 0) — the admin explicitly wants the real structure
+// to exist ahead of any payment processor, not a placeholder for one. See
 // /admin/events/[id]/edit's "Tickets and items" section and its own
 // "Add a new ticket type" modal (TicketTypeModal.tsx), built field for
-// field off Ticket Tailor's real modal.
+// field off that platform's real modal.
 enum TicketTypeStatus {
   ON_SALE
   HIDDEN
@@ -210,7 +210,7 @@ model Registration {
   ticketTypeId String?
 
   // One person can hold more than one ticket under the same order — e.g.
-  // Ticket Tailor's "titular + acompañante" pattern, where the +1's own
+  // our previous ticketing platform's "titular + acompañante" pattern, where the +1's own
   // data is deliberately never collected (friction), but they're still a
   // real body at the door with their own scannable ticket. ticketCount /
   // checkedInCount track that gap so aforo (door headcount) reflects real
@@ -234,7 +234,7 @@ model Registration {
   confirmedAt DateTime?
 
   // How many tickets this registration represents (titular + up to 1
-  // acompañante slot — Ticket Tailor allows max 2 per order today) and how
+  // acompañante slot — our previous ticketing platform allows max 2 per order today) and how
   // many of those were actually scanned at the door. checkedInCount is
   // counted per physical ticket from the source data, never inferred from
   // the titular's own status — scanning the titular's ticket does NOT
@@ -437,8 +437,8 @@ model SegmentMetaSync {
   createdAt      DateTime   @default(now())
 }
 
-// Ticket Tailor's own 4 send-time options on its per-event broadcast
-// composer — see EventBroadcastComposer.tsx. IMMEDIATE/AT_DATETIME both
+// Our previous ticketing platform's own 4 send-time options on its
+// per-event broadcast composer — see EventBroadcastComposer.tsx. IMMEDIATE/AT_DATETIME both
 // resolve to a fixed instant; the other two are relative to the event's
 // OWN dates, recomputed at send-check time (see lib/broadcastSchedule.ts)
 // rather than frozen at creation — editing the event's date after
@@ -470,8 +470,8 @@ model EmailBroadcast {
   // the rest of this schema's optional-relation pairs.
   event       Event?            @relation(fields: [eventId], references: [id], onDelete: Cascade)
   eventId     String?
-  // "Ticket buyers who bought a specific ticket type" — Ticket Tailor's
-  // own recipient-narrowing option. Null = every confirmed registration
+  // "Ticket buyers who bought a specific ticket type" — our previous
+  // ticketing platform's own recipient-narrowing option. Null = every confirmed registration
   // for the event, regardless of type.
   ticketType   TicketType?      @relation(fields: [ticketTypeId], references: [id], onDelete: SetNull)
   ticketTypeId String?
@@ -809,8 +809,8 @@ model WhatsAppMessage {
 }
 
 // ---------------------------------------------------------------------------
-// Account-level settings ("Box office settings" in Ticket Tailor's terms —
-// nivel 1, one row for the whole account, distinct from any single event).
+// Account-level settings ("Box office settings" in our previous ticketing
+// platform's terms — nivel 1, one row for the whole account, distinct from any single event).
 // ---------------------------------------------------------------------------
 
 // True singleton — always read/written at id "singleton", never
@@ -859,7 +859,7 @@ model OrgSettings {
   // in addition to) the explicit ADVERTISING consent checkbox that already
   // gates the Meta Pixel/CAPI — that checkbox covers the ad-sharing
   // purpose specifically; this covers the general "we use cookies" notice
-  // Ticket Tailor shows whenever any tracking script is active.
+  // our previous ticketing platform shows whenever any tracking script is active.
   cookieConsentEnabled Boolean @default(false)
 
   // Turns on /reenviar — a public "resend my ticket" page that only needs
@@ -878,12 +878,12 @@ model OrgSettings {
   // real fallback chain (event -> global -> hand-built default).
   confirmationEmailHtml String?
 
-  // Ticket Tailor's own "Attach ticket vouchers as a PDF" checkbox — global
-  // on/off for the printable PDF ticket (lib/ticketPdf.ts) attached to
-  // every confirmation email. Defaults to true (matches what the user
-  // actually asked for: "que llegue un PDF"). Unlike
-  // confirmationEmailHtml above, this has no per-event override — one
-  // account-wide switch, same as Ticket Tailor's own single checkbox.
+  // Our previous ticketing platform's own "Attach ticket vouchers as a
+  // PDF" checkbox — global on/off for the printable PDF ticket
+  // (lib/ticketPdf.ts) attached to every confirmation email. Defaults to
+  // true (matches what the user actually asked for: "que llegue un
+  // PDF"). Unlike confirmationEmailHtml above, this has no per-event
+  // override — one account-wide switch, same as that platform's own single checkbox.
   attachTicketPdf Boolean @default(true)
 
   // The nailfest.co homepage (src/app/page.tsx) — editable via
@@ -904,11 +904,11 @@ model OrgSettings {
 }
 
 // ---------------------------------------------------------------------------
-// Checkout form — Ticket Tailor's "Buyer questions" editor (see
-// /admin/settings/checkout-form and lib/checkoutForm.ts).
+// Checkout form — matches our previous ticketing platform's "Buyer
+// questions" editor (see /admin/settings/checkout-form and lib/checkoutForm.ts).
 // ---------------------------------------------------------------------------
 
-// Deliberately NOT offering Ticket Tailor's "Opt in to receive marketing
+// Deliberately NOT offering that platform's "Opt in to receive marketing
 // emails" type here — that already exists as a real, connected feature
 // (the MARKETING consent checkbox on the form, backed by the Consent
 // table and read by hasActiveConsent()/broadcasts). A question of that
@@ -924,8 +924,8 @@ enum CheckoutQuestionType {
   AGREEMENT // one checkbox, label IS the terms text — "must check to submit" when required
 }
 
-// Only meaningful for the locked "fullName" row — matches Ticket Tailor's
-// own "Format" control on its compulsory Name question. FULL keeps today's
+// Only meaningful for the locked "fullName" row — matches our previous
+// ticketing platform's own "Format" control on its compulsory Name question. FULL keeps today's
 // single field, split into firstName/lastName heuristically server-side
 // (lib/name.ts: first word vs. the rest). FIRST_LAST renders two real
 // inputs instead and sends firstName/lastName directly — no guessing —
@@ -940,8 +940,8 @@ enum NameFormat {
 // write into a real Person column or a name the rest of the app already
 // depends on (segments filter on city/profession specifically — see
 // lib/segments/builder.ts) — those can't be deleted or reordered from the
-// admin, only relabeled/toggled required, same as Ticket Tailor's own
-// "Name"/"Email" questions being compulsory. Everything else is a normal
+// admin, only relabeled/toggled required, same as our previous ticketing
+// platform's own "Name"/"Email" questions being compulsory. Everything else is a normal
 // row: create/edit/delete/reorder all really change what
 // RegistrationForm.tsx renders and what /api/register accepts — see
 // lib/checkoutForm.ts's own comment on why this needed a real table
@@ -970,8 +970,8 @@ model CheckoutQuestion {
   // Only meaningful for the locked "fullName" row — see the NameFormat
   // enum's own comment.
   nameFormat NameFormat           @default(FULL)
-  // Only meaningful for the locked "email" row — Ticket Tailor's own
-  // "Customers have to enter their email twice to avoid typos" toggle.
+  // Only meaningful for the locked "email" row — our previous ticketing
+  // platform's own "Customers have to enter their email twice to avoid typos" toggle.
   // When true, RegistrationForm renders a second confirm-email input and
   // /api/register rejects the submission if the two don't match.
   confirmEmail Boolean            @default(false)

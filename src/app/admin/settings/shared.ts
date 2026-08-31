@@ -1,5 +1,5 @@
 // Shared by every /admin/settings/* form — one place for the save call and
-// the Ticket-Tailor-matched styling (emerald save button, card shell)
+// the reference-matched styling (emerald save button, card shell)
 // instead of repeating both across six near-identical components.
 import type { CSSProperties } from "react";
 

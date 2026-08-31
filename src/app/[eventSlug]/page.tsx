@@ -16,8 +16,8 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
   const event = await db.event.findUnique({ where: { slug: params.eventSlug } });
   if (!event) notFound();
 
-  // Draft events (/admin/events) aren't live yet — same gate as Ticket
-  // Tailor's own Draft status. A plain 404 here would be confusing for an
+  // Draft events (/admin/events) aren't live yet — same gate as our
+  // previous ticketing platform's own Draft status. A plain 404 here would be confusing for an
   // admin double-checking a link before publishing (it looks like the
   // event doesn't exist at all instead of "not published yet"), so this
   // shows a clear message and no registration form instead of notFound().

@@ -5,8 +5,8 @@ import { useEffect, useState } from "react";
 const STORAGE_KEY = "nf_cookie_consent_ack";
 
 // Only rendered at all when OrgSettings.cookieConsentEnabled is true (see
-// layout.tsx) — this is the general "this site uses cookies" notice Ticket
-// Tailor shows whenever a tracking pixel is active. It's informational,
+// layout.tsx) — this is the general "this site uses cookies" notice our
+// previous ticketing platform shows whenever a tracking pixel is active. It's informational,
 // not a gate: the Meta Pixel/CAPI already only fire after the explicit
 // "Autorizo compartir mis datos con Meta" checkbox on the form, which is
 // the real consent that matters for that purpose.

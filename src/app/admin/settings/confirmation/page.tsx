@@ -6,8 +6,8 @@ import AttachPdfForm from "./AttachPdfForm";
 export const dynamic = "force-dynamic";
 
 // The GLOBAL confirmation email — applies to every event that doesn't
-// set its own override (see /admin/events/[id]/confirmation). Ticket
-// Tailor's own "Global confirmation" half of the same radio choice.
+// set its own override (see /admin/events/[id]/confirmation). Matches our
+// previous ticketing platform's own "Global confirmation" half of the same radio choice.
 export default async function GlobalConfirmationSettingsPage() {
   const orgSettings = await getOrgSettings();
   return (

@@ -18,8 +18,8 @@ interface QuestionRow {
   confirmEmail: boolean;
 }
 
-// Name/Email never show a Required toggle at all — same as Ticket
-// Tailor's own "compulsory" questions — because the rest of the CRM
+// Name/Email never show a Required toggle at all — same as our previous
+// ticketing platform's own "compulsory" questions — because the rest of the CRM
 // (dedup key, personalization) genuinely can't function without them.
 const ALWAYS_REQUIRED_KEYS = new Set(["fullName", "email"]);
 

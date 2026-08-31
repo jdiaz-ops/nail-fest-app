@@ -1,8 +1,8 @@
 import type { CheckoutQuestion, Person, Registration } from "@prisma/client";
 
 // One place that turns "the live checkout questions + a real
-// Registration/Person" into the same "buyer details" list Ticket
-// Tailor's order modal shows — every question that exists today (cedula,
+// Registration/Person" into the same "buyer details" list our previous
+// ticketing platform's order modal shows — every question that exists today (cedula,
 // city, profession, Instagram/TikTok, and whatever an admin has added in
 // /admin/settings/checkout-form), not a hardcoded subset. Locked
 // questions read from the real Person/Registration columns they're

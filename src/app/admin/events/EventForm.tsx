@@ -166,9 +166,9 @@ export default function EventForm({
     if (res.ok) {
       const resBody = await res.json().catch(() => ({}));
       // On create, go straight into editing the new event (not the list)
-      // so "Tickets and items" is reachable immediately — matches Ticket
-      // Tailor's own flow, where "Add new event" drops you straight into
-      // that event's edit screen instead of back to the events list.
+      // so "Tickets and items" is reachable immediately — matches our
+      // previous ticketing platform's own flow, where "Add new event"
+      // drops you straight into that event's edit screen instead of back to the events list.
       router.push(isEdit ? "/admin/events" : `/admin/events/${resBody.event.id}/edit`);
       router.refresh();
     } else {

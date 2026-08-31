@@ -16,8 +16,8 @@ import { isKnownCityLabel } from "@/lib/cityMatch";
 const bodySchema = z.object({
   eventSlug: z.string(),
   email: z.string().email(),
-  // Only sent when the "email" question's confirmEmail is on (Ticket
-  // Tailor's "ask twice to catch typos") — see CheckoutFormEditor.tsx.
+  // Only sent when the "email" question's confirmEmail is on (matches our
+  // previous ticketing platform's "ask twice to catch typos") — see CheckoutFormEditor.tsx.
   emailConfirm: z.string().optional(),
   phone: z.string(),
   // Exactly one of fullName (Format: "Full name", the default) or
@@ -142,7 +142,13 @@ export async function POST(req: NextRequest) {
   // for stats/segments going forward). Empty is fine when the question
   // isn't required — that's already enforced by the missing-fields check
   // above; this only rejects a NON-empty value that isn't a real city.
-  if (input.city.trim() && !isKnownCityLabel(input.city)) {
+  //
+  // Only enforced for a Colombian phone number (+57) — that's the only
+  // country with a real municipality list to validate against (see
+  // RegistrationForm.tsx's own city-field comment). Anyone registering
+  // with another country's number (Venezuela, etc. — see COUNTRY_CODES)
+  // gets a free-text city instead, both client- and server-side.
+  if (input.phone.startsWith("+57") && input.city.trim() && !isKnownCityLabel(input.city)) {
     return NextResponse.json({ error: "invalid_city" }, { status: 400 });
   }
 
