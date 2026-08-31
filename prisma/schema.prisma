@@ -643,11 +643,39 @@ model WhatsAppTemplate {
   createdAt     DateTime                 @default(now())
   updatedAt     DateTime                 @updatedAt
 
-  broadcasts            WhatsAppBroadcast[]
-  messages              WhatsAppMessage[]
-  orgSettingsTicketLink OrgSettings[]     @relation("TicketLinkTemplate")
+  broadcasts   WhatsAppBroadcast[]
+  messages     WhatsAppMessage[]
+  automations  WhatsAppAutomation[]
 
   @@unique([name, language])
+}
+
+// The only trigger built today is REGISTRATION_CONFIRMED — fires once per
+// registration (see lib/whatsapp/sendTicketLink.ts, called right after
+// the confirmation email in /api/register). More triggers (check-in,
+// event reminder, ...) would just add values here — the model and the
+// "Automatizaciones" UI (/admin/crm/whatsapp/automatizaciones) already
+// handle any number of them, one automation per trigger.
+enum WhatsAppAutomationTrigger {
+  REGISTRATION_CONFIRMED
+}
+
+// "Automatizaciones" — the WhatsApp equivalent of a Zapier/n8n trigger,
+// not something an admin sends by hand (that's Difusiones): each row
+// pairs one trigger with the APPROVED template it fires, and can be
+// turned off without losing that pairing (`enabled`) — same "keep the
+// config, just stop firing" reasoning as WhatsAppConversation.
+// aiAutoReplyEnabled. @@unique on trigger — never two automations racing
+// to fire on the same event; disable the old one and edit its template
+// instead of creating a second row.
+model WhatsAppAutomation {
+  id         String                    @id @default(cuid())
+  trigger    WhatsAppAutomationTrigger @unique
+  template   WhatsAppTemplate          @relation(fields: [templateId], references: [id])
+  templateId String
+  enabled    Boolean                   @default(true)
+  createdAt  DateTime                  @default(now())
+  updatedAt  DateTime                  @updatedAt
 }
 
 model WhatsAppBroadcast {
@@ -902,20 +930,6 @@ model OrgSettings {
   homepageImageUrl String?
   homepageTagline  String?
   homepageCtaLabel String  @default("Conseguir entrada gratis")
-
-  // Auto-sends the ticket link over WhatsApp right after registration —
-  // the LATAM Airlines-style pattern (a UTILITY template whose one button
-  // is a dynamic URL, e.g. ".../api/ticket-pdf/{{1}}", filled per
-  // recipient with their own qrToken at send time — see
-  // WhatsAppTemplateButton's own comment in lib/whatsapp/provider.ts).
-  // Null (the default) means this stays off, same "additive, opt-in"
-  // pattern as attachTicketPdf/cookieConsentEnabled above — nothing sends
-  // until an admin picks an APPROVED template here (Plantillas page).
-  // Gated by the WHATSAPP consent same as every other outbound WhatsApp
-  // send, never a replacement for the email ticket (see
-  // lib/whatsapp/sendTicketLink.ts and /api/register/route.ts).
-  ticketLinkWhatsAppTemplate   WhatsAppTemplate? @relation("TicketLinkTemplate", fields: [ticketLinkWhatsAppTemplateId], references: [id], onDelete: SetNull)
-  ticketLinkWhatsAppTemplateId String?
 
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())

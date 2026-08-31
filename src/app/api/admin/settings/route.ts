@@ -31,9 +31,6 @@ const patchSchema = z
     homepageImageUrl: z.string(),
     homepageTagline: z.string(),
     homepageCtaLabel: z.string().min(1),
-    // "" means "turn the auto-send off" — see OrgSettings.
-    // ticketLinkWhatsAppTemplateId's own schema comment.
-    ticketLinkWhatsAppTemplateId: z.string(),
   })
   .partial();
 
@@ -54,8 +51,7 @@ export async function POST(req: NextRequest) {
   }
   // "" from an empty optional email input means "clear it", not "set it to
   // an empty string that fails email validation on the next read".
-  const { replyToEmail, confirmationEmailHtml, homepageImageUrl, homepageTagline, ticketLinkWhatsAppTemplateId, ...rest } =
-    parsed.data;
+  const { replyToEmail, confirmationEmailHtml, homepageImageUrl, homepageTagline, ...rest } = parsed.data;
   const updated = await updateOrgSettings({
     ...rest,
     ...(replyToEmail !== undefined ? { replyToEmail: replyToEmail || null } : {}),
@@ -64,9 +60,6 @@ export async function POST(req: NextRequest) {
       : {}),
     ...(homepageImageUrl !== undefined ? { homepageImageUrl: homepageImageUrl || null } : {}),
     ...(homepageTagline !== undefined ? { homepageTagline: homepageTagline || null } : {}),
-    ...(ticketLinkWhatsAppTemplateId !== undefined
-      ? { ticketLinkWhatsAppTemplateId: ticketLinkWhatsAppTemplateId || null }
-      : {}),
   });
   return NextResponse.json({ ok: true, settings: updated });
 }

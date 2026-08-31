@@ -1,9 +1,7 @@
 import { db } from "@/lib/db";
 import type { WhatsAppTemplateButton } from "@/lib/whatsapp/provider";
-import { getOrgSettings } from "@/lib/settings";
 import WhatsAppTemplateSyncButton from "@/components/WhatsAppTemplateSyncButton";
 import WhatsAppTemplateCreateForm from "@/components/WhatsAppTemplateCreateForm";
-import TicketLinkTemplateSetting from "@/components/TicketLinkTemplateSetting";
 import CrmPageHeader from "../../CrmPageHeader";
 
 export const dynamic = "force-dynamic";
@@ -23,15 +21,7 @@ function buttonLabel(b: WhatsAppTemplateButton): string {
 }
 
 export default async function WhatsAppTemplatesPage() {
-  const [templates, orgSettings] = await Promise.all([db.whatsAppTemplate.findMany({ orderBy: { name: "asc" } }), getOrgSettings()]);
-
-  // Only an APPROVED template with a dynamic URL button (its stored url
-  // contains "{{") makes sense for the auto-send-on-registration setting
-  // below — see TicketLinkTemplateSetting's own comment.
-  const eligibleForTicketLink = templates
-    .filter((t) => t.status === "APPROVED")
-    .filter((t) => ((t.buttons as unknown as WhatsAppTemplateButton[] | null) ?? []).some((b) => b.type === "URL" && b.url.includes("{{")))
-    .map((t) => ({ id: t.id, name: t.name, language: t.language }));
+  const templates = await db.whatsAppTemplate.findMany({ orderBy: { name: "asc" } });
 
   return (
     <div>
@@ -39,8 +29,6 @@ export default async function WhatsAppTemplatesPage() {
         title="Plantillas"
         subtitle="Créalas acá y se envían directo a Meta para revisión — o créalas en el WhatsApp Manager y sincronízalas. El estado (pendiente/aprobada/rechazada) se actualiza al sincronizar."
       />
-
-      <TicketLinkTemplateSetting eligibleTemplates={eligibleForTicketLink} currentTemplateId={orgSettings.ticketLinkWhatsAppTemplateId} />
 
       <div style={{ display: "flex", gap: 12, alignItems: "flex-start", flexWrap: "wrap" }}>
         <WhatsAppTemplateCreateForm />

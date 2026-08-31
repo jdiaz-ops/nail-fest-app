@@ -17,8 +17,6 @@ export interface OrgSettingsValue {
   homepageImageUrl: string | null;
   homepageTagline: string | null;
   homepageCtaLabel: string;
-  // See OrgSettings.ticketLinkWhatsAppTemplateId's own schema comment.
-  ticketLinkWhatsAppTemplateId: string | null;
 }
 
 const DEFAULTS: OrgSettingsValue = {
@@ -36,7 +34,6 @@ const DEFAULTS: OrgSettingsValue = {
   homepageImageUrl: null,
   homepageTagline: null,
   homepageCtaLabel: "Conseguir entrada gratis",
-  ticketLinkWhatsAppTemplateId: null,
 };
 
 // No row exists until the first save from /admin/settings — reads never
@@ -60,7 +57,6 @@ export async function getOrgSettings(): Promise<OrgSettingsValue> {
     homepageImageUrl: row.homepageImageUrl,
     homepageTagline: row.homepageTagline,
     homepageCtaLabel: row.homepageCtaLabel,
-    ticketLinkWhatsAppTemplateId: row.ticketLinkWhatsAppTemplateId,
   };
 }
 
@@ -85,6 +81,5 @@ export async function updateOrgSettings(patch: Partial<OrgSettingsValue>): Promi
     homepageImageUrl: row.homepageImageUrl,
     homepageTagline: row.homepageTagline,
     homepageCtaLabel: row.homepageCtaLabel,
-    ticketLinkWhatsAppTemplateId: row.ticketLinkWhatsAppTemplateId,
   };
 }

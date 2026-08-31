@@ -6,6 +6,7 @@ export const dynamic = "force-dynamic";
 const TABS: { href: string; label: string }[] = [
   { href: "/admin/crm/whatsapp/conexion", label: "Conexión" },
   { href: "/admin/crm/whatsapp/plantillas", label: "Plantillas" },
+  { href: "/admin/crm/whatsapp/automatizaciones", label: "Automatizaciones" },
   { href: "/admin/crm/whatsapp/difusiones", label: "Difusiones" },
   { href: "/admin/crm/whatsapp/bandeja", label: "Bandeja" },
 ];

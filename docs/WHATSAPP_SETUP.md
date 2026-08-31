@@ -54,30 +54,51 @@ Moving off WhatChimp to a direct Cloud API connection:
   Manager, and is what picks up a PENDING → APPROVED/REJECTED transition
   after review (no webhook for that here; re-sync to see the current
   status).
-- **Enlace de la entrada al registrarse** — a small on/off setting at the
-  top of Plantillas: pick an APPROVED template with a dynamic URL button
-  and every new registration (and resend) gets it sent automatically,
-  right after the confirmation email — same UTILITY-category, "your own
-  link, not the same as everyone else's" pattern as an airline's WhatsApp
-  boarding-pass message (see the commit this feature shipped with for
-  the real example it's modeled on). The button's `{{1}}` gets filled
-  with that registration's own `qrToken`, so it opens the same
+- **Automatizaciones** (`/admin/crm/whatsapp/automatizaciones`) — the
+  Zapier/n8n idea, scoped to what this app actually needs: a trigger (a
+  real event in the app) paired with an APPROVED template, firing
+  per-person with no admin clicking "enviar" — the opposite of Difusiones,
+  which is always a deliberate one-time send to a segment. One card per
+  known trigger (`WhatsAppAutomationTrigger` in schema.prisma,
+  `AUTOMATION_TRIGGERS` in `lib/whatsapp/automations.ts` — a registry to
+  extend when a new trigger is built, not a config table an admin edits),
+  whether or not it's configured yet. Each configured one can be turned
+  off without losing its chosen template (`enabled`, a real pause — the
+  "necesito poder desactivar" requirement this shipped for) or repointed
+  at a different template; "Quitar" clears the pairing entirely.
+  `WhatsAppAutomation.trigger` is unique — one automation per trigger, so
+  there's never two rows racing to fire on the same event.
+
+  The one trigger built today, **"Cuando alguien se registra"**
+  (`REGISTRATION_CONFIRMED`): fires right after the confirmation email,
+  every new registration and every resend, sending a UTILITY template
+  whose one button is a dynamic URL — same "your own link, not the same
+  as everyone else's" pattern as an airline's WhatsApp boarding-pass
+  message (see the commit this feature shipped with for the real example
+  it's modeled on). The button's `{{1}}` gets filled with that
+  registration's own `qrToken`, so it opens the same
   `/api/ticket-pdf/[token]` link `sendTicketPdfViaWhatsApp` (Bandeja's
   "Reenviar PDF por WhatsApp") already uses — the difference is this one
   works outside the 24h customer-service window, because it's a template
   send, not a freeform document. Gated by the `WHATSAPP` consent, same as
   everything else here; never a replacement for the email ticket, an
   extra channel on top of it (`lib/whatsapp/sendTicketLink.ts`, called
-  from `/api/register`). Off by default (`OrgSettings.
-  ticketLinkWhatsAppTemplateId` is null) — nothing sends until you pick a
-  template. A **plantilla sugerida** to submit for review: body `Hola
-  {{1}}, tu entrada para {{2}} ya está lista. Tócala abajo para verla.`
-  (examples: `Maria`, `Nail Fest Bogotá`), footer `Nail Fest`, one URL
-  button `Ver mi entrada` → `https://<tu-dominio>/api/ticket-pdf/{{1}}`
-  (example: any real ticket link) — the body's two variables are a fixed
-  convention (`{{1}}` = nombre, `{{2}}` = nombre del evento), not a
-  configurable mapping, since this isn't a Difusión with its own
-  variable-mapping UI.
+  from `/api/register`). Only an APPROVED template with a dynamic URL
+  button is offered when picking one (`listEligibleAutomationTemplates`)
+  — a static link would send the exact same URL to every recipient,
+  defeating the point. A **plantilla sugerida** to submit for review:
+  body `Hola {{1}}, tu entrada para {{2}} ya está lista. Tócala abajo
+  para verla.` (examples: `Maria`, `Nail Fest Bogotá`), footer `Nail
+  Fest`, one URL button `Ver mi entrada` →
+  `https://<tu-dominio>/api/ticket-pdf/{{1}}` (example: any real ticket
+  link, marking "el enlace es distinto para cada persona" in Plantillas)
+  — the body's two variables are a fixed convention (`{{1}}` = nombre,
+  `{{2}}` = nombre del evento), not a configurable mapping, since this
+  isn't a Difusión with its own variable-mapping UI. Adding a second
+  trigger later (check-in, recordatorio 24h antes del evento, ...) means:
+  add it to the enum, add the entry in `AUTOMATION_TRIGGERS`, and add the
+  actual firing call wherever that event happens in the app — the page
+  and API route pick it up automatically, no new UI to build.
 - **Difusiones** (`/admin/crm/whatsapp/difusiones`) — sends an approved
   template to an existing, named segment (same segment engine as email
   broadcasts — `resolveSegment()`, including a `label` condition — see
