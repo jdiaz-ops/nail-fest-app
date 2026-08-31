@@ -46,8 +46,8 @@ export async function sendTicketEmail(params: {
       ? await db.ticketType.findUnique({ where: { id: params.registration.ticketTypeId } })
       : null;
     // Last 8 chars of the cuid, uppercased — not cryptographically
-    // meaningful, just a short human-readable reference (Ticket Tailor's
-    // own "order #") for someone reading it over the phone or WhatsApp.
+    // meaningful, just a short human-readable reference (same idea as an
+    // "order #") for someone reading it over the phone or WhatsApp.
     const confirmationCode = (params.registration?.id ?? params.qrToken).slice(-8).toUpperCase();
 
     // Fallback chain: this event's own override -> the account-wide
@@ -94,8 +94,8 @@ export async function sendTicketEmail(params: {
     // A real, self-contained ticket (event name/date/venue, attendee,
     // ticket type, the QR itself) instead of the old bare QR-only PNG — a
     // lone QR image, saved or printed on its own, carries no event or
-    // attendee info once separated from the email body. Ticket Tailor's
-    // own "Attach ticket vouchers as a PDF" checkbox (OrgSettings.
+    // attendee info once separated from the email body. Our previous
+    // ticketing platform's own "Attach ticket vouchers as a PDF" checkbox (OrgSettings.
     // attachTicketPdf, /admin/settings/confirmation) decides whether this
     // gets built at all — off means no attachment, not a fallback to the
     // old bare-QR PNG.

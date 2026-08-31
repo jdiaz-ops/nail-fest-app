@@ -54,8 +54,8 @@ export interface EventInput {
   slug?: string;
 }
 
-/** New events start as DRAFT — matches Ticket Tailor's own behavior
- * (see the EventStatus enum's own comment on why the DB-level default
+/** New events start as DRAFT — matches our previous ticketing platform's
+ * own behavior (see the EventStatus enum's own comment on why the DB-level default
  * is PUBLISHED instead: that one's a migration safety net, not this). */
 export async function createEvent(input: EventInput): Promise<Event> {
   const slug = await uniqueSlug(input.slug?.trim() || input.name);

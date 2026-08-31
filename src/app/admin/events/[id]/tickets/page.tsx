@@ -10,8 +10,8 @@ export const dynamic = "force-dynamic";
 // CANCELLED; STARTED rows are abandoned carts, they never issued
 // anything, see /admin/crm/abandonados for those instead), with the
 // buyer's own checkout answers, ticket/check-in status, and the email
-// delivery status Ticket Tailor's own order modal highlights ("Email
-// bounced" vs "Email opened" — the specific thing the user called out as
+// delivery status our previous ticketing platform's own order modal
+// highlights ("Email bounced" vs "Email opened" — the specific thing the user called out as
 // important for deciding who to follow up with).
 export default async function IssuedTicketsPage({ params }: { params: { id: string } }) {
   const [registrations, questions, orgSettings] = await Promise.all([

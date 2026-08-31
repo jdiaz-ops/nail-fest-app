@@ -2,12 +2,12 @@ import { Fraunces } from "next/font/google";
 import SettingsNavLink from "./SettingsNavLink";
 import { requirePageUser } from "@/lib/auth/guard";
 
-// Ticket Tailor's "Box office settings" — nivel 1 (cuenta completa), as
-// opposed to any single event's own settings (nivel 2, still to come).
-// Styled to match their real admin panel closely (per the screenshot
-// review): the coral/salmon active state, the slab-serif display heading,
-// the emerald save buttons — scoped to this settings section only, not a
-// site-wide reskin.
+// Our previous ticketing platform's "Box office settings" — nivel 1
+// (cuenta completa), as opposed to any single event's own settings
+// (nivel 2, still to come). Styled to match its real admin panel closely
+// (per the reference screenshot review): the coral/salmon active state,
+// the slab-serif display heading, the emerald save buttons — scoped to
+// this settings section only, not a site-wide reskin.
 const fraunces = Fraunces({ subsets: ["latin"], weight: ["600", "900"] });
 
 const EDIT_NAV: { href: string; label: string }[] = [
@@ -29,7 +29,7 @@ const MANAGE_NAV: { href: string; label: string }[] = [
 
 // Not real routes yet — nothing to configure (no integración externa que
 // use una API key propia, ningún dominio conectado a Vercel todavía).
-// Shown greyed-out rather than hidden so the shape of Ticket Tailor's
+// Shown greyed-out rather than hidden so the shape of that reference
 // "Manage" group stays visible — same reasoning as the roadmap items in
 // the infra-audit doc, just inline here.
 const MANAGE_PLACEHOLDERS = ["API", "Dominio propio"];

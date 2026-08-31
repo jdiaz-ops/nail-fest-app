@@ -7,7 +7,7 @@ import { requireUser } from "@/lib/auth/guard";
 
 //
 // Bulk-writes an already-parsed, already-deduped person list (produced
-// client-side by lib/import/ticketTailorDoorlist.ts — see /admin/import)
+// client-side by lib/import/doorlistCsv.ts — see /admin/import)
 // into Person/Registration/Consent. Deliberately NOT one Prisma call per
 // person: at ~5,800+ people per city that's 15,000+ round trips, which
 // blows past any serverless function timeout. Instead: batched raw
@@ -51,8 +51,8 @@ const bodySchema = z.object({
     marketing: z.boolean(),
     advertising: z.boolean(),
     // Explicit business decision, not a default (see the composer's own
-    // comment on this field): the original Ticket Tailor registration
-    // never asked these people about WhatsApp specifically, so marking
+    // comment on this field): the original registration never asked
+    // these people about WhatsApp specifically, so marking
     // this granted on import is a real judgment call about scope, not a
     // formality — the admin sees the risk spelled out before checking it.
     whatsapp: z.boolean(),

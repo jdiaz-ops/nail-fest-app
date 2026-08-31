@@ -4,7 +4,7 @@ import { emailProvider } from "@/lib/email";
 import { sanitizeEventDescription } from "@/lib/sanitizeHtml";
 import { requireUser } from "@/lib/auth/guard";
 
-// "Send test email" — Ticket Tailor's own field in the broadcast composer.
+// "Send test email" — our previous ticketing platform's own field in the broadcast composer.
 // A real send to real addresses the admin controls, but deliberately
 // outside the real audience/consent/EmailLog machinery: this is the admin
 // checking their own draft looks right, not a broadcast to a subscriber,

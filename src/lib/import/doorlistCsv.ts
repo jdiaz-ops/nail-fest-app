@@ -1,4 +1,5 @@
-// Parses a Ticket Tailor "doorlist" CSV export and normalizes it into one
+// Parses a "doorlist"-style CSV export (one row per ticket, the shape our
+// previous event-ticketing platform exports) and normalizes it into one
 // record per real person — pure functions, no DB access, so this runs
 // identically in the browser (for a preview) and on the server (for the
 // actual write). See /admin/import and docs/IMPORT.md.
@@ -37,15 +38,15 @@ export interface ImportPerson {
   instagram: string | null;
   // How many tickets this person's rows represent, and how many of those
   // were marked "Checked-in: Yes" — a snapshot per physical ticket, capped
-  // by ticketCount. NOT a re-entry log: Ticket Tailor's own doorlist export
-  // has no scan-count/timestamp data, only this Yes/No per ticket. See
+  // by ticketCount. NOT a re-entry log: this doorlist export format has
+  // no scan-count/timestamp data, only this Yes/No per ticket. See
   // docs/IMPORT.md.
   ticketCount: number;
   checkedInCount: number;
 }
 
 /** Minimal RFC4180 CSV parser — handles quoted fields, escaped `""`, commas
- * and newlines inside quotes. Ticket Tailor exports UTF-8 with a BOM. */
+ * and newlines inside quotes. This export format is UTF-8 with a BOM. */
 export function parseCsv(text: string): string[][] {
   const clean = text.replace(/^﻿/, "");
   const rows: string[][] = [];
@@ -142,8 +143,8 @@ export function normalizePhoneForStorage(raw: string): string | null {
   const digits = trimmed.replace(/[^0-9]/g, "");
   if (!digits) return null;
   // Assumes the source already includes a country code (it does in every
-  // Ticket Tailor export seen so far — the form's WhatsApp field forces a
-  // country picker). E.164 storage form for consistency with live
+  // export seen so far — the form's WhatsApp field forces a country
+  // picker). E.164 storage form for consistency with live
   // registrations; hashPhone() strips non-digits again before hashing
   // regardless, so this only affects display/storage, not Meta matching.
   return "+" + digits;
@@ -201,8 +202,8 @@ export interface GroupResult {
 /** Groups doorlist rows (one per ticket) into one record per unique email —
  * the actual person. checkedInCount tallies how many of that email's rows
  * were marked "Yes", capped at ticketCount — a per-ticket snapshot, not a
- * scan log (Ticket Tailor's export has no re-entry/scan-count data; the
- * live scanning app is where that would eventually live). */
+ * scan log (this export format has no re-entry/scan-count data; the live
+ * scanning app is where that would eventually live). */
 export function groupIntoImportPeople(rows: DoorlistRow[]): GroupResult {
   const byEmail = new Map<string, ImportPerson>();
   let skippedNoEmail = 0;

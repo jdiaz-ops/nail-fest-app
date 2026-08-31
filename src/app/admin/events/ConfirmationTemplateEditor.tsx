@@ -14,7 +14,7 @@ const STARTER_HTML =
 // /admin/settings/confirmation (the account-wide default it falls back
 // to) — same editor either way, see sendTicketEmail.ts for the actual
 // fallback chain this feeds. `scope="event"` adds the Global/Event-
-// specific radio Ticket Tailor's own screenshots showed; `scope="global"`
+// specific radio the reference screenshots showed; `scope="global"`
 // has no such toggle — the account-wide template just always applies
 // when nothing more specific overrides it.
 export default function ConfirmationTemplateEditor({

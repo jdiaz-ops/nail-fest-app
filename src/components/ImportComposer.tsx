@@ -6,7 +6,7 @@ import {
   parseDoorlistCsv,
   groupIntoImportPeople,
   type ImportPerson,
-} from "@/lib/import/ticketTailorDoorlist";
+} from "@/lib/import/doorlistCsv";
 
 interface Props {
   events: { slug: string; name: string }[];
@@ -38,9 +38,10 @@ export default function ImportComposer({ events }: Props) {
   const [marketingConsent, setMarketingConsent] = useState(true);
   const [advertisingConsent, setAdvertisingConsent] = useState(true);
   // Checked by default per an explicit call made on /admin/crm/import's
-  // own page — NOT a formality: the original Ticket Tailor registration
-  // these historical rows came from never asked about WhatsApp
-  // specifically, so this is a real decision to treat that consent as
+  // own page — NOT a formality: the original registration these
+  // historical rows came from (our previous event-ticketing platform)
+  // never asked about WhatsApp specifically, so this is a real decision
+  // to treat that consent as
   // covering it, with the risk (Meta quality-rating/spam-report exposure
   // from messaging people who never opted into this exact channel, and
   // the Ley 1581 "informed consent for the specific channel" question)
@@ -118,7 +119,7 @@ export default function ImportComposer({ events }: Props) {
   return (
     <div style={{ maxWidth: 700 }}>
       <div className="field">
-        <label>Archivo CSV (export &quot;doorlist&quot; de Ticket Tailor)</label>
+        <label>Archivo CSV (formato &quot;doorlist&quot; — una fila por boleta, columnas Name / Ticket type / Checked-in / Email address)</label>
         <input type="file" accept=".csv" onChange={handleFile} />
         {fileName && <p style={{ fontSize: 13, color: "#5b5f6b" }}>{fileName}</p>}
       </div>
@@ -227,7 +228,7 @@ export default function ImportComposer({ events }: Props) {
           WhatsApp (recibir difusiones)
         </label>
         <p style={{ fontSize: 12, color: "#b8791a", margin: "6px 0 0" }}>
-          El registro original de Ticket Tailor nunca les preguntó específicamente por WhatsApp — al marcar esto
+          El registro original nunca les preguntó específicamente por WhatsApp — al marcar esto
           asumís que ese consentimiento general también cubre este canal. Riesgo real: si alguien reporta el mensaje
           como spam, Meta puede bajar la calidad de tu número o suspenderlo.
         </p>

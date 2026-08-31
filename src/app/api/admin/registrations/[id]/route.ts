@@ -4,8 +4,9 @@ import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth/guard";
 
 // Backs the "Editar detalles" / "Cancelar inscripción" actions in the
-// Issued tickets modal (/admin/events/[id]/tickets) — Ticket Tailor's own
-// order modal lets you fix a mistyped email/phone and cancel an order;
+// Issued tickets modal (/admin/events/[id]/tickets) — our previous
+// ticketing platform's own order modal lets you fix a mistyped
+// email/phone and cancel an order;
 // this is the same, adapted to our model (no payments, so "cancel" has no
 // refund step — it just flips status, same as every other place in this
 // app that already treats CANCELLED as "doesn't count", see

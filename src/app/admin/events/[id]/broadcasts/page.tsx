@@ -22,8 +22,8 @@ const SCHEDULE_LABEL: Record<string, string> = {
   AFTER_EVENT_END: "Después del evento",
 };
 
-// Correos del evento — Ticket Tailor's own "Email broadcasts": correos
-// específicos para los inscritos de ESTE evento (recordatorios, avisos de
+// Correos del evento — el mismo concepto de "Email broadcasts" de la
+// plataforma de tickets anterior: correos específicos para los inscritos de ESTE evento (recordatorios, avisos de
 // cambio de fecha, agradecimiento post-evento), no la lista global de
 // marketing que ya existe en /admin/crm/broadcasts.
 export default async function EventBroadcastsPage({ params }: { params: { id: string } }) {

@@ -232,8 +232,8 @@ button.primary:disabled {
    — a single 480px column on mobile (unchanged, already the "optimizada
    para celulares" shape), widening past ~900px to a real two-column
    layout with a sticky info-card sidebar next to the description, closer
-   to how Ticket Tailor's own event page reads on desktop instead of the
-   same narrow mobile column just centered on a wide screen. */
+   to how established ticketing platforms' own event pages read on desktop
+   instead of the same narrow mobile column just centered on a wide screen. */
 .event-page {
   max-width: 480px;
   margin: 0 auto;

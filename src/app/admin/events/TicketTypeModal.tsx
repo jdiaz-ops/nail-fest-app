@@ -71,7 +71,7 @@ export default function TicketTypeModal({
   initial: TicketTypeValues;
   // Sum of every OTHER ticket type's quantity for this event — "Total
   // quantity" below is that plus whatever's typed here, live, matching
-  // Ticket Tailor's own running total. Deliberately NOT written back to
+  // our previous ticketing platform's own running total. Deliberately NOT written back to
   // Event.capacity (see the schema's own comment on TicketType) — purely
   // informational here.
   otherTypesQuantity: number;

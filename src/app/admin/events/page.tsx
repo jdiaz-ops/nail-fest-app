@@ -6,7 +6,7 @@ import EventsTable from "./EventsTable";
 export const dynamic = "force-dynamic";
 
 // Same slab-serif display heading as /admin/settings and /admin/crm — see
-// settings/layout.tsx's own comment on the Ticket Tailor screenshot review
+// settings/layout.tsx's own comment on the reference screenshot review
 // this matches.
 const fraunces = Fraunces({ subsets: ["latin"], weight: ["600", "900"] });
 

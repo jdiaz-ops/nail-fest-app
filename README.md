@@ -1,7 +1,7 @@
 # Nail Fest — Slice 1
 
 Internal registration platform for Nail Fest events. This is **Slice 1** of
-the larger plan (replacing Ticket Tailor): landing → registration → CRM →
+the larger plan (replacing our previous ticketing platform): landing → registration → CRM →
 Meta attribution → email broadcast, built as one thin vertical slice to
 prove out before the rest (check-in/aforo app, TikTok/Google, landing
 editor, referrals, roles, etc.) gets built.

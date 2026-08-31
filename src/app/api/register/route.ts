@@ -88,8 +88,8 @@ export async function POST(req: NextRequest) {
   // comes from live /admin/settings/checkout-form config, not a fixed zod
   // schema — that's the whole point of that editor actually changing what
   // this endpoint accepts. fullName/email are hard-required regardless of
-  // what's stored (same as Ticket Tailor: Name/Email have no "Required"
-  // toggle at all, they're just always on) since the rest of the CRM
+  // what's stored (same as our previous ticketing platform: Name/Email have
+  // no "Required" toggle at all, they're just always on) since the rest of the CRM
   // (dedup key, personalization) depends on both existing.
   const questions = await getCheckoutQuestions();
   const requiredByKey = new Map(questions.map((q) => [q.key, q.required]));
@@ -147,7 +147,7 @@ export async function POST(req: NextRequest) {
   }
 
   // See /admin/settings/banned-emails — checked before touching the CRM at
-  // all, same as Ticket Tailor's own "Banned email addresses" block.
+  // all, same as our previous ticketing platform's own "Banned email addresses" block.
   const orgSettings = await getOrgSettings();
   const normalizedEmail = input.email.trim().toLowerCase();
   if (orgSettings.bannedEmails.includes(normalizedEmail)) {

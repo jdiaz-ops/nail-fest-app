@@ -26,8 +26,9 @@ export interface EventFormValues {
   slug: string;
 }
 
-// What "Copiar detalles de..." (Ticket Tailor's "Copy event details
-// from...") can carry over — everything EXCEPT dates and slug, which
+// What "Copiar detalles de..." (matching a "Copy event details from..."
+// pattern from our previous ticketing platform) can carry over —
+// everything EXCEPT dates and slug, which
 // stay blank/auto so a copied event never accidentally goes live under
 // the old event's dates or URL without the admin deliberately setting
 // new ones.
@@ -388,8 +389,8 @@ export default function EventForm({
   );
 }
 
-// One visually distinct block per Ticket Tailor's own "Event info" /
-// "Dates" / "Location" / "Event page" grouping — a header, generous
+// One visually distinct block per our previous ticketing platform's own
+// "Event info" / "Dates" / "Location" / "Event page" grouping — a header, generous
 // padding, and a full-width divider below (except the last section),
 // instead of every field running together in one cramped column.
 function Section({ title, children, last }: { title: string; children: React.ReactNode; last?: boolean }) {

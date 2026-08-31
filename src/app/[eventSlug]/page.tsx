@@ -60,9 +60,9 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
     // .event-page: 480px column on mobile (unchanged — already optimized,
     // see globals.css) widening to a real two-column layout with a sticky
     // sidebar (see EventRegistration.tsx's own comment) past ~900px,
-    // closer to how Ticket Tailor's own event page reads on desktop
-    // instead of the same narrow mobile column just centered on a wide
-    // screen.
+    // closer to how established ticketing platforms' own event pages read
+    // on desktop instead of the same narrow mobile column just centered
+    // on a wide screen.
     <main className="event-page">
       <MetaPixelScript pixelId={metaConnection?.pixelId ?? null} />
 

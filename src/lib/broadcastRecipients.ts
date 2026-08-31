@@ -17,8 +17,9 @@ export interface EventBroadcastRecipient {
 }
 
 // Recipients for an event-scoped broadcast — "All ticket buyers" or
-// "Ticket buyers who bought a specific ticket type", Ticket Tailor's own
-// two real options (the others it shows — waitlist sign-ups — don't apply
+// "Ticket buyers who bought a specific ticket type", our previous
+// ticketing platform's own two real options (the others it shows —
+// waitlist sign-ups — don't apply
 // here, this app has no waitlist feature). Deliberately resolved directly
 // from real registrations rather than requiring a named SegmentDefinition
 // first, unlike the original /admin/crm/broadcasts flow — "everyone

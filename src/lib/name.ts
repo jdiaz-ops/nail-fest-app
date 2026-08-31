@@ -1,7 +1,8 @@
 /** First word is firstName, everything else is lastName — matches how
- * Ticket Tailor's single "Nombre y Apellido" field has always worked, so
- * the live form (RegistrationForm.tsx) and the historical CSV import
- * (lib/import/ticketTailorDoorlist.ts) split names identically. */
+ * our previous ticketing platform's single "Nombre y Apellido" field has
+ * always worked, so the live form (RegistrationForm.tsx) and the
+ * historical CSV import (lib/import/doorlistCsv.ts) split names
+ * identically. */
 export function splitName(fullName: string): { firstName: string; lastName: string } {
   const parts = fullName.trim().split(/\s+/);
   if (parts.length === 0 || (parts.length === 1 && parts[0] === "")) {

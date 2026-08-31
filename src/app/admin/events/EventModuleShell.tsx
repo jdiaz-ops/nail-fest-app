@@ -5,8 +5,9 @@ import Link from "next/link";
 import DuplicateEventButton from "./DuplicateEventButton";
 import DeleteEventButton from "./DeleteEventButton";
 
-// The per-event "module" — Ticket Tailor's own left-nav-scoped-to-one-event
-// pattern, which the user walked through screenshot by screenshot before
+// The per-event "module" — our previous ticketing platform's own
+// left-nav-scoped-to-one-event pattern, which the user walked through
+// screenshot by screenshot before
 // asking for this. Wraps every /admin/events/[id]/* page (see the sibling
 // layout.tsx) so each sub-page only needs to render its own content, not
 // its own copy of this nav. Client component: needs usePathname to

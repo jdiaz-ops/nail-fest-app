@@ -7,8 +7,9 @@ import { NodeViewWrapper, ReactNodeViewRenderer, type NodeViewProps } from "@tip
 
 // Extends TipTap's stock Image node (src/alt/title only, no way to select
 // it and nothing to edit once inserted) with the same per-image controls
-// Ticket Tailor's own editor exposes on click: alt text, a caption, a
-// left/center/right/none position, and an optional link — plus an actual
+// established ticketing-platform editors expose on click: alt text, a
+// caption, a left/center/right/none position, and an optional link — plus
+// an actual
 // selected state (outline + Editar/Eliminar buttons) so an image can be
 // picked out and removed instead of only ever deleted by placing the
 // cursor next to it and hitting backspace.

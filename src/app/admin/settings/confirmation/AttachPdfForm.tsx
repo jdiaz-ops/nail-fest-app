@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { postSettings, cardStyle, saveButtonStyle } from "../shared";
 
-// Ticket Tailor's own "Attach ticket vouchers as a PDF" checkbox — one
-// account-wide on/off (see OrgSettings.attachTicketPdf's schema comment),
+// Our previous ticketing platform's own "Attach ticket vouchers as a PDF"
+// checkbox — one account-wide on/off (see OrgSettings.attachTicketPdf's schema comment),
 // separate mini-form from the rich-text template editor above it, same
 // pattern as SelfServeForm.tsx.
 export default function AttachPdfForm({ initialEnabled }: { initialEnabled: boolean }) {

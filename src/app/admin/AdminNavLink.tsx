@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-// The salmon/coral active-tab pill from Ticket Tailor's top nav
-// ("Overview" highlighted in their screenshots) — same mechanism as
+// The salmon/coral active-tab pill from our previous ticketing platform's
+// top nav ("Overview" highlighted in its screenshots) — same mechanism as
 // /admin/settings/SettingsNavLink, one level up.
 export default function AdminNavLink({ href, label }: { href: string; label: string }) {
   const pathname = usePathname();

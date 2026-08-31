@@ -68,7 +68,7 @@ interface Props {
   submitLabel: string;
 }
 
-// Matches the Ticket Tailor forms this replaces — Colombia default since
+// Matches the previous platform's forms this replaces — Colombia default since
 // that's effectively the whole audience today (see docs/IMPORT.md), with a
 // handful of other countries covered rather than forcing everyone else to
 // mistype a Colombian number.

@@ -12,7 +12,7 @@ export default async function ImportPage() {
       <CrmPageHeader
         title="Importar registros históricos"
         subtitle={
-          'Sube el export "doorlist" de Ticket Tailor para un evento (CSV). Todo el procesamiento (agrupar por email, normalizar ciudad/teléfono/profesión) pasa en tu navegador antes de enviar nada — puedes revisar el resumen abajo antes de confirmar. No se envía ningún correo ni se genera QR para estos registros; es solo para poblar el CRM y las audiencias de Meta con datos históricos.'
+          'Sube el export "doorlist" (CSV, una fila por boleta) de un evento anterior. Todo el procesamiento (agrupar por email, normalizar ciudad/teléfono/profesión) pasa en tu navegador antes de enviar nada — puedes revisar el resumen abajo antes de confirmar. No se envía ningún correo ni se genera QR para estos registros; es solo para poblar el CRM y las audiencias de Meta con datos históricos.'
         }
       />
       <ImportComposer events={events.map((e) => ({ slug: e.slug, name: e.name }))} />

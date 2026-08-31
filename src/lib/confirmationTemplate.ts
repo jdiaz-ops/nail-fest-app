@@ -3,9 +3,10 @@ import { htmlToPlainText } from "@/lib/email/templates";
 
 // Merge tags for the confirmation-email editor (Confirmación del evento,
 // /admin/events/[id]/confirmation and /admin/settings/confirmation) — the
-// same idea as Ticket Tailor's own placeholder dropdown, scoped to real
-// data this app actually has. Deliberately NOT offering postcode, "add to
-// calendar" links, or seat reservations like Ticket Tailor's own list —
+// same idea as our previous ticketing platform's own placeholder
+// dropdown, scoped to real data this app actually has. Deliberately NOT
+// offering postcode, "add to calendar" links, or seat reservations like
+// that platform's own list —
 // this app has no postal-code field, no ICS generation, and no seating,
 // so those would be placeholders with nothing real to substitute.
 export const CONFIRMATION_MERGE_TAGS: { key: string; label: string }[] = [

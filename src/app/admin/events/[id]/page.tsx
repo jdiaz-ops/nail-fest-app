@@ -5,7 +5,7 @@ import { StatCard } from "../../StatsUI";
 export const dynamic = "force-dynamic";
 
 // Event summary — the landing page when you open an event, same role as
-// Ticket Tailor's own "Event summary": a fast glance that combines BOTH
+// our previous ticketing platform's own "Event summary": a fast glance that combines BOTH
 // halves the user explicitly asked to see together here — "cómo vamos
 // hacia el evento" (momentum: boletas emitidas, restantes, días para el
 // evento) and "qué pasó durante el evento" (escaneadas/entraron) — in one
