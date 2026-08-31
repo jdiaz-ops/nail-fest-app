@@ -21,13 +21,25 @@ const nextConfig = {
   // rather than assumed, since guessing wrong here silently no-ops).
   experimental: {
     serverComponentsExternalPackages: ["pdfkit"],
-    // Belt-and-suspenders alongside the above: makes sure the .afm font
-    // data files themselves are physically present in the deployed
-    // function's filesystem, in case Vercel's own tracer for an
-    // "external" package ever narrows what it ships instead of the
-    // whole package directory. Harmless either way, cheap insurance.
+    // serverComponentsExternalPackages alone fixed the RESOLUTION
+    // mechanism (confirmed live: the error moved from "Cannot find
+    // module '#standard-fonts/Helvetica'" to a real filesystem path,
+    // meaning Node's own resolver is now correctly turning that subpath
+    // import into ./js/standard-fonts/Helvetica.cjs) but Vercel's file
+    // tracer (@vercel/nft) still doesn't SHIP every file pdfkit actually
+    // needs at runtime — verified directly against the real
+    // route.js.nft.json trace manifests after adding a narrower
+    // js/standard-fonts/**/* include: the tracer had followed pdfkit's
+    // ESM entry (js/pdfkit.node.mjs) for its static analysis, but the
+    // deployed function's require() at runtime actually resolves through
+    // the CJS entry (js/pdfkit.js) instead — which was then missing
+    // entirely, a second, different MODULE_NOT_FOUND. Rather than keep
+    // chasing individual files through this ESM/CJS + subpath-imports
+    // resolution mismatch, include the WHOLE package — small library,
+    // and the one glob that's actually correct regardless of which
+    // entry point or lazily-`imports`-mapped file ends up used.
     outputFileTracingIncludes: {
-      "/api/**": ["./node_modules/pdfkit/js/data/**/*"],
+      "/api/**": ["./node_modules/pdfkit/**/*"],
     },
   },
 };
