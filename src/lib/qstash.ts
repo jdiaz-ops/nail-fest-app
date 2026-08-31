@@ -11,10 +11,20 @@ import { Client } from "@upstash/qstash";
 // just an outbound HTTP call this app makes to a third-party API, not a
 // Vercel-side cron.
 //
-// Requires QSTASH_TOKEN (publish/cancel) and QSTASH_CURRENT_SIGNING_KEY
-// / QSTASH_NEXT_SIGNING_KEY (verify the callback really came from
-// QStash, not just anyone who guesses the webhook URL) — see
+// Requires QSTASH_TOKEN (publish/cancel), QSTASH_CURRENT_SIGNING_KEY /
+// QSTASH_NEXT_SIGNING_KEY (verify the callback really came from QStash,
+// not just anyone who guesses the webhook URL), AND QSTASH_URL — see
 // docs/WHATSAPP_SETUP.md for how to get these from the Upstash console.
+// QSTASH_URL is easy to skip since the SDK technically works without it
+// in some setups, but QStash accounts are region-pinned (US or EU,
+// chosen when the account was created) and the bare default endpoint
+// doesn't reliably route to the right one — it can land on the other
+// region's cluster depending on where the Vercel function physically
+// runs, failing with `user (...) not found in this region`. Passed
+// automatically by the Client constructor via the QSTASH_URL env var
+// (its own default), not read here — just needs to be SET, matching
+// whichever region the Upstash console shows.
+//
 // Every function here is best-effort: missing/invalid credentials never
 // throw past this module, they return null/false so the caller falls
 // back to the daily cron instead of failing the whole broadcast.

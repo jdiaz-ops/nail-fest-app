@@ -190,23 +190,35 @@ warning right there instead of pretending it worked.
 
 **Setup:**
 1. Create a free account at [console.upstash.com](https://console.upstash.com)
-   and open the **QStash** tab.
+   and open the **QStash** tab. Note the region shown next to "QStash"
+   at the top (e.g. "QStash / US Region") — you'll need it in step 3.
 2. Copy three values from there: **QSTASH_TOKEN** (top of the QStash
    page), and under **Signing Keys**: **Current signing key** and **Next
    signing key**.
-3. Add all three as environment variables in Vercel → your project →
-   Settings → Environment Variables:
+3. Add environment variables in Vercel → your project → Settings →
+   Environment Variables:
    - `QSTASH_TOKEN`
    - `QSTASH_CURRENT_SIGNING_KEY`
    - `QSTASH_NEXT_SIGNING_KEY`
+   - `QSTASH_URL` — **required**, not optional, despite the SDK
+     technically working without it in some setups. QStash runs
+     region-pinned instances (US or EU, picked when you create the
+     account), and the bare default endpoint
+     (`https://qstash.upstash.io`) doesn't reliably route to the right
+     one — it can land on the other region's cluster depending on where
+     Vercel's function actually runs, which fails with `user (...) not
+     found in this region`. Set this to match the region from step 1:
+     - US Region → `https://qstash-us-east-1.upstash.io`
+     - EU Region → `https://qstash-eu-central-1.upstash.io`
 4. **Redeploy** (same gotcha as `META_APP_SECRET` earlier — a Vercel env
    var change doesn't touch an already-running deployment).
 5. Schedule a test Difusión a few minutes out and confirm it actually
    sends at that time, not just "eventually." If the composer shows "No
-   se pudo programar la hora exacta" after saving the three env vars
-   correctly, double check they were pasted into the right Vercel
-   environment (Production vs Preview) and that step 4's redeploy
-   actually happened.
+   se pudo programar la hora exacta" after saving these env vars
+   correctly, check Vercel → Logs for a line starting with `qstash:
+   failed to schedule whatsapp broadcast send` — the real error from
+   Upstash is right there (wrong region is the most common one; a typo'd
+   token or missing Redeploy are the other two).
 
 Nothing else in the app depends on QStash — Conexión, Plantillas,
 Bandeja and an *immediate* Difusión all work exactly the same with or
