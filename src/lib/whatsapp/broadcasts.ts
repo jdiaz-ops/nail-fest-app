@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { hasActiveConsent } from "@/lib/consent";
+import { hasActiveConsent, bulkActiveConsent } from "@/lib/consent";
 import { getOrgSettings, type OrgSettingsValue } from "@/lib/settings";
 import { resolveSegment, type SegmentFilter } from "@/lib/segments/builder";
 import { resolveEventBroadcastRecipients } from "@/lib/broadcastRecipients";
@@ -91,6 +91,7 @@ export async function previewSegmentRecipients(
 ): Promise<{ total: number; eligible: number; noConsent: number; noPhone: number }> {
   const segment = await db.segmentDefinition.findUniqueOrThrow({ where: { id: segmentId } });
   const people = await resolveSegment(segment.filter as unknown as SegmentFilter);
+  const consented = await bulkActiveConsent(people.map((p) => p.id), "WHATSAPP");
 
   let eligible = 0;
   let noConsent = 0;
@@ -98,13 +99,11 @@ export async function previewSegmentRecipients(
   for (const person of people) {
     if (!person.phone) {
       noPhone++;
-      continue;
-    }
-    if (!(await hasActiveConsent(person.id, "WHATSAPP"))) {
+    } else if (!consented.has(person.id)) {
       noConsent++;
-      continue;
+    } else {
+      eligible++;
     }
-    eligible++;
   }
   return { total: people.length, eligible, noConsent, noPhone };
 }
@@ -131,6 +130,11 @@ export async function sendWhatsAppBroadcast(
     : (await resolveSegment(broadcast.segment!.filter as unknown as SegmentFilter)).map((person) => ({ person, event: null }));
 
   const orgSettings = await getOrgSettings();
+  // One bulk consent check for the whole recipient list instead of one
+  // DB round trip per person inside the loop below — see
+  // bulkActiveConsent's own comment; matters a lot once a segment runs
+  // into the thousands (a real Nail Fest segment easily does).
+  const consented = await bulkActiveConsent(recipients.map((r) => r.person.id), "WHATSAPP");
 
   let sent = 0;
   let skippedNoConsent = 0;
@@ -150,7 +154,7 @@ export async function sendWhatsAppBroadcast(
           skippedNoPhone++;
           return;
         }
-        if (!(await hasActiveConsent(person.id, "WHATSAPP"))) {
+        if (!consented.has(person.id)) {
           skippedNoConsent++;
           return;
         }

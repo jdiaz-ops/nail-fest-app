@@ -11,16 +11,28 @@ import { getOrCreateLabel } from "@/lib/labels";
 // (WhatsAppBroadcast.eventId exists) but not a second composer surface
 // built here; picking an "everyone registered for X" segment in
 // /admin/crm/segments covers the same audience today.
-const bodySchema = z.object({
-  segmentId: z.string().min(1),
-  templateId: z.string().min(1),
-  variableMapping: z.record(z.string()).default({}),
-  // A plain name, not an id — WhatChimp's own "type a name and hit
-  // enter" UX, same reasoning as getOrCreateLabel's own comment: created
-  // on first use so the composer never needs a separate "manage labels"
-  // step first.
-  assignLabelName: z.string().optional(),
-});
+const bodySchema = z
+  .object({
+    segmentId: z.string().min(1),
+    templateId: z.string().min(1),
+    variableMapping: z.record(z.string()).default({}),
+    // A plain name, not an id — WhatChimp's own "type a name and hit
+    // enter" UX, same reasoning as getOrCreateLabel's own comment: created
+    // on first use so the composer never needs a separate "manage labels"
+    // step first.
+    assignLabelName: z.string().optional(),
+    // Segment-based Difusiones only ever needs IMMEDIATE or a fixed
+    // date/time — BEFORE_EVENT_START/AFTER_EVENT_END (also valid on this
+    // model, see WhatsAppBroadcast.scheduleKind) only make sense for an
+    // event-scoped broadcast, which this composer doesn't create.
+    scheduleKind: z.enum(["IMMEDIATE", "AT_DATETIME"]).default("IMMEDIATE"),
+    scheduledAt: z.string().datetime().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.scheduleKind === "AT_DATETIME" && !data.scheduledAt) {
+      ctx.addIssue({ code: "custom", message: "scheduledAt required for AT_DATETIME", path: ["scheduledAt"] });
+    }
+  });
 
 export async function POST(req: NextRequest) {
   const auth = await requireUser(["ADMIN"]);
@@ -30,7 +42,7 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: "invalid_body", issues: parsed.error.issues }, { status: 400 });
   }
-  const { segmentId, templateId, variableMapping, assignLabelName } = parsed.data;
+  const { segmentId, templateId, variableMapping, assignLabelName, scheduleKind, scheduledAt } = parsed.data;
 
   const [segment, template] = await Promise.all([
     db.segmentDefinition.findUnique({ where: { id: segmentId } }),
@@ -47,13 +59,23 @@ export async function POST(req: NextRequest) {
       templateId: template.id,
       variableMapping,
       assignLabelId: assignLabel?.id ?? null,
-      status: "SENDING",
+      scheduleKind,
+      scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
+      // A scheduled one waits for /api/whatsapp/send-due (the daily
+      // cron) to pick it up — same QUEUED/SENDING split as the
+      // event-scoped email broadcasts (/api/admin/events/[id]/
+      // broadcasts), just never actually sent from inside this request.
+      status: scheduleKind === "IMMEDIATE" ? "SENDING" : "QUEUED",
     },
   });
 
+  if (scheduleKind !== "IMMEDIATE") {
+    return NextResponse.json({ ok: true, broadcastId: broadcast.id, sentNow: false });
+  }
+
   try {
     const result = await sendWhatsAppBroadcast(broadcast.id);
-    return NextResponse.json({ ok: true, broadcastId: broadcast.id, ...result });
+    return NextResponse.json({ ok: true, broadcastId: broadcast.id, sentNow: true, ...result });
   } catch (err) {
     console.error("whatsapp broadcast send failed", err);
     return NextResponse.json({ error: err instanceof Error ? err.message : "send_failed" }, { status: 502 });

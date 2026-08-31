@@ -1,11 +1,14 @@
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { getOrgSettings } from "@/lib/settings";
+import { listResendableRegistrations } from "@/lib/whatsapp/sendTicketPdf";
 import WhatsAppThreadComposer from "@/components/WhatsAppThreadComposer";
 import WhatsAppMarkRead from "@/components/WhatsAppMarkRead";
 import WhatsAppWindowCountdown from "@/components/WhatsAppWindowCountdown";
 import WhatsAppAssignAgent from "@/components/WhatsAppAssignAgent";
 import WhatsAppPersonLabels from "@/components/WhatsAppPersonLabels";
+import WhatsAppPersonEditForm from "@/components/WhatsAppPersonEditForm";
+import WhatsAppSendTicketButton from "@/components/WhatsAppSendTicketButton";
 
 export const dynamic = "force-dynamic";
 
@@ -37,12 +40,13 @@ export default async function WhatsAppThreadPage({ params }: { params: { id: str
   });
   if (!conversation) notFound();
 
-  const [agents, orgSettings, lastRegistration] = await Promise.all([
+  const [agents, orgSettings, lastRegistration, resendableRegistrations] = await Promise.all([
     db.adminUser.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
     getOrgSettings(),
     conversation.personId
       ? db.registration.findFirst({ where: { personId: conversation.personId }, orderBy: { createdAt: "desc" } })
       : null,
+    conversation.personId ? listResendableRegistrations(conversation.personId) : Promise.resolve([]),
   ]);
 
   const withinWindow = Boolean(conversation.lastInboundAt && Date.now() - conversation.lastInboundAt.getTime() < WINDOW_MS);
@@ -146,6 +150,42 @@ export default async function WhatsAppThreadPage({ params }: { params: { id: str
             <span style={{ fontSize: 12, color: "#8a8478" }}>Sin contacto vinculado del CRM todavía.</span>
           )}
         </SidebarSection>
+
+        <SidebarSection title="Ficha del contacto">
+          {conversation.person ? (
+            <WhatsAppPersonEditForm
+              person={{
+                id: conversation.person.id,
+                firstName: conversation.person.firstName,
+                lastName: conversation.person.lastName,
+                email: conversation.person.email,
+                city: conversation.person.city,
+                profession: conversation.person.profession,
+              }}
+            />
+          ) : (
+            <span style={{ fontSize: 12, color: "#8a8478" }}>Sin contacto vinculado del CRM todavía.</span>
+          )}
+        </SidebarSection>
+
+        {conversation.personId && resendableRegistrations.length > 0 && (
+          <SidebarSection title="Entradas">
+            {!withinWindow && (
+              <p style={{ fontSize: 12, color: "#8a5a1f", margin: "0 0 8px" }}>
+                Ventana cerrada — no se puede reenviar un PDF hasta que la persona vuelva a escribir.
+              </p>
+            )}
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {resendableRegistrations.map((r) => (
+                <div key={r.id} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  <span style={{ fontSize: 12.5, fontWeight: 500 }}>{r.event.name}</span>
+                  <span style={{ fontSize: 11, color: "#8a8478" }}>{r.id.slice(-8).toUpperCase()}</span>
+                  {withinWindow && <WhatsAppSendTicketButton conversationId={conversation.id} registrationId={r.id} />}
+                </div>
+              ))}
+            </div>
+          </SidebarSection>
+        )}
 
         <SidebarSection title="Datos del contacto">
           <SnapshotRow label="Cliente desde" value={new Date(conversation.createdAt).toLocaleDateString("es-CO")} />

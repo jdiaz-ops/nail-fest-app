@@ -12,6 +12,7 @@ export const dynamic = "force-dynamic";
 const STATUS_STYLE: Record<string, { bg: string; ink: string }> = {
   SENT: { bg: "#e8f6ef", ink: "#0e6b4c" },
   SENDING: { bg: "#fdf1e6", ink: "#8a5a1f" },
+  QUEUED: { bg: "#e7edfb", ink: "#2f4ba8" },
   DRAFT: { bg: "#f6f5f2", ink: "#5b5f6b" },
 };
 
@@ -92,6 +93,8 @@ export default async function WhatsAppDifusionesPage() {
                         <Bar label="Leídos" count={s.read} total={s.processed} color="#2f6fed" />
                         <Bar label="Fallidos" count={s.failed} total={s.processed} color="#c2185b" />
                       </div>
+                    ) : b.status === "QUEUED" && b.scheduledAt ? (
+                      <span style={{ color: "#2f4ba8" }}>Programado para {new Date(b.scheduledAt).toLocaleString("es-CO")}</span>
                     ) : (
                       <span style={{ color: "#8a8478" }}>—</span>
                     )}

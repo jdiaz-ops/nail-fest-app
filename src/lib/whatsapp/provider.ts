@@ -23,6 +23,19 @@ export interface WhatsAppFreeformMessage {
   text: string;
 }
 
+// A document sent inside the 24h freeform window — same rules as a text
+// reply (see WhatsAppFreeformMessage), just a PDF instead of text. Sent
+// by `link`, not a pre-uploaded media id: Meta's Cloud API fetches the
+// URL itself at send time, so the caller needs no separate media-upload
+// step — see /api/ticket-pdf/[token] (the public URL this points at,
+// same pattern as /api/ticket-qr's PNG).
+export interface WhatsAppDocumentMessage {
+  to: string; // E.164
+  link: string; // publicly fetchable HTTPS URL — Meta's servers download from it directly
+  filename: string;
+  caption?: string;
+}
+
 // Meta's real button component shapes — static only (no dynamic URL
 // suffix parameter), which is all this app's templates need.
 export type WhatsAppTemplateButton =
@@ -88,6 +101,7 @@ export interface WhatsAppPhoneNumberStatus {
 export interface WhatsAppProvider {
   sendTemplate(input: WhatsAppTemplateMessage): Promise<{ providerMessageId: string }>;
   sendFreeform(input: WhatsAppFreeformMessage): Promise<{ providerMessageId: string }>;
+  sendDocument(input: WhatsAppDocumentMessage): Promise<{ providerMessageId: string }>;
   listTemplates(): Promise<RemoteWhatsAppTemplate[]>;
   createTemplate(input: CreateWhatsAppTemplateInput): Promise<{ metaTemplateId: string; status: RemoteWhatsAppTemplate["status"] }>;
   getPhoneNumberStatus(): Promise<WhatsAppPhoneNumberStatus>;

@@ -1,6 +1,7 @@
 import type {
   CreateWhatsAppTemplateInput,
   RemoteWhatsAppTemplate,
+  WhatsAppDocumentMessage,
   WhatsAppFreeformMessage,
   WhatsAppPhoneNumberStatus,
   WhatsAppProvider,
@@ -81,6 +82,22 @@ async function sendFreeform(input: WhatsAppFreeformMessage): Promise<{ providerM
       to: toGraphPhone(input.to),
       type: "text",
       text: { body: input.text },
+    }),
+  });
+  const providerMessageId = json?.messages?.[0]?.id;
+  if (!providerMessageId) throw new Error("WhatsApp Cloud API did not return a message id");
+  return { providerMessageId };
+}
+
+async function sendDocument(input: WhatsAppDocumentMessage): Promise<{ providerMessageId: string }> {
+  const conn = await getWhatsAppConnection();
+  const json = await graphFetch(`${conn.phoneNumberId}/messages`, conn.token, {
+    method: "POST",
+    body: JSON.stringify({
+      messaging_product: "whatsapp",
+      to: toGraphPhone(input.to),
+      type: "document",
+      document: { link: input.link, filename: input.filename, ...(input.caption ? { caption: input.caption } : {}) },
     }),
   });
   const providerMessageId = json?.messages?.[0]?.id;
@@ -245,6 +262,7 @@ export async function subscribeAppToWaba(wabaId: string, token: string): Promise
 export const metaWhatsAppProvider: WhatsAppProvider = {
   sendTemplate,
   sendFreeform,
+  sendDocument,
   listTemplates,
   createTemplate,
   getPhoneNumberStatus,

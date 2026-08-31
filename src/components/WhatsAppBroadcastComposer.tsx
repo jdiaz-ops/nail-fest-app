@@ -11,6 +11,8 @@ interface EligibilityPreview {
   noPhone: number;
 }
 
+type ScheduleKind = "IMMEDIATE" | "AT_DATETIME";
+
 interface SegmentOption {
   id: string;
   name: string;
@@ -57,6 +59,8 @@ export default function WhatsAppBroadcastComposer({ segments, templates, mergeTa
   const [sending, setSending] = useState(false);
   const [eligibility, setEligibility] = useState<EligibilityPreview | null>(null);
   const [eligibilityLoading, setEligibilityLoading] = useState(false);
+  const [scheduleKind, setScheduleKind] = useState<ScheduleKind>("IMMEDIATE");
+  const [scheduledAtLocal, setScheduledAtLocal] = useState("");
 
   const selectedSegment = segments.find((s) => s.id === segmentId);
   const selectedTemplate = templates.find((t) => t.id === templateId);
@@ -104,19 +108,37 @@ export default function WhatsAppBroadcastComposer({ segments, templates, mergeTa
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
-    setSending(true);
     setResult(null);
 
+    if (scheduleKind === "AT_DATETIME" && !scheduledAtLocal) {
+      setResult("Elige una fecha y hora para programar el envío.");
+      return;
+    }
+
+    setSending(true);
     const res = await fetch("/api/admin/whatsapp/broadcasts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ segmentId, templateId, variableMapping: mapping, assignLabelName: assignLabelName || undefined }),
+      body: JSON.stringify({
+        segmentId,
+        templateId,
+        variableMapping: mapping,
+        assignLabelName: assignLabelName || undefined,
+        scheduleKind,
+        scheduledAt: scheduleKind === "AT_DATETIME" ? new Date(scheduledAtLocal).toISOString() : undefined,
+      }),
     });
     const body = await res.json();
     setSending(false);
     if (res.ok) {
-      setResult(body.failed > 0 ? `Enviado — ${body.sent} entregados, ${body.failed} fallidos.` : `Enviado a los ${body.sent} contactos elegibles.`);
+      if (body.sentNow) {
+        setResult(body.failed > 0 ? `Enviado — ${body.sent} entregados, ${body.failed} fallidos.` : `Enviado a los ${body.sent} contactos elegibles.`);
+      } else {
+        setResult(`Programada para ${new Date(scheduledAtLocal).toLocaleString("es-CO")} — se enviará sola, no hace falta dejar esta pantalla abierta.`);
+      }
       setAssignLabelName("");
+      setScheduleKind("IMMEDIATE");
+      setScheduledAtLocal("");
       router.refresh();
     } else {
       setResult(`Error al enviar: ${body?.error ?? "revisa la consola"}`);
@@ -221,6 +243,30 @@ export default function WhatsAppBroadcastComposer({ segments, templates, mergeTa
         </p>
       </div>
 
+      <div className="field">
+        <label htmlFor="scheduleKind">Enviar</label>
+        <select id="scheduleKind" value={scheduleKind} onChange={(e) => setScheduleKind(e.target.value as ScheduleKind)}>
+          <option value="IMMEDIATE">Inmediatamente</option>
+          <option value="AT_DATETIME">A una fecha y hora programada</option>
+        </select>
+      </div>
+
+      {scheduleKind === "AT_DATETIME" && (
+        <div className="field">
+          <label htmlFor="scheduledAtLocal">Fecha y hora</label>
+          <input
+            id="scheduledAtLocal"
+            type="datetime-local"
+            value={scheduledAtLocal}
+            onChange={(e) => setScheduledAtLocal(e.target.value)}
+            required
+          />
+          <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>
+            Se revisa una vez al día — el envío puede salir hasta ~24h después de la hora elegida, no al minuto exacto.
+          </p>
+        </div>
+      )}
+
       <div style={{ background: "#f0efec", borderRadius: 8, padding: "10px 14px", marginBottom: 16, fontSize: 13, color: "#5b5f6b" }}>
         {eligibilityLoading && !eligibility && "Calculando a quién le llegará..."}
         {eligibility && (
@@ -256,7 +302,7 @@ export default function WhatsAppBroadcastComposer({ segments, templates, mergeTa
       </div>
 
       <button className="primary" type="submit" disabled={sending} style={{ width: "auto", padding: "10px 24px" }}>
-        {sending ? "Enviando..." : "Enviar difusión"}
+        {sending ? "Enviando..." : scheduleKind === "IMMEDIATE" ? "Enviar difusión" : "Programar envío"}
       </button>
       {result && <p style={{ marginTop: 12 }}>{result}</p>}
     </form>

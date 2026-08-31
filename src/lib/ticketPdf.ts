@@ -1,4 +1,6 @@
 import PDFDocument from "pdfkit";
+import { db } from "@/lib/db";
+import { getOrgSettings } from "@/lib/settings";
 import { formatDateInTz } from "@/lib/dateFormat";
 import { renderQrPngBuffer } from "@/lib/ticket";
 
@@ -114,4 +116,40 @@ export async function renderTicketPdfBuffer(data: TicketPdfData): Promise<Buffer
 
     doc.end();
   });
+}
+
+/** Loads everything renderTicketPdfBuffer needs straight from a
+ * registration id — shared by /api/ticket-pdf/[token] (the public URL
+ * WhatsApp document sends point at) and anywhere else that needs "just
+ * render this person's ticket" without duplicating the field mapping
+ * sendTicketEmail.ts already does inline for the email attachment. Same
+ * confirmationCode derivation as that file (last 8 chars of the
+ * registration id, uppercased) — kept identical so the code shown to
+ * someone never disagrees between the email and a WhatsApp resend.
+ * Returns null for anything that isn't a real, confirmed, QR-issued
+ * registration — never partially renders a ticket for a draft/cancelled
+ * one. */
+export async function buildTicketPdfDataForRegistration(registrationId: string): Promise<TicketPdfData | null> {
+  const registration = await db.registration.findUnique({
+    where: { id: registrationId },
+    include: { person: true, event: true, ticketType: true },
+  });
+  if (!registration || !registration.qrToken || registration.status !== "CONFIRMED") return null;
+
+  const orgSettings = await getOrgSettings();
+  return {
+    firstName: registration.person.firstName ?? "",
+    lastName: registration.person.lastName ?? undefined,
+    eventName: registration.event.name,
+    venueName: registration.event.venueName ?? undefined,
+    venueAddress: registration.event.venueAddress ?? undefined,
+    startsAt: registration.event.startsAt,
+    endsAt: registration.event.endsAt ?? undefined,
+    ticketTypeName: registration.ticketType?.name,
+    ticketCount: registration.ticketCount ?? undefined,
+    confirmationCode: registration.id.slice(-8).toUpperCase(),
+    qrToken: registration.qrToken,
+    timezone: orgSettings.timezone,
+    language: orgSettings.language,
+  };
 }
