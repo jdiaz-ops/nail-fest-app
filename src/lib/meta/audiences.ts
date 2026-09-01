@@ -6,6 +6,16 @@ import { resolveSegment, normalizeFilter, type SegmentFilter } from "@/lib/segme
 
 const GRAPH_VERSION = "v21.0";
 
+// Same small helper as import-registrations/route.ts's own chunk() — kept
+// local here too rather than pulled into a shared utils module, matching
+// how this codebase already prefers a duplicated one-liner over a new
+// shared dependency for something this small.
+function chunk<T>(arr: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+
 async function getConnection() {
   const conn = await db.metaConnection.findFirst({ orderBy: { createdAt: "desc" } });
   if (!conn) throw new Error("No MetaConnection configured — see docs/META_SETUP.md.");
@@ -305,18 +315,35 @@ export async function ensureSeedAudiences() {
  * checkbox), and nothing before this surfaced that gap in the UI — a
  * segment could show thousands of "Personas" while its actual Custom
  * Audience on Meta sits under 1,000, with no visible reason why.
+ *
+ * Batched internally (CONSENT_QUERY_BATCH_SIZE per `IN (...)`) — Postgres
+ * caps a single prepared statement at 32,767 bind variables, and the
+ * "Masterlist" segment alone already has more people than that (confirmed
+ * live: 49,833). One `personId: { in: [...] }` over the whole list blew
+ * past that cap with a P2035 the moment a list this large hit this
+ * function, however it got called — every caller (this one, the three
+ * below) shares the fix by living here instead of in each call site.
  */
+const CONSENT_QUERY_BATCH_SIZE = 25_000;
+
 export async function filterByActiveConsent<T extends { id: string }>(
   people: T[],
   purpose: ConsentPurpose
 ): Promise<T[]> {
   if (people.length === 0) return [];
 
-  const consents = await db.consent.findMany({
-    where: { personId: { in: people.map((p) => p.id) }, purpose },
-    orderBy: { grantedAt: "desc" },
-    select: { personId: true, granted: true, revokedAt: true },
-  });
+  const ids = people.map((p) => p.id);
+  const consents = (
+    await Promise.all(
+      chunk(ids, CONSENT_QUERY_BATCH_SIZE).map((idBatch) =>
+        db.consent.findMany({
+          where: { personId: { in: idBatch }, purpose },
+          orderBy: { grantedAt: "desc" },
+          select: { personId: true, granted: true, revokedAt: true },
+        })
+      )
+    )
+  ).flat();
 
   const latestByPerson = new Map<string, { granted: boolean; revokedAt: Date | null }>();
   for (const c of consents) {
