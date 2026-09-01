@@ -9,6 +9,11 @@ import CrmPageHeader from "../CrmPageHeader";
 import StatCard from "../StatCard";
 
 export const dynamic = "force-dynamic";
+// Extra headroom on Vercel's default function timeout — this page resolves
+// every saved segment (each its own resolveSegment query set) plus one
+// shared consent query, over CRMs with tens of thousands of people across
+// events. Same reasoning as the chunked-broadcast routes' own maxDuration.
+export const maxDuration = 60;
 
 // ADMIN-only — see ImportPage's own comment on why this is gated again
 // here, not just hidden from CrmLayout's nav.
@@ -47,13 +52,32 @@ export default async function SegmentsPage() {
   // reaching Meta, on purpose (Ley 1581). Surfacing it here means that gap
   // is visible on this page instead of only showing up as a surprisingly
   // small "estimated audience size" in Meta Ads Manager.
-  const segments = await Promise.all(
-    segmentRows.map(async (s) => {
-      const people = await resolveSegment(s.filter as unknown as SegmentFilter);
-      const consented = await filterByActiveConsent(people, "ADVERTISING");
-      return { ...s, memberCount: people.length, advertisingConsentedCount: consented.length };
-    })
+  //
+  // ONE shared consent query for the whole page, not one per segment: an
+  // earlier version called filterByActiveConsent(people, "ADVERTISING")
+  // inside this map, so every saved segment (there can be 10+, some with
+  // thousands of members — see the real Bogotá/Cali/Bucaramanga sizes)
+  // fired its own large `Consent` query, all in parallel via Promise.all.
+  // Against Neon's pooled connection that many concurrent large queries
+  // from one request pushed this page past its function timeout — a 500
+  // where the page used to load. Deduplicating across every segment's
+  // resolved members first means at most one extra query total, however
+  // many segments this page has.
+  const resolved = await Promise.all(
+    segmentRows.map(async (s) => ({
+      segment: s,
+      people: await resolveSegment(s.filter as unknown as SegmentFilter),
+    }))
   );
+  const allPersonIds = Array.from(new Set(resolved.flatMap((r) => r.people.map((p) => p.id))));
+  const consentedIds = new Set(
+    (await filterByActiveConsent(allPersonIds.map((id) => ({ id })), "ADVERTISING")).map((p) => p.id)
+  );
+  const segments = resolved.map(({ segment, people }) => ({
+    ...segment,
+    memberCount: people.length,
+    advertisingConsentedCount: people.filter((p) => consentedIds.has(p.id)).length,
+  }));
   const syncedCount = segments.filter((s) => s.metaSync?.status === "OK").length;
 
   return (
