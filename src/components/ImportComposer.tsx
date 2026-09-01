@@ -17,6 +17,8 @@ type EventMode = "existing" | "new";
 interface Preview {
   people: ImportPerson[];
   skippedNoEmail: number;
+  skippedInvalidEmail: number;
+  invalidEmailSamples: string[];
   unmappedProfessions: string[];
   cityCounts: [string, number][];
 }
@@ -70,6 +72,8 @@ export default function ImportComposer({ events }: Props) {
       setPreview({
         people: grouped.people,
         skippedNoEmail: grouped.skippedNoEmail,
+        skippedInvalidEmail: grouped.skippedInvalidEmail,
+        invalidEmailSamples: grouped.invalidEmailSamples,
         unmappedProfessions: grouped.unmappedProfessions,
         cityCounts: [...cityCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12),
       });
@@ -111,6 +115,17 @@ export default function ImportComposer({ events }: Props) {
         `Listo — "${body.event.name}": ${body.created} registros nuevos, ${body.updated} ya existían y se actualizaron (sin duplicar). ${body.peopleWithAnyCheckIn} personas con asistencia real. Aforo real: ${body.ticketsCheckedIn} de ${body.ticketsIssued} boletas escaneadas en la puerta. ${body.professionsCreated.length > 0 ? `Profesiones nuevas creadas: ${body.professionsCreated.join(", ")}.` : ""}`
       );
       router.refresh();
+    } else if (body.error === "invalid_body" && Array.isArray(body.issues) && body.issues.length > 0) {
+      // The zod issue's own `path` starts with ["people", <index>, ...] —
+      // that index is the row's position in `preview.people`, so this can
+      // point straight at the actual bad record instead of a bare "revisa
+      // la consola" for a batch that can be thousands of rows.
+      const first = body.issues[0];
+      const idx = typeof first.path?.[1] === "number" ? first.path[1] : null;
+      const person = idx !== null ? preview.people[idx] : null;
+      setResult(
+        `Error de validación en ${body.issues.length} fila(s) — la primera: ${first.message}${person ? ` (${person.email})` : ""}. No se importó nada; corrige esa fila en el CSV y vuelve a intentar.`
+      );
     } else {
       setResult(`Error: ${body.error ?? "algo salió mal"} — revisa la consola.`);
     }
@@ -128,12 +143,26 @@ export default function ImportComposer({ events }: Props) {
         <div style={{ background: "#f0efec", borderRadius: 8, padding: 12, marginTop: 12, fontSize: 13 }}>
           <p>
             <strong>{preview.people.length}</strong> personas únicas detectadas
-            {preview.skippedNoEmail > 0 && <> — {preview.skippedNoEmail} filas sin email fueron omitidas</>}.{" "}
+            {preview.skippedNoEmail > 0 && <> — {preview.skippedNoEmail} filas sin email fueron omitidas</>}
+            {preview.skippedInvalidEmail > 0 && (
+              <>
+                {" "}
+                — {preview.skippedInvalidEmail} filas con un email inválido (no una dirección real) fueron omitidas
+              </>
+            )}
+            .{" "}
             <strong>{preview.people.filter((p) => p.checkedInCount > 0).length}</strong> con asistencia real
             (check-in) —{" "}
             <strong>{preview.people.reduce((sum, p) => sum + p.checkedInCount, 0)}</strong> boletas escaneadas de{" "}
             <strong>{preview.people.reduce((sum, p) => sum + p.ticketCount, 0)}</strong> emitidas (aforo real).
           </p>
+          {preview.skippedInvalidEmail > 0 && (
+            <p style={{ color: "#b8791a" }}>
+              Ejemplos de email inválido omitido: {preview.invalidEmailSamples.join(" · ")}
+              {preview.skippedInvalidEmail > preview.invalidEmailSamples.length ? "…" : ""} — esas personas no se
+              importaron; si son reales, corrige el correo en el CSV original y vuelve a subirlo.
+            </p>
+          )}
           {preview.unmappedProfessions.length > 0 && (
             <p style={{ color: "#c2185b" }}>
               Profesiones no reconocidas (se importan tal cual, como categoría nueva):{" "}

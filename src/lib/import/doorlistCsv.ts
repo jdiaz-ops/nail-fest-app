@@ -4,6 +4,7 @@
 // identically in the browser (for a preview) and on the server (for the
 // actual write). See /admin/import and docs/IMPORT.md.
 
+import { z } from "zod";
 import { splitName } from "@/lib/name";
 //
 // Doorlist quirk (confirmed against a real export): a person can hold up to
@@ -193,9 +194,25 @@ export function normalizeProfession(raw: string): string | null {
   return PROFESSION_CANONICAL[trimmed.toLowerCase()] ?? trimmed;
 }
 
+// The exact same rule /api/admin/import-registrations validates the whole
+// batch against (z.string().email() there too) — reused here, not
+// reimplemented, so a row this function lets through can never fail that
+// check later. That matters a lot for this file specifically: the API
+// validates `people` as one array, so a single malformed row anywhere in
+// a 6,000+ row import used to fail the ENTIRE import with an opaque
+// "invalid_body" and no indication of which row — see the commit this
+// comment shipped with.
+const emailSchema = z.string().email();
+
 export interface GroupResult {
   people: ImportPerson[];
   skippedNoEmail: number;
+  // Distinct from skippedNoEmail — has an "@" but isn't a real email
+  // (typo'd domain, stray characters, ...). Kept separate so the preview
+  // can tell an admin which kind of row got dropped, instead of one
+  // opaque bucket.
+  skippedInvalidEmail: number;
+  invalidEmailSamples: string[];
   unmappedProfessions: string[];
 }
 
@@ -207,12 +224,19 @@ export interface GroupResult {
 export function groupIntoImportPeople(rows: DoorlistRow[]): GroupResult {
   const byEmail = new Map<string, ImportPerson>();
   let skippedNoEmail = 0;
+  let skippedInvalidEmail = 0;
+  const invalidEmailSamples: string[] = [];
   const unmapped = new Set<string>();
 
   for (const row of rows) {
     const email = row.email.trim().toLowerCase();
-    if (!email || !email.includes("@")) {
+    if (!email) {
       skippedNoEmail++;
+      continue;
+    }
+    if (!emailSchema.safeParse(email).success) {
+      skippedInvalidEmail++;
+      if (invalidEmailSamples.length < 10) invalidEmailSamples.push(row.email.trim());
       continue;
     }
 
@@ -256,6 +280,8 @@ export function groupIntoImportPeople(rows: DoorlistRow[]): GroupResult {
   return {
     people: [...byEmail.values()],
     skippedNoEmail,
+    skippedInvalidEmail,
+    invalidEmailSamples,
     unmappedProfessions: [...unmapped],
   };
 }
