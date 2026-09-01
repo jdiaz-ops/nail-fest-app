@@ -415,22 +415,25 @@ async function getAdvertisingConsentedPurchasers(): Promise<
   return filterByActiveConsent(confirmed, "ADVERTISING");
 }
 
-// Deliberately OFF. Meta's /users endpoint only ever adds people to a
-// Custom Audience — nothing in this file ever told it to remove someone,
-// so an audience could only grow, never shrink, even past a revoked
-// ADVERTISING consent (confirmed live: "APP Registros Pereira 2025"
-// matching 7,100-8,400 on Meta against 6,216 people in the segment
-// today — the gap is people who dropped out since and were never
-// removed). removePeopleFromAudience + the diff logic below fix that,
-// but flipping this on means the next sync (cron or manual) starts
-// issuing real DELETE calls against a live Meta Custom Audience with ad
-// spend behind it — an outward-facing, not-easily-undone action that
-// needs a person to turn on, not a bug being "fixed" quietly on deploy.
-// lastSyncedPersonIds is still written on every sync regardless of this
-// flag, so whenever it IS flipped to true, the first run already has a
-// real baseline to diff against instead of treating everyone on file as
-// "new" and pruning nothing that first time.
-const PRUNE_STALE_AUDIENCE_MEMBERS = false;
+// Turned ON per explicit confirmation (2026-09-01) after confirming the
+// exact failure mode live: "APP Registros Pereira 2025"'s Meta History tab
+// showed two separate "Added N Rows" events the same day (5,826 then
+// 6,216, neither ever removed in between) — Meta's /users endpoint only
+// ever adds, so the audience became the UNION of both instead of the
+// current, correct list, landing at 7,100-8,400 estimated against 6,216
+// real people. removePeopleFromAudience + the diff logic below close that
+// gap going forward: every sync now removes whoever dropped out
+// (revoked ADVERTISING consent, no longer matches the segment filter,
+// etc.) since the last successful sync, before uploading the current list.
+//
+// Does NOT retroactively fix an audience that already accumulated stale
+// members before this was turned on (lastSyncedPersonIds only started
+// being recorded once this shipped, so there's no earlier baseline to
+// diff against for those) — that needs a one-time manual reset: delete
+// the Custom Audience in Meta Ads Manager and let the next sync recreate
+// it clean with today's real list. Pereira 2025 is being reset that way
+// separately; this flag only prevents the gap from opening again.
+const PRUNE_STALE_AUDIENCE_MEMBERS = true;
 
 /**
  * Full resync of ONE segment's Meta Custom Audience — resolve the filter,
