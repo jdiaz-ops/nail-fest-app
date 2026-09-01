@@ -1036,6 +1036,16 @@ model CheckoutQuestion {
 enum AdminRole {
   ADMIN // full dashboard: Resumen, Eventos, CRM, Configuración, Escáner + Estadísticas
   STAFF // door staff — can only select an event and scan, nothing else
+  // Between ADMIN and STAFF: Resumen, Eventos (view + Reportes + Entradas
+  // emitidas, but not Correos del evento / Editar evento y entradas /
+  // Confirmación del evento / Copiar / Borrar), CRM (Personas, Limpiar
+  // ciudades, Inscritos, Abandonados — not Importar/Broadcasts/Segmentos),
+  // WhatsApp Bandeja only (not Conexión/Plantillas/Automatizaciones/
+  // Difusiones), and full Escáner — never Editar homepage or
+  // Configuración. See lib/auth/guard.ts's own comment and every
+  // requirePageUser/requireUser call site touched in the commit this
+  // role shipped with for the full, page-by-page map.
+  COORDINADOR
 }
 
 model AdminUser {

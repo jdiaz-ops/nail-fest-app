@@ -1,10 +1,15 @@
 import { db } from "@/lib/db";
+import { requirePageUser } from "@/lib/auth/guard";
 import ImportComposer from "@/components/ImportComposer";
 import CrmPageHeader from "../CrmPageHeader";
 
 export const dynamic = "force-dynamic";
 
+// ADMIN-only — hidden from CRM's own nav for COORDINADOR too (see
+// CrmLayout), gated again here since the nav is just visibility, not the
+// real access control.
 export default async function ImportPage() {
+  await requirePageUser(["ADMIN"]);
   const events = await db.event.findMany({ orderBy: { startsAt: "desc" } });
 
   return (

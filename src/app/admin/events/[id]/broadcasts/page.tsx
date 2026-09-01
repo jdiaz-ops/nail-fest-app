@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { getOrgSettings } from "@/lib/settings";
 import { formatDateInTz } from "@/lib/dateFormat";
 import { resolveDueAt } from "@/lib/broadcastSchedule";
+import { requirePageUser } from "@/lib/auth/guard";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +27,10 @@ const SCHEDULE_LABEL: Record<string, string> = {
 // plataforma de tickets anterior: correos específicos para los inscritos de ESTE evento (recordatorios, avisos de
 // cambio de fecha, agradecimiento post-evento), no la lista global de
 // marketing que ya existe en /admin/crm/broadcasts.
+// ADMIN-only — see EventModuleShell's own comment on why this is gated
+// again here, not just hidden from its nav.
 export default async function EventBroadcastsPage({ params }: { params: { id: string } }) {
+  await requirePageUser(["ADMIN"]);
   const [event, orgSettings, broadcasts] = await Promise.all([
     db.event.findUnique({ where: { id: params.id } }),
     getOrgSettings(),

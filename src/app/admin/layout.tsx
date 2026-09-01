@@ -13,5 +13,9 @@ import { requirePageUser } from "@/lib/auth/guard";
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const user = await requirePageUser();
 
-  return <AdminTopNav userLabel={user.name || user.username}>{children}</AdminTopNav>;
+  return (
+    <AdminTopNav userLabel={user.name || user.username} role={user.role}>
+      {children}
+    </AdminTopNav>
+  );
 }

@@ -5,6 +5,7 @@ import { getBroadcastStats } from "@/lib/whatsapp/broadcasts";
 import { whatsappProvider } from "@/lib/whatsapp";
 import { getOrgSettings } from "@/lib/settings";
 import { formatDateInTz } from "@/lib/dateFormat";
+import { requirePageUser } from "@/lib/auth/guard";
 import WhatsAppBroadcastComposer from "@/components/WhatsAppBroadcastComposer";
 import WhatsAppBroadcastRowActions from "@/components/WhatsAppBroadcastRowActions";
 import CrmPageHeader from "../../CrmPageHeader";
@@ -34,7 +35,9 @@ function Bar({ label, count, total, color }: { label: string; count: number; tot
   );
 }
 
+// ADMIN-only — see WhatsAppConexionPage's own comment.
 export default async function WhatsAppDifusionesPage() {
+  await requirePageUser(["ADMIN"]);
   const [segmentRows, templates, broadcasts, connection, orgSettings] = await Promise.all([
     db.segmentDefinition.findMany({ orderBy: { createdAt: "desc" } }),
     db.whatsAppTemplate.findMany({ orderBy: { name: "asc" } }),

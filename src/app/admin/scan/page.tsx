@@ -5,8 +5,11 @@ import { getOrgSettings } from "@/lib/settings";
 import EventsListClient from "./EventsListClient";
 
 export default async function ScanEventsPage() {
-  const user = await requirePageUser(["ADMIN", "STAFF"]);
-  const isAdmin = user.role === "ADMIN";
+  const user = await requirePageUser(["ADMIN", "STAFF", "COORDINADOR"]);
+  // COORDINADOR gets the full scanner experience, same as ADMIN — "todo
+  // en escáner" was the explicit ask (unlike everywhere else in the app,
+  // there's no narrower scope for this role here).
+  const isAdmin = user.role === "ADMIN" || user.role === "COORDINADOR";
 
   const [events, orgSettings] = await Promise.all([
     db.event.findMany({

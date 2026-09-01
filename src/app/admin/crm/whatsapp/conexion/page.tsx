@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { whatsappProvider } from "@/lib/whatsapp";
+import { requirePageUser } from "@/lib/auth/guard";
 import WhatsAppConnectionForm from "@/components/WhatsAppConnectionForm";
 import WhatsAppSubscribeAppButton from "@/components/WhatsAppSubscribeAppButton";
 import CrmPageHeader from "../../CrmPageHeader";
@@ -14,7 +15,11 @@ const QUALITY_STYLE: Record<string, { bg: string; ink: string; label: string }> 
   RED: { bg: "#fbe9ea", ink: "#a3212b", label: "Baja" },
 };
 
+// ADMIN-only — see admin/crm/import/page.tsx's own comment on why this is
+// gated again here, not just hidden from WhatsAppLayout's tab nav (see
+// that layout for COORDINADOR only ever seeing Bandeja there).
 export default async function WhatsAppConexionPage() {
+  await requirePageUser(["ADMIN"]);
   const connection = await db.whatsAppConnection.findFirst({ orderBy: { createdAt: "desc" } });
   const baseUrl = process.env.APP_BASE_URL || "https://register.nailfest.co";
   const webhookUrl = `${baseUrl}/api/webhooks/whatsapp`;

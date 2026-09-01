@@ -1,16 +1,21 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import type { AdminRole } from "@prisma/client";
 import AdminNavLink from "./AdminNavLink";
 import LogoutButton from "./LogoutButton";
 
-const NAV: { href: string; label: string }[] = [
+const NAV: { href: string; label: string; adminOnly?: boolean }[] = [
   { href: "/admin", label: "Resumen" },
   { href: "/admin/events", label: "Eventos" },
   { href: "/admin/crm", label: "CRM" },
   { href: "/admin/scan", label: "Escáner" },
-  { href: "/admin/homepage", label: "Editar homepage" },
-  { href: "/admin/settings", label: "Configuración" },
+  // COORDINADOR never gets these two — hidden here AND gated again on
+  // their own pages (already ADMIN-only, unchanged), same "nav
+  // visibility isn't the real gate" reasoning as CrmLayout/
+  // EventModuleShell.
+  { href: "/admin/homepage", label: "Editar homepage", adminOnly: true },
+  { href: "/admin/settings", label: "Configuración", adminOnly: true },
 ];
 
 // Wraps every /admin/* page's chrome. Under /admin/scan this renders
@@ -23,11 +28,15 @@ const NAV: { href: string; label: string }[] = [
 // nothing here runs on the Edge where middleware could otherwise read
 // that for free). STAFF can only ever be under /admin/scan (every other
 // section redirects them there), so in practice the desktop chrome below
-// never renders for STAFF at all — no separate role check needed for
-// that, the pathname check already covers it.
-export default function AdminTopNav({ userLabel, children }: { userLabel: string; children: React.ReactNode }) {
+// never renders for STAFF at all — no role filtering needed for that,
+// the pathname check already covers it. COORDINADOR DOES see this chrome
+// (Resumen/Eventos/CRM/Escáner all partly theirs) — just with the two
+// ADMIN-only items above filtered out.
+export default function AdminTopNav({ userLabel, role, children }: { userLabel: string; role: AdminRole; children: React.ReactNode }) {
   const pathname = usePathname();
   if (pathname?.startsWith("/admin/scan")) return <>{children}</>;
+
+  const nav = role === "ADMIN" ? NAV : NAV.filter((item) => !item.adminOnly);
 
   return (
     <div>
@@ -42,7 +51,7 @@ export default function AdminTopNav({ userLabel, children }: { userLabel: string
           }}
         >
           <span style={{ color: "#fff", fontWeight: 700, marginRight: 20, whiteSpace: "nowrap" }}>Nail Fest</span>
-          {NAV.map((item) => (
+          {nav.map((item) => (
             <AdminNavLink key={item.href} href={item.href} label={item.label} />
           ))}
           <div style={{ flex: 1 }} />

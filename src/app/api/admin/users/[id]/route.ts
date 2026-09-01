@@ -7,7 +7,7 @@ import { destroySessionsForUser } from "@/lib/auth/session";
 
 const patchSchema = z.object({
   name: z.string().trim().max(120).optional(),
-  role: z.enum(["ADMIN", "STAFF"]).optional(),
+  role: z.enum(["ADMIN", "STAFF", "COORDINADOR"]).optional(),
   active: z.boolean().optional(),
   password: z.string().min(8, "mínimo 8 caracteres").optional(),
 });
@@ -42,7 +42,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ error: "last_admin" }, { status: 409 });
   }
 
-  const data: { name?: string | null; role?: "ADMIN" | "STAFF"; active?: boolean; passwordHash?: string } = {};
+  const data: { name?: string | null; role?: "ADMIN" | "STAFF" | "COORDINADOR"; active?: boolean; passwordHash?: string } = {};
   if (name !== undefined) data.name = name || null;
   if (role !== undefined) data.role = role;
   if (active !== undefined) data.active = active;

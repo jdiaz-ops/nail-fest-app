@@ -1,10 +1,13 @@
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
+import { requirePageUser } from "@/lib/auth/guard";
 import EventBroadcastComposer from "../../../EventBroadcastComposer";
 
 export const dynamic = "force-dynamic";
 
+// ADMIN-only — see EventModuleShell's own comment.
 export default async function NewEventBroadcastPage({ params }: { params: { id: string } }) {
+  await requirePageUser(["ADMIN"]);
   const event = await db.event.findUnique({ where: { id: params.id } });
   if (!event) notFound();
 

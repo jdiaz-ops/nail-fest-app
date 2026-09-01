@@ -2,13 +2,17 @@ import { db } from "@/lib/db";
 import { getOrderedProfessionOptions } from "@/lib/professions";
 import { listLabels } from "@/lib/labels";
 import { resolveSegment, type SegmentFilter } from "@/lib/segments/builder";
+import { requirePageUser } from "@/lib/auth/guard";
 import SegmentsAdminClient from "@/components/SegmentsAdminClient";
 import CrmPageHeader from "../CrmPageHeader";
 import StatCard from "../StatCard";
 
 export const dynamic = "force-dynamic";
 
+// ADMIN-only — see ImportPage's own comment on why this is gated again
+// here, not just hidden from CrmLayout's nav.
 export default async function SegmentsPage() {
+  await requirePageUser(["ADMIN"]);
   const [events, professionOptions, cityRows, labels, segmentRows] = await Promise.all([
     db.event.findMany({ orderBy: { startsAt: "asc" } }),
     getOrderedProfessionOptions(),

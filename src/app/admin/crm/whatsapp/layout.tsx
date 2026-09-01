@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth/session";
 import WhatsAppNavLink from "./WhatsAppNavLink";
 
 export const dynamic = "force-dynamic";
@@ -12,13 +13,20 @@ const TABS: { href: string; label: string }[] = [
 ];
 
 export default async function WhatsAppLayout({ children }: { children: React.ReactNode }) {
+  // Requiring a user was already done one level up (CrmLayout); this just
+  // reads the role to know which tabs to show. COORDINADOR only ever gets
+  // Bandeja here — the other four pages are gated ADMIN-only again on
+  // their own (see each one's own comment), this is just visibility.
+  const user = await getCurrentUser();
+  const tabs = user?.role === "COORDINADOR" ? TABS.filter((t) => t.href.endsWith("/bandeja")) : TABS;
+
   const unread = await db.whatsAppConversation.aggregate({ _sum: { unreadCount: true } });
   const unreadTotal = unread._sum.unreadCount ?? 0;
 
   return (
     <div>
       <div style={{ display: "flex", gap: 4, marginBottom: 24, borderBottom: "1px solid #e3e1dc", paddingBottom: 12 }}>
-        {TABS.map((tab) => (
+        {tabs.map((tab) => (
           <span key={tab.href} style={{ position: "relative" }}>
             <WhatsAppNavLink href={tab.href} label={tab.label} />
             {tab.href.endsWith("/bandeja") && unreadTotal > 0 && (

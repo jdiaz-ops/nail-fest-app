@@ -10,7 +10,7 @@ function daysUntil(date: Date): number {
 }
 
 export default async function OverviewPage() {
-  await requirePageUser(["ADMIN"]);
+  await requirePageUser(["ADMIN", "COORDINADOR"]);
 
   // Every count on this dashboard is scoped to CONFIRMED registrations —
   // a STARTED row is an abandoned-cart draft (see /api/register/draft),

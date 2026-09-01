@@ -16,8 +16,11 @@ export default async function UsersPage() {
     <div>
       <h2 style={{ fontSize: 18, marginTop: 0 }}>Usuarios</h2>
       <p style={{ fontSize: 13, color: "#5b5f6b", maxWidth: 640 }}>
-        Cuentas con acceso al panel. <strong>Admin</strong> ve todo. <strong>Staff</strong> solo puede
-        seleccionar el evento y escanear entradas en la puerta — nada más.
+        Cuentas con acceso al panel. <strong>Admin</strong> ve todo. <strong>Coordinador</strong> opera el día a día
+        (Resumen, Eventos, CRM y Bandeja de WhatsApp, Escáner) pero no configura nada — sin Importar, Broadcasts,
+        Segmentos, Conexión/Plantillas/Automatizaciones/Difusiones de WhatsApp, editar o borrar eventos, ni
+        Configuración/Editar homepage. <strong>Staff</strong> solo puede seleccionar el evento y escanear entradas en
+        la puerta — nada más.
       </p>
       <UsersPanel
         users={users.map((u) => ({ ...u, createdAt: u.createdAt.toISOString(), lastLoginAt: u.lastLoginAt?.toISOString() ?? null }))}

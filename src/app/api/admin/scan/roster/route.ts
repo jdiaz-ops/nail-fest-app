@@ -14,7 +14,7 @@ import { requireUser } from "@/lib/auth/guard";
 // touches real people's data (see Ley 1581 discussion elsewhere in this
 // codebase's history).
 export async function GET(req: NextRequest) {
-  const auth = await requireUser(["ADMIN", "STAFF"]);
+  const auth = await requireUser(["ADMIN", "STAFF", "COORDINADOR"]);
   if ("response" in auth) return auth.response;
 
   const eventId = req.nextUrl.searchParams.get("eventId");

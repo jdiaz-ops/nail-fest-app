@@ -7,19 +7,24 @@ import { requirePageUser } from "@/lib/auth/guard";
 // separate top-nav tabs.
 const fraunces = Fraunces({ subsets: ["latin"], weight: ["600", "900"] });
 
-const NAV: { href: string; label: string }[] = [
+const NAV: { href: string; label: string; adminOnly?: boolean }[] = [
   { href: "/admin/crm/personas", label: "Personas" },
   { href: "/admin/crm/ciudades", label: "Limpiar ciudades" },
   { href: "/admin/crm/registrations", label: "Inscritos" },
   { href: "/admin/crm/abandonados", label: "Abandonados" },
-  { href: "/admin/crm/import", label: "Importar" },
-  { href: "/admin/crm/broadcasts", label: "Broadcasts" },
+  // Importar/Broadcasts/Segmentos: COORDINADOR doesn't get these — hidden
+  // here AND gated again on each own page (see those pages' own
+  // requirePageUser call), same "nav visibility isn't the real gate"
+  // reasoning as EventModuleShell.
+  { href: "/admin/crm/import", label: "Importar", adminOnly: true },
+  { href: "/admin/crm/broadcasts", label: "Broadcasts", adminOnly: true },
   { href: "/admin/crm/whatsapp", label: "WhatsApp" },
-  { href: "/admin/crm/segments", label: "Segmentos" },
+  { href: "/admin/crm/segments", label: "Segmentos", adminOnly: true },
 ];
 
 export default async function CrmLayout({ children }: { children: React.ReactNode }) {
-  await requirePageUser(["ADMIN"]);
+  const user = await requirePageUser(["ADMIN", "COORDINADOR"]);
+  const nav = user.role === "ADMIN" ? NAV : NAV.filter((item) => !item.adminOnly);
   return (
     <div>
       <h1 className={fraunces.className} style={{ fontWeight: 900, fontSize: 28, marginBottom: 24 }}>
@@ -28,7 +33,7 @@ export default async function CrmLayout({ children }: { children: React.ReactNod
       <div className="admin-sidebar-layout">
         <nav className="admin-sidebar-nav" style={{ width: 200, flex: "0 0 auto" }}>
           <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 2 }}>
-            {NAV.map((item) => (
+            {nav.map((item) => (
               <li key={item.href}>
                 <CrmNavLink href={item.href} label={item.label} />
               </li>

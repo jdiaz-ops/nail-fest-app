@@ -3,11 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+type Role = "ADMIN" | "STAFF" | "COORDINADOR";
+
 interface UserRow {
   id: string;
   username: string;
   name: string | null;
-  role: "ADMIN" | "STAFF";
+  role: Role;
   active: boolean;
   createdAt: string;
   lastLoginAt: string | null;
@@ -21,10 +23,10 @@ const ERROR_LABEL: Record<string, string> = {
 
 interface ApiErrorBody {
   error?: string;
-  // From zod's safeParse — server validation failures (username with
-  // espacios, contraseña muy corta, etc.) come back with the SPECIFIC
-  // reason here; showing a generic "algo salió mal" for these was itself
-  // a real usability bug, not just an unpolished message.
+  // From zod's safeParse — server validation failures (username con
+  // espacios, contraseña muy corta, etc.) come back with la razón
+  // específica acá; mostrar un "algo salió mal" genérico para esto era en
+  // sí mismo un problema real de usabilidad, no solo un mensaje sin pulir.
   issues?: { path: (string | number)[]; message: string }[];
 }
 
@@ -85,10 +87,20 @@ export default function UsersPanel({ users, currentUserId }: { users: UserRow[];
   );
 }
 
+function RoleSelect({ id, value, onChange, disabled }: { id?: string; value: Role; onChange: (role: Role) => void; disabled?: boolean }) {
+  return (
+    <select id={id} value={value} disabled={disabled} onChange={(e) => onChange(e.target.value as Role)}>
+      <option value="STAFF">Staff</option>
+      <option value="COORDINADOR">Coordinador</option>
+      <option value="ADMIN">Admin</option>
+    </select>
+  );
+}
+
 function CreateUserForm({ onCreated }: { onCreated: () => void }) {
   const [username, setUsername] = useState("");
   const [name, setName] = useState("");
-  const [role, setRole] = useState<"ADMIN" | "STAFF">("STAFF");
+  const [role, setRole] = useState<Role>("STAFF");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -127,10 +139,7 @@ function CreateUserForm({ onCreated }: { onCreated: () => void }) {
         </div>
         <div className="field" style={{ marginBottom: 0 }}>
           <label htmlFor="new-role">Rol</label>
-          <select id="new-role" value={role} onChange={(e) => setRole(e.target.value as "ADMIN" | "STAFF")}>
-            <option value="STAFF">Staff</option>
-            <option value="ADMIN">Admin</option>
-          </select>
+          <RoleSelect id="new-role" value={role} onChange={setRole} />
         </div>
         <div className="field" style={{ marginBottom: 0 }}>
           <label htmlFor="new-password">Contraseña</label>
@@ -173,7 +182,7 @@ function UserRowItem({ user, isSelf, onChanged }: { user: UserRow; isSelf: boole
     await patch({ active: !user.active });
   }
 
-  async function handleRoleChange(role: "ADMIN" | "STAFF") {
+  async function handleRoleChange(role: Role) {
     if (role === user.role) return;
     await patch({ role });
   }
@@ -209,14 +218,7 @@ function UserRowItem({ user, isSelf, onChanged }: { user: UserRow; isSelf: boole
         </td>
         <td style={{ padding: "10px 12px" }}>{user.name || "—"}</td>
         <td style={{ padding: "10px 12px" }}>
-          {isSelf ? (
-            <RoleBadge role={user.role} />
-          ) : (
-            <select value={user.role} disabled={busy} onChange={(e) => handleRoleChange(e.target.value as "ADMIN" | "STAFF")}>
-              <option value="STAFF">Staff</option>
-              <option value="ADMIN">Admin</option>
-            </select>
-          )}
+          {isSelf ? <RoleBadge role={user.role} /> : <RoleSelect value={user.role} disabled={busy} onChange={handleRoleChange} />}
         </td>
         <td style={{ padding: "10px 12px" }}>
           <span
@@ -284,7 +286,15 @@ function UserRowItem({ user, isSelf, onChanged }: { user: UserRow; isSelf: boole
   );
 }
 
-function RoleBadge({ role }: { role: "ADMIN" | "STAFF" }) {
+const ROLE_LABEL: Record<Role, string> = { ADMIN: "Admin", COORDINADOR: "Coordinador", STAFF: "Staff" };
+const ROLE_STYLE: Record<Role, { bg: string; ink: string }> = {
+  ADMIN: { bg: "#e3faf7", ink: "var(--accent-ink)" },
+  COORDINADOR: { bg: "#fdf1e6", ink: "#8a5a1f" },
+  STAFF: { bg: "#f6f5f2", ink: "#5b5f6b" },
+};
+
+function RoleBadge({ role }: { role: Role }) {
+  const style = ROLE_STYLE[role];
   return (
     <span
       style={{
@@ -293,11 +303,11 @@ function RoleBadge({ role }: { role: "ADMIN" | "STAFF" }) {
         borderRadius: 999,
         fontSize: 12,
         fontWeight: 600,
-        background: role === "ADMIN" ? "#e3faf7" : "#f6f5f2",
-        color: role === "ADMIN" ? "var(--accent-ink)" : "#5b5f6b",
+        background: style.bg,
+        color: style.ink,
       }}
     >
-      {role === "ADMIN" ? "Admin" : "Staff"}
+      {ROLE_LABEL[role]}
     </span>
   );
 }

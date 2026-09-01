@@ -18,7 +18,7 @@ export async function GET() {
 const createSchema = z.object({
   username: z.string().trim().toLowerCase().min(3).max(40).regex(/^[a-z0-9._-]+$/, "solo letras, números, punto, guion y guion bajo"),
   name: z.string().trim().max(120).optional(),
-  role: z.enum(["ADMIN", "STAFF"]),
+  role: z.enum(["ADMIN", "STAFF", "COORDINADOR"]),
   password: z.string().min(8, "mínimo 8 caracteres"),
 });
 

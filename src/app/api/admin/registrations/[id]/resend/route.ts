@@ -10,7 +10,7 @@ import { sendTicketEmail } from "@/lib/sendTicketEmail";
 // Same underlying sendTicketEmail as both that route and /api/register —
 // one real send path, not a second copy that could drift.
 export async function POST(_req: NextRequest, { params }: { params: { id: string } }) {
-  const auth = await requireUser(["ADMIN"]);
+  const auth = await requireUser(["ADMIN", "COORDINADOR"]);
   if ("response" in auth) return auth.response;
 
   const registration = await db.registration.findUnique({

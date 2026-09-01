@@ -11,7 +11,7 @@ const bodySchema = z.object({ name: z.string().min(1) });
 // from a number that never matched a CRM contact) has nothing to attach
 // a label to yet.
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  const auth = await requireUser(["ADMIN"]);
+  const auth = await requireUser(["ADMIN", "COORDINADOR"]);
   if ("response" in auth) return auth.response;
 
   const parsed = bodySchema.safeParse(await req.json().catch(() => null));

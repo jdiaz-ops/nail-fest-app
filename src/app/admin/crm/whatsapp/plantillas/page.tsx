@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import type { WhatsAppTemplateButton } from "@/lib/whatsapp/provider";
+import { requirePageUser } from "@/lib/auth/guard";
 import WhatsAppTemplateSyncButton from "@/components/WhatsAppTemplateSyncButton";
 import WhatsAppTemplateCreateForm from "@/components/WhatsAppTemplateCreateForm";
 import CrmPageHeader from "../../CrmPageHeader";
@@ -20,7 +21,9 @@ function buttonLabel(b: WhatsAppTemplateButton): string {
   return `↩ ${b.text}`;
 }
 
+// ADMIN-only — see WhatsAppConexionPage's own comment.
 export default async function WhatsAppTemplatesPage() {
+  await requirePageUser(["ADMIN"]);
   const templates = await db.whatsAppTemplate.findMany({ orderBy: { name: "asc" } });
 
   return (

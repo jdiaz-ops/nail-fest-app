@@ -4,12 +4,15 @@ import { getOrgSettings } from "@/lib/settings";
 import { utcToZonedInputValue } from "@/lib/dateFormat";
 import { DEFAULT_REGISTER_BUTTON_LABEL } from "@/lib/events";
 import { listTicketTypes } from "@/lib/ticketTypes";
+import { requirePageUser } from "@/lib/auth/guard";
 import EventForm from "../../EventForm";
 import TicketTypesSection from "../../TicketTypesSection";
 
 export const dynamic = "force-dynamic";
 
+// ADMIN-only — see EventModuleShell's own comment.
 export default async function EditEventPage({ params }: { params: { id: string } }) {
+  await requirePageUser(["ADMIN"]);
   const [event, orgSettings, ticketTypes] = await Promise.all([
     db.event.findUnique({ where: { id: params.id } }),
     getOrgSettings(),

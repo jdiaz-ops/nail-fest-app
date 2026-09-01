@@ -18,7 +18,7 @@ const bodySchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  const auth = await requireUser(["ADMIN", "STAFF"]);
+  const auth = await requireUser(["ADMIN", "STAFF", "COORDINADOR"]);
   if ("response" in auth) return auth.response;
 
   const parsed = bodySchema.safeParse(await req.json().catch(() => null));

@@ -20,7 +20,7 @@ export const dynamic = "force-dynamic";
 // worst case is a little extra page scroll, not broken layout, since both
 // panes scroll internally regardless.
 export default async function BandejaLayout({ children }: { children: React.ReactNode }) {
-  await requirePageUser(["ADMIN"]);
+  await requirePageUser(["ADMIN", "COORDINADOR"]);
 
   return (
     <div

@@ -18,6 +18,7 @@ export default function EventModuleShell({
   eventWhen,
   statusLabel,
   eventSlug,
+  isAdmin,
   children,
 }: {
   eventId: string;
@@ -25,6 +26,13 @@ export default function EventModuleShell({
   eventWhen: string;
   statusLabel: string;
   eventSlug: string;
+  // COORDINADOR gets Resumen/Reportes/Entradas emitidas — Correos del
+  // evento, the whole Configuración group, and the Duplicar/Borrar
+  // actions below are ADMIN-only, gated again on each of those pages
+  // (see edit/confirmation/broadcasts' own page.tsx) — this only hides
+  // the nav/buttons that would otherwise bounce a COORDINADOR straight
+  // back out.
+  isAdmin: boolean;
   children: React.ReactNode;
 }) {
   const pathname = usePathname() ?? "";
@@ -41,16 +49,20 @@ export default function EventModuleShell({
       heading: "Administrar",
       items: [
         { href: `${base}/tickets`, label: "Entradas emitidas" },
-        { href: `${base}/broadcasts`, label: "Correos del evento" },
+        ...(isAdmin ? [{ href: `${base}/broadcasts`, label: "Correos del evento" }] : []),
       ],
     },
-    {
-      heading: "Configuración",
-      items: [
-        { href: `${base}/edit`, label: "Editar evento y entradas" },
-        { href: `${base}/confirmation`, label: "Confirmación del evento" },
-      ],
-    },
+    ...(isAdmin
+      ? [
+          {
+            heading: "Configuración",
+            items: [
+              { href: `${base}/edit`, label: "Editar evento y entradas" },
+              { href: `${base}/confirmation`, label: "Confirmación del evento" },
+            ],
+          },
+        ]
+      : []),
   ];
 
   function isActive(href: string, exact?: boolean) {
@@ -122,13 +134,15 @@ export default function EventModuleShell({
               })}
             </div>
           ))}
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 11, color: "#8a8478", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 6, paddingLeft: 12 }}>
-              Acciones
+          {isAdmin && (
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 11, color: "#8a8478", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 6, paddingLeft: 12 }}>
+                Acciones
+              </div>
+              <DuplicateEventButton eventId={eventId} />
+              <DeleteEventButton eventId={eventId} />
             </div>
-            <DuplicateEventButton eventId={eventId} />
-            <DeleteEventButton eventId={eventId} />
-          </div>
+          )}
         </nav>
 
         <div className="admin-sidebar-content">{children}</div>

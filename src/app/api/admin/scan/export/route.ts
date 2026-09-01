@@ -12,7 +12,7 @@ function csvEscape(value: string): string {
 }
 
 export async function GET(req: NextRequest) {
-  const auth = await requireUser(["ADMIN"]);
+  const auth = await requireUser(["ADMIN", "COORDINADOR"]);
   if ("response" in auth) return auth.response;
 
   const eventId = req.nextUrl.searchParams.get("eventId");

@@ -24,7 +24,7 @@ const bodySchema = z.object({
 });
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const auth = await requireUser(["ADMIN"]);
+  const auth = await requireUser(["ADMIN", "COORDINADOR"]);
   if ("response" in auth) return auth.response;
 
   const parsed = bodySchema.safeParse(await req.json().catch(() => null));

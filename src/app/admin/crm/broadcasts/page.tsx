@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { resolveSegment, type SegmentFilter } from "@/lib/segments/builder";
+import { requirePageUser } from "@/lib/auth/guard";
 import BroadcastComposer from "@/components/BroadcastComposer";
 import CrmPageHeader from "../CrmPageHeader";
 
@@ -11,7 +12,10 @@ const STATUS_STYLE: Record<string, { bg: string; ink: string }> = {
   DRAFT: { bg: "#f6f5f2", ink: "#5b5f6b" },
 };
 
+// ADMIN-only — see ImportPage's own comment on why this is gated again
+// here, not just hidden from CrmLayout's nav.
 export default async function BroadcastsPage() {
+  await requirePageUser(["ADMIN"]);
   const [segmentRows, broadcasts] = await Promise.all([
     db.segmentDefinition.findMany({ orderBy: { createdAt: "desc" } }),
     // segmentId: not null — event-scoped broadcasts (see

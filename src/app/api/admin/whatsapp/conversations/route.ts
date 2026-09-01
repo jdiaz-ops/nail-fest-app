@@ -11,7 +11,7 @@ const WINDOW_MS = 24 * 60 * 60 * 1000;
 // the way the rest of the admin does. Shape mirrors what the old
 // bandeja/page.tsx used to query inline before this became a layout.
 export async function GET(req: NextRequest) {
-  const auth = await requireUser(["ADMIN"]);
+  const auth = await requireUser(["ADMIN", "COORDINADOR"]);
   if ("response" in auth) return auth.response;
 
   const filter = req.nextUrl.searchParams.get("filter");

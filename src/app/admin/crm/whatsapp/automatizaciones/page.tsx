@@ -1,4 +1,5 @@
 import { AUTOMATION_TRIGGERS, AUTOMATION_TRIGGER_LIST, listAutomations, listEligibleAutomationTemplates } from "@/lib/whatsapp/automations";
+import { requirePageUser } from "@/lib/auth/guard";
 import AutomationCard from "@/components/AutomationCard";
 import CrmPageHeader from "../../CrmPageHeader";
 
@@ -7,7 +8,9 @@ export const dynamic = "force-dynamic";
 // One card per known trigger — not just the configured ones — so an
 // admin sees what CAN be automated even before setting anything up. See
 // AUTOMATION_TRIGGERS's own comment for how a new trigger gets added.
+// ADMIN-only — see WhatsAppConexionPage's own comment.
 export default async function WhatsAppAutomationsPage() {
+  await requirePageUser(["ADMIN"]);
   const [automations, eligibleTemplates] = await Promise.all([listAutomations(), listEligibleAutomationTemplates()]);
   const byTrigger = new Map(automations.map((a) => [a.trigger, a]));
 
