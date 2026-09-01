@@ -42,8 +42,17 @@ export default function BroadcastComposer({ segments }: Props) {
     const body = await res.json();
     setSending(false);
     if (res.ok) {
+      // A segment bigger than one chunk keeps sending in the background
+      // after this response — remaining/backgrounded say so honestly
+      // instead of implying it's all done (see /api/broadcasts/route.ts's
+      // own comment). Never left stuck: without backgrounded (QStash not
+      // configured), the send just kept going synchronously and body.sent
+      // already reflects everyone.
+      const base = `Enviado a ${body.sent} de ${body.segmentSize} en el segmento (${body.skippedNoConsent} sin consentimiento de marketing, no recibieron nada).`;
       setResult(
-        `Enviado a ${body.sent} de ${body.segmentSize} en el segmento (${body.skippedNoConsent} sin consentimiento de marketing, no recibieron nada).`
+        body.remaining > 0
+          ? `${base} Quedan ${body.remaining} más en camino — siguen enviándose solos, no hace falta hacer nada más.`
+          : base
       );
     } else {
       setResult("Error al enviar — revisa la consola.");

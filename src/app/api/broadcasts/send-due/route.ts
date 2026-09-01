@@ -21,6 +21,13 @@ import { sendDueEventBroadcasts } from "@/lib/broadcasts";
 // "2 hours before doors open" can land up to ~24h later than intended.
 // If this project moves to Vercel Pro, tighten this to something like
 // "*/15 * * * *" for real precision.
+//
+// Each due broadcast now only sends its FIRST chunk here before handing
+// the rest to a QStash continuation (see sendEventBroadcast's own
+// comment) — real headroom for however many due broadcasts + first
+// chunks land in one run, not the framework default.
+export const maxDuration = 60;
+
 async function handle(req: NextRequest) {
   if (!isAuthorizedCronRequest(req)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });

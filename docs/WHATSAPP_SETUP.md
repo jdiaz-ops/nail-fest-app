@@ -241,25 +241,38 @@ Moving off WhatChimp to a direct Cloud API connection:
    Bandeja — that's the one test that actually proves the webhook is
    wired correctly, not just "Verified" in Meta's dashboard.
 
-## Envíos programados con precisión (QStash)
+## Envíos programados con precisión, y envíos grandes en tandas (QStash)
 
-Difusiones' "A una fecha y hora programada" needs one more thing to fire
-at the *exact* minute you pick — without it, a scheduled broadcast still
-works, just up to ~24h late.
+QStash powers two related things, both optional-but-recommended, both
+off the same Upstash account:
 
-**Why:** this app's own daily cron (`/api/whatsapp/send-due`,
-`vercel.json`) is a Vercel **Hobby plan** constraint — cron jobs on that
-tier can only run once a day, so "programar para las 3pm" could
-otherwise mean anywhere from 3pm to 3pm the next day. [Upstash
-QStash](https://upstash.com/docs/qstash) fixes this properly instead of
-just polling more often: you publish ONE message scheduled for an exact
-unix timestamp, and QStash calls this app back at that moment — no
-Vercel plan upgrade needed, since it's this app making an outbound HTTP
-call to QStash, not a Vercel-side cron running more frequently. The
-daily cron stays in place as a fallback (in case QStash isn't configured
-yet, or a publish call fails) — scheduling never *silently* degrades:
-if the exact-time schedule fails to set up, the composer shows a clear
-warning right there instead of pretending it worked.
+1. **Precisión de horario** — Difusiones' "A una fecha y hora
+   programada" needs this to fire at the *exact* minute you pick;
+   without it, a scheduled broadcast still works, just up to ~24h late.
+2. **Envíos grandes en tandas** — cualquier Difusión o correo masivo
+   (segmento o evento) con más destinatarios de los que caben en una
+   sola tanda (500) sigue enviándose sola de fondo en llamadas
+   sucesivas en vez de arriesgarse a que la función se corte a mitad de
+   camino — ver `lib/whatsapp/broadcasts.ts` / `lib/broadcasts.ts`, la
+   razón por la que ya no queda "the fix before a 10k+ send" como una
+   limitación pendiente. Sin QStash configurado, un envío grande
+   TODAVÍA se completa (sigue mandando en la misma llamada, el
+   comportamiento de siempre), solo sin esta red de seguridad extra.
+
+**Por qué la precisión de horario necesita esto:** this app's own daily
+cron (`/api/whatsapp/send-due`, `vercel.json`) is a Vercel **Hobby
+plan** constraint — cron jobs on that tier can only run once a day, so
+"programar para las 3pm" could otherwise mean anywhere from 3pm to 3pm
+the next day. [Upstash QStash](https://upstash.com/docs/qstash) fixes
+this properly instead of just polling more often: you publish ONE
+message scheduled for an exact unix timestamp, and QStash calls this
+app back at that moment — no Vercel plan upgrade needed, since it's
+this app making an outbound HTTP call to QStash, not a Vercel-side cron
+running more frequently. The daily cron stays in place as a fallback
+(in case QStash isn't configured yet, or a publish call fails) —
+scheduling never *silently* degrades: if the exact-time schedule fails
+to set up, the composer shows a clear warning right there instead of
+pretending it worked.
 
 **Setup:**
 1. Create a free account at [console.upstash.com](https://console.upstash.com)
@@ -293,9 +306,11 @@ warning right there instead of pretending it worked.
    Upstash is right there (wrong region is the most common one; a typo'd
    token or missing Redeploy are the other two).
 
-Nothing else in the app depends on QStash — Conexión, Plantillas,
-Bandeja and an *immediate* Difusión all work exactly the same with or
-without it configured.
+Nothing else in the app depends on QStash — Conexión, Plantillas, and
+Bandeja work exactly the same with or without it configured. An
+*immediate* Difusión or email broadcast also still completes either
+way; without QStash it just loses the extra safety net for a very large
+send (see above), same as before this chunking existed.
 
 ## Agente de IA — configuración
 

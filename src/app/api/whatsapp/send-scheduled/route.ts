@@ -1,35 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Receiver } from "@upstash/qstash";
 import { db } from "@/lib/db";
 import { sendWhatsAppBroadcast } from "@/lib/whatsapp/broadcasts";
-import { scheduledSendCallbackUrl } from "@/lib/qstash";
+import { scheduledSendCallbackUrl, verifyQstashSignature } from "@/lib/qstash";
 
 // QStash's exact-time callback for a Difusión scheduled via "A una fecha
 // y hora programada" — see lib/qstash.ts's own comment for why this
 // exists alongside the daily /api/whatsapp/send-due cron rather than
-// instead of it. Verified against QSTASH_CURRENT_SIGNING_KEY/
-// QSTASH_NEXT_SIGNING_KEY the same way (raw body, before JSON.parse,
-// fail closed on a missing secret) as /api/webhooks/whatsapp verifies
-// Meta's own signature — not @upstash/qstash's verifySignatureAppRouter
-// helper, which throws at import time when the signing keys aren't set
-// yet (this route needs to exist and fail closed cleanly even before
-// Upstash is configured, not break the whole module).
-async function isValidSignature(rawBody: string, signature: string | null): Promise<boolean> {
-  const currentSigningKey = process.env.QSTASH_CURRENT_SIGNING_KEY;
-  const nextSigningKey = process.env.QSTASH_NEXT_SIGNING_KEY;
-  if (!signature || (!currentSigningKey && !nextSigningKey)) return false;
-  const receiver = new Receiver({ currentSigningKey, nextSigningKey });
-  try {
-    return await receiver.verify({ signature, body: rawBody, url: scheduledSendCallbackUrl() });
-  } catch {
-    return false;
-  }
-}
+// instead of it.
+
+// A large SENDING broadcast can now take several chunked QStash callbacks
+// to finish (see sendWhatsAppBroadcast's own comment) — give each one the
+// same generous budget as the chunk-continuation route itself, not the
+// framework default.
+export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   const rawBody = await req.text();
 
-  if (!(await isValidSignature(rawBody, req.headers.get("upstash-signature")))) {
+  if (!(await verifyQstashSignature(rawBody, req.headers.get("upstash-signature"), scheduledSendCallbackUrl()))) {
     return NextResponse.json({ error: "invalid_signature" }, { status: 401 });
   }
 

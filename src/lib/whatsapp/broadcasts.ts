@@ -3,16 +3,20 @@ import { hasActiveConsent, bulkActiveConsent } from "@/lib/consent";
 import { getOrgSettings, type OrgSettingsValue } from "@/lib/settings";
 import { resolveSegment, type SegmentFilter } from "@/lib/segments/builder";
 import { resolveEventBroadcastRecipients } from "@/lib/broadcastRecipients";
+import { publishChunkContinuation } from "@/lib/qstash";
 import { whatsappProvider } from "./index";
 import { recordOutboundMessage } from "./inbox";
 import { resolveMergeTag } from "./mergeTags";
 import type { Person, Event, WhatsAppBroadcast, WhatsAppTemplate } from "@prisma/client";
 
-// Same synchronous, concurrency-limited send as lib/broadcasts.ts — same
-// known limitation flagged there (a real queue is the fix before a much
-// larger send), kept identical rather than inventing a different number
-// here for no reason.
 const CONCURRENCY = 10;
+// How many recipients one chunk sends before either finishing or handing
+// the rest off to QStash (see sendWhatsAppBroadcast's own comment) — big
+// enough that a typical event's audience (hundreds, sometimes low
+// thousands) finishes in one chunk with no behavior change at all;
+// small enough that CHUNK_SIZE / CONCURRENCY batches of real network
+// calls comfortably fit inside one serverless function invocation.
+const CHUNK_SIZE = 500;
 
 interface Recipient {
   person: Person;
@@ -108,9 +112,31 @@ export async function previewSegmentRecipients(
   return { total: people.length, eligible, noConsent, noPhone };
 }
 
+/** Sends the next chunk of a broadcast, picking up wherever its persisted
+ * cursor left off, and either finishes it (status -> SENT) or hands the
+ * rest to a QStash callback (see lib/qstash.ts's chunk-continuation
+ * functions) so a big segment never has to fit inside one function
+ * invocation. This is the real fix for the "a background job/queue is
+ * the fix before a 10k+ send" limitation this module used to just flag
+ * and accept — see the commit this comment shipped with.
+ *
+ * The full recipient list is resolved ONCE (on the very first call for
+ * this broadcast) and frozen as `recipientPersonIds` on the row itself —
+ * never re-resolved on a later chunk, so a segment gaining/losing members
+ * mid-send can't skip anyone or double-send to someone who left it.
+ * `cursor` is how many of that frozen list have been processed (sent,
+ * skipped, or failed) so far.
+ *
+ * Without QStash configured this still completes a broadcast of any
+ * size — it just keeps looping chunk after chunk in the SAME call,
+ * exactly the synchronous behavior this had before chunking existed (see
+ * `backgrounded: false` in the return value); the risk that used to be
+ * flagged (a huge send exceeding the function's time limit) is smaller
+ * now that each chunk's own accounting doesn't restart, but isn't fully
+ * gone without QStash — surfaced to the caller as a warning, not hidden. */
 export async function sendWhatsAppBroadcast(
   broadcastId: string
-): Promise<{ sent: number; skippedNoConsent: number; skippedNoPhone: number; failed: number }> {
+): Promise<{ sent: number; skippedNoConsent: number; skippedNoPhone: number; failed: number; remaining: number; backgrounded: boolean }> {
   const broadcast = await db.whatsAppBroadcast.findUniqueOrThrow({
     where: { id: broadcastId },
     include: { template: true, event: true, segment: true },
@@ -120,66 +146,119 @@ export async function sendWhatsAppBroadcast(
     throw new Error(`Template "${broadcast.template.name}" is not APPROVED (status: ${broadcast.template.status}) — re-sync or pick another.`);
   }
 
-  await db.whatsAppBroadcast.update({ where: { id: broadcast.id }, data: { status: "SENDING" } });
+  const event: Recipient["event"] = broadcast.eventId ? broadcast.event : null;
 
-  const recipients: Recipient[] = broadcast.eventId
-    ? (await resolveEventBroadcastRecipients(broadcast.eventId, broadcast.ticketTypeId)).map((r) => ({
-        person: r.person,
-        event: broadcast.event,
-      }))
-    : (await resolveSegment(broadcast.segment!.filter as unknown as SegmentFilter)).map((person) => ({ person, event: null }));
+  // First call for this broadcast: resolve the full recipient list once
+  // and freeze it. A later (continuation) call reuses the frozen list —
+  // never re-resolves the segment/event membership.
+  let recipientIds: string[];
+  if (broadcast.recipientPersonIds) {
+    recipientIds = broadcast.recipientPersonIds as unknown as string[];
+  } else {
+    const recipients: Recipient[] = broadcast.eventId
+      ? (await resolveEventBroadcastRecipients(broadcast.eventId, broadcast.ticketTypeId)).map((r) => ({ person: r.person, event }))
+      : (await resolveSegment(broadcast.segment!.filter as unknown as SegmentFilter)).map((person) => ({ person, event: null }));
+    recipientIds = recipients.map((r) => r.person.id);
+    await db.whatsAppBroadcast.update({
+      where: { id: broadcast.id },
+      data: { status: "SENDING", recipientPersonIds: recipientIds },
+    });
+  }
 
   const orgSettings = await getOrgSettings();
-  // One bulk consent check for the whole recipient list instead of one
-  // DB round trip per person inside the loop below — see
-  // bulkActiveConsent's own comment; matters a lot once a segment runs
-  // into the thousands (a real Nail Fest segment easily does).
-  const consented = await bulkActiveConsent(recipients.map((r) => r.person.id), "WHATSAPP");
 
   let sent = 0;
   let skippedNoConsent = 0;
   let skippedNoPhone = 0;
   let failed = 0;
-  // Collected across the whole send, not per-chunk — Promise.allSettled
-  // callbacks below run sequentially with respect to this array (Node is
-  // single-threaded; no lock needed) so this is just "everyone SENT
-  // successfully", used once at the end for assignLabel.
-  const sentPersonIds: string[] = [];
+  let cursor = broadcast.cursor;
+  let backgrounded = false;
 
-  for (let i = 0; i < recipients.length; i += CONCURRENCY) {
-    const chunk = recipients.slice(i, i + CONCURRENCY);
-    await Promise.allSettled(
-      chunk.map(async ({ person, event }) => {
-        if (!person.phone) {
-          skippedNoPhone++;
-          return;
-        }
-        if (!consented.has(person.id)) {
-          skippedNoConsent++;
-          return;
-        }
-        const outcome = await sendOneTemplateMessage(broadcast, person, event, orgSettings);
-        if (outcome === "sent") {
-          sent++;
-          sentPersonIds.push(person.id);
-        } else {
-          failed++;
-        }
-      })
+  while (cursor < recipientIds.length) {
+    const chunkIds = recipientIds.slice(cursor, cursor + CHUNK_SIZE);
+    const people = await db.person.findMany({ where: { id: { in: chunkIds } } });
+    const peopleById = new Map(people.map((p) => [p.id, p]));
+    // One bulk consent check for the whole chunk instead of one DB round
+    // trip per person inside the loop below — see bulkActiveConsent's own
+    // comment; matters a lot once a segment runs into the thousands (a
+    // real Nail Fest segment easily does).
+    const consented = await bulkActiveConsent(chunkIds, "WHATSAPP");
+    // Belt-and-suspenders against a duplicate send if this exact chunk
+    // gets retried after a crash partway through (cursor only advances
+    // once the whole chunk finishes) — skip anyone who somehow already
+    // has a message row for this broadcast+chunk.
+    const alreadyAttempted = new Set(
+      (
+        await db.whatsAppMessage.findMany({
+          where: { broadcastId, kind: "TEMPLATE", conversation: { personId: { in: chunkIds } } },
+          select: { conversation: { select: { personId: true } } },
+        })
+      ).map((m) => m.conversation.personId)
     );
+
+    // Collected per chunk, not across the whole send — Promise.allSettled
+    // callbacks below run sequentially with respect to this array (Node
+    // is single-threaded; no lock needed), so this is just "everyone in
+    // THIS chunk who SENT successfully," used right after for assignLabel.
+    const sentPersonIds: string[] = [];
+
+    for (let i = 0; i < chunkIds.length; i += CONCURRENCY) {
+      const sub = chunkIds.slice(i, i + CONCURRENCY);
+      await Promise.allSettled(
+        sub.map(async (personId) => {
+          if (alreadyAttempted.has(personId)) return;
+          const person = peopleById.get(personId);
+          if (!person) {
+            skippedNoPhone++; // a person deleted since the list was frozen — nothing to send to
+            return;
+          }
+          if (!person.phone) {
+            skippedNoPhone++;
+            return;
+          }
+          if (!consented.has(person.id)) {
+            skippedNoConsent++;
+            return;
+          }
+          const outcome = await sendOneTemplateMessage(broadcast, person, event, orgSettings);
+          if (outcome === "sent") {
+            sent++;
+            sentPersonIds.push(person.id);
+          } else {
+            failed++;
+          }
+        })
+      );
+    }
+
+    if (broadcast.assignLabelId && sentPersonIds.length > 0) {
+      await db.label
+        .update({
+          where: { id: broadcast.assignLabelId },
+          data: { people: { connect: sentPersonIds.map((id) => ({ id })) } },
+        })
+        .catch((err) => console.error("whatsapp broadcast: failed to assign label after chunk", err));
+    }
+
+    cursor += chunkIds.length;
+    await db.whatsAppBroadcast.update({ where: { id: broadcast.id }, data: { cursor } });
+
+    if (cursor >= recipientIds.length) break; // done — falls through to the SENT update below
+
+    const messageId = await publishChunkContinuation("whatsapp", broadcastId);
+    if (messageId) {
+      backgrounded = true;
+      break; // the rest continues in a later invocation, not this one
+    }
+    // QStash unavailable — keep going in this same call (today's
+    // pre-chunking behavior), rather than leaving the broadcast stuck.
   }
 
-  if (broadcast.assignLabelId && sentPersonIds.length > 0) {
-    await db.label
-      .update({
-        where: { id: broadcast.assignLabelId },
-        data: { people: { connect: sentPersonIds.map((id) => ({ id })) } },
-      })
-      .catch((err) => console.error("whatsapp broadcast: failed to assign label after send", err));
+  const remaining = recipientIds.length - cursor;
+  if (remaining === 0) {
+    await db.whatsAppBroadcast.update({ where: { id: broadcast.id }, data: { status: "SENT", sentAt: new Date() } });
   }
-
-  await db.whatsAppBroadcast.update({ where: { id: broadcast.id }, data: { status: "SENT", sentAt: new Date() } });
-  return { sent, skippedNoConsent, skippedNoPhone, failed };
+  return { sent, skippedNoConsent, skippedNoPhone, failed, remaining, backgrounded };
 }
 
 /** Re-attempts every FAILED message logged for this broadcast — for a

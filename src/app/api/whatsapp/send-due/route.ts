@@ -7,6 +7,12 @@ import { sendDueWhatsAppBroadcasts } from "@/lib/whatsapp/broadcasts";
 // (Vercel Hobby plan's cron frequency cap). Add this route's path to
 // vercel.json's `crons` once a real send is scheduled non-IMMEDIATE; an
 // IMMEDIATE WhatsApp broadcast never needs this at all, same as email.
+//
+// Each due broadcast now only sends its FIRST chunk here before handing
+// the rest to a QStash continuation (see sendWhatsAppBroadcast's own
+// comment) — real headroom for that, not the framework default.
+export const maxDuration = 60;
+
 async function handle(req: NextRequest) {
   if (!isAuthorizedCronRequest(req)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });

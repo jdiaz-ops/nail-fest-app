@@ -30,6 +30,10 @@ const bodySchema = z
     }
   });
 
+// sendEventBroadcast now sends the first chunk synchronously (see its own
+// comment) — real headroom for that, not the framework default.
+export const maxDuration = 60;
+
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const auth = await requireUser(["ADMIN"]);
   if ("response" in auth) return auth.response;

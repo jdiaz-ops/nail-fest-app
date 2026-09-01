@@ -149,7 +149,13 @@ export default function WhatsAppBroadcastComposer({ segments, templates, mergeTa
     setSending(false);
     if (res.ok) {
       if (body.sentNow) {
-        setResult(body.failed > 0 ? `Enviado — ${body.sent} entregados, ${body.failed} fallidos.` : `Enviado a los ${body.sent} contactos elegibles.`);
+        // A segment bigger than one chunk keeps sending in the background
+        // after this response — body.remaining says so honestly instead
+        // of implying it's all done. Never left stuck: without
+        // body.backgrounded (QStash not configured), the send just kept
+        // going synchronously and body.sent already reflects everyone.
+        const base = body.failed > 0 ? `Enviado — ${body.sent} entregados, ${body.failed} fallidos.` : `Enviado a los ${body.sent} contactos elegibles.`;
+        setResult(body.remaining > 0 ? `${base} Quedan ${body.remaining} más en camino — siguen enviándose solos.` : base);
       } else if (body.scheduleWarning) {
         setResult(body.scheduleWarning);
       } else {

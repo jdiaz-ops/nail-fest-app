@@ -500,6 +500,16 @@ model EmailBroadcast {
   // startsAt/endsAt — see this enum's own comment on why this is an
   // offset, not a frozen instant.
   scheduleOffsetMinutes Int?
+  // Chunked sending (see lib/broadcasts.ts's own CHUNK_SIZE comment) — the
+  // real fix for "a background job/queue is the fix before a 10k+ send"
+  // (this field used to sit next to that exact warning). The full
+  // recipient list is resolved ONCE, right before the first chunk, and
+  // frozen here as personIds — never re-resolved mid-send, so a segment
+  // that gains/loses members between chunks can't skip or double-count
+  // anyone. `cursor` is how many of that list have been processed (sent,
+  // skipped, or failed) so far; both null/0 until the first chunk runs.
+  recipientPersonIds Json?
+  cursor      Int               @default(0)
   createdAt   DateTime          @default(now())
   sentAt      DateTime?
 
@@ -717,6 +727,10 @@ model WhatsAppBroadcast {
   // Used to cancel the pending QStash message if this broadcast gets
   // deleted before it fires.
   qstashMessageId String?
+  // Chunked sending — same mechanism and same reasoning as EmailBroadcast.
+  // recipientPersonIds/cursor's own schema comment.
+  recipientPersonIds Json?
+  cursor       Int                   @default(0)
   createdAt    DateTime              @default(now())
   sentAt       DateTime?
 

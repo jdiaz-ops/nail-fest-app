@@ -1,4 +1,4 @@
-import { Client } from "@upstash/qstash";
+import { Client, Receiver } from "@upstash/qstash";
 
 // Precise-time scheduled sends for Difusiones — see WhatsAppBroadcast.
 // qstashMessageId's own schema comment for WHY this exists: the daily
@@ -80,4 +80,66 @@ export async function cancelScheduledSend(messageId: string): Promise<void> {
   await client.messages.cancel(messageId).catch((err) => {
     console.error("qstash: failed to cancel scheduled message", messageId, err);
   });
+}
+
+// --- Chunked broadcast sending (email + WhatsApp) ---------------------
+//
+// The real fix for "a background job/queue is the fix before a 10k+
+// send" (see lib/broadcasts.ts / lib/whatsapp/broadcasts.ts's own
+// CHUNK_SIZE comment): once a broadcast has more recipients left than
+// fit in one chunk, the send function hands the rest off to QStash
+// instead of looping further in the same request/function invocation —
+// each callback processes one more chunk and, if there's still more,
+// republishes itself. Reuses the exact same scheduled-send mechanism
+// above, just with no `notBefore` (fire as soon as possible instead of
+// at an exact future instant).
+
+/** This app's own callback URL for a chunk-continuation of the given
+ * channel's broadcast send — one route per channel since email and
+ * WhatsApp broadcasts are different tables with different send logic
+ * (lib/broadcasts.ts vs lib/whatsapp/broadcasts.ts). */
+export function chunkContinuationCallbackUrl(channel: "email" | "whatsapp"): string {
+  const path = channel === "email" ? "/api/broadcasts/process-chunk" : "/api/whatsapp/process-chunk";
+  return `${process.env.APP_BASE_URL || ""}${path}`;
+}
+
+/** Publishes an ASAP callback to continue a broadcast send from wherever
+ * its persisted cursor left off (see the model's own recipientPersonIds/
+ * cursor comment). Same best-effort contract as scheduleWhatsAppBroadcastSend
+ * — null means "QStash isn't configured or the publish failed," and the
+ * caller falls back to finishing the send synchronously in the current
+ * call instead of leaving it stuck, same as before this chunking existed. */
+export async function publishChunkContinuation(channel: "email" | "whatsapp", broadcastId: string): Promise<string | null> {
+  const client = getClient();
+  if (!client) return null;
+  try {
+    const result = await client.publishJSON({ url: chunkContinuationCallbackUrl(channel), body: { broadcastId } });
+    return result.messageId;
+  } catch (err) {
+    console.error(`qstash: failed to publish ${channel} broadcast chunk continuation`, broadcastId, err);
+    return null;
+  }
+}
+
+/** Verifies an inbound QStash callback's signature against this app's own
+ * signing keys — shared by every route QStash calls back into (the
+ * scheduled-send route and both chunk-continuation routes) so there's one
+ * place that gets this right, not three separately-drifting copies. Raw
+ * body (before JSON.parse), fails closed (false) on a missing signature
+ * or missing signing keys — same posture as /api/webhooks/whatsapp
+ * verifying Meta's own signature. Not @upstash/qstash's own
+ * verifySignatureAppRouter helper, which throws at import time when the
+ * signing keys aren't set yet — these routes need to exist and fail
+ * closed cleanly even before Upstash is configured, not break the whole
+ * module. */
+export async function verifyQstashSignature(rawBody: string, signature: string | null, url: string): Promise<boolean> {
+  const currentSigningKey = process.env.QSTASH_CURRENT_SIGNING_KEY;
+  const nextSigningKey = process.env.QSTASH_NEXT_SIGNING_KEY;
+  if (!signature || (!currentSigningKey && !nextSigningKey)) return false;
+  const receiver = new Receiver({ currentSigningKey, nextSigningKey });
+  try {
+    return await receiver.verify({ signature, body: rawBody, url });
+  } catch {
+    return false;
+  }
 }
