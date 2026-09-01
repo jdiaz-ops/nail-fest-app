@@ -155,6 +155,16 @@ export async function ensureWebsiteAudience(params: {
  * out) — passing the real id renames that same audience in place instead.
  * The name-lookup path stays as the fallback for the case with no stored
  * id yet (first sync ever, or the seed audiences in ensureSeedAudiences).
+ *
+ * Self-heals when existingAudienceId points at an audience that no longer
+ * exists in Meta — an admin can always delete a Custom Audience directly
+ * in Ads Manager (the reset move for one that accumulated stale members
+ * before PRUNE_STALE_AUDIENCE_MEMBERS existed — see "APP Registros
+ * Pereira 2025"), and the next sync shouldn't die on that. Rename-in-place
+ * failing is treated as exactly that case: fall through to the
+ * name-lookup-or-create path below instead of propagating the error, so
+ * the segment just gets a fresh audience under the same name and syncs
+ * clean — no manual "forget this id" step needed on the app side.
  */
 export async function ensureCustomerListAudience(params: {
   name: string;
@@ -164,12 +174,20 @@ export async function ensureCustomerListAudience(params: {
   const conn = await getConnection();
 
   if (params.existingAudienceId) {
-    // Rename in place — cheap no-op if the name didn't actually change.
-    await graphFetch(params.existingAudienceId, conn.token, {
-      method: "POST",
-      body: JSON.stringify({ name: params.name }),
-    });
-    return params.existingAudienceId;
+    try {
+      // Rename in place — cheap no-op if the name didn't actually change.
+      await graphFetch(params.existingAudienceId, conn.token, {
+        method: "POST",
+        body: JSON.stringify({ name: params.name }),
+      });
+      return params.existingAudienceId;
+    } catch (err) {
+      console.warn(
+        `ensureCustomerListAudience: stored metaAudienceId ${params.existingAudienceId} rejected by Meta ` +
+          `(likely deleted in Ads Manager) — falling back to name lookup / creating a fresh audience.`,
+        err instanceof Error ? err.message : err
+      );
+    }
   }
 
   const existing = await graphFetch(
