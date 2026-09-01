@@ -296,8 +296,17 @@ export async function ensureSeedAudiences() {
  * used for the CAPI Purchase event in /api/register). One bulk query + an
  * in-memory "latest consent per person" reduction instead of
  * hasActiveConsent() in a loop, since this can run over 10,000+ people.
+ *
+ * Exported so /admin/crm/segments can show how many of a segment's members
+ * actually have ADVERTISING consent — i.e. how many of them really reach
+ * Meta once syncSegmentAudience runs, as opposed to the segment's raw
+ * "Personas" count. Those two numbers can differ a lot for
+ * imported/historical segments (see docs/IMPORT.md's advertising-consent
+ * checkbox), and nothing before this surfaced that gap in the UI — a
+ * segment could show thousands of "Personas" while its actual Custom
+ * Audience on Meta sits under 1,000, with no visible reason why.
  */
-async function filterByActiveConsent<T extends { id: string }>(
+export async function filterByActiveConsent<T extends { id: string }>(
   people: T[],
   purpose: ConsentPurpose
 ): Promise<T[]> {

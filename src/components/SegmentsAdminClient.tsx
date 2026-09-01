@@ -18,8 +18,22 @@ export interface SegmentRow {
   name: string;
   filter: unknown;
   memberCount: number;
+  // How many of memberCount actually have ADVERTISING consent on file —
+  // i.e. what syncSegmentAudience really uploads to Meta. Can be much
+  // smaller than memberCount (imported/historical people, see
+  // docs/IMPORT.md) — that's expected, not a sync failure.
+  advertisingConsentedCount: number;
   metaSync: { status: string; lastError: string | null; lastSyncedAt: Date | null } | null;
 }
+
+// Below this share of memberCount, flag the "Con consentimiento Meta"
+// number instead of leaving it looking like a plain stat — a segment
+// showing e.g. 1,204 of 15,436 is the exact "why is my Custom Audience so
+// small" gap this column exists to make visible before it's a surprise in
+// Meta Ads Manager. Same amber/gray restraint as the sync-status pills
+// above, not a hard error state (ERROR is reserved for an actual failed
+// sync) — a low ratio can be entirely correct, just worth a second look.
+const LOW_CONSENT_RATIO = 0.3;
 
 // Owns "which segment is being edited" — the composer above the table
 // switches between its create form and an edit form for the chosen row;
@@ -73,6 +87,7 @@ export default function SegmentsAdminClient({
             <tr style={{ textAlign: "left", background: "#faf9f7" }}>
               <th style={{ padding: "10px 12px" }}>Nombre</th>
               <th style={{ padding: "10px 12px" }}>Personas</th>
+              <th style={{ padding: "10px 12px" }}>Con consentimiento Meta</th>
               <th style={{ padding: "10px 12px" }}>Sync con Meta</th>
               <th style={{ padding: "10px 12px" }}>Última sincronización</th>
               <th style={{ padding: "10px 12px" }}></th>
@@ -89,6 +104,25 @@ export default function SegmentsAdminClient({
                 >
                   <td style={{ padding: "10px 12px", fontWeight: 600 }}>{s.name}</td>
                   <td style={{ padding: "10px 12px" }}>{s.memberCount}</td>
+                  <td style={{ padding: "10px 12px" }}>
+                    {(() => {
+                      const isLow =
+                        s.memberCount > 0 && s.advertisingConsentedCount / s.memberCount < LOW_CONSENT_RATIO;
+                      return (
+                        <span style={{ color: isLow ? "#a3660e" : undefined, fontWeight: isLow ? 600 : undefined }}>
+                          {s.advertisingConsentedCount}
+                          {isLow && (
+                            <span
+                              title="Menos del 30% de este segmento tiene consentimiento ADVERTISING — esto es lo que de verdad sube a Meta, no el total de Personas. Suele pasar con segmentos importados sin ese consentimiento marcado (ver docs/IMPORT.md)."
+                              style={{ marginLeft: 5, cursor: "help" }}
+                            >
+                              ⚠️
+                            </span>
+                          )}
+                        </span>
+                      );
+                    })()}
+                  </td>
                   <td style={{ padding: "10px 12px" }}>
                     {syncStyle ? (
                       <span

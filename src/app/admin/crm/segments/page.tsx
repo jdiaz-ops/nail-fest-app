@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { getOrderedProfessionOptions } from "@/lib/professions";
 import { listLabels } from "@/lib/labels";
 import { resolveSegment, type SegmentFilter } from "@/lib/segments/builder";
+import { filterByActiveConsent } from "@/lib/meta/audiences";
 import { requirePageUser } from "@/lib/auth/guard";
 import SegmentsAdminClient from "@/components/SegmentsAdminClient";
 import CrmPageHeader from "../CrmPageHeader";
@@ -36,11 +37,22 @@ export default async function SegmentsPage() {
   // the Meta audience right now" (that's ADVERTISING-consent-filtered and
   // as-of-last-sync; see the Sync column), this is "how many people in the
   // CRM match this filter today", like Klaviyo's "Members" column.
+  //
+  // advertisingConsentedCount is that other number, computed live (not
+  // just as-of-last-sync) — the same filterByActiveConsent(..., "ADVERTISING")
+  // gate syncSegmentAudience actually applies before uploading to Meta. A
+  // segment can show a big "Personas" count and a tiny fraction of that
+  // here — that's not a sync bug, it's imported/historical people with no
+  // ADVERTISING consent on file (see docs/IMPORT.md) genuinely never
+  // reaching Meta, on purpose (Ley 1581). Surfacing it here means that gap
+  // is visible on this page instead of only showing up as a surprisingly
+  // small "estimated audience size" in Meta Ads Manager.
   const segments = await Promise.all(
-    segmentRows.map(async (s) => ({
-      ...s,
-      memberCount: (await resolveSegment(s.filter as unknown as SegmentFilter)).length,
-    }))
+    segmentRows.map(async (s) => {
+      const people = await resolveSegment(s.filter as unknown as SegmentFilter);
+      const consented = await filterByActiveConsent(people, "ADVERTISING");
+      return { ...s, memberCount: people.length, advertisingConsentedCount: consented.length };
+    })
   );
   const syncedCount = segments.filter((s) => s.metaSync?.status === "OK").length;
 
