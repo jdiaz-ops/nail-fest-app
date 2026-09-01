@@ -103,7 +103,6 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
           ticketTypes={ticketTypes}
           registerButtonLabel={event.registerButtonLabel || "Registrarme GRATIS"}
           brandName={orgSettings.name}
-          supportEmail={orgSettings.replyToEmail}
           descriptionHtml={event.description}
         />
       </Suspense>

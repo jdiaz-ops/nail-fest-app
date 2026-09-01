@@ -4,6 +4,27 @@ import { useEffect, useRef, useState } from "react";
 import { Fraunces } from "next/font/google";
 import RegistrationForm, { type QuestionView, type RegisterPayload } from "./RegistrationForm";
 import { track, ensureFbcCookie } from "./tracking";
+import { COUNTRY_CODES } from "@/lib/countryCodes";
+
+// Purely cosmetic — the phone the person submitted is stored/sent as raw
+// E.164 ("+573001234567", see RegistrationForm's countryCode+localPhone
+// concat), so this just re-groups it for the confirmation pill: country
+// code, then the rest in groups of 3 with the last group taking any
+// remainder (so a 10-digit CO mobile reads "+57 300 123 4567", matching
+// how the app already asks for it). Falls back to the raw string when the
+// prefix isn't one of the app's own COUNTRY_CODES — never throws.
+function formatPhoneDisplay(raw: string): string {
+  const country = COUNTRY_CODES.find((c) => raw.startsWith(c.code));
+  if (!country) return raw;
+  let rest = raw.slice(country.code.length);
+  const groups: string[] = [];
+  while (rest.length > 4) {
+    groups.push(rest.slice(0, 3));
+    rest = rest.slice(3);
+  }
+  if (rest) groups.push(rest);
+  return [country.code, ...groups].join(" ");
+}
 
 // Same face the admin already uses for its own brand/celebratory moments
 // (EventForm.tsx, the CRM/Settings section headers) — one display font for
@@ -36,12 +57,6 @@ interface Props {
   // confirmation wordmark stays correct if that ever changes instead of
   // hardcoding the brand name here.
   brandName: string;
-  // OrgSettings.replyToEmail (/admin/settings/contact) — the real address
-  // people's email replies already land on. Reused here as the "¿ese
-  // correo no es tuyo?" escape hatch instead of inventing a new contact
-  // channel; the link is hidden entirely when this isn't configured
-  // rather than rendering a dead mailto:.
-  supportEmail: string | null;
   // Already-sanitized (sanitizeHtml.ts) event.description — rendered here
   // rather than by [eventSlug]/page.tsx itself so the description and the
   // sticky sidebar info card (desktop only, see globals.css's
@@ -72,7 +87,6 @@ export default function EventRegistration({
   ticketTypes,
   registerButtonLabel,
   brandName,
-  supportEmail,
   descriptionHtml,
 }: Props) {
   const hasTicketTypes = ticketTypes.length > 0;
@@ -83,6 +97,14 @@ export default function EventRegistration({
   // wrong, that they typed it wrong). Cleared whenever the modal is
   // reopened for a fresh attempt (see openModal below).
   const [submittedEmail, setSubmittedEmail] = useState<string | null>(null);
+  // Same reasoning as submittedEmail — shown back so the person can spot
+  // a typo'd number. whatsappTicketLinkSent is whether /api/register
+  // actually attempted the WhatsApp send (see sendTicketLinkViaWhatsApp's
+  // own comment) — the confirmation screen's WhatsApp pill only renders
+  // when this is true, so it never claims something that didn't happen
+  // (automation off, no WHATSAPP consent, or no phone).
+  const [submittedPhone, setSubmittedPhone] = useState<string | null>(null);
+  const [whatsappTicketLinkSent, setWhatsappTicketLinkSent] = useState(false);
   // Only pre-select when there's exactly one type AND it actually has
   // stock — a single sold-out type must NOT default to a nonzero
   // quantity, or the submit button would wrongly enable with nothing
@@ -179,7 +201,10 @@ export default function EventRegistration({
 
     setSubmitting(false);
     if (res.ok) {
+      const body = await res.json().catch(() => ({}));
       setSubmittedEmail(payload.email);
+      setSubmittedPhone(payload.phone);
+      setWhatsappTicketLinkSent(Boolean(body?.whatsappTicketLinkSent));
       setStep("resumen");
     } else {
       const body = await res.json().catch(() => ({}));
@@ -456,44 +481,60 @@ export default function EventRegistration({
                   </h2>
 
                   <p style={{ fontSize: 13.5, color: "#5b5f6b", margin: "0 0 10px", position: "relative" }}>
-                    Tu entrada con el <strong>código QR</strong> ya va camino a tu correo:
+                    <strong>Tu entrada</strong> ya va camino a tu correo{whatsappTicketLinkSent && submittedPhone ? " y WhatsApp" : ""}:
                   </p>
 
-                  {submittedEmail && (
-                    <div
-                      style={{
-                        position: "relative",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 7,
-                        background: "#e6f9f7",
-                        border: "1px solid #b7e8e3",
-                        borderRadius: 10,
-                        padding: "8px 12px",
-                        maxWidth: "100%",
-                      }}
-                    >
-                      <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-ink)" strokeWidth="2" style={{ width: 15, height: 15, flex: "0 0 auto" }}>
-                        <rect x="3" y="5" width="18" height="14" rx="2.5" />
-                        <path d="M3.5 6.5l8.5 6.5 8.5-6.5" />
-                      </svg>
-                      <span style={{ fontSize: 12.5, fontWeight: 700, color: "var(--accent-ink)", wordBreak: "break-all" }}>{submittedEmail}</span>
-                    </div>
-                  )}
-
-                  {supportEmail && (
-                    <p style={{ fontSize: 11, color: "#8a8f9c", margin: "8px 0 0", position: "relative" }}>
-                      ¿Ese correo no es tuyo?{" "}
-                      <a
-                        href={`mailto:${supportEmail}?subject=${encodeURIComponent(`Corregir mi correo — ${eventName}`)}&body=${encodeURIComponent(
-                          `Hola, me registré a ${eventName} pero creo que escribí mal mi correo (quedó como: ${submittedEmail ?? ""}).\n\nMi nombre:\nMi teléfono:\nMi correo correcto:`
-                        )}`}
-                        style={{ color: "var(--link)", fontWeight: 700 }}
+                  <div style={{ position: "relative", display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8 }}>
+                    {submittedEmail && (
+                      <div
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 7,
+                          background: "#e6f9f7",
+                          border: "1px solid #b7e8e3",
+                          borderRadius: 10,
+                          padding: "8px 12px",
+                          maxWidth: "100%",
+                        }}
                       >
-                        Escríbenos
-                      </a>
-                    </p>
-                  )}
+                        <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-ink)" strokeWidth="2" style={{ width: 15, height: 15, flex: "0 0 auto" }}>
+                          <rect x="3" y="5" width="18" height="14" rx="2.5" />
+                          <path d="M3.5 6.5l8.5 6.5 8.5-6.5" />
+                        </svg>
+                        <span style={{ fontSize: 12.5, fontWeight: 700, color: "var(--accent-ink)", wordBreak: "break-all" }}>{submittedEmail}</span>
+                      </div>
+                    )}
+
+                    {/* Only shown when sendTicketLinkViaWhatsApp actually
+                        attempted a send (automation on + WHATSAPP consent +
+                        phone present) — never claims the ticket went to
+                        WhatsApp when it didn't. See EventRegistration's own
+                        whatsappTicketLinkSent state and /api/register's
+                        response field of the same name. */}
+                    {whatsappTicketLinkSent && submittedPhone && (
+                      <div
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 7,
+                          background: "#e6f9f7",
+                          border: "1px solid #b7e8e3",
+                          borderRadius: 10,
+                          padding: "8px 12px",
+                          maxWidth: "100%",
+                        }}
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-ink)" strokeWidth="2" style={{ width: 15, height: 15, flex: "0 0 auto" }}>
+                          <path d="M6.5 3h11a3.5 3.5 0 0 1 3.5 3.5v9a3.5 3.5 0 0 1-3.5 3.5H10l-4 3v-3H6.5A3.5 3.5 0 0 1 3 15.5v-9A3.5 3.5 0 0 1 6.5 3Z" />
+                          <path d="M7.5 9.5h9M7.5 13h6" />
+                        </svg>
+                        <span style={{ fontSize: 12.5, fontWeight: 700, color: "var(--accent-ink)", wordBreak: "break-all" }}>
+                          {formatPhoneDisplay(submittedPhone)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
 
                   <div
                     style={{

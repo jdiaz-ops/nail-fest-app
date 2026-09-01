@@ -30,19 +30,26 @@ import { recordOutboundMessage } from "./inbox";
  * "Plantilla sugerida" note in docs/WHATSAPP_SETUP.md). A template with a
  * different variableCount still gets as many of [firstName, eventName] as
  * it needs, in order — an extra {{3}}+ would just come through empty.
+ *
+ * Returns whether it actually attempted a send (got past every gate),
+ * NOT whether the provider call itself succeeded — same "did we try,"
+ * not "did it arrive" signal /api/register already gives sendTicketEmail
+ * no equivalent of. Used to decide whether the confirmation modal's own
+ * "ya va camino a tu WhatsApp" line is true before showing it — see
+ * EventRegistration.tsx.
  */
 export async function sendTicketLinkViaWhatsApp(params: {
   person: Person;
   event: Pick<Event, "name">;
   qrToken: string;
-}): Promise<void> {
+}): Promise<boolean> {
   const { person, event, qrToken } = params;
-  if (!person.phone) return;
+  if (!person.phone) return false;
 
   const automation = await getEnabledAutomation("REGISTRATION_CONFIRMED");
-  if (!automation) return;
+  if (!automation) return false;
 
-  if (!(await hasActiveConsent(person.id, "WHATSAPP"))) return;
+  if (!(await hasActiveConsent(person.id, "WHATSAPP"))) return false;
 
   const template = automation.template;
   const bodyValues = [person.firstName ?? "", event.name];
@@ -76,4 +83,5 @@ export async function sendTicketLinkViaWhatsApp(params: {
     });
     console.error("whatsapp send-ticket-link failed", person.id, err);
   }
+  return true;
 }

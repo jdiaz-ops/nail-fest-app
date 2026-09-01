@@ -309,10 +309,13 @@ export async function POST(req: NextRequest) {
 
   // --- Ticket link over WhatsApp, gated by the WHATSAPP consent — an
   // extra channel on top of the email above, never a replacement for it.
-  // No-op until an admin turns it on (OrgSettings.
-  // ticketLinkWhatsAppTemplateId); never fails the registration itself,
-  // same swallow-and-log posture as sendTicketEmail. ---
-  await sendTicketLinkViaWhatsApp({ person, event, qrToken });
+  // No-op until an admin turns on the REGISTRATION_CONFIRMED automation
+  // (/admin/crm/whatsapp/automatizaciones); never fails the registration
+  // itself, same swallow-and-log posture as sendTicketEmail. The return
+  // value (did it actually attempt a send, not whether the provider call
+  // itself succeeded) goes back to the client below so the confirmation
+  // modal only claims "ya va camino a tu WhatsApp" when that's true. ---
+  const whatsappTicketLinkSent = await sendTicketLinkViaWhatsApp({ person, event, qrToken });
 
   // --- Purchase → Meta CAPI, gated by the ADVERTISING consent, not just
   // "did they register". Sharing hashed identifiers with Meta is a distinct
@@ -342,5 +345,5 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  return NextResponse.json({ ok: true, registrationId: registration.id, resent: isResend });
+  return NextResponse.json({ ok: true, registrationId: registration.id, resent: isResend, whatsappTicketLinkSent });
 }
