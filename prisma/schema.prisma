@@ -435,6 +435,20 @@ model SegmentMetaSync {
   lastError      String?
   lastSyncedAt   DateTime?
   createdAt      DateTime   @default(now())
+  // Person ids actually uploaded to Meta on the last successful sync — the
+  // baseline syncSegmentAudience diffs against to know who dropped out
+  // since (revoked ADVERTISING consent, no longer matches the segment
+  // filter, etc.) and should be removed from the live Meta audience, not
+  // just skipped on future uploads. Meta's /users endpoint only ever ADDS
+  // people — nothing here ever told it to remove someone, so a Custom
+  // Audience could only ever grow, never shrink, even past revoked
+  // consent (confirmed live: "APP Registros Pereira 2025" showing 7,100-
+  // 8,400 matched on Meta against 6,216 people in the segment today).
+  // Written on every sync regardless of whether pruning is turned on
+  // (see PRUNE_STALE_AUDIENCE_MEMBERS in lib/meta/audiences.ts) so the
+  // day it is, the first run already has an accurate baseline instead of
+  // treating everyone currently on file as "new" and pruning nothing.
+  lastSyncedPersonIds Json?
 }
 
 // Our previous ticketing platform's own 4 send-time options on its

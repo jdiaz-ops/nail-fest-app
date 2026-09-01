@@ -202,7 +202,7 @@ const UPLOAD_BATCH_SIZE = 10_000; // Meta's per-request cap on /users
 export async function syncPeopleToAudience(
   audienceId: string,
   people: Array<{ email?: string | null; phone?: string | null }>
-): Promise<{ batches: number }> {
+): Promise<{ batches: number; numReceived: number; numInvalidEntries: number }> {
   const conn = await getConnection();
 
   const rows = people
@@ -210,20 +210,69 @@ export async function syncPeopleToAudience(
     .filter(([em, ph]) => em || ph);
 
   let batches = 0;
+  let numReceived = 0;
+  let numInvalidEntries = 0;
   for (let i = 0; i < rows.length; i += UPLOAD_BATCH_SIZE) {
-    const chunk = rows.slice(i, i + UPLOAD_BATCH_SIZE);
-    await graphFetch(`${audienceId}/users`, conn.token, {
+    const batch = rows.slice(i, i + UPLOAD_BATCH_SIZE);
+    // Meta's response here (num_received/num_invalid_entries) is the only
+    // real signal of whether the upload actually matched — this call
+    // succeeding (res.ok, no throw) only means Meta accepted the request,
+    // NOT that the hashed rows were valid. Before this, that response body
+    // was discarded entirely: a segment could show hundreds of
+    // "num_invalid_entries" (bad hash format, wrong normalization, whatever)
+    // and this function — and everything reading its result — would still
+    // report a clean "OK" sync. Logging the raw body too since Meta's exact
+    // field names have drifted across API versions before; better to have
+    // it in the function logs than silently coerce something unexpected to
+    // 0 and hide a real problem.
+    const res = await graphFetch(`${audienceId}/users`, conn.token, {
       method: "POST",
       body: JSON.stringify({
         payload: {
           schema: ["EMAIL", "PHONE"],
-          data: chunk,
+          data: batch,
         },
       }),
     });
+    console.log("Meta customaudiences/users response (add)", JSON.stringify(res));
+    if (typeof res.num_received === "number") numReceived += res.num_received;
+    if (typeof res.num_invalid_entries === "number") numInvalidEntries += res.num_invalid_entries;
     batches++;
   }
-  return { batches };
+  return { batches, numReceived, numInvalidEntries };
+}
+
+/**
+ * The other half syncPeopleToAudience never had: removes people from a
+ * Meta Custom Audience via DELETE /{audience_id}/users (same payload
+ * shape as the ADD call, different HTTP method — this is Meta's own
+ * documented way to remove specific hashed identifiers from a customer-
+ * list audience). Only called when PRUNE_STALE_AUDIENCE_MEMBERS is on —
+ * see syncSegmentAudience.
+ */
+async function removePeopleFromAudience(
+  audienceId: string,
+  people: Array<{ email?: string | null; phone?: string | null }>
+): Promise<void> {
+  const conn = await getConnection();
+
+  const rows = people
+    .map((p) => [p.email ? hashEmail(p.email) : "", p.phone ? hashPhone(p.phone) : ""])
+    .filter(([em, ph]) => em || ph);
+
+  for (let i = 0; i < rows.length; i += UPLOAD_BATCH_SIZE) {
+    const batch = rows.slice(i, i + UPLOAD_BATCH_SIZE);
+    const res = await graphFetch(`${audienceId}/users`, conn.token, {
+      method: "DELETE",
+      body: JSON.stringify({
+        payload: {
+          schema: ["EMAIL", "PHONE"],
+          data: batch,
+        },
+      }),
+    });
+    console.log("Meta customaudiences/users response (remove)", JSON.stringify(res));
+  }
 }
 
 type SeedAudienceResult = { id: string } | { error: string };
@@ -366,6 +415,23 @@ async function getAdvertisingConsentedPurchasers(): Promise<
   return filterByActiveConsent(confirmed, "ADVERTISING");
 }
 
+// Deliberately OFF. Meta's /users endpoint only ever adds people to a
+// Custom Audience — nothing in this file ever told it to remove someone,
+// so an audience could only grow, never shrink, even past a revoked
+// ADVERTISING consent (confirmed live: "APP Registros Pereira 2025"
+// matching 7,100-8,400 on Meta against 6,216 people in the segment
+// today — the gap is people who dropped out since and were never
+// removed). removePeopleFromAudience + the diff logic below fix that,
+// but flipping this on means the next sync (cron or manual) starts
+// issuing real DELETE calls against a live Meta Custom Audience with ad
+// spend behind it — an outward-facing, not-easily-undone action that
+// needs a person to turn on, not a bug being "fixed" quietly on deploy.
+// lastSyncedPersonIds is still written on every sync regardless of this
+// flag, so whenever it IS flipped to true, the first run already has a
+// real baseline to diff against instead of treating everyone on file as
+// "new" and pruning nothing that first time.
+const PRUNE_STALE_AUDIENCE_MEMBERS = false;
+
 /**
  * Full resync of ONE segment's Meta Custom Audience — resolve the filter,
  * keep only ADVERTISING-consented people, upsert the audience, upload the
@@ -390,10 +456,36 @@ export async function syncSegmentAudience(
       retentionDays: 180,
       existingAudienceId: link.metaAudienceId,
     });
+
+    if (PRUNE_STALE_AUDIENCE_MEMBERS) {
+      const previousIds = new Set((link.lastSyncedPersonIds as unknown as string[] | null) ?? []);
+      const currentIds = new Set(consented.map((p) => p.id));
+      const droppedIds = [...previousIds].filter((id) => !currentIds.has(id));
+      if (droppedIds.length > 0) {
+        // Fetched fresh, chunked the same way filterByActiveConsent is —
+        // the same 32,767-bind-variable ceiling applies to any `id: {in:
+        // [...]}` this size.
+        const dropped = (
+          await Promise.all(
+            chunk(droppedIds, CONSENT_QUERY_BATCH_SIZE).map((idBatch) =>
+              db.person.findMany({ where: { id: { in: idBatch } }, select: { id: true, email: true, phone: true } })
+            )
+          )
+        ).flat();
+        await removePeopleFromAudience(audienceId, dropped);
+      }
+    }
+
     await syncPeopleToAudience(audienceId, consented);
     await db.segmentMetaSync.update({
       where: { id: link.id },
-      data: { status: "OK", metaAudienceId: audienceId, lastSyncedAt: new Date(), lastError: null },
+      data: {
+        status: "OK",
+        metaAudienceId: audienceId,
+        lastSyncedAt: new Date(),
+        lastError: null,
+        lastSyncedPersonIds: consented.map((p) => p.id),
+      },
     });
     return { status: "OK", audienceId, memberCount: consented.length };
   } catch (err) {
