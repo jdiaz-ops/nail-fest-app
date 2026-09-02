@@ -71,12 +71,7 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
         <img src={event.imageUrl} alt={event.name} className="event-page-hero" />
       )}
 
-      <h1 style={{ marginTop: 4 }}>{event.name}</h1>
-      {eventWhen && (
-        <p className="event-page-meta">
-          🕐 {eventWhen}
-        </p>
-      )}
+      <h1 style={{ margin: "4px 0 8px" }}>{event.name}</h1>
       {eventVenue && (
         <p className="event-page-meta">
           📍 {eventVenue}
