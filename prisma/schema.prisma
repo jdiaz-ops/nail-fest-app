@@ -804,10 +804,11 @@ model WhatsAppConversation {
   // false the moment the agent itself decides to hand off (the customer
   // asked for a human — see the escalate_to_human tool) OR a real staff
   // member sends a manual reply from Bandeja (never let the agent talk
-  // over someone who already jumped in). Defaults true so newly-created
-  // conversations get an answer immediately, per how this was scoped —
-  // "automático a todo mensaje nuevo" — not opt-in per thread.
-  aiAutoReplyEnabled Boolean @default(true)
+  // over someone who already jumped in). Defaults false — the agent/LLM
+  // project itself is on hold for now (2026-09-02), so a newly-created
+  // conversation starts "en manos de un humano" until someone opts a
+  // specific thread in via WhatsAppAiToggle, not the other way around.
+  aiAutoReplyEnabled Boolean @default(false)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 

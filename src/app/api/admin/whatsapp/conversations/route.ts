@@ -46,11 +46,6 @@ export async function GET(req: NextRequest) {
         assignedToLabel: c.assignedTo ? c.assignedTo.name || c.assignedTo.username : null,
         unreadCount: c.unreadCount,
         withinWindow,
-        // Escalated by the AI agent (or taken over by a human reply) but
-        // nobody's actually claimed it yet — the one state that needs a
-        // human to notice on their own, since neither "unread" nor
-        // "assigned to me" necessarily catches it.
-        waitingForHuman: !c.aiAutoReplyEnabled && !c.assignedToId,
         lastMessage: last
           ? { body: last.body, direction: last.direction, createdAt: last.createdAt.toISOString() }
           : null,
