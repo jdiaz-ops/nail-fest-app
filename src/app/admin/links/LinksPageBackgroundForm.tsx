@@ -92,6 +92,14 @@ export default function LinksPageBackgroundForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    // Guard against saving mid-upload — without this, clicking Guardar
+    // while a video is still uploading submits whatever videoUrl already
+    // was (often still null), silently reverting to the solid fallback
+    // even though the file itself did finish uploading to Blob storage.
+    // The button below is also disabled while uploading, this is the
+    // belt-and-suspenders check for a submit that slips through anyway
+    // (e.g. hitting Enter).
+    if (uploading) return;
     setStatus("saving");
     try {
       await postSettings({
@@ -186,8 +194,8 @@ export default function LinksPageBackgroundForm({
       {uploadError && <p style={{ fontSize: 13, color: "#c2185b" }}>{uploadError}</p>}
 
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 16 }}>
-        <button type="submit" style={saveButtonStyle} disabled={status === "saving"}>
-          {status === "saving" ? "Guardando…" : "Guardar fondo"}
+        <button type="submit" style={saveButtonStyle} disabled={uploading || status === "saving"}>
+          {uploading ? "Esperando la subida…" : status === "saving" ? "Guardando…" : "Guardar fondo"}
         </button>
         {status === "saved" && <span style={{ color: "#12966b", fontSize: 14 }}>Guardado ✓</span>}
         {status === "error" && <span style={{ color: "#c2185b", fontSize: 14 }}>Error al guardar</span>}

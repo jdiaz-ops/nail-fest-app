@@ -103,6 +103,14 @@ export default function HomepageEditorForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    // Guard against saving mid-upload — without this, clicking Guardar
+    // while a video is still uploading submits whatever videoUrl already
+    // was (often still null), silently reverting to the solid fallback
+    // even though the file itself did finish uploading to Blob storage.
+    // The button below is also disabled while uploading, this is the
+    // belt-and-suspenders check for a submit that slips through anyway
+    // (e.g. hitting Enter).
+    if (uploading) return;
     setStatus("saving");
     try {
       // Whichever type isn't the active tab gets saved as "" (cleared) —
@@ -220,8 +228,8 @@ export default function HomepageEditorForm({
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <button type="submit" style={saveButtonStyle} disabled={status === "saving"}>
-          {status === "saving" ? "Guardando…" : "Guardar"}
+        <button type="submit" style={saveButtonStyle} disabled={uploading || status === "saving"}>
+          {uploading ? "Esperando la subida…" : status === "saving" ? "Guardando…" : "Guardar"}
         </button>
         <a href="/" target="_blank" rel="noreferrer" style={{ fontSize: 14 }}>
           Ver la homepage ↗
