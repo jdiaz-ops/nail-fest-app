@@ -1128,3 +1128,26 @@ model AdminSession {
 
   @@index([userId])
 }
+
+// ---------------------------------------------------------------------------
+// Links page — nailfest.co/links, a Linktree-equivalent the admin manages
+// from /admin/links (same "editor page" shape as OrgSettings.homepageImageUrl
+// above). v1 is deliberately just title + URL, ordered pill buttons — the
+// user's own richer idea (a block that embeds the actual registration form,
+// event schedule, or instructor list inline) is an explicitly stated FUTURE
+// direction, not this model. Reordering follows the exact same pattern as
+// CheckoutQuestion.order (see lib/checkoutForm.ts's moveQuestion()) — plain
+// integer order, swapped pairwise via /api/admin/links/[id]/move, no drag-
+// and-drop library.
+model LinkPageLink {
+  id        String   @id @default(cuid())
+  title     String
+  url       String
+  // Hidden links stay in the list (and keep their spot in `order`) without
+  // being deleted — same "soft off-switch" reasoning as other enabled
+  // flags in this schema, e.g. Event.published.
+  enabled   Boolean  @default(true)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

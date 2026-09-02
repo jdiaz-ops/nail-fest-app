@@ -10,11 +10,12 @@ const NAV: { href: string; label: string; adminOnly?: boolean }[] = [
   { href: "/admin/events", label: "Eventos" },
   { href: "/admin/crm", label: "CRM" },
   { href: "/admin/scan", label: "Escáner" },
-  // COORDINADOR never gets these two — hidden here AND gated again on
+  // COORDINADOR never gets these three — hidden here AND gated again on
   // their own pages (already ADMIN-only, unchanged), same "nav
   // visibility isn't the real gate" reasoning as CrmLayout/
   // EventModuleShell.
   { href: "/admin/homepage", label: "Editar homepage", adminOnly: true },
+  { href: "/admin/links", label: "Editar Links", adminOnly: true },
   { href: "/admin/settings", label: "Configuración", adminOnly: true },
 ];
 
