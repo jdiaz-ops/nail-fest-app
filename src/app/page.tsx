@@ -27,7 +27,14 @@ export default async function HomePage() {
     <main
       style={{
         position: "relative",
-        minHeight: "100vh",
+        // 100dvh, not 100vh — same fix already used in ScanAppShell.tsx.
+        // 100vh is the LARGEST possible mobile viewport (as if the
+        // browser's address bar were hidden); on a real phone with the
+        // bar showing, a bottom-anchored flex block sized against 100vh
+        // sits partly below the visible fold, reading as a gap under the
+        // button until you scroll — 100dvh tracks the actual visible
+        // height instead.
+        minHeight: "100dvh",
         display: "flex",
         flexDirection: "column",
         // Nothing uploaded yet → the brand teal solid, same accent/ink
@@ -79,6 +86,21 @@ export default async function HomePage() {
       <div style={{ position: "relative", zIndex: 1, padding: "32px 24px 20px", textAlign: "center" }}>
         {/* eslint-disable-next-line @next/next/no-img-element -- fixed logo mark, not worth next/image's overhead here */}
         <img src="/logo.png" alt="Nail Fest" style={{ height: 72, width: "auto", margin: "0 auto", display: "block" }} />
+        {orgSettings.homepageTagline && (
+          <p
+            style={{
+              margin: "14px 0 0",
+              fontSize: 13,
+              fontWeight: 500,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              opacity: 0.8,
+              textShadow: hasMedia ? "0 1px 6px rgba(0,0,0,0.35)" : "none",
+            }}
+          >
+            {orgSettings.homepageTagline}
+          </p>
+        )}
       </div>
 
       <div
@@ -113,9 +135,6 @@ export default async function HomePage() {
               <p style={{ fontSize: 16, margin: "0 0 20px", fontWeight: 600, textShadow: hasMedia ? "0 1px 8px rgba(0,0,0,0.35)" : "none" }}>
                 {eventPlace}
               </p>
-            )}
-            {orgSettings.homepageTagline && (
-              <p style={{ fontSize: 15, margin: "0 0 24px", opacity: 0.85, maxWidth: 460 }}>{orgSettings.homepageTagline}</p>
             )}
             <div>
               <Link
