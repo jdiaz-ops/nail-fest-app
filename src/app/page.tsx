@@ -60,8 +60,9 @@ export default async function HomePage() {
         </>
       )}
 
-      <div style={{ position: "relative", zIndex: 1, padding: "28px 24px", fontWeight: 800, fontSize: 20, letterSpacing: "-0.01em" }}>
-        Nail Fest
+      <div style={{ position: "relative", zIndex: 1, padding: "28px 24px" }}>
+        {/* eslint-disable-next-line @next/next/no-img-element -- small fixed logo mark, not worth next/image's overhead here */}
+        <img src="/logo.png" alt="Nail Fest" style={{ height: 36, width: "auto", display: "block" }} />
       </div>
 
       <div
