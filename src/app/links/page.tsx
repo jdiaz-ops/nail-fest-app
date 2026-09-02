@@ -94,14 +94,17 @@ export default async function LinksPage() {
                 display: "block",
                 padding: "16px 20px",
                 borderRadius: 999,
-                background: "rgba(255,255,255,0.12)",
-                border: "1px solid rgba(255,255,255,0.2)",
-                color: "#fff",
+                // Frosted-white pill, dark text — picked over a translucent-
+                // dark or brand-teal treatment (all three mocked up and
+                // compared) specifically for max legibility over a busy
+                // photo/video background without darkening the whole page.
+                background: "rgba(255,255,255,0.92)",
+                color: "var(--accent-ink)",
                 textDecoration: "none",
                 fontSize: 15,
                 fontWeight: 600,
                 textAlign: ALIGN_CSS[link.textAlign],
-                boxShadow: hasMedia ? "0 4px 16px -6px rgba(0,0,0,0.4)" : "none",
+                boxShadow: "0 6px 18px -8px rgba(0,0,0,0.45)",
               }}
             >
               {link.title}
