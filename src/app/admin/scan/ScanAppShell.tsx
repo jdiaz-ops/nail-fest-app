@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { formatDateInTz } from "@/lib/dateFormat";
 import { ScanAppProvider, useScanApp, type EventInfo } from "./ScanAppContext";
-import { DashboardIcon, ScannerIcon, ListIcon, HomeIcon } from "./icons";
+import { DashboardIcon, ScannerIcon, ListIcon, HomeIcon, ChatIcon } from "./icons";
 
 export default function ScanAppShell({
   event,
@@ -160,6 +160,24 @@ function BottomTabs() {
           </button>
         );
       })}
+      {role === "ADMIN" && (
+        <Link
+          href={`${base}/bandeja`}
+          style={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 2,
+            padding: "10px 0 8px",
+            textDecoration: "none",
+            color: pathname.startsWith(`${base}/bandeja`) ? "var(--accent-ink)" : "#8a8478",
+          }}
+        >
+          <ChatIcon />
+          <span style={{ fontSize: 11, fontWeight: pathname.startsWith(`${base}/bandeja`) ? 700 : 400 }}>Bandeja</span>
+        </Link>
+      )}
     </nav>
   );
 }

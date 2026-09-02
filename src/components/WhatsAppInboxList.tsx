@@ -52,7 +52,15 @@ function initials(name: string | null, phone: string): string {
 // (dispatched by WhatsAppMarkRead and the thread composer) so opening or
 // replying to a conversation updates the list immediately instead of
 // waiting for the next poll.
-export default function WhatsAppInboxList() {
+//
+// basePath — where a row's link goes. Defaults to the desktop CRM route;
+// the mobile scan-app Bandeja (/admin/scan/[eventId]/bandeja, ADMIN and
+// COORDINADOR only, so staff working the door can reply during an event)
+// reuses this exact component with its own basePath instead of a forked
+// copy of the list rendering. activeId's own regex just looks for
+// "/bandeja/<id>" anywhere in the path, so it already works under either
+// base without changes.
+export default function WhatsAppInboxList({ basePath = "/admin/crm/whatsapp/bandeja" }: { basePath?: string } = {}) {
   const [filter, setFilter] = useState<Filter>("all");
   const [rows, setRows] = useState<ConversationRow[] | null>(null);
   const pathname = usePathname();
@@ -136,7 +144,7 @@ export default function WhatsAppInboxList() {
           return (
             <Link
               key={c.id}
-              href={`/admin/crm/whatsapp/bandeja/${c.id}`}
+              href={`${basePath}/${c.id}`}
               style={{
                 display: "flex",
                 alignItems: "flex-start",

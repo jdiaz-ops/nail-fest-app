@@ -66,3 +66,11 @@ export function SearchIcon() {
     </svg>
   );
 }
+
+export function ChatIcon() {
+  return (
+    <svg {...common}>
+      <path d="M4 5.5A2.5 2.5 0 016.5 3h11A2.5 2.5 0 0120 5.5v8a2.5 2.5 0 01-2.5 2.5H10l-4 3.5v-3.5H6.5A2.5 2.5 0 014 13.5z" />
+    </svg>
+  );
+}
