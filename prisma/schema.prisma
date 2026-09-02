@@ -1132,10 +1132,10 @@ model AdminSession {
 // ---------------------------------------------------------------------------
 // Links page — nailfest.co/links, a Linktree-equivalent the admin manages
 // from /admin/links (same "editor page" shape as OrgSettings.homepageImageUrl
-// above). v1 is deliberately just title + URL, ordered pill buttons — the
-// user's own richer idea (a block that embeds the actual registration form,
-// event schedule, or instructor list inline) is an explicitly stated FUTURE
-// direction, not this model. Reordering follows the exact same pattern as
+// above). Title + URL is the only required content — the user's richer idea
+// (a block that embeds the actual registration form, event schedule, or
+// instructor list inline) is an explicitly stated FUTURE direction, not
+// this model. Reordering follows the exact same pattern as
 // CheckoutQuestion.order (see lib/checkoutForm.ts's moveQuestion()) — plain
 // integer order, swapped pairwise via /api/admin/links/[id]/move, no drag-
 // and-drop library.
@@ -1143,6 +1143,18 @@ model LinkPageLink {
   id        String   @id @default(cuid())
   title     String
   url       String
+  // Optional per-link background (photo/GIF or video) — when set, the
+  // public page renders this link as the same "hero card" pattern as the
+  // homepage's own event box (src/app/page.tsx): full-bleed background
+  // media, dark gradient scrim, and the title as a pill button over it.
+  // Same reasoning as OrgSettings.homepageImageUrl/homepageVideoUrl for
+  // why these are two separate nullable fields instead of one + a type
+  // flag — kept mutually exclusive by the editor form (LinksEditor.tsx
+  // clears whichever tab isn't active on save), not enforced in the DB.
+  // A link with neither set falls back to a plain pill link — see
+  // src/app/links/page.tsx.
+  imageUrl  String?
+  videoUrl  String?
   // Hidden links stay in the list (and keep their spot in `order`) without
   // being deleted — same "soft off-switch" reasoning as other enabled
   // flags in this schema, e.g. Event.published.

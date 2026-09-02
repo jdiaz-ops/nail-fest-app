@@ -16,12 +16,19 @@ export async function getEnabledLinks(): Promise<LinkPageLink[]> {
   return db.linkPageLink.findMany({ where: { enabled: true }, orderBy: { order: "asc" } });
 }
 
-export async function createLink(input: { title: string; url: string }): Promise<LinkPageLink> {
+export async function createLink(input: {
+  title: string;
+  url: string;
+  imageUrl?: string | null;
+  videoUrl?: string | null;
+}): Promise<LinkPageLink> {
   const maxOrder = await db.linkPageLink.aggregate({ _max: { order: true } });
   return db.linkPageLink.create({
     data: {
       title: input.title,
       url: input.url,
+      imageUrl: input.imageUrl ?? null,
+      videoUrl: input.videoUrl ?? null,
       order: (maxOrder._max.order ?? -1) + 1,
     },
   });
@@ -29,7 +36,7 @@ export async function createLink(input: { title: string; url: string }): Promise
 
 export async function updateLink(
   id: string,
-  patch: { title?: string; url?: string; enabled?: boolean }
+  patch: { title?: string; url?: string; enabled?: boolean; imageUrl?: string | null; videoUrl?: string | null }
 ): Promise<LinkPageLink> {
   return db.linkPageLink.update({ where: { id }, data: patch });
 }

@@ -7,18 +7,29 @@ const patchSchema = z.object({
   title: z.string().min(1).optional(),
   url: z.string().min(1).url().optional(),
   enabled: z.boolean().optional(),
+  // "" means "clear the card background" — only applied when the field is
+  // actually present in the body (see below); same convention as
+  // OrgSettings' own image/video fields.
+  imageUrl: z.string().optional(),
+  videoUrl: z.string().optional(),
 });
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const auth = await requireUser(["ADMIN"]);
   if ("response" in auth) return auth.response;
 
-  const parsed = patchSchema.safeParse(await req.json().catch(() => null));
+  const body = await req.json().catch(() => null);
+  const parsed = patchSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: "invalid_body", issues: parsed.error.issues }, { status: 400 });
   }
+  const { imageUrl, videoUrl, ...rest } = parsed.data;
   try {
-    const link = await updateLink(params.id, parsed.data);
+    const link = await updateLink(params.id, {
+      ...rest,
+      ...(imageUrl !== undefined ? { imageUrl: imageUrl || null } : {}),
+      ...(videoUrl !== undefined ? { videoUrl: videoUrl || null } : {}),
+    });
     return NextResponse.json({ ok: true, link });
   } catch (err) {
     console.error("update link failed", err);
