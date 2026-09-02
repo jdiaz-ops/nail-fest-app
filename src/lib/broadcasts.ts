@@ -160,7 +160,7 @@ export async function sendEventBroadcast(
                 broadcastId: broadcast.id,
                 personId: person.id,
                 toEmail: person.email,
-                sesMessageId: result.providerMessageId,
+                providerMessageId: result.providerMessageId,
                 status: "SENT",
               },
             });
@@ -265,7 +265,7 @@ export async function sendSegmentEmailBroadcast(
                 broadcastId: broadcast.id,
                 personId: person.id,
                 toEmail: person.email,
-                sesMessageId: result.providerMessageId,
+                providerMessageId: result.providerMessageId,
                 status: "SENT",
               },
             });

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { applyEmailTrackingEvent, type EmailTrackingStage } from "@/lib/email/tracking";
 
 // Receives SNS notifications from the SES event destination (see
 // docs/SES_EVENT_TRACKING.md for the AWS-side setup this depends on —
@@ -12,6 +12,10 @@ import { db } from "@/lib/db";
 //    whatever the publisher sent) containing SES's own event JSON.
 //
 // No AWS SDK needed — SNS just POSTs plain JSON over HTTPS.
+//
+// Only relevant while EMAIL_PROVIDER=ses (src/lib/email/index.ts) is the
+// live one — see /api/webhooks/resend for the Resend-native counterpart,
+// and src/lib/email/tracking.ts for the apply-one-event logic both share.
 
 // SNS doesn't sign requests with anything this route can cheaply verify
 // (real signature verification means fetching AWS's public cert and doing
@@ -31,6 +35,14 @@ interface SesMailEvent {
   eventType: "Send" | "Delivery" | "Open" | "Click" | "Bounce" | "Complaint" | "Reject" | "DeliveryDelay" | "Subscription";
   mail: { messageId: string };
 }
+
+const STAGE_BY_EVENT_TYPE: Partial<Record<SesMailEvent["eventType"], EmailTrackingStage>> = {
+  Delivery: "DELIVERED",
+  Open: "OPENED",
+  Click: "CLICKED",
+  Bounce: "BOUNCED",
+  Complaint: "COMPLAINED",
+};
 
 export async function POST(req: NextRequest) {
   if (!isAuthorized(req)) {
@@ -67,59 +79,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  const now = new Date();
-  const patch: Record<string, unknown> = {};
-  switch (event.eventType) {
-    case "Delivery":
-      patch.deliveredAt = now;
-      patch.status = "DELIVERED";
-      break;
-    case "Open":
-      patch.openedAt = now;
-      patch.status = "OPENED";
-      break;
-    case "Click":
-      patch.firstClickedAt = now;
-      patch.status = "CLICKED";
-      break;
-    case "Bounce":
-      patch.bouncedAt = now;
-      patch.status = "BOUNCED";
-      break;
-    case "Complaint":
-      patch.complainedAt = now;
-      patch.status = "COMPLAINED";
-      break;
-    default:
-      // Send/Reject/DeliveryDelay aren't tracked as their own timeline
-      // moments today — QUEUED→SENT already happens at send time in
-      // sendTicketEmail.ts/the broadcast sender, before SES is even involved.
-      return NextResponse.json({ ok: true });
-  }
+  // Send/Reject/DeliveryDelay aren't tracked as their own timeline moment
+  // today — QUEUED→SENT already happens at send time in sendTicketEmail.ts/
+  // the broadcast sender, before SES is even involved.
+  const stage = STAGE_BY_EVENT_TYPE[event.eventType];
+  if (!stage) return NextResponse.json({ ok: true });
 
-  // updateMany, not update: a bad/duplicate SNS redelivery naming a
-  // messageId we don't have on file should be a no-op, not a 500 — and
-  // openedAt/etc. are "first occurrence" fields, so re-applying the same
-  // event type (SNS redelivers on retry) just leaves the same timestamp
-  // rather than overwriting it forward — see the guard below.
-  const existing = await db.emailLog.findFirst({ where: { sesMessageId: event.mail.messageId } });
-  if (!existing) return NextResponse.json({ ok: true });
-
-  // Never let a later-arriving Delivery notification stomp an Open/Click
-  // that already progressed further, and never overwrite an
-  // already-recorded timestamp for the same field (first occurrence wins).
-  const STAGE_ORDER = ["QUEUED", "SENT", "DELIVERED", "OPENED", "CLICKED", "BOUNCED", "COMPLAINED", "FAILED"];
-  const patchStatus = patch.status as string;
-  if (STAGE_ORDER.indexOf(patchStatus) < STAGE_ORDER.indexOf(existing.status)) {
-    delete patch.status;
-  }
-  for (const field of ["deliveredAt", "openedAt", "firstClickedAt", "bouncedAt", "complainedAt"] as const) {
-    if (field in patch && existing[field]) delete patch[field];
-  }
-
-  if (Object.keys(patch).length > 0) {
-    await db.emailLog.update({ where: { id: existing.id }, data: patch });
-  }
-
+  await applyEmailTrackingEvent(event.mail.messageId, stage);
   return NextResponse.json({ ok: true });
 }

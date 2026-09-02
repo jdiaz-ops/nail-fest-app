@@ -31,10 +31,13 @@
    SES_CONFIGURATION_SET_MARKETING=nailfest-marketing
    ```
 
-**If production access gets denied**: the code sends through
-`src/lib/email/provider.ts`'s interface, not the AWS SDK directly — swapping
-in SendGrid/Mailgun/Postmark only touches `src/lib/email/ses.ts` and the env
-vars, per the plan's fallback strategy. Nothing else in the app changes.
+**If production access gets denied — or AWS just never responds**: the
+code sends through `src/lib/email/provider.ts`'s interface, not the AWS SDK
+directly, so a swap doesn't touch anything else in the app. This has an
+actual, already-built Plan B — see `docs/RESEND_SETUP.md` — not just a
+"could swap to X later" note: `src/lib/email/resend.ts` exists, sits inert
+alongside this SES setup, and one env var (`EMAIL_PROVIDER=resend`) flips
+everything over.
 
 **Until production access is approved**, SES is in sandbox mode: you can
 only send to individually-verified email addresses. Verify your own test

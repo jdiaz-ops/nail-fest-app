@@ -130,7 +130,7 @@ export async function sendTicketEmail(params: {
         kind: "TRANSACTIONAL",
         personId: params.person.id,
         toEmail: params.person.email,
-        sesMessageId: sent.providerMessageId,
+        providerMessageId: sent.providerMessageId,
         status: "SENT",
       },
     });

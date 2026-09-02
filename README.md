@@ -46,6 +46,8 @@ Full setup guides:
   Test Events
 - [`docs/SES_SETUP.md`](docs/SES_SETUP.md) — domain verification,
   Configuration Sets, production access request
+- [`docs/RESEND_SETUP.md`](docs/RESEND_SETUP.md) — Plan B if SES
+  production access is denied or never answered
 
 ## How to test it end to end
 

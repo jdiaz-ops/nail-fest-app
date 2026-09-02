@@ -47,8 +47,19 @@ interface SesMailOptions extends nodemailer.SendMailOptions {
 
 async function send(
   input: SendEmailInput,
-  opts: { from: string; configurationSet: string }
+  opts: { fromEnvVar: string; configurationSetEnvVar: string }
 ): Promise<{ providerMessageId: string }> {
+  // requireEnv() calls happen IN HERE, not at the sendTransactional/
+  // sendMarketing call site below — those are plain (non-async) arrow
+  // functions, so a requireEnv() throw there would throw synchronously
+  // instead of rejecting the returned promise, breaking every
+  // Promise.allSettled-based caller (lib/broadcasts.ts, the "send test
+  // email" route) with an uncaught exception instead of a per-recipient
+  // failure. Resolving them inside this async function turns that throw
+  // into an ordinary rejection like any other send failure.
+  const from = requireEnv(opts.fromEnvVar);
+  const configurationSet = requireEnv(opts.configurationSetEnvVar);
+
   // Explicit input.replyTo wins; otherwise fall back to the account-wide
   // setting (/admin/settings/contact) — one DB read per send, acceptable
   // for our volume and simpler than threading the setting through every
@@ -56,7 +67,7 @@ async function send(
   const replyTo = input.replyTo ?? (await getOrgSettings()).replyToEmail ?? undefined;
 
   const mailOptions: SesMailOptions = {
-    from: opts.from,
+    from,
     to: input.to,
     subject: input.subject,
     text: input.text,
@@ -69,7 +80,7 @@ async function send(
           "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
         }
       : undefined,
-    ses: { ConfigurationSetName: opts.configurationSet },
+    ses: { ConfigurationSetName: configurationSet },
   };
   const info = (await getTransporter().sendMail(mailOptions)) as { messageId?: string };
 
@@ -81,13 +92,13 @@ async function send(
 export const sesProvider: EmailProvider = {
   sendTransactional: (input) =>
     send(input, {
-      from: requireEnv("SES_FROM_TRANSACTIONAL"),
-      configurationSet: requireEnv("SES_CONFIGURATION_SET_TRANSACTIONAL"),
+      fromEnvVar: "SES_FROM_TRANSACTIONAL",
+      configurationSetEnvVar: "SES_CONFIGURATION_SET_TRANSACTIONAL",
     }),
   sendMarketing: (input) =>
     send(input, {
-      from: requireEnv("SES_FROM_MARKETING"),
-      configurationSet: requireEnv("SES_CONFIGURATION_SET_MARKETING"),
+      fromEnvVar: "SES_FROM_MARKETING",
+      configurationSetEnvVar: "SES_CONFIGURATION_SET_MARKETING",
     }),
 };
 

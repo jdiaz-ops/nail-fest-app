@@ -1,5 +1,9 @@
 # Tracking de entregas, aperturas y clics de correo
 
+Esto es específico de SES — si terminaste activando el Plan B
+(`EMAIL_PROVIDER=resend`, ver `docs/RESEND_SETUP.md`), el tracking de
+Resend se configura desde su propio dashboard, no desde aquí.
+
 Esto conecta el envío real de SES con `EmailLog` y con el historial por
 persona (`/admin/crm/personas/[id]`) — sin esto, `EmailLog.status` se queda
 en `SENT` para siempre y el timeline nunca muestra "abrió el correo" ni

@@ -552,15 +552,22 @@ model EmailLog {
   broadcastId String?
   personId    String?
   toEmail     String
-  sesMessageId String?
+  // Provider-agnostic on purpose (renamed from sesMessageId once a second
+  // provider — Resend — existed): whichever EmailProvider actually sent
+  // this (src/lib/email/index.ts) writes its own message id here, and the
+  // matching webhook (ses/route.ts or resend/route.ts) looks it up by
+  // this same field — see src/lib/email/tracking.ts's own comment for the
+  // shared apply-one-event logic both webhooks call into.
+  providerMessageId String?
   // `status` stays the simple "furthest stage reached" field (already had
   // OPENED/CLICKED/BOUNCED/COMPLAINED in its enum, just never driven by
   // anything until now) — good enough for a list view. The timestamps
   // below are what the person timeline actually reads from, since "cuándo"
   // matters there and a single status can't carry multiple event times.
-  // Populated by /api/webhooks/ses (see docs/SES_EVENT_TRACKING.md) —
-  // null until that SNS→SES event destination is wired up in AWS, at
-  // which point existing rows just start filling in going forward.
+  // Populated by whichever provider webhook is actually wired up (see
+  // docs/SES_EVENT_TRACKING.md / docs/RESEND_SETUP.md) — null until that
+  // event destination exists, at which point existing rows just start
+  // filling in going forward.
   status      EmailLogStatus  @default(QUEUED)
   deliveredAt    DateTime?
   openedAt       DateTime?
@@ -572,7 +579,7 @@ model EmailLog {
 
   @@index([broadcastId, status])
   @@index([toEmail])
-  @@index([sesMessageId])
+  @@index([providerMessageId])
 }
 
 // ---------------------------------------------------------------------------
