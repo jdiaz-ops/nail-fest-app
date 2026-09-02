@@ -18,6 +18,8 @@ export interface OrgSettingsValue {
   homepageVideoUrl: string | null;
   homepageTagline: string | null;
   homepageCtaLabel: string;
+  linksPageImageUrl: string | null;
+  linksPageVideoUrl: string | null;
 }
 
 const DEFAULTS: OrgSettingsValue = {
@@ -36,6 +38,8 @@ const DEFAULTS: OrgSettingsValue = {
   homepageVideoUrl: null,
   homepageTagline: null,
   homepageCtaLabel: "Conseguir entrada gratis",
+  linksPageImageUrl: null,
+  linksPageVideoUrl: null,
 };
 
 // No row exists until the first save from /admin/settings — reads never
@@ -60,6 +64,8 @@ export async function getOrgSettings(): Promise<OrgSettingsValue> {
     homepageVideoUrl: row.homepageVideoUrl,
     homepageTagline: row.homepageTagline,
     homepageCtaLabel: row.homepageCtaLabel,
+    linksPageImageUrl: row.linksPageImageUrl,
+    linksPageVideoUrl: row.linksPageVideoUrl,
   };
 }
 
@@ -85,5 +91,7 @@ export async function updateOrgSettings(patch: Partial<OrgSettingsValue>): Promi
     homepageVideoUrl: row.homepageVideoUrl,
     homepageTagline: row.homepageTagline,
     homepageCtaLabel: row.homepageCtaLabel,
+    linksPageImageUrl: row.linksPageImageUrl,
+    linksPageVideoUrl: row.linksPageVideoUrl,
   };
 }

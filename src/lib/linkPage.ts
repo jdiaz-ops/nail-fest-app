@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import type { LinkPageLink } from "@prisma/client";
+import type { LinkPageLink, LinkTextAlign } from "@prisma/client";
 
 // nailfest.co/links — a Linktree-equivalent the admin manages from
 // /admin/links (see LinkPageLink's own schema comment). Reorder logic is
@@ -19,16 +19,14 @@ export async function getEnabledLinks(): Promise<LinkPageLink[]> {
 export async function createLink(input: {
   title: string;
   url: string;
-  imageUrl?: string | null;
-  videoUrl?: string | null;
+  textAlign?: LinkTextAlign;
 }): Promise<LinkPageLink> {
   const maxOrder = await db.linkPageLink.aggregate({ _max: { order: true } });
   return db.linkPageLink.create({
     data: {
       title: input.title,
       url: input.url,
-      imageUrl: input.imageUrl ?? null,
-      videoUrl: input.videoUrl ?? null,
+      textAlign: input.textAlign ?? "CENTER",
       order: (maxOrder._max.order ?? -1) + 1,
     },
   });
@@ -36,13 +34,26 @@ export async function createLink(input: {
 
 export async function updateLink(
   id: string,
-  patch: { title?: string; url?: string; enabled?: boolean; imageUrl?: string | null; videoUrl?: string | null }
+  patch: { title?: string; url?: string; enabled?: boolean; textAlign?: LinkTextAlign }
 ): Promise<LinkPageLink> {
   return db.linkPageLink.update({ where: { id }, data: patch });
 }
 
 export async function deleteLink(id: string): Promise<void> {
   await db.linkPageLink.delete({ where: { id } });
+}
+
+// Called by the public, unauthenticated POST /api/links/[id]/click beacon
+// — see LinkPageLink.clickCount's own schema comment. Swallows a bad/
+// deleted id instead of throwing: a stale click beacon from a cached page
+// is expected, and a visitor's click must never surface an error either
+// way.
+export async function incrementLinkClicks(id: string): Promise<void> {
+  try {
+    await db.linkPageLink.update({ where: { id }, data: { clickCount: { increment: 1 } } });
+  } catch {
+    // Unknown id — nothing to bump, nothing to report.
+  }
 }
 
 export async function moveLink(id: string, direction: "up" | "down"): Promise<void> {

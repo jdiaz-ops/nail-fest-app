@@ -972,6 +972,17 @@ model OrgSettings {
   homepageTagline  String?
   homepageCtaLabel String  @default("Conseguir entrada gratis")
 
+  // nailfest.co/links (src/app/links/page.tsx) — editable from the same
+  // /admin/links screen as the LinkPageLink list itself. Same shape and
+  // same mutual-exclusivity reasoning as homepageImageUrl/homepageVideoUrl
+  // above (null/null = the brand teal solid color the page already used
+  // before this existed). This is the PAGE's own background, distinct
+  // from LinkPageLink.imageUrl/videoUrl (an individual link's own card
+  // background) — the two are independent, a page can have one, both, or
+  // neither.
+  linksPageImageUrl String?
+  linksPageVideoUrl String?
+
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
 }
@@ -1129,6 +1140,12 @@ model AdminSession {
   @@index([userId])
 }
 
+enum LinkTextAlign {
+  LEFT
+  CENTER
+  RIGHT
+}
+
 // ---------------------------------------------------------------------------
 // Links page — nailfest.co/links, a Linktree-equivalent the admin manages
 // from /admin/links (same "editor page" shape as OrgSettings.homepageImageUrl
@@ -1143,23 +1160,23 @@ model LinkPageLink {
   id        String   @id @default(cuid())
   title     String
   url       String
-  // Optional per-link background (photo/GIF or video) — when set, the
-  // public page renders this link as the same "hero card" pattern as the
-  // homepage's own event box (src/app/page.tsx): full-bleed background
-  // media, dark gradient scrim, and the title as a pill button over it.
-  // Same reasoning as OrgSettings.homepageImageUrl/homepageVideoUrl for
-  // why these are two separate nullable fields instead of one + a type
-  // flag — kept mutually exclusive by the editor form (LinksEditor.tsx
-  // clears whichever tab isn't active on save), not enforced in the DB.
-  // A link with neither set falls back to a plain pill link — see
-  // src/app/links/page.tsx.
-  imageUrl  String?
-  videoUrl  String?
+  // Horizontal alignment of the title text inside the pill on the public
+  // page — CENTER matches the original look. Plain CSS text-align, see
+  // TrackedLink.tsx in src/app/links/page.tsx.
+  textAlign LinkTextAlign @default(CENTER)
   // Hidden links stay in the list (and keep their spot in `order`) without
   // being deleted — same "soft off-switch" reasoning as other enabled
-  // flags in this schema, e.g. Event.published.
-  enabled   Boolean  @default(true)
-  order     Int      @default(0)
-  createdAt DateTime @default(now())
+  // flags in this schema, e.g. Event.published. Toggled directly from the
+  // row in LinksEditor.tsx (a real switch, matching the Linktree reference)
+  // rather than only inside the edit modal.
+  enabled    Boolean  @default(true)
+  // Bumped by the public POST /api/links/[id]/click beacon (see
+  // TrackedLink.tsx) every time someone actually clicks the link on
+  // nailfest.co/links — a raw counter, not deduped per visitor, same
+  // "good enough, not analytics-grade" scope as Event.viewCount if that
+  // ever existed. Shown in the admin list, same as Linktree's own count.
+  clickCount Int      @default(0)
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

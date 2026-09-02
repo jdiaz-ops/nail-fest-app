@@ -3,10 +3,8 @@ import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { requireUser } from "@/lib/auth/guard";
 
 // Same client-direct-upload shape as /api/admin/uploads/homepage-video —
-// see that route's own comment for why video can't go through a plain
-// req.formData() → put() route the way link-image does (Vercel's
-// serverless body-size cap). Backs a single LinkPageLink's optional card
-// background — see that model's own schema comment.
+// see that route's own comment for why. Backs the /links PAGE's own
+// background — see OrgSettings.linksPageImageUrl's own schema comment.
 const MAX_BYTES = 20 * 1024 * 1024; // 20MB — a short, well-compressed loop, not a full clip
 
 export async function POST(req: NextRequest) {
@@ -27,7 +25,7 @@ export async function POST(req: NextRequest) {
       body,
       request: req,
       onBeforeGenerateToken: async (pathname) => {
-        if (!pathname.startsWith("link-videos/")) {
+        if (!pathname.startsWith("links-page-videos/")) {
           throw new Error("Unexpected upload path");
         }
         return {
