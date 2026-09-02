@@ -15,6 +15,7 @@ export interface OrgSettingsValue {
   confirmationEmailHtml: string | null;
   attachTicketPdf: boolean;
   homepageImageUrl: string | null;
+  homepageVideoUrl: string | null;
   homepageTagline: string | null;
   homepageCtaLabel: string;
 }
@@ -32,6 +33,7 @@ const DEFAULTS: OrgSettingsValue = {
   confirmationEmailHtml: null,
   attachTicketPdf: true,
   homepageImageUrl: null,
+  homepageVideoUrl: null,
   homepageTagline: null,
   homepageCtaLabel: "Conseguir entrada gratis",
 };
@@ -55,6 +57,7 @@ export async function getOrgSettings(): Promise<OrgSettingsValue> {
     confirmationEmailHtml: row.confirmationEmailHtml,
     attachTicketPdf: row.attachTicketPdf,
     homepageImageUrl: row.homepageImageUrl,
+    homepageVideoUrl: row.homepageVideoUrl,
     homepageTagline: row.homepageTagline,
     homepageCtaLabel: row.homepageCtaLabel,
   };
@@ -79,6 +82,7 @@ export async function updateOrgSettings(patch: Partial<OrgSettingsValue>): Promi
     confirmationEmailHtml: row.confirmationEmailHtml,
     attachTicketPdf: row.attachTicketPdf,
     homepageImageUrl: row.homepageImageUrl,
+    homepageVideoUrl: row.homepageVideoUrl,
     homepageTagline: row.homepageTagline,
     homepageCtaLabel: row.homepageCtaLabel,
   };

@@ -13,6 +13,12 @@ export default async function HomePage() {
   const [orgSettings, nextEvent] = await Promise.all([getOrgSettings(), getNextEvent()]);
 
   const eventPlace = nextEvent ? [nextEvent.city, nextEvent.venueName].filter(Boolean).join(" — ") : "";
+  // Video takes priority if somehow both are set (shouldn't happen from
+  // the editor form, which keeps them mutually exclusive — see
+  // OrgSettings.homepageVideoUrl's own schema comment). A GIF needs no
+  // special case here at all: it's still homepageImageUrl, rendered by
+  // the same <img> as any static photo, animating on its own.
+  const hasMedia = Boolean(orgSettings.homepageVideoUrl || orgSettings.homepageImageUrl);
 
   return (
     <main
@@ -21,24 +27,35 @@ export default async function HomePage() {
         minHeight: "100vh",
         display: "flex",
         flexDirection: "column",
-        // No image yet (or none uploaded) → the brand teal solid, same
-        // accent/ink pairing used everywhere else in this app (see
-        // globals.css's own comment on why --accent-ink, not white, is
-        // the readable choice on top of --accent).
-        background: orgSettings.homepageImageUrl ? "#0b2e2c" : "var(--accent)",
-        color: orgSettings.homepageImageUrl ? "#fff" : "var(--accent-ink)",
+        // Nothing uploaded yet → the brand teal solid, same accent/ink
+        // pairing used everywhere else in this app (see globals.css's own
+        // comment on why --accent-ink, not white, is the readable choice
+        // on top of --accent).
+        background: hasMedia ? "#0b2e2c" : "var(--accent)",
+        color: hasMedia ? "#fff" : "var(--accent-ink)",
       }}
     >
-      {orgSettings.homepageImageUrl && (
+      {hasMedia && (
         <>
-          {/* eslint-disable-next-line @next/next/no-img-element -- full-bleed hero background from an admin-uploaded URL, not a known-size asset */}
-          <img
-            src={orgSettings.homepageImageUrl}
-            alt=""
-            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", zIndex: 0 }}
-          />
-          {/* Dark scrim so white text stays legible over any photo — same
-              reasoning as the Lollapalooza reference. */}
+          {orgSettings.homepageVideoUrl ? (
+            <video
+              src={orgSettings.homepageVideoUrl}
+              autoPlay
+              muted
+              loop
+              playsInline
+              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", zIndex: 0 }}
+            />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element -- full-bleed hero background from an admin-uploaded URL (photo or animated GIF), not a known-size asset
+            <img
+              src={orgSettings.homepageImageUrl!}
+              alt=""
+              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", zIndex: 0 }}
+            />
+          )}
+          {/* Dark scrim so white text stays legible over any photo/video —
+              same reasoning as the Lollapalooza reference. */}
           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(11,46,44,0.35) 0%, rgba(11,46,44,0.75) 100%)", zIndex: 0 }} />
         </>
       )}
@@ -86,8 +103,8 @@ export default async function HomePage() {
                   // the pairing) while the photo state uses the bright
                   // accent, same as the reference screenshot's cyan button
                   // on a dark photo.
-                  background: orgSettings.homepageImageUrl ? "var(--accent)" : "var(--accent-ink)",
-                  color: orgSettings.homepageImageUrl ? "var(--accent-ink)" : "#fff",
+                  background: hasMedia ? "var(--accent)" : "var(--accent-ink)",
+                  color: hasMedia ? "var(--accent-ink)" : "#fff",
                 }}
               >
                 {orgSettings.homepageCtaLabel}

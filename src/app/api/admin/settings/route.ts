@@ -24,11 +24,14 @@ const patchSchema = z
     // a PDF" checkbox — see OrgSettings.attachTicketPdf's own schema comment.
     attachTicketPdf: z.boolean(),
     // nailfest.co homepage (/admin/homepage) — see OrgSettings.
-    // homepageImageUrl's own schema comment. "" on the image/tagline
-    // means "clear it", same reasoning as confirmationEmailHtml above;
-    // the CTA label can't be saved blank, it's always shown as a real
-    // button.
+    // homepageImageUrl's own schema comment. "" on the image/video/
+    // tagline means "clear it", same reasoning as confirmationEmailHtml
+    // above; the CTA label can't be saved blank, it's always shown as a
+    // real button. Keeping the two background fields mutually exclusive
+    // is the editor form's job (it clears the one it isn't using before
+    // POSTing) — this route just stores whatever it's sent.
     homepageImageUrl: z.string(),
+    homepageVideoUrl: z.string(),
     homepageTagline: z.string(),
     homepageCtaLabel: z.string().min(1),
   })
@@ -51,7 +54,7 @@ export async function POST(req: NextRequest) {
   }
   // "" from an empty optional email input means "clear it", not "set it to
   // an empty string that fails email validation on the next read".
-  const { replyToEmail, confirmationEmailHtml, homepageImageUrl, homepageTagline, ...rest } = parsed.data;
+  const { replyToEmail, confirmationEmailHtml, homepageImageUrl, homepageVideoUrl, homepageTagline, ...rest } = parsed.data;
   const updated = await updateOrgSettings({
     ...rest,
     ...(replyToEmail !== undefined ? { replyToEmail: replyToEmail || null } : {}),
@@ -59,6 +62,7 @@ export async function POST(req: NextRequest) {
       ? { confirmationEmailHtml: confirmationEmailHtml ? sanitizeEventDescription(confirmationEmailHtml) : null }
       : {}),
     ...(homepageImageUrl !== undefined ? { homepageImageUrl: homepageImageUrl || null } : {}),
+    ...(homepageVideoUrl !== undefined ? { homepageVideoUrl: homepageVideoUrl || null } : {}),
     ...(homepageTagline !== undefined ? { homepageTagline: homepageTagline || null } : {}),
   });
   return NextResponse.json({ ok: true, settings: updated });

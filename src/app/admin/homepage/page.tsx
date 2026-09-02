@@ -18,10 +18,11 @@ export default async function AdminHomepagePage() {
       <h1 style={{ fontSize: 24, marginBottom: 4 }}>Editar homepage</h1>
       <p style={{ color: "#5b5f6b", marginTop: 0, marginBottom: 24 }}>
         La página principal de nailfest.co. El nombre del evento, ciudad y fechas se toman solos del próximo evento
-        publicado — aquí solo editas la imagen de fondo, un eslogan opcional, y el texto del botón.
+        publicado — aquí solo editas el fondo (imagen, GIF o video), un eslogan opcional, y el texto del botón.
       </p>
       <HomepageEditorForm
         initialImageUrl={orgSettings.homepageImageUrl}
+        initialVideoUrl={orgSettings.homepageVideoUrl}
         initialTagline={orgSettings.homepageTagline}
         initialCtaLabel={orgSettings.homepageCtaLabel}
         nextEventLabel={nextEvent ? `${nextEvent.name} — ${nextEvent.city}` : null}

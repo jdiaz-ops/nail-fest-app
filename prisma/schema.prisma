@@ -952,11 +952,23 @@ model OrgSettings {
   // here: it's computed live from Event (the published event with the
   // soonest future startsAt), same reasoning as everywhere else in this
   // app — nothing here should be able to drift from real data. These
-  // three fields are only the parts an admin actually authors: the hero
-  // background (null = the brand teal solid color, no image required to
-  // launch), an optional line under the event name/date, and the CTA
-  // button's label.
+  // fields are only the parts an admin actually authors: the hero
+  // background (null/null = the brand teal solid color, no upload
+  // required to launch), an optional line under the event name/date, and
+  // the CTA button's label.
+  //
+  // homepageImageUrl covers BOTH a static photo and an animated GIF — a
+  // GIF is just `image/*` to the browser's own <img> tag, nothing special
+  // needed. homepageVideoUrl is the separate video background (mp4/webm,
+  // rendered as an autoplaying muted loop) — kept as its own field rather
+  // than reusing homepageImageUrl with a type flag so a stale value in
+  // the other slot can never accidentally resurface if an admin switches
+  // background type and back; the editor form (HomepageEditorForm.tsx)
+  // clears the one it isn't using on save. Video wins if somehow both are
+  // set (see src/app/page.tsx) — the two are meant to be mutually
+  // exclusive from the UI, but the DB itself doesn't enforce that.
   homepageImageUrl String?
+  homepageVideoUrl String?
   homepageTagline  String?
   homepageCtaLabel String  @default("Conseguir entrada gratis")
 
