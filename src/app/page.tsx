@@ -12,7 +12,10 @@ export const dynamic = "force-dynamic";
 export default async function HomePage() {
   const [orgSettings, nextEvent] = await Promise.all([getOrgSettings(), getNextEvent()]);
 
-  const eventPlace = nextEvent ? [nextEvent.city, nextEvent.venueName].filter(Boolean).join(" — ") : "";
+  // Venue only, no city — the city's already in the event name itself
+  // (see EventForm's own "Nombre del evento" convention, e.g. "Nail Fest
+  // Cúcuta"), so repeating it here just duplicated the h1 right above.
+  const eventPlace = nextEvent?.venueName ?? "";
   // Video takes priority if somehow both are set (shouldn't happen from
   // the editor form, which keeps them mutually exclusive — see
   // OrgSettings.homepageVideoUrl's own schema comment). A GIF needs no
@@ -55,14 +58,27 @@ export default async function HomePage() {
             />
           )}
           {/* Dark scrim so white text stays legible over any photo/video —
-              same reasoning as the Lollapalooza reference. */}
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(11,46,44,0.35) 0%, rgba(11,46,44,0.75) 100%)", zIndex: 0 }} />
+              same reasoning as the Lollapalooza reference. Multi-stop, not
+              flat: stays light up top so the photo/video itself still
+              reads (that's the point of uploading one), then ramps up
+              hard through the bottom third where the h1/venue/CTA sit —
+              real contrast exactly where it's needed instead of dimming
+              the whole frame evenly. */}
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background:
+                "linear-gradient(180deg, rgba(11,46,44,0.12) 0%, rgba(11,46,44,0.22) 38%, rgba(11,46,44,0.58) 68%, rgba(11,46,44,0.94) 100%)",
+              zIndex: 0,
+            }}
+          />
         </>
       )}
 
-      <div style={{ position: "relative", zIndex: 1, padding: "28px 24px" }}>
-        {/* eslint-disable-next-line @next/next/no-img-element -- small fixed logo mark, not worth next/image's overhead here */}
-        <img src="/logo.png" alt="Nail Fest" style={{ height: 36, width: "auto", display: "block" }} />
+      <div style={{ position: "relative", zIndex: 1, padding: "32px 24px 20px", textAlign: "center" }}>
+        {/* eslint-disable-next-line @next/next/no-img-element -- fixed logo mark, not worth next/image's overhead here */}
+        <img src="/logo.png" alt="Nail Fest" style={{ height: 72, width: "auto", margin: "0 auto", display: "block" }} />
       </div>
 
       <div
@@ -79,10 +95,25 @@ export default async function HomePage() {
       >
         {nextEvent ? (
           <>
-            <h1 style={{ fontSize: "clamp(32px, 8vw, 56px)", lineHeight: 1.05, margin: "0 0 12px", fontWeight: 800 }}>
+            <h1
+              style={{
+                fontSize: "clamp(32px, 8vw, 56px)",
+                lineHeight: 1.05,
+                margin: "0 0 12px",
+                fontWeight: 800,
+                // A little lift off a busy photo — subtle on purpose, this
+                // is backup for the gradient above, not doing the work
+                // itself.
+                textShadow: hasMedia ? "0 2px 16px rgba(0,0,0,0.35)" : "none",
+              }}
+            >
               {nextEvent.name}
             </h1>
-            <p style={{ fontSize: 16, margin: "0 0 20px", fontWeight: 600 }}>{eventPlace}</p>
+            {eventPlace && (
+              <p style={{ fontSize: 16, margin: "0 0 20px", fontWeight: 600, textShadow: hasMedia ? "0 1px 8px rgba(0,0,0,0.35)" : "none" }}>
+                {eventPlace}
+              </p>
+            )}
             {orgSettings.homepageTagline && (
               <p style={{ fontSize: 15, margin: "0 0 24px", opacity: 0.85, maxWidth: 460 }}>{orgSettings.homepageTagline}</p>
             )}
@@ -92,10 +123,10 @@ export default async function HomePage() {
                 style={{
                   display: "inline-block",
                   textDecoration: "none",
-                  padding: "16px 32px",
+                  padding: "16px 34px",
                   fontSize: 16,
                   fontWeight: 700,
-                  borderRadius: 8,
+                  borderRadius: 999,
                   // The button always needs to read as a distinct, tappable
                   // surface against whichever background is active — the
                   // solid-teal state would make an accent-colored button
@@ -103,9 +134,13 @@ export default async function HomePage() {
                   // fill (still the brand palette, just the other half of
                   // the pairing) while the photo state uses the bright
                   // accent, same as the reference screenshot's cyan button
-                  // on a dark photo.
+                  // on a dark photo. The shadow only earns its keep over a
+                  // photo/video — floating a pill button off a busy image
+                  // reads as designed; the same shadow on the flat teal
+                  // solid state would just look like a smudge.
                   background: hasMedia ? "var(--accent)" : "var(--accent-ink)",
                   color: hasMedia ? "var(--accent-ink)" : "#fff",
+                  boxShadow: hasMedia ? "0 10px 28px -10px rgba(0,0,0,0.55)" : "none",
                 }}
               >
                 {orgSettings.homepageCtaLabel}
