@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { getOrgSettings } from "@/lib/settings";
@@ -33,10 +34,14 @@ type TimelineItem =
   | { kind: "note"; id: string; createdAt: Date; text: string; authorName: string | null };
 
 // Renders inside bandeja/layout.tsx's right pane — no page header or
-// "← Bandeja" back link anymore, since the conversation list stays
-// visible on the left the whole time (that was the point of the
-// redesign; see the layout's own comment). This fills the pane at
-// height: 100% with its own internal scroll for the message timeline,
+// "← Bandeja" back link on desktop, since the conversation list stays
+// visible on the left the whole time there (that was the point of the
+// redesign; see the layout's own comment). Below 900px the list is
+// hidden instead (see globals.css's .wa-bandeja-shell comment), so the
+// back link below IS needed there — it's CSS-hidden on desktop, not
+// conditionally rendered, since whether it's needed depends on viewport
+// width, not anything this server component knows. This fills the pane
+// at height: 100% with its own internal scroll for the message timeline,
 // composer pinned at the bottom, same as any real chat app.
 export default async function WhatsAppThreadPage({ params }: { params: { id: string } }) {
   const conversation = await db.whatsAppConversation.findUnique({
@@ -94,6 +99,13 @@ export default async function WhatsAppThreadPage({ params }: { params: { id: str
 
       <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
         <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
+          <Link
+            href="/admin/crm/whatsapp/bandeja"
+            className="wa-thread-mobile-back"
+            style={{ fontSize: 12.5, color: "var(--link)", textDecoration: "none", fontWeight: 600, marginBottom: 4 }}
+          >
+            ← Bandeja
+          </Link>
           <div style={{ fontWeight: 700, fontSize: 15 }}>{name}</div>
           <div style={{ fontSize: 12.5, color: "#8a8478" }}>
             {conversation.phone}
@@ -159,7 +171,7 @@ export default async function WhatsAppThreadPage({ params }: { params: { id: str
         </div>
       </div>
 
-      <div style={{ width: 300, flexShrink: 0, borderLeft: "1px solid var(--border)", overflowY: "auto", padding: 14, display: "flex", flexDirection: "column", gap: 16 }}>
+      <div className="wa-thread-sidebar">
         <SidebarSection title="Ventana de mensajería">
           <WhatsAppWindowCountdown lastInboundAt={conversation.lastInboundAt?.toISOString() ?? null} />
         </SidebarSection>

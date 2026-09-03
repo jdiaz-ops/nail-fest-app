@@ -340,3 +340,69 @@ button.primary:disabled {
     display: none;
   }
 }
+
+/* WhatsApp Bandeja (/admin/crm/whatsapp/bandeja[/id]) — three fixed-width
+   panes (conversation list, thread, thread's own sidebar) built assuming
+   real desktop width, with zero narrow-viewport handling until this was
+   added: on a phone all three try to fit side by side, squeezing the
+   thread down to almost nothing and overlapping its content with the
+   sidebar's — exactly what broke for a Coordinador checking the Bandeja
+   from their phone (the CRM nav is intentionally open to that role; this
+   inbox itself just never degraded). Below 900px, BandejaShell.tsx (a
+   client component, since it needs the current pathname) shows exactly
+   ONE pane at a time — the list at the plain /bandeja route, the thread
+   once a conversation is open — instead of cramming both in; the
+   thread's own sidebar (desktop-only tools: Agente de IA, Agente
+   asignado, etc. — same reasoning as the Scanner app's own simplified
+   thread page) stays hidden below that width regardless of which pane
+   is showing. Above 900px this is unchanged from before: list + thread
+   + sidebar, all always visible together. */
+.wa-bandeja-shell {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  /* dvh, not vh — same fix as ScanAppShell.tsx/src/app/page.tsx, and
+     newly relevant here now that this pane is actually used on mobile. */
+  height: calc(100dvh - 230px);
+  min-height: 520px;
+  background: var(--surface);
+}
+.wa-bandeja-list-pane {
+  width: 300px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+}
+.wa-bandeja-thread-pane {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.wa-thread-sidebar {
+  width: 300px;
+  flex-shrink: 0;
+  border-left: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.wa-thread-mobile-back {
+  display: none;
+}
+@media (max-width: 899px) {
+  .wa-bandeja-list-pane {
+    width: 100%;
+  }
+  .wa-bandeja-list-pane-hide-mobile,
+  .wa-bandeja-thread-pane-hide-mobile,
+  .wa-thread-sidebar {
+    display: none;
+  }
+  .wa-thread-mobile-back {
+    display: inline-block;
+  }
+}
