@@ -64,6 +64,7 @@ export default async function EventBroadcastsPage({ params }: { params: { id: st
               <th style={{ padding: "8px 12px" }}>Envío</th>
               <th style={{ padding: "8px 12px" }}>Estado</th>
               <th style={{ padding: "8px 12px" }}>Enviados</th>
+              <th style={{ padding: "8px 12px" }}></th>
             </tr>
           </thead>
           <tbody>
@@ -84,12 +85,20 @@ export default async function EventBroadcastsPage({ params }: { params: { id: st
                     </span>
                   </td>
                   <td style={{ padding: "10px 12px" }}>{b._count.logs}</td>
+                  <td style={{ padding: "10px 12px", whiteSpace: "nowrap" }}>
+                    {/* Opens "Nuevo correo" pre-filled with this one's content — see
+                        new/page.tsx's own comment. A plain link, no client JS needed
+                        here since the prefill itself happens server-side on that page. */}
+                    <Link href={`/admin/events/${event.id}/broadcasts/new?duplicate=${b.id}`} style={{ fontSize: 13 }}>
+                      Duplicar
+                    </Link>
+                  </td>
                 </tr>
               );
             })}
             {broadcasts.length === 0 && (
               <tr>
-                <td colSpan={5} style={{ padding: "10px 12px", color: "#5b5f6b" }}>
+                <td colSpan={6} style={{ padding: "10px 12px", color: "#5b5f6b" }}>
                   Aún no se ha enviado ningún correo para este evento.
                 </td>
               </tr>

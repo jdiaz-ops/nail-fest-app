@@ -12,16 +12,25 @@ export default function EventBroadcastComposer({
   eventId,
   ticketTypes,
   allBuyersCount,
+  initial,
 }: {
   eventId: string;
   ticketTypes: { id: string; name: string; count: number }[];
   allBuyersCount: number;
+  // Set when this composer opened from "Duplicar" on an existing
+  // broadcast (see the [id]/broadcasts list's own comment) — pre-fills
+  // the form with that broadcast's content so the admin only has to
+  // review/tweak it, not retype it. scheduleKind/scheduledAt are
+  // deliberately NOT copied — this is always a brand-new send the admin
+  // configures fresh (a stale scheduled date from the original wouldn't
+  // make sense to inherit silently), same as the plain "new" case.
+  initial?: { ticketTypeId: string | null; subject: string; bodyHtml: string; attachTicketPdf: boolean };
 }) {
   const router = useRouter();
-  const [ticketTypeId, setTicketTypeId] = useState("");
-  const [subject, setSubject] = useState("");
-  const [bodyHtml, setBodyHtml] = useState("");
-  const [attachTicketPdf, setAttachTicketPdf] = useState(false);
+  const [ticketTypeId, setTicketTypeId] = useState(initial?.ticketTypeId ?? "");
+  const [subject, setSubject] = useState(initial?.subject ?? "");
+  const [bodyHtml, setBodyHtml] = useState(initial?.bodyHtml ?? "");
+  const [attachTicketPdf, setAttachTicketPdf] = useState(initial?.attachTicketPdf ?? false);
   const [scheduleKind, setScheduleKind] = useState<ScheduleKind>("IMMEDIATE");
   const [scheduledAtLocal, setScheduledAtLocal] = useState("");
   const [offsetValue, setOffsetValue] = useState(2);

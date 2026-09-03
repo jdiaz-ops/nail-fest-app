@@ -78,7 +78,17 @@ export const ImageWithControls = Image.extend({
       href: string | null;
     };
 
-    const imgSpec: [string, Record<string, unknown>] = ["img", mergeAttributes(this.options.HTMLAttributes, { src, alt })];
+    // The inline style (not just a CSS class) is what keeps this
+    // responsive in a confirmation email, not only on the public event
+    // page — a class alone only works where globals.css's own
+    // `.event-description img` rule is actually loaded, which an email
+    // never does (see sanitizeHtml.ts's own comment on why "style" had
+    // to join img's allowlist). Same numbers as that CSS rule, just
+    // carried on the element itself so they travel with the HTML.
+    const imgSpec: [string, Record<string, unknown>] = [
+      "img",
+      mergeAttributes(this.options.HTMLAttributes, { src, alt, style: "max-width:100%;height:auto;border-radius:8px;" }),
+    ];
     // Links always open in a new tab, same as a regular text link in this
     // editor (see RichTextEditor.tsx's handleLink — and sanitizeHtml.ts's
     // transformTags, which forces target/rel on every <a> regardless, so
