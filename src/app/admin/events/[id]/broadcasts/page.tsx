@@ -85,7 +85,17 @@ export default async function EventBroadcastsPage({ params }: { params: { id: st
                     </span>
                   </td>
                   <td style={{ padding: "10px 12px" }}>{b._count.logs}</td>
-                  <td style={{ padding: "10px 12px", whiteSpace: "nowrap" }}>
+                  <td style={{ padding: "10px 12px", whiteSpace: "nowrap", display: "flex", gap: 12 }}>
+                    {/* Only a still-QUEUED broadcast can change — one that already
+                        sent (or is sending) has content that's already out, so
+                        editing it here would be misleading. See
+                        [broadcastId]/route.ts's own comment for the matching
+                        server-side guard (this link alone isn't the real gate). */}
+                    {b.status === "QUEUED" && (
+                      <Link href={`/admin/events/${event.id}/broadcasts/${b.id}/edit`} style={{ fontSize: 13 }}>
+                        Editar
+                      </Link>
+                    )}
                     {/* Opens "Nuevo correo" pre-filled with this one's content — see
                         new/page.tsx's own comment. A plain link, no client JS needed
                         here since the prefill itself happens server-side on that page. */}

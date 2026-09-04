@@ -8,11 +8,47 @@ type ScheduleKind = "IMMEDIATE" | "AT_DATETIME" | "BEFORE_EVENT_START" | "AFTER_
 
 const UNIT_TO_MINUTES: Record<"minutos" | "horas" | "días", number> = { minutos: 1, horas: 60, días: 1440 };
 
+type EditingBroadcast = {
+  id: string;
+  ticketTypeId: string | null;
+  subject: string;
+  bodyHtml: string;
+  attachTicketPdf: boolean;
+  scheduleKind: ScheduleKind;
+  scheduledAt: string | null; // ISO, or null when scheduleKind isn't AT_DATETIME
+  scheduleOffsetMinutes: number | null;
+};
+
+// Inverse of `new Date(scheduledAtLocal)` in handleSubmit below — that
+// call treats a bare "YYYY-MM-DDTHH:mm" string as the BROWSER's own
+// local time (no timezone in the string), so pre-filling from a stored
+// UTC instant has to use the browser's local Date getters too, not
+// OrgSettings' timezone (a different admin's browser, or a device set
+// to a different zone than the org's, would otherwise see the wrong
+// time — and re-saving without touching this field would silently
+// shift it).
+function toLocalInputValue(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+// Inverse of `offsetValue * UNIT_TO_MINUTES[offsetUnit]` in handleSubmit
+// — only the total minutes are persisted, so pre-filling the two-field
+// value+unit picker has to pick back the largest whole unit that
+// reconstructs it exactly (an admin who set "2 días" shouldn't see "2880
+// minutos" when they come back to edit).
+function minutesToOffset(totalMinutes: number): { value: number; unit: "minutos" | "horas" | "días" } {
+  if (totalMinutes > 0 && totalMinutes % 1440 === 0) return { value: totalMinutes / 1440, unit: "días" };
+  if (totalMinutes > 0 && totalMinutes % 60 === 0) return { value: totalMinutes / 60, unit: "horas" };
+  return { value: totalMinutes, unit: "minutos" };
+}
+
 export default function EventBroadcastComposer({
   eventId,
   ticketTypes,
   allBuyersCount,
   initial,
+  editing,
 }: {
   eventId: string;
   ticketTypes: { id: string; name: string; count: number }[];
@@ -25,16 +61,28 @@ export default function EventBroadcastComposer({
   // configures fresh (a stale scheduled date from the original wouldn't
   // make sense to inherit silently), same as the plain "new" case.
   initial?: { ticketTypeId: string | null; subject: string; bodyHtml: string; attachTicketPdf: boolean };
+  // Set when this composer opened from "Editar" on an existing QUEUED
+  // broadcast (see the list's own "Editar" link, shown only for QUEUED
+  // rows). Unlike `initial`, this ALSO pre-fills the existing schedule
+  // — a queued send's whole point is that its schedule might need
+  // changing, e.g. the event's date moved — and switches submit to a
+  // PATCH against that broadcast instead of creating a new one.
+  // Mutually exclusive with `initial` — a composer is either plain-new,
+  // a duplicate, or an edit, never two of those at once.
+  editing?: EditingBroadcast;
 }) {
   const router = useRouter();
-  const [ticketTypeId, setTicketTypeId] = useState(initial?.ticketTypeId ?? "");
-  const [subject, setSubject] = useState(initial?.subject ?? "");
-  const [bodyHtml, setBodyHtml] = useState(initial?.bodyHtml ?? "");
-  const [attachTicketPdf, setAttachTicketPdf] = useState(initial?.attachTicketPdf ?? false);
-  const [scheduleKind, setScheduleKind] = useState<ScheduleKind>("IMMEDIATE");
-  const [scheduledAtLocal, setScheduledAtLocal] = useState("");
-  const [offsetValue, setOffsetValue] = useState(2);
-  const [offsetUnit, setOffsetUnit] = useState<"minutos" | "horas" | "días">("horas");
+  const [ticketTypeId, setTicketTypeId] = useState(editing?.ticketTypeId ?? initial?.ticketTypeId ?? "");
+  const [subject, setSubject] = useState(editing?.subject ?? initial?.subject ?? "");
+  const [bodyHtml, setBodyHtml] = useState(editing?.bodyHtml ?? initial?.bodyHtml ?? "");
+  const [attachTicketPdf, setAttachTicketPdf] = useState(editing?.attachTicketPdf ?? initial?.attachTicketPdf ?? false);
+  const [scheduleKind, setScheduleKind] = useState<ScheduleKind>(editing?.scheduleKind ?? "IMMEDIATE");
+  const [scheduledAtLocal, setScheduledAtLocal] = useState(
+    editing?.scheduledAt ? toLocalInputValue(new Date(editing.scheduledAt)) : ""
+  );
+  const initialOffset = editing?.scheduleOffsetMinutes != null ? minutesToOffset(editing.scheduleOffsetMinutes) : null;
+  const [offsetValue, setOffsetValue] = useState(initialOffset?.value ?? 2);
+  const [offsetUnit, setOffsetUnit] = useState<"minutos" | "horas" | "días">(initialOffset?.unit ?? "horas");
   const [testTo, setTestTo] = useState("");
   const [testSending, setTestSending] = useState(false);
   const [testMessage, setTestMessage] = useState<string | null>(null);
@@ -84,8 +132,9 @@ export default function EventBroadcastComposer({
       payload.scheduleOffsetMinutes = offsetValue * UNIT_TO_MINUTES[offsetUnit];
     }
 
-    const res = await fetch(`/api/admin/events/${eventId}/broadcasts`, {
-      method: "POST",
+    const url = editing ? `/api/admin/events/${eventId}/broadcasts/${editing.id}` : `/api/admin/events/${eventId}/broadcasts`;
+    const res = await fetch(url, {
+      method: editing ? "PATCH" : "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
@@ -95,7 +144,7 @@ export default function EventBroadcastComposer({
       router.push(`/admin/events/${eventId}/broadcasts`);
       router.refresh();
     } else {
-      setError(body.message || "No se pudo crear el broadcast — revisa los datos.");
+      setError(body.message || (editing ? "No se pudo guardar el correo — revisa los datos." : "No se pudo crear el broadcast — revisa los datos."));
     }
   }
 
@@ -196,7 +245,15 @@ export default function EventBroadcastComposer({
       {error && <p style={{ color: "#a3212b", fontSize: 13 }}>{error}</p>}
 
       <button className="primary" type="submit" disabled={sending} style={{ padding: "10px 24px", marginTop: 8 }}>
-        {sending ? "Enviando…" : scheduleKind === "IMMEDIATE" ? "Enviar ahora" : "Programar envío"}
+        {sending
+          ? editing
+            ? "Guardando…"
+            : "Enviando…"
+          : scheduleKind === "IMMEDIATE"
+            ? "Enviar ahora"
+            : editing
+              ? "Guardar cambios"
+              : "Programar envío"}
       </button>
     </form>
   );
