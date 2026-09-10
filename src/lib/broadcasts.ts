@@ -299,6 +299,50 @@ export async function sendSegmentEmailBroadcast(
   return { sent, skippedNoConsent, remaining, backgrounded, total: recipientIds.length };
 }
 
+/** Delivery breakdown for one broadcast's history row — same idea as
+ * lib/whatsapp/broadcasts.ts's own getBroadcastStats (Processed/
+ * Delivered/Read/Failed), adapted to email's own richer event set.
+ * Unlike the WhatsApp version, this reads straight off EmailLog's
+ * per-event TIMESTAMP columns (deliveredAt/openedAt/…), not off the
+ * `status` "furthest stage" field — see tracking.ts's own comment on
+ * why the timestamps are the real source of truth: a message that was
+ * later marked COMPLAINED (spam) still really was delivered and opened
+ * before that, and counting by status alone would silently drop it out
+ * of "delivered"/"opened". Populated by whichever provider's webhook is
+ * actually wired up (docs/SES_EVENT_TRACKING.md /
+ * docs/RESEND_SETUP.md) — everything but `attempted`/`sent`/`failed`
+ * stays 0 until that webhook exists, same as EmailLog.status did
+ * before it existed.
+ *
+ * `sent` (attempted minus FAILED) is the honest denominator for rates —
+ * `attempted` on its own over-counts by including sends that never
+ * reached the provider at all (see sendEventBroadcast's own per-
+ * recipient try/catch, which logs a FAILED row with no timestamps on
+ * a provider error). */
+export interface EmailBroadcastStats {
+  attempted: number;
+  sent: number;
+  delivered: number;
+  opened: number;
+  clicked: number;
+  bounced: number;
+  complained: number;
+  failed: number;
+}
+
+export async function getEmailBroadcastStats(broadcastId: string): Promise<EmailBroadcastStats> {
+  const [attempted, failed, delivered, opened, clicked, bounced, complained] = await Promise.all([
+    db.emailLog.count({ where: { broadcastId } }),
+    db.emailLog.count({ where: { broadcastId, status: "FAILED" } }),
+    db.emailLog.count({ where: { broadcastId, deliveredAt: { not: null } } }),
+    db.emailLog.count({ where: { broadcastId, openedAt: { not: null } } }),
+    db.emailLog.count({ where: { broadcastId, firstClickedAt: { not: null } } }),
+    db.emailLog.count({ where: { broadcastId, bouncedAt: { not: null } } }),
+    db.emailLog.count({ where: { broadcastId, complainedAt: { not: null } } }),
+  ]);
+  return { attempted, sent: attempted - failed, delivered, opened, clicked, bounced, complained, failed };
+}
+
 /** Every QUEUED, non-immediate broadcast whose computed due time has
  * arrived — see /api/broadcasts/send-due, the cron entry point. Only
  * event-scoped broadcasts support scheduling today (see

@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { getOrgSettings } from "@/lib/settings";
 import { formatDateInTz } from "@/lib/dateFormat";
 import { resolveDueAt } from "@/lib/broadcastSchedule";
+import { getEmailBroadcastStats } from "@/lib/broadcasts";
 import { requirePageUser } from "@/lib/auth/guard";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +24,26 @@ const SCHEDULE_LABEL: Record<string, string> = {
   AFTER_EVENT_END: "Después del evento",
 };
 
+// Same "WhatChimp Broadcast Center"-style bar as the WhatsApp Difusiones
+// list's own Bar (crm/whatsapp/difusiones/page.tsx) — duplicated rather
+// than shared since the two pages already keep their own STATUS_STYLE
+// maps separately too; `total` is `sent` (attempted minus FAILED, see
+// getEmailBroadcastStats's own comment), not the raw attempted count, so
+// a send that never left the building doesn't drag every rate down.
+function Bar({ label, count, total, color, title }: { label: string; count: number; total: number; color: string; title?: string }) {
+  const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+  return (
+    <div style={{ minWidth: 92 }} title={title}>
+      <div style={{ fontSize: 11, color: "#8a8478" }}>
+        {label} ({pct}%) {count}/{total}
+      </div>
+      <div style={{ height: 4, background: "#f0efec", borderRadius: 999, marginTop: 2 }}>
+        <div style={{ height: "100%", width: `${pct}%`, background: color, borderRadius: 999 }} />
+      </div>
+    </div>
+  );
+}
+
 // Correos del evento — el mismo concepto de "Email broadcasts" de la
 // plataforma de tickets anterior: correos específicos para los inscritos de ESTE evento (recordatorios, avisos de
 // cambio de fecha, agradecimiento post-evento), no la lista global de
@@ -37,10 +58,12 @@ export default async function EventBroadcastsPage({ params }: { params: { id: st
     db.emailBroadcast.findMany({
       where: { eventId: params.id },
       orderBy: { createdAt: "desc" },
-      include: { ticketType: true, _count: { select: { logs: true } } },
+      include: { ticketType: true },
     }),
   ]);
   if (!event) notFound();
+
+  const stats = await Promise.all(broadcasts.map((b) => getEmailBroadcastStats(b.id)));
 
   return (
     <div>
@@ -63,14 +86,15 @@ export default async function EventBroadcastsPage({ params }: { params: { id: st
               <th style={{ padding: "8px 12px" }}>Destinatarios</th>
               <th style={{ padding: "8px 12px" }}>Envío</th>
               <th style={{ padding: "8px 12px" }}>Estado</th>
-              <th style={{ padding: "8px 12px" }}>Enviados</th>
+              <th style={{ padding: "8px 12px" }}>Entrega</th>
               <th style={{ padding: "8px 12px" }}></th>
             </tr>
           </thead>
           <tbody>
-            {broadcasts.map((b) => {
+            {broadcasts.map((b, i) => {
               const style = STATUS_STYLE[b.status] ?? { bg: "#f6f5f2", ink: "#5b5f6b", label: b.status };
               const dueAt = b.status === "QUEUED" ? resolveDueAt(b, event) : null;
+              const s = stats[i]!;
               return (
                 <tr key={b.id} style={{ borderTop: "1px solid #f0efec" }}>
                   <td style={{ padding: "10px 12px" }}>{b.subject}</td>
@@ -84,7 +108,36 @@ export default async function EventBroadcastsPage({ params }: { params: { id: st
                       {style.label}
                     </span>
                   </td>
-                  <td style={{ padding: "10px 12px" }}>{b._count.logs}</td>
+                  <td style={{ padding: "10px 12px" }}>
+                    {s.sent > 0 ? (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                          <Bar label="Entregados" count={s.delivered} total={s.sent} color="#12966b" />
+                          <Bar
+                            label="Abiertos"
+                            count={s.opened}
+                            total={s.sent}
+                            color="#2f6fed"
+                            title="Puede incluir aperturas falsas de Apple Mail Privacy Protection — los clics son la señal más confiable"
+                          />
+                          <Bar label="Clics" count={s.clicked} total={s.sent} color="#5b3fa8" />
+                          <Bar label="Rebotes" count={s.bounced} total={s.sent} color="var(--danger)" />
+                        </div>
+                        {s.failed > 0 && (
+                          <span style={{ fontSize: 11, color: "var(--danger)" }}>
+                            {s.failed} {s.failed === 1 ? "envío falló" : "envíos fallaron"} antes de salir (no se cuentan arriba)
+                          </span>
+                        )}
+                        {s.complained > 0 && (
+                          <span style={{ fontSize: 11, color: "var(--danger)", fontWeight: 600 }}>
+                            ⚠ {s.complained} {s.complained === 1 ? "queja de spam" : "quejas de spam"}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <span style={{ color: "#8a8478" }}>—</span>
+                    )}
+                  </td>
                   <td style={{ padding: "10px 12px", whiteSpace: "nowrap", display: "flex", gap: 12 }}>
                     {/* Only a still-QUEUED broadcast can change — one that already
                         sent (or is sending) has content that's already out, so
