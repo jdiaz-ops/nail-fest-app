@@ -1,21 +1,29 @@
 import { db } from "@/lib/db";
-import { matchCity } from "@/lib/cityMatch";
 import CrmPageHeader from "../CrmPageHeader";
-import StatCard from "../StatCard";
-import CityCleanupClient, { type CityCleanupRow } from "./CityCleanupClient";
+import CityCleanupClient from "./CityCleanupClient";
 
 export const dynamic = "force-dynamic";
-// Real headroom for matchCity() across every distinct raw city value on
-// real production data — same reasoning as Segmentos' own maxDuration.
-// The first-letter bucketing in cityMatch.ts's fuzzy tier is the actual
-// fix for the slowness itself; this is the safety net underneath it.
-export const maxDuration = 60;
 
 // The "hacia atrás" half of city cleanup (the forward half is
 // CityAutocomplete.tsx on the live registration form) — every DISTINCT
 // raw Person.city value already on file, matched against the same real
 // municipality list, for the admin to review and approve merges. Never
 // applies anything on its own; see the API route this client posts to.
+//
+// This page's OWN work is now deliberately bounded: the only thing it
+// does server-side at render time is db.person.groupBy() — cheap no
+// matter how many distinct raw city values exist. Actually matching each
+// value against the canonical list (matchCity(), the expensive part —
+// see cityMatch.ts's own comment) used to run for every single one of
+// them right here, synchronously, before the page could render at all.
+// On real production data (a bulk-imported CRM with hundreds of
+// genuinely garbled raw values, not a handful) that meant the page could
+// simply never finish loading, however cheap each individual match got —
+// nothing bounded the TOTAL number of matches one request computed. Now
+// CityCleanupClient fetches matches in small capped batches from
+// /api/admin/crm/city-cleanup/match AFTER the page has already rendered,
+// so this page's own response time no longer depends on how messy the
+// real data is.
 export default async function CityCleanupPage() {
   const rows = await db.person.groupBy({
     by: ["city"],
@@ -23,29 +31,10 @@ export default async function CityCleanupPage() {
     _count: { _all: true },
   });
 
-  // Skip anything already exactly a canonical label — nothing to review,
-  // showing it would just be noise. Everything else (a normalization-only
-  // difference, a real typo, a "Ciudad-Departamento" variant, garbage
-  // that isn't a city at all) shows up for the admin to decide on.
-  const needsReview: CityCleanupRow[] = [];
-  for (const r of rows) {
-    const raw = r.city;
-    if (!raw || !raw.trim()) continue;
-    const result = matchCity(raw);
-    if (result.confidence === "exact" && result.match?.label === raw) continue;
-    needsReview.push({
-      raw,
-      count: r._count._all,
-      confidence: result.confidence,
-      notACity: result.notACity,
-      candidates: result.candidates.map((c) => c.label),
-      suggested: result.match?.label ?? null,
-    });
-  }
-  needsReview.sort((a, b) => b.count - a.count);
-
-  const totalDistinct = rows.length;
-  const totalPeopleAffected = needsReview.reduce((sum, r) => sum + r.count, 0);
+  const allRaw = rows
+    .map((r) => ({ raw: (r.city ?? "").trim(), count: r._count._all }))
+    .filter((r) => r.raw.length > 0)
+    .sort((a, b) => b.count - a.count);
 
   return (
     <div>
@@ -54,13 +43,7 @@ export default async function CityCleanupPage() {
         subtitle='Cada valor real de "Ciudad" ya guardado, comparado contra la lista oficial de municipios de Colombia. Revisa cada fila y decide — nada se cambia hasta que apruebes y presiones "Aplicar cambios".'
       />
 
-      <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 24 }}>
-        <StatCard label="Valores distintos en la base" value={String(totalDistinct)} />
-        <StatCard label="Necesitan revisión" value={String(needsReview.length)} />
-        <StatCard label="Personas afectadas" value={String(totalPeopleAffected)} />
-      </div>
-
-      <CityCleanupClient rows={needsReview} />
+      <CityCleanupClient allRaw={allRaw} />
     </div>
   );
 }
