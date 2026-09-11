@@ -1,6 +1,6 @@
 import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
 import nodemailer from "nodemailer";
-import type { EmailProvider, SendEmailInput } from "./provider";
+import { friendlyFrom, type EmailProvider, type SendEmailInput } from "./provider";
 import { getOrgSettings } from "@/lib/settings";
 
 // Two logically separate channels on the SAME SES account/domain, per
@@ -57,7 +57,7 @@ async function send(
   // email" route) with an uncaught exception instead of a per-recipient
   // failure. Resolving them inside this async function turns that throw
   // into an ordinary rejection like any other send failure.
-  const from = requireEnv(opts.fromEnvVar);
+  const from = friendlyFrom(requireEnv(opts.fromEnvVar));
   const configurationSet = requireEnv(opts.configurationSetEnvVar);
 
   // Explicit input.replyTo wins; otherwise fall back to the account-wide

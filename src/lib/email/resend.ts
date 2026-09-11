@@ -1,5 +1,5 @@
 import { Resend } from "resend";
-import type { EmailProvider, SendEmailInput } from "./provider";
+import { friendlyFrom, type EmailProvider, type SendEmailInput } from "./provider";
 import { getOrgSettings } from "@/lib/settings";
 
 // Plan B for src/lib/email/ses.ts — see docs/RESEND_SETUP.md for exactly
@@ -32,7 +32,7 @@ async function send(
   // arrow function throwing synchronously breaks every
   // Promise.allSettled-based caller instead of rejecting like any other
   // send failure).
-  const from = requireEnv(opts.fromEnvVar);
+  const from = friendlyFrom(requireEnv(opts.fromEnvVar));
 
   // Explicit input.replyTo wins; otherwise fall back to the account-wide
   // setting (/admin/settings/contact) — same reasoning as ses.ts's own
