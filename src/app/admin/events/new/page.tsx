@@ -31,6 +31,7 @@ export default async function NewEventPage() {
           registerButtonLabel: DEFAULT_REGISTER_BUTTON_LABEL,
           startsAtLocal: "",
           endsAtLocal: "",
+          scheduleDays: [],
           capacity: "",
           status: "DRAFT",
           slug: "",

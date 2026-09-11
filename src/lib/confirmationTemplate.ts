@@ -1,4 +1,5 @@
 import { formatDateInTz } from "@/lib/dateFormat";
+import { formatEventScheduleLines } from "@/lib/eventSchedule";
 import { htmlToPlainText } from "@/lib/email/templates";
 
 // Merge tags for the confirmation-email editor (Confirmación del evento,
@@ -29,6 +30,10 @@ export interface ConfirmationTemplateData {
   venueAddress?: string;
   startsAt: Date;
   endsAt?: Date;
+  /** Event.scheduleDays — see lib/eventSchedule.ts. Drives
+   * {{EVENTO_FECHA_RANGO}} showing one line per real day instead of a
+   * single combined range once an admin configures it. */
+  scheduleDays?: unknown;
   qrImageUrl: string;
   ticketTypeName?: string;
   ticketCount?: number;
@@ -83,16 +88,22 @@ function renderVoucherHtml(data: ConfirmationTemplateData): string {
  * chain this is one link in (sendTicketEmail.ts owns the actual chain
  * logic; this just renders ONE resolved template string). */
 export function renderConfirmationFromTemplate(templateHtml: string, data: ConfirmationTemplateData): { subject: string; text: string; html: string } {
-  const dateOpts = { dateStyle: "full" as const, timeStyle: "short" as const };
-  const rangeWhen = [
-    formatDateInTz(data.startsAt, dateOpts, data.timezone, data.language),
-    data.endsAt ? ` – ${formatDateInTz(data.endsAt, dateOpts, data.timezone, data.language)}` : "",
-  ].join("");
+  // One line per real day when Event.scheduleDays is set, joined with
+  // <br> (not a plain "\n" — this substitutes into HTML, and
+  // htmlToPlainText below turns <br> back into a real line break for
+  // the plain-text version) — otherwise the same single combined range
+  // as before. See eventSchedule.ts's own comment on why.
+  const whenLines = formatEventScheduleLines(
+    { startsAt: data.startsAt, endsAt: data.endsAt ?? null, scheduleDays: data.scheduleDays },
+    data.timezone,
+    data.language
+  );
+  const rangeWhenHtml = whenLines.map(escapeHtml).join("<br>");
 
   const replacements: Record<string, string> = {
     ENTRADAS: renderVoucherHtml(data),
     EVENTO_NOMBRE: escapeHtml(data.eventName),
-    EVENTO_FECHA_RANGO: escapeHtml(rangeWhen),
+    EVENTO_FECHA_RANGO: rangeWhenHtml,
     EVENTO_FECHA_INICIO: escapeHtml(formatDateInTz(data.startsAt, { dateStyle: "full" }, data.timezone, data.language)),
     EVENTO_HORA_INICIO: escapeHtml(formatDateInTz(data.startsAt, { timeStyle: "short" }, data.timezone, data.language)),
     EVENTO_FECHA_FIN: data.endsAt ? escapeHtml(formatDateInTz(data.endsAt, { dateStyle: "full" }, data.timezone, data.language)) : "",

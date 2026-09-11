@@ -3,6 +3,12 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { updateEvent, setEventStatus, deleteEvent, EventHasRegistrationsError } from "@/lib/events";
 import { requireUser } from "@/lib/auth/guard";
+import { parseScheduleDays } from "@/lib/eventSchedule";
+
+const scheduleDaySchema = z.object({
+  opensAt: z.string().min(1),
+  closesAt: z.string().min(1),
+});
 
 const patchSchema = z.object({
   name: z.string().min(1).optional(),
@@ -15,6 +21,9 @@ const patchSchema = z.object({
   startsAt: z.string().optional(),
   endsAt: z.string().nullable().optional(),
   capacity: z.number().int().positive().nullable().optional(),
+  // See lib/eventSchedule.ts — omitted keeps whatever's already saved,
+  // an explicit [] clears it back to the old single-range display.
+  scheduleDays: z.array(scheduleDaySchema).optional(),
   status: z.enum(["DRAFT", "PUBLISHED"]).optional(),
   slug: z.string().optional(),
 });
@@ -48,6 +57,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (endsAt && Number.isNaN(endsAt.getTime())) {
       return NextResponse.json({ error: "invalid_body", issues: [{ path: ["endsAt"], message: "invalid date" }] }, { status: 400 });
     }
+    for (const day of data.scheduleDays ?? []) {
+      if (Number.isNaN(new Date(day.opensAt).getTime()) || Number.isNaN(new Date(day.closesAt).getTime())) {
+        return NextResponse.json({ error: "invalid_body", issues: [{ path: ["scheduleDays"], message: "invalid date" }] }, { status: 400 });
+      }
+    }
 
     const event = await updateEvent(params.id, {
       name: data.name ?? existing.name,
@@ -60,6 +74,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       startsAt,
       endsAt,
       capacity: data.capacity === undefined ? existing.capacity : data.capacity,
+      scheduleDays: data.scheduleDays ?? parseScheduleDays(existing.scheduleDays),
       status: data.status ?? existing.status,
       slug: data.slug,
     });

@@ -21,6 +21,13 @@ export interface EventFormValues {
   registerButtonLabel: string;
   startsAtLocal: string; // "YYYY-MM-DDTHH:mm", already in `timezone`
   endsAtLocal: string;
+  // "El horario es diferente según el evento, la ciudad, etc." — real
+  // per-day open/close times (see lib/eventSchedule.ts), each pair
+  // already in `timezone` same as startsAtLocal/endsAtLocal above.
+  // Empty (the default) means "not configured" — the confirmation
+  // email/ticket/public page all keep showing the old single
+  // startsAtLocal–endsAtLocal range in that case.
+  scheduleDays: { opensAtLocal: string; closesAtLocal: string }[];
   capacity: string; // kept as text in the form, parsed on submit
   status: EventStatus;
   slug: string;
@@ -141,6 +148,22 @@ export default function EventForm({
     }
     const endsAt = values.endsAtLocal ? zonedTimeToUtc(values.endsAtLocal, timezone) : null;
 
+    // Every day row needs BOTH times filled to count — a half-filled row
+    // (admin started adding a day, then changed their mind) is silently
+    // dropped rather than rejected, since this whole section is optional.
+    const scheduleDays: { opensAt: string; closesAt: string }[] = [];
+    for (const day of values.scheduleDays) {
+      if (!day.opensAtLocal || !day.closesAtLocal) continue;
+      const opensAt = zonedTimeToUtc(day.opensAtLocal, timezone);
+      const closesAt = zonedTimeToUtc(day.closesAtLocal, timezone);
+      if (Number.isNaN(opensAt.getTime()) || Number.isNaN(closesAt.getTime())) {
+        setError("Uno de los horarios por día no es válido.");
+        setSaving(false);
+        return;
+      }
+      scheduleDays.push({ opensAt: opensAt.toISOString(), closesAt: closesAt.toISOString() });
+    }
+
     const body = {
       name: values.name.trim(),
       city: values.city.trim(),
@@ -152,6 +175,7 @@ export default function EventForm({
       startsAt: startsAt.toISOString(),
       endsAt: endsAt ? endsAt.toISOString() : null,
       capacity,
+      scheduleDays,
       status: values.status,
       slug: values.slug.trim() || undefined,
     };
@@ -232,6 +256,61 @@ export default function EventForm({
           <p style={{ fontSize: 12, color: "#5b5f6b", marginTop: 10, marginBottom: 0 }}>
             Hora local de {timezone} (Configuración → Datos básicos).
           </p>
+        </Section>
+
+        <Section title="Horario real (opcional)">
+          <p style={{ fontSize: 12, color: "#5b5f6b", marginTop: 0, marginBottom: 12 }}>
+            Para un evento de varios días con horas de apertura/cierre distintas cada día — sin esto, el correo de
+            confirmación y el ticket muestran un solo rango &quot;Empieza – Termina&quot; de arriba, que en un
+            evento de dos días se lee como si fuera un solo bloque de toda la noche. Agrega un día por cada jornada
+            real y ese rango confuso desaparece — cada día se muestra por separado con su propia hora.
+          </p>
+          {values.scheduleDays.map((day, i) => (
+            <Row key={i}>
+              <div className="field" style={{ marginBottom: 0 }}>
+                <label>Día {i + 1} — abre</label>
+                <input
+                  type="datetime-local"
+                  value={day.opensAtLocal}
+                  onChange={(e) => {
+                    const next = [...values.scheduleDays];
+                    next[i] = { ...next[i]!, opensAtLocal: e.target.value };
+                    set("scheduleDays", next);
+                  }}
+                />
+              </div>
+              <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
+                <div className="field" style={{ marginBottom: 0, flex: 1 }}>
+                  <label>Día {i + 1} — cierra</label>
+                  <input
+                    type="datetime-local"
+                    value={day.closesAtLocal}
+                    onChange={(e) => {
+                      const next = [...values.scheduleDays];
+                      next[i] = { ...next[i]!, closesAtLocal: e.target.value };
+                      set("scheduleDays", next);
+                    }}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => set("scheduleDays", values.scheduleDays.filter((_, j) => j !== i))}
+                  className="secondary"
+                  style={{ width: "auto", padding: "8px 14px", marginBottom: 0 }}
+                >
+                  Quitar
+                </button>
+              </div>
+            </Row>
+          ))}
+          <button
+            type="button"
+            onClick={() => set("scheduleDays", [...values.scheduleDays, { opensAtLocal: "", closesAtLocal: "" }])}
+            className="secondary"
+            style={{ width: "auto", padding: "8px 14px" }}
+          >
+            + Agregar día
+          </button>
         </Section>
 
         <Section title="Ubicación">

@@ -1,7 +1,7 @@
 import PDFDocument from "pdfkit";
 import { db } from "@/lib/db";
 import { getOrgSettings } from "@/lib/settings";
-import { formatDateInTz } from "@/lib/dateFormat";
+import { formatEventScheduleLines } from "@/lib/eventSchedule";
 import { renderQrPngBuffer } from "@/lib/ticket";
 
 // One self-contained, printable ticket — same fields and the same teal
@@ -20,6 +20,10 @@ export interface TicketPdfData {
   venueAddress?: string;
   startsAt: Date;
   endsAt?: Date;
+  /** Event.scheduleDays — see lib/eventSchedule.ts. Shows one "Fecha"
+   * line per real day instead of a single combined range once an admin
+   * configures it. */
+  scheduleDays?: unknown;
   ticketTypeName?: string;
   ticketCount?: number;
   confirmationCode: string;
@@ -36,11 +40,17 @@ const MUTED = "#5b5f6b";
 export async function renderTicketPdfBuffer(data: TicketPdfData): Promise<Buffer> {
   const qrPng = await renderQrPngBuffer(data.qrToken);
   const attendeeName = [data.firstName, data.lastName].filter(Boolean).join(" ").trim() || "—";
-  const dateOpts = { dateStyle: "full" as const, timeStyle: "short" as const };
-  const rangeWhen = [
-    formatDateInTz(data.startsAt, dateOpts, data.timezone, data.language),
-    data.endsAt ? ` – ${formatDateInTz(data.endsAt, dateOpts, data.timezone, data.language)}` : "",
-  ].join("");
+  // One line per real day when Event.scheduleDays is set, joined with a
+  // real newline — PDFKit's .text() wraps on "\n" natively, and row()
+  // below already measures height via heightOfString on whatever string
+  // it's given, so a multi-line value just makes that row taller.
+  // Otherwise the same single combined range as before. See
+  // eventSchedule.ts's own comment on why.
+  const rangeWhen = formatEventScheduleLines(
+    { startsAt: data.startsAt, endsAt: data.endsAt ?? null, scheduleDays: data.scheduleDays },
+    data.timezone,
+    data.language
+  ).join("\n");
   const ticketTypeLine =
     data.ticketTypeName && (data.ticketCount ?? 1) > 1
       ? `${data.ticketTypeName} · x${data.ticketCount}`
@@ -145,6 +155,7 @@ export async function buildTicketPdfDataForRegistration(registrationId: string):
     venueAddress: registration.event.venueAddress ?? undefined,
     startsAt: registration.event.startsAt,
     endsAt: registration.event.endsAt ?? undefined,
+    scheduleDays: registration.event.scheduleDays,
     ticketTypeName: registration.ticketType?.name,
     ticketCount: registration.ticketCount ?? undefined,
     confirmationCode: registration.id.slice(-8).toUpperCase(),

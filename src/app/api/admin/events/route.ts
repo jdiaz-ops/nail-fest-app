@@ -3,6 +3,11 @@ import { z } from "zod";
 import { createEvent, DEFAULT_REGISTER_BUTTON_LABEL } from "@/lib/events";
 import { requireUser } from "@/lib/auth/guard";
 
+const scheduleDaySchema = z.object({
+  opensAt: z.string().min(1),
+  closesAt: z.string().min(1),
+});
+
 const bodySchema = z.object({
   name: z.string().min(1),
   city: z.string().min(1),
@@ -14,6 +19,10 @@ const bodySchema = z.object({
   startsAt: z.string().datetime().or(z.string().min(1)),
   endsAt: z.string().nullable().optional(),
   capacity: z.number().int().positive().nullable().optional(),
+  // Real per-day open/close times — see EventForm.tsx's own "Horario
+  // real" section and lib/eventSchedule.ts. Optional, defaults to none
+  // (the old single startsAt–endsAt range display).
+  scheduleDays: z.array(scheduleDaySchema).default([]),
   status: z.enum(["DRAFT", "PUBLISHED"]).default("DRAFT"),
   slug: z.string().optional(),
 });
@@ -35,6 +44,11 @@ export async function POST(req: NextRequest) {
   if (endsAt && Number.isNaN(endsAt.getTime())) {
     return NextResponse.json({ error: "invalid_body", issues: [{ path: ["endsAt"], message: "invalid date" }] }, { status: 400 });
   }
+  for (const day of data.scheduleDays) {
+    if (Number.isNaN(new Date(day.opensAt).getTime()) || Number.isNaN(new Date(day.closesAt).getTime())) {
+      return NextResponse.json({ error: "invalid_body", issues: [{ path: ["scheduleDays"], message: "invalid date" }] }, { status: 400 });
+    }
+  }
 
   const event = await createEvent({
     name: data.name,
@@ -47,6 +61,7 @@ export async function POST(req: NextRequest) {
     startsAt,
     endsAt,
     capacity: data.capacity ?? null,
+    scheduleDays: data.scheduleDays,
     status: data.status,
     slug: data.slug,
   });

@@ -1,4 +1,4 @@
-import { formatDateInTz } from "@/lib/dateFormat";
+import { formatEventScheduleLines } from "@/lib/eventSchedule";
 
 // Colors match the app's own brand tokens (src/app/globals.css: --ink,
 // --ink-muted, --border, --accent, --accent-ink) — the ticket should look
@@ -31,6 +31,12 @@ export function confirmationEmail(params: {
    * reads as "this code only works for one day" — it doesn't, entry is
    * valid the whole event, this was just a display gap. */
   endsAt?: Date;
+  /** Event.scheduleDays — real per-day open/close times (see
+   * lib/eventSchedule.ts) so a multi-day event shows each day's own
+   * hours instead of one combined startsAt–endsAt range that reads as
+   * an overnight span. Falls back to that same combined range when
+   * unset — nothing changes for an event that hasn't configured this. */
+  scheduleDays?: unknown;
   qrImageUrl: string;
   /** Event.imageUrl (Vercel Blob) — a real https URL, so it renders in
    * inboxes the same way the QR does. Omitted from the ticket card when
@@ -56,16 +62,16 @@ export function confirmationEmail(params: {
   const orgName = params.orgName || "Nail Fest";
   const tz = params.timezone || "America/Bogota";
   const lang = params.language || "es";
-  const dateOpts = { dateStyle: "full" as const, timeStyle: "short" as const };
-  // Same range logic as [eventSlug]/page.tsx's own eventWhen — always show
-  // both ends when endsAt is set, so a Sat→Sun event never reads as
-  // single-day only. Kept in sync deliberately rather than importing one
-  // from the other: the page builds a JSX-ready string, this builds a
-  // plain one embedded in both an HTML table cell and a text email.
-  const when = [
-    formatDateInTz(params.startsAt, dateOpts, tz, lang),
-    params.endsAt ? ` – ${formatDateInTz(params.endsAt, dateOpts, tz, lang)}` : "",
-  ].join("");
+  // One line per real day when Event.scheduleDays is set ("Sábado 7 de
+  // noviembre, 10:00 a. m. – 7:00 p. m." / "Domingo 8 de noviembre,
+  // 10:00 a. m. – 5:00 p. m."), otherwise the same single combined
+  // startsAt–endsAt range as before — see eventSchedule.ts's own comment
+  // on why a two-day event's single range read as an overnight span.
+  const whenLines = formatEventScheduleLines(
+    { startsAt: params.startsAt, endsAt: params.endsAt ?? null, scheduleDays: params.scheduleDays },
+    tz,
+    lang
+  );
   const attendeeName = [params.firstName, params.lastName].filter(Boolean).join(" ").trim();
   const ticketTypeLine =
     params.ticketTypeName && (params.ticketCount ?? 1) > 1
@@ -78,7 +84,11 @@ export function confirmationEmail(params: {
     `Hola ${params.firstName},`,
     ``,
     `Tu registro para ${params.eventName} (${params.eventCity}) quedó confirmado.`,
-    `Fecha: ${when}`,
+    // One line, "Fecha: <rango>", when there's only the old combined
+    // range — but a real "Fecha:" header followed by one line PER DAY
+    // once scheduleDays is configured, so each day's own hours actually
+    // reads as separate days, not one long run-on sentence.
+    ...(whenLines.length > 1 ? [`Fecha:`, ...whenLines] : [`Fecha: ${whenLines[0]}`]),
     ...(venueLine ? [`Lugar: ${venueLine}`] : []),
     ...(attendeeName ? [`A nombre de: ${attendeeName}`] : []),
     ...(ticketTypeLine ? [`Entrada: ${ticketTypeLine}`] : []),
@@ -123,7 +133,7 @@ export function confirmationEmail(params: {
                   <tr>
                     <td style="padding:20px 24px 0;">
                       <p style="margin:0;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#8a8478;">Fecha</p>
-                      <p style="margin:2px 0 0;font-size:14px;font-weight:600;color:${INK};">${escapeHtml(when)}</p>
+                      ${whenLines.map((line) => `<p style="margin:2px 0 0;font-size:14px;font-weight:600;color:${INK};">${escapeHtml(line)}</p>`).join("")}
                     </td>
                   </tr>
                   ${

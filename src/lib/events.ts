@@ -1,7 +1,9 @@
 import { db } from "@/lib/db";
+import { Prisma } from "@prisma/client";
 import type { Event, EventStatus } from "@prisma/client";
 import { sanitizeEventDescription } from "@/lib/sanitizeHtml";
 import { createTicketType } from "@/lib/ticketTypes";
+import type { EventScheduleDay } from "@/lib/eventSchedule";
 
 // The public event page's own default when an event doesn't set its own
 // (see [eventSlug]/page.tsx) — kept here too so a freshly-created event's
@@ -47,6 +49,10 @@ export interface EventInput {
   startsAt: Date;
   endsAt: Date | null;
   capacity: number | null;
+  // Real per-day open/close times (see lib/eventSchedule.ts) — empty
+  // array (the default) means "not configured", keeping the old single
+  // startsAt–endsAt range display exactly as before.
+  scheduleDays: EventScheduleDay[];
   status: EventStatus;
   // Only used on create when the admin wants a specific URL instead of
   // the auto-generated one (e.g. matching an already-promoted link from
@@ -72,6 +78,7 @@ export async function createEvent(input: EventInput): Promise<Event> {
       startsAt: input.startsAt,
       endsAt: input.endsAt,
       capacity: input.capacity,
+      scheduleDays: input.scheduleDays.length > 0 ? (input.scheduleDays as unknown as Prisma.InputJsonValue) : Prisma.JsonNull,
       status: input.status,
     },
   });
@@ -95,6 +102,7 @@ export async function updateEvent(id: string, input: EventInput): Promise<Event>
       startsAt: input.startsAt,
       endsAt: input.endsAt,
       capacity: input.capacity,
+      scheduleDays: input.scheduleDays.length > 0 ? (input.scheduleDays as unknown as Prisma.InputJsonValue) : Prisma.JsonNull,
       status: input.status,
     },
   });

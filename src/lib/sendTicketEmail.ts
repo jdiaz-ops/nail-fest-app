@@ -17,6 +17,10 @@ export async function sendTicketEmail(params: {
     city: string;
     startsAt: Date;
     endsAt?: Date | null;
+    // Event.scheduleDays — see lib/eventSchedule.ts. Optional so any
+    // older/other caller without it still satisfies the type; falls
+    // back to the plain startsAt–endsAt range exactly as before.
+    scheduleDays?: unknown;
     venueName?: string | null;
     venueAddress?: string | null;
     imageUrl?: string | null;
@@ -65,6 +69,7 @@ export async function sendTicketEmail(params: {
           venueAddress: params.event.venueAddress ?? undefined,
           startsAt: params.event.startsAt,
           endsAt: params.event.endsAt ?? undefined,
+          scheduleDays: params.event.scheduleDays,
           qrImageUrl,
           ticketTypeName: ticketType?.name,
           ticketCount: params.registration?.ticketCount ?? undefined,
@@ -82,6 +87,7 @@ export async function sendTicketEmail(params: {
           venueAddress: params.event.venueAddress ?? undefined,
           startsAt: params.event.startsAt,
           endsAt: params.event.endsAt ?? undefined,
+          scheduleDays: params.event.scheduleDays,
           qrImageUrl,
           eventImageUrl: params.event.imageUrl ?? undefined,
           ticketTypeName: ticketType?.name,
@@ -108,6 +114,7 @@ export async function sendTicketEmail(params: {
           venueAddress: params.event.venueAddress ?? undefined,
           startsAt: params.event.startsAt,
           endsAt: params.event.endsAt ?? undefined,
+          scheduleDays: params.event.scheduleDays,
           ticketTypeName: ticketType?.name,
           ticketCount: params.registration?.ticketCount ?? undefined,
           confirmationCode,

@@ -116,6 +116,18 @@ model Event {
   startsAt     DateTime
   endsAt       DateTime?
   capacity     Int?
+  // Real per-day open/close times (see lib/eventSchedule.ts) — a
+  // multi-day event's startsAt–endsAt alone reads as ONE continuous span
+  // ("sábado 10am – domingo 5pm" looks like you're there overnight),
+  // when it's actually two separate daily sessions. Optional: an admin
+  // who sets this gets each real day shown everywhere (confirmation
+  // email, ticket PDF, the public event page); one who doesn't keeps the
+  // old single-range display exactly as before — never a breaking
+  // change for an event that hasn't configured it. JSON, not a related
+  // table — this is display config, never independently queried/filtered,
+  // same reasoning as Registration.customFields. Shape: an array of
+  // { opensAt: ISO string, closesAt: ISO string }, one entry per real day.
+  scheduleDays Json?
   // Per-event override of the confirmation email — see OrgSettings.
   // confirmationEmailHtml's own comment for the full fallback chain
   // (this -> the account-wide template -> the original hand-built
