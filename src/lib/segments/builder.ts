@@ -77,12 +77,20 @@ async function matchingPersonIds(condition: SegmentCondition): Promise<Set<strin
     }
     case "phoneCountry": {
       if (condition.codes.length === 0) return new Set();
-      // No dedicated country column — Person.phone is already stored
-      // E.164 (see its own schema comment), so the country code IS the
-      // prefix. OR across codes, same shape as every other multi-select
-      // condition here.
+      // No dedicated column for THIS one — Person.phone is already
+      // stored E.164 (see its own schema comment), so the dial code IS
+      // the prefix. OR across codes, same shape as every other
+      // multi-select condition here.
       const rows = await db.person.findMany({
         where: { OR: condition.codes.map((code) => ({ phone: { startsWith: code } })) },
+        select: { id: true },
+      });
+      return new Set(rows.map((r) => r.id));
+    }
+    case "country": {
+      if (condition.countries.length === 0) return new Set();
+      const rows = await db.person.findMany({
+        where: { country: { in: condition.countries } },
         select: { id: true },
       });
       return new Set(rows.map((r) => r.id));

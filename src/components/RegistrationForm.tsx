@@ -1,12 +1,13 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { attributionFromSearchParams } from "@/lib/utm";
 import CityAutocomplete from "./CityAutocomplete";
 import { isKnownCityLabel } from "@/lib/cityMatch";
 import { suggestEmailCorrection } from "@/lib/emailTypo";
-import { COUNTRY_CODES } from "@/lib/countryCodes";
+import { COUNTRY_CODES, GENERIC_PHONE_PLACEHOLDER, GENERIC_ID_PLACEHOLDER } from "@/lib/countryCodes";
+import { WORLD_COUNTRIES, findCountry } from "@/lib/worldCountries";
 
 export interface QuestionView {
   key: string;
@@ -36,6 +37,10 @@ export interface RegisterPayload {
   emailConfirm?: string;
   city: string;
   profession: string;
+  // País de residencia (ISO2, e.g. "CO") — a real, required, separately-
+  // filterable field now, NOT derived from the phone's own dial code
+  // (see RegistrationForm.tsx's own comment on the two selectors).
+  country: string;
   customFields: Record<string, string>;
   consents: { logistics: boolean; marketing: boolean; advertising: boolean; whatsapp: boolean };
   attribution?: {
@@ -113,14 +118,37 @@ export default function RegistrationForm({
 }: Props) {
   const searchParams = useSearchParams();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [countryCode, setCountryCode] = useState("+57");
-  // Both the phone number's grey example and the cédula/NIT field's grey
-  // example depend on which country is selected — "según la el país que
-  // se escoja, pues se adapte a los celulares, de ejemplo" and "según
-  // cómo seleccione el país... el texto que piden... si no la llaman
-  // cédula en Venezuela". Falls back to Colombia's own entry (index 0)
-  // if countryCode somehow isn't in the list — never undefined.
-  const selectedCountry = COUNTRY_CODES.find((c) => c.code === countryCode) ?? COUNTRY_CODES[0]!;
+  // "no tiene sentido ahí tener el +57, es lo del celular. Ahí es
+  // seleccionar el país, lo del celular es aparte" — País (dónde vive, un
+  // campo real y obligatorio — ver Person.country) y el país del propio
+  // celular (qué prefijo usa el NÚMERO, independiente de dónde viva la
+  // persona) son dos cosas separadas ahora. Colombia preseleccionada en
+  // ambos por default.
+  const [country, setCountry] = useState("CO");
+  const [phoneCountryIso2, setPhoneCountryIso2] = useState("CO");
+
+  // "cuando seleccioné el país... el celular me obliga a que sea de
+  // Venezuela. No me puede obligar, me preselecciona Venezuela... puedo
+  // seleccionar otro celular" — cambiar País PRE-LLENA el celular como
+  // conveniencia (alguien vive en Venezuela pero puede tener un celular
+  // de Estados Unidos), pero el celular queda con su propio selector,
+  // libre de cambiarse después sin que este efecto lo revierta — solo
+  // reacciona a un cambio de País, no se re-ejecuta por su cuenta.
+  useEffect(() => {
+    setPhoneCountryIso2(country);
+  }, [country]);
+
+  const phoneCountry = findCountry(phoneCountryIso2) ?? WORLD_COUNTRIES[0]!;
+  // El ejemplo de celular depende del PAÍS DEL CELULAR (qué prefijo usa
+  // el número); el ejemplo de cédula/NIT/RIF/DNI depende del PAÍS DONDE
+  // VIVE (qué le dice su propio país, sin importar de dónde sea su
+  // celular). countryCodes.ts solo tiene datos verificados para un
+  // puñado de países — el resto usa un texto genérico honesto, nunca un
+  // formato inventado.
+  const phoneHint = COUNTRY_CODES.find((c) => c.iso2 === phoneCountryIso2);
+  const phonePlaceholder = phoneHint?.phonePlaceholder ?? GENERIC_PHONE_PLACEHOLDER;
+  const idHint = COUNTRY_CODES.find((c) => c.iso2 === country);
+  const idPlaceholder = idHint?.idPlaceholder ?? GENERIC_ID_PLACEHOLDER;
   // "¿hay posibilidad de tener un detector de correos mal redactados?" —
   // a live suggestion while typing (gmial.com -> ¿quisiste decir
   // gmail.com?), never a hard block — see emailTypo.ts's own comment.
@@ -160,12 +188,13 @@ export default function RegistrationForm({
     const body = {
       eventSlug,
       email: emailValue,
-      phone: localPhone ? `${countryCode}${localPhone}` : undefined,
+      phone: localPhone ? `${phoneCountry.dialCode}${localPhone}` : undefined,
       fullName: usesFirstLast ? undefined : String(fd.get("field_fullName") ?? "").trim() || undefined,
       firstName: usesFirstLast ? String(fd.get("field_firstName") ?? "").trim() || undefined : undefined,
       lastName: usesFirstLast ? String(fd.get("field_lastName") ?? "").trim() || undefined : undefined,
       city: String(fd.get("field_city") ?? "").trim() || undefined,
       profession: String(fd.get("field_profession") ?? "").trim() || undefined,
+      country,
       ticketTypeId,
       ticketCount,
       utmSource: attribution?.utmSource,
@@ -219,7 +248,7 @@ export default function RegistrationForm({
     const payload: RegisterPayload = {
       eventSlug,
       email,
-      phone: localPhone ? `${countryCode}${localPhone}` : "",
+      phone: localPhone ? `${phoneCountry.dialCode}${localPhone}` : "",
       // Only one of fullName or firstName/lastName is ever actually
       // populated below — sending both keys with one blank is fine,
       // /api/register only looks at firstName first, then falls back.
@@ -229,6 +258,7 @@ export default function RegistrationForm({
       emailConfirm: emailQuestion?.confirmEmail ? String(form.get("field_emailConfirm") ?? "") : undefined,
       city: String(form.get("field_city") ?? ""),
       profession: String(form.get("field_profession") ?? ""),
+      country,
       customFields,
       // No consent checkboxes at all anymore — LOGISTICS, MARKETING,
       // ADVERTISING and now WHATSAPP are all implicit in submitting the
@@ -266,10 +296,11 @@ export default function RegistrationForm({
     // suggestion. Caught here too (not just in the component's own inline
     // message) so it actually blocks the submit, and again server-side in
     // /api/register — belt and suspenders, same reasoning as the email-
-    // confirm check above. Only enforced for Colombia (+57) — that's the
-    // only country with a real municipality list to validate against; see
-    // the city field's own conditional render above.
-    if (countryCode === "+57" && byKey(questions, "city") && payload.city.trim() && !isKnownCityLabel(payload.city)) {
+    // confirm check above. Keyed off País (residence), not the phone's
+    // dial code — those are separate now; only Colombia has a real
+    // municipality list to validate against; see the city field's own
+    // conditional render above.
+    if (country === "CO" && byKey(questions, "city") && payload.city.trim() && !isKnownCityLabel(payload.city)) {
       setErrorMessage("Elige tu ciudad de la lista de sugerencias — revisa el campo Ciudad.");
       return;
     }
@@ -378,30 +409,35 @@ export default function RegistrationForm({
         </div>
       )}
 
-      {/* "después del email debería ir un seleccionador de país... según
-          lo que escoge ahí pues se adapta el código país del celular" —
-          Cúcuta ya trae tráfico real de Venezuela, no solo Colombia, y
-          "mañana Ecuador o Perú" — un solo selector aquí (no otro
-          escondido junto al teléfono) es lo único que decide countryCode:
-          maneja el prefijo del celular, el ejemplo de cédula/NIT/RIF/DNI
-          de countryCodes.ts, y si el campo Ciudad usa el autocompletar
-          colombiano o texto libre. Colombia preseleccionado — es
-          efectivamente toda la audiencia hoy. */}
+      {/* "no tiene sentido ahí tener el +57, es lo del celular. Ahí es
+          [s]eleccionar el país, lo del celular es aparte" — Este es el
+          país DONDE VIVE (Person.country — un campo real, obligatorio,
+          filtrable en Personas y Segmentos, ver ese modelo), NO el
+          código de marcado del celular (eso vive en su propio selector,
+          justo abajo). "Tienes que tener todos los países del mundo" —
+          la lista completa (lib/worldCountries.ts), no un puñado.
+          Colombia preseleccionado — es efectivamente toda la audiencia
+          hoy, pero Cúcuta ya trae tráfico real de Venezuela también. */}
       <div className="field">
-        <label htmlFor="field_country">País</label>
-        <select id="field_country" value={countryCode} onChange={(e) => setCountryCode(e.target.value)}>
-          {COUNTRY_CODES.map((c) => (
-            <option key={c.code} value={c.code}>
-              {c.label} {c.name}
+        <label htmlFor="field_country">
+          País<Req required />
+        </label>
+        <select id="field_country" required value={country} onChange={(e) => setCountry(e.target.value)}>
+          {WORLD_COUNTRIES.map((c) => (
+            <option key={c.iso2} value={c.iso2}>
+              {c.name}
             </option>
           ))}
         </select>
       </div>
 
-      {/* Phone gets its own full-width row — el prefijo de país (del
-          selector "País" de arriba) se muestra como una insignia fija
-          aquí, ya no como su propio desplegable editable — un solo
-          selector maneja los dos, no dos que se puedan desincronizar. */}
+      {/* El celular tiene su PROPIO selector de país — independiente del
+          "País" de arriba ("puedo estar viviendo en Venezuela, pero
+          tener mi celular de Estados Unidos... solo que facilitamos el
+          hecho que ya está preseleccionado Venezuela"). El useEffect más
+          arriba lo pre-llena cuando cambia País, pero queda libre de
+          cambiarse aparte — no es una insignia fija, es un <select> real
+          con la misma lista completa de países. */}
       {phone && (
         <div className="field">
           <label htmlFor="phone">
@@ -409,28 +445,28 @@ export default function RegistrationForm({
             <Req required={phone.required} />
           </label>
           <div style={{ display: "flex", gap: 8 }}>
-            <span
-              aria-hidden="true"
-              style={{
-                flex: "0 0 auto",
-                width: 72,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                border: "1px solid var(--border, #e3e1dc)",
-                borderRadius: 8,
-                background: "#f6f5f2",
-                fontSize: 14,
-              }}
+            <select
+              aria-label="País del celular"
+              value={phoneCountryIso2}
+              onChange={(e) => setPhoneCountryIso2(e.target.value)}
+              // Wide enough for most "Nombre (+dialCode)" pairs without
+              // truncating — a handful of the longest country names
+              // still clip in the closed state, but the full text always
+              // shows in the open dropdown itself.
+              style={{ flex: "0 0 auto", width: 168 }}
             >
-              {selectedCountry.label}
-            </span>
+              {WORLD_COUNTRIES.map((c) => (
+                <option key={c.iso2} value={c.iso2}>
+                  {c.name} ({c.dialCode})
+                </option>
+              ))}
+            </select>
             <input
               id="phone"
               name="phone"
               type="tel"
               autoComplete="tel"
-              placeholder={selectedCountry.phonePlaceholder}
+              placeholder={phonePlaceholder}
               required={phone.required}
               style={{ flex: 1, minWidth: 0 }}
             />
@@ -456,7 +492,7 @@ export default function RegistrationForm({
                 {cedula.label}
                 <Req required={cedula.required} />
               </label>
-              <input id="field_cedula" name="field_cedula" required={cedula.required} placeholder={selectedCountry.idPlaceholder} />
+              <input id="field_cedula" name="field_cedula" required={cedula.required} placeholder={idPlaceholder} />
             </div>
           )}
           {city && (
@@ -465,13 +501,13 @@ export default function RegistrationForm({
                 {city.label}
                 <Req required={city.required} />
               </label>
-              {countryCode === "+57" ? (
+              {country === "CO" ? (
                 <CityAutocomplete id="field_city" name="field_city" required={city.required} />
               ) : (
                 // Outside Colombia there's no reliable municipality list to
-                // validate against (see this file's own comment on
-                // COUNTRY_CODES) — free text instead of forcing a match
+                // validate against — free text instead of forcing a match
                 // against a list that was never built for this country.
+                // Keyed off País (residence), not the phone's dial code.
                 <input id="field_city" name="field_city" required={city.required} placeholder="Tu ciudad" />
               )}
             </div>

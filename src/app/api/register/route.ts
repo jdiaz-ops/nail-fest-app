@@ -13,6 +13,7 @@ import { splitName } from "@/lib/name";
 import { getOrgSettings } from "@/lib/settings";
 import { getCheckoutQuestions, LOCKED_KEYS, type LockedKey } from "@/lib/checkoutForm";
 import { isKnownCityLabel } from "@/lib/cityMatch";
+import { WORLD_COUNTRIES } from "@/lib/worldCountries";
 
 // The real registration path — the single busiest route on launch day —
 // synchronously awaits several real external calls in series (Meta CAPI,
@@ -41,6 +42,14 @@ const bodySchema = z.object({
   lastName: z.string().optional(),
   city: z.string(),
   profession: z.string(),
+  // País de residencia (ISO2, e.g. "CO") — NOT the phone's own dial code.
+  // Those are genuinely separate now (someone can live in Venezuela with
+  // a US phone number, see RegistrationForm.tsx's own comment) — `phone`
+  // above already carries whatever dial code the person actually picked
+  // for their number, independent of this. Hard-required regardless of
+  // any admin config, same treatment as email/fullName — this isn't a
+  // customizable CheckoutQuestion, it's a fixed structural field.
+  country: z.string().min(1),
   // The "Entradas" step (EventRegistration.tsx) — omitted entirely for
   // events with no TicketType rows yet (older/seeded events), which keep
   // registering exactly as before: ticketCount defaults to 1, no ticket
@@ -155,6 +164,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "missing_required_fields", fields: missing }, { status: 400 });
   }
 
+  // País must be a real ISO2 from the same list the form itself offers —
+  // same "never trust the client" reasoning as the city check below.
+  if (!WORLD_COUNTRIES.some((c) => c.iso2 === input.country)) {
+    return NextResponse.json({ error: "invalid_country" }, { status: 400 });
+  }
+
   // "Ask twice to catch typos" — see the confirmEmail field's own comment
   // on CheckoutQuestion. Checked here too (not just client-side in
   // RegistrationForm.tsx) so a direct API call can't skip it.
@@ -173,12 +188,15 @@ export async function POST(req: NextRequest) {
   // isn't required — that's already enforced by the missing-fields check
   // above; this only rejects a NON-empty value that isn't a real city.
   //
-  // Only enforced for a Colombian phone number (+57) — that's the only
-  // country with a real municipality list to validate against (see
-  // RegistrationForm.tsx's own city-field comment). Anyone registering
-  // with another country's number (Venezuela, etc. — see COUNTRY_CODES)
-  // gets a free-text city instead, both client- and server-side.
-  if (input.phone.startsWith("+57") && input.city.trim() && !isKnownCityLabel(input.city)) {
+  // Only enforced for someone who says they live in Colombia (input.country
+  // === "CO") — that's the only country with a real municipality list to
+  // validate against (see RegistrationForm.tsx's own city-field comment).
+  // Keyed off País (residence), NOT the phone's dial code — those are
+  // separate now (a Colombian resident might register with a foreign
+  // phone number, and that shouldn't switch off city validation). Anyone
+  // living elsewhere gets a free-text city instead, both client- and
+  // server-side.
+  if (input.country === "CO" && input.city.trim() && !isKnownCityLabel(input.city)) {
     return NextResponse.json({ error: "invalid_city" }, { status: 400 });
   }
 
@@ -303,6 +321,7 @@ export async function POST(req: NextRequest) {
             lastName,
             city: input.city || null,
             profession: input.profession || null,
+            country: input.country,
           },
           update: {
             phone: input.phone || null,
@@ -310,6 +329,7 @@ export async function POST(req: NextRequest) {
             lastName,
             city: input.city || null,
             profession: input.profession || null,
+            country: input.country,
           },
         });
 

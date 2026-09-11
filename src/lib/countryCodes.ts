@@ -13,9 +13,12 @@
 export interface CountryCodeOption {
   code: string;
   label: string;
-  // Full Spanish country name — used by RegistrationForm.tsx's own "País"
-  // question (the thing that actually drives countryCode now; label
-  // above is the compact flag+code shown as the phone's fixed prefix).
+  // ISO2 — lets RegistrationForm.tsx look up a hint by EITHER the "País"
+  // (residence) selection or the phone's own country selection
+  // (lib/worldCountries.ts, independent of each other now) without
+  // guessing from a bare dial code, which isn't unique (+1 alone can't
+  // tell Estados Unidos from Canadá).
+  iso2: string;
   name: string;
   // Example local mobile number, in whatever grouping that country
   // actually writes it — shown as the phone input's placeholder once
@@ -30,18 +33,24 @@ export interface CountryCodeOption {
 }
 
 export const COUNTRY_CODES: CountryCodeOption[] = [
-  { code: "+57", label: "🇨🇴 +57", name: "Colombia", phonePlaceholder: "321 1234567", idPlaceholder: "Ej: 1020304050 (cédula) o 900123456-7 (NIT de empresa)" },
-  { code: "+52", label: "🇲🇽 +52", name: "México", phonePlaceholder: "55 1234 5678", idPlaceholder: "Ej: RFC o CURP" },
-  { code: "+51", label: "🇵🇪 +51", name: "Perú", phonePlaceholder: "912 345 678", idPlaceholder: "Ej: 12345678 (DNI) o 20123456789 (RUC de empresa)" },
-  { code: "+593", label: "🇪🇨 +593", name: "Ecuador", phonePlaceholder: "99 123 4567", idPlaceholder: "Ej: 1234567890 (cédula) o 1234567890001 (RUC de empresa)" },
-  { code: "+507", label: "🇵🇦 +507", name: "Panamá", phonePlaceholder: "6123-4567", idPlaceholder: "Ej: 8-123-4567 (cédula) o RUC de empresa" },
+  { code: "+57", label: "🇨🇴 +57", iso2: "CO", name: "Colombia", phonePlaceholder: "321 1234567", idPlaceholder: "Ej: 1020304050 (cédula) o 900123456-7 (NIT de empresa)" },
+  { code: "+52", label: "🇲🇽 +52", iso2: "MX", name: "México", phonePlaceholder: "55 1234 5678", idPlaceholder: "Ej: RFC o CURP" },
+  { code: "+51", label: "🇵🇪 +51", iso2: "PE", name: "Perú", phonePlaceholder: "912 345 678", idPlaceholder: "Ej: 12345678 (DNI) o 20123456789 (RUC de empresa)" },
+  { code: "+593", label: "🇪🇨 +593", iso2: "EC", name: "Ecuador", phonePlaceholder: "99 123 4567", idPlaceholder: "Ej: 1234567890 (cédula) o 1234567890001 (RUC de empresa)" },
+  { code: "+507", label: "🇵🇦 +507", iso2: "PA", name: "Panamá", phonePlaceholder: "6123-4567", idPlaceholder: "Ej: 8-123-4567 (cédula) o RUC de empresa" },
   // Venezuela — same word as Colombia ("cédula de identidad"), but a
   // different prefix format and a different company ID (RIF, not NIT).
   // Every Venezuelan mobile starts with 04 + a 2-digit carrier code
   // (0412/0414/0424/0416/0426) + 7 digits.
-  { code: "+58", label: "🇻🇪 +58", name: "Venezuela", phonePlaceholder: "0412 1234567", idPlaceholder: "Ej: V-12345678 (cédula) o J-123456789 (RIF de empresa)" },
-  { code: "+56", label: "🇨🇱 +56", name: "Chile", phonePlaceholder: "9 1234 5678", idPlaceholder: "Ej: 12.345.678-9 (RUT)" },
-  { code: "+54", label: "🇦🇷 +54", name: "Argentina", phonePlaceholder: "11 1234-5678", idPlaceholder: "Ej: 12345678 (DNI) o CUIT de empresa" },
-  { code: "+34", label: "🇪🇸 +34", name: "España", phonePlaceholder: "612 345 678", idPlaceholder: "Ej: 12345678A (DNI/NIE) o CIF de empresa" },
-  { code: "+1", label: "🇺🇸 +1", name: "Estados Unidos", phonePlaceholder: "(555) 123-4567", idPlaceholder: "Documento de identidad (si aplica)" },
+  { code: "+58", label: "🇻🇪 +58", iso2: "VE", name: "Venezuela", phonePlaceholder: "0412 1234567", idPlaceholder: "Ej: V-12345678 (cédula) o J-123456789 (RIF de empresa)" },
+  { code: "+56", label: "🇨🇱 +56", iso2: "CL", name: "Chile", phonePlaceholder: "9 1234 5678", idPlaceholder: "Ej: 12.345.678-9 (RUT)" },
+  { code: "+54", label: "🇦🇷 +54", iso2: "AR", name: "Argentina", phonePlaceholder: "11 1234-5678", idPlaceholder: "Ej: 12345678 (DNI) o CUIT de empresa" },
+  { code: "+34", label: "🇪🇸 +34", iso2: "ES", name: "España", phonePlaceholder: "612 345 678", idPlaceholder: "Ej: 12345678A (DNI/NIE) o CIF de empresa" },
+  { code: "+1", label: "🇺🇸 +1", iso2: "US", name: "Estados Unidos", phonePlaceholder: "(555) 123-4567", idPlaceholder: "Documento de identidad (si aplica)" },
 ];
+
+// Every other country in the world (see lib/worldCountries.ts) falls back
+// to these generic hints — never an invented/guessed format for a
+// country nobody's actually verified, just an honest placeholder.
+export const GENERIC_PHONE_PLACEHOLDER = "Número de celular";
+export const GENERIC_ID_PLACEHOLDER = "Documento de identidad";

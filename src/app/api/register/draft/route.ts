@@ -28,6 +28,7 @@ const bodySchema = z.object({
   lastName: z.string().optional(),
   city: z.string().optional(),
   profession: z.string().optional(),
+  country: z.string().optional(),
   ticketTypeId: z.string().optional(),
   ticketCount: z.number().int().positive().optional(),
   utmSource: z.string().optional(),
@@ -75,6 +76,7 @@ export async function POST(req: NextRequest) {
         lastName: lastName || null,
         city: input.city || null,
         profession: input.profession || null,
+        country: input.country || null,
       },
       update: {
         phone: input.phone || undefined,
@@ -82,6 +84,7 @@ export async function POST(req: NextRequest) {
         lastName: lastName || undefined,
         city: input.city || undefined,
         profession: input.profession || undefined,
+        country: input.country || undefined,
       },
     });
 

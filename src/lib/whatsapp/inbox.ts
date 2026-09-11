@@ -3,7 +3,7 @@ import type { WhatsAppMessageKind, WhatsAppMessageStatus } from "@prisma/client"
 
 // Digits only — Meta's webhook payload identifies contacts by "wa_id"
 // (e.g. "573001234567", no "+"), while Person.phone is stored with the
-// leading "+" (see RegistrationForm.tsx's countryCode+localPhone). Compare
+// leading "+" (see RegistrationForm.tsx's phoneCountry.dialCode+localPhone). Compare
 // on digits only everywhere in this file instead of requiring an exact
 // string match either direction.
 function digitsOnly(phone: string): string {

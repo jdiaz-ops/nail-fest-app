@@ -7,8 +7,8 @@ import { track, ensureFbcCookie } from "./tracking";
 import { COUNTRY_CODES } from "@/lib/countryCodes";
 
 // Purely cosmetic — the phone the person submitted is stored/sent as raw
-// E.164 ("+573001234567", see RegistrationForm's countryCode+localPhone
-// concat), so this just re-groups it for the confirmation pill: country
+// E.164 ("+573001234567", see RegistrationForm's phoneCountry.dialCode +
+// localPhone concat), so this just re-groups it for the confirmation pill: country
 // code, then the rest in groups of 3 with the last group taking any
 // remainder (so a 10-digit CO mobile reads "+57 300 123 4567", matching
 // how the app already asks for it). Falls back to the raw string when the

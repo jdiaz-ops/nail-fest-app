@@ -14,6 +14,7 @@ export const conditionSchema = z.union([
   z.object({ field: z.literal("profession"), professions: z.array(z.string()).min(1) }),
   z.object({ field: z.literal("label"), labels: z.array(z.string()).min(1) }),
   z.object({ field: z.literal("phoneCountry"), codes: z.array(z.string()).min(1) }),
+  z.object({ field: z.literal("country"), countries: z.array(z.string()).min(1) }),
 ]);
 
 export const filterSchema = z.object({

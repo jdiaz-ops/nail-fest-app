@@ -34,6 +34,15 @@ model Person {
   // rather than true text so it stays usable as a segment filter — see
   // docs/PLAN.md "campos personalizables como filtros de segmentación".
   profession String?
+  // País de residencia — ISO 3166-1 alpha-2 (see lib/worldCountries.ts),
+  // NOT derived from Person.phone's own dial-code prefix (that's a
+  // separate thing entirely — someone can live in Venezuela with a US
+  // phone number, see RegistrationForm.tsx's own comment). Required on
+  // the registration form going forward but nullable here — historical
+  // rows imported before this field existed have no value to backfill.
+  // A real column (not decorative) so it's usable as a segment filter
+  // and a Personas filter, same as city/profession.
+  country   String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -46,6 +55,7 @@ model Person {
   @@index([phone])
   @@index([city])
   @@index([profession])
+  @@index([country])
 }
 
 // Reusable, organizer-managed list of profession/category options so the

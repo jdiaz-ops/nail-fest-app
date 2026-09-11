@@ -12,13 +12,20 @@ export type SegmentCondition =
   | { field: "profession"; professions: string[] }
   | { field: "label"; labels: string[] }
   // Derived from Person.phone's own country code prefix (E.164, e.g.
-  // "+58..." for Venezuela) — there's no separate country column, the
-  // phone number a person actually registered with already carries this,
-  // and for a WhatsApp broadcast the phone's country is the one that
-  // actually matters (see RegistrationForm.tsx's COUNTRY_CODES for the
-  // same list this reuses). `codes` holds the raw prefixes ("+58"), not
-  // labels — OR'd together same as every other multi-select condition.
-  | { field: "phoneCountry"; codes: string[] };
+  // "+58..." for Venezuela) — for a WhatsApp broadcast the phone's
+  // country is the one that actually matters (see RegistrationForm.tsx's
+  // COUNTRY_CODES for the same list this reuses). `codes` holds the raw
+  // prefixes ("+58"), not labels — OR'd together same as every other
+  // multi-select condition. NOT the same as `country` below — a person
+  // can live in one country and register with another's phone number,
+  // see RegistrationForm.tsx's own comment on why those two are separate
+  // fields now.
+  | { field: "phoneCountry"; codes: string[] }
+  // Person.country — a real, stored ISO2 (lib/worldCountries.ts) of
+  // where they say they LIVE, filled from the registration form's own
+  // required "País" question. `countries` holds ISO2 codes ("VE"), OR'd
+  // together same as every other multi-select condition.
+  | { field: "country"; countries: string[] };
 
 export interface SegmentFilter {
   include: SegmentCondition[];
@@ -51,6 +58,8 @@ function normalizeCondition(raw: any): SegmentCondition {
       return { field: "label", labels: raw.labels ?? [] };
     case "phoneCountry":
       return { field: "phoneCountry", codes: raw.codes ?? [] };
+    case "country":
+      return { field: "country", countries: raw.countries ?? [] };
     default:
       throw new Error(`Unknown segment condition field: ${raw?.field}`);
   }

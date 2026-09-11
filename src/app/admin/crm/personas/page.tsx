@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
+import { findCountry } from "@/lib/worldCountries";
 import { getLifecycleStagesBulk } from "@/lib/personTimeline";
 import CrmPageHeader from "../CrmPageHeader";
 import StatCard from "../StatCard";
@@ -13,16 +14,16 @@ const THIRTY_DAYS_AGO = () => new Date(Date.now() - 30 * 86_400_000);
 export default async function PersonasPage({
   searchParams,
 }: {
-  searchParams: { q?: string; city?: string; profession?: string };
+  searchParams: { q?: string; city?: string; profession?: string; country?: string };
 }) {
   const q = searchParams.q?.trim();
   const cityFilter = searchParams.city?.trim();
   const professionFilter = searchParams.profession?.trim();
+  const countryFilter = searchParams.country?.trim();
 
   // Every filter is optional and combines with AND (ciudad = Bucaramanga
   // Y profesión = Manicurista) — same posture as Segmentos' own builder,
-  // just a fixed two-field version here rather than the full condition
-  // list.
+  // just a fixed set of fields here rather than the full condition list.
   const where: Prisma.PersonWhereInput = {};
   if (q) {
     where.OR = [
@@ -34,8 +35,9 @@ export default async function PersonasPage({
   }
   if (cityFilter) where.city = cityFilter;
   if (professionFilter) where.profession = professionFilter;
+  if (countryFilter) where.country = countryFilter;
 
-  const [people, totalPeople, newLast30Days, cityRows, professionRows] = await Promise.all([
+  const [people, totalPeople, newLast30Days, cityRows, professionRows, countryRows] = await Promise.all([
     db.person.findMany({
       where,
       include: { _count: { select: { registrations: true } } },
@@ -48,9 +50,10 @@ export default async function PersonasPage({
     // option lists — same reasoning as Segmentos' own city filter: a
     // dropdown listing an option nobody actually has would just be a
     // dead end. Distinct here, not resolveSegment/countSegment (there's
-    // no saved SegmentFilter involved, just two plain equality filters).
+    // no saved SegmentFilter involved, just plain equality filters).
     db.person.findMany({ where: { city: { not: null } }, select: { city: true }, distinct: ["city"] }),
     db.person.findMany({ where: { profession: { not: null } }, select: { profession: true }, distinct: ["profession"] }),
+    db.person.findMany({ where: { country: { not: null } }, select: { country: true }, distinct: ["country"] }),
   ]);
   const cityOptions = cityRows
     .map((r) => r.city)
@@ -60,12 +63,22 @@ export default async function PersonasPage({
     .map((r) => r.profession)
     .filter((p): p is string => !!p && p.trim().length > 0)
     .sort((a, b) => a.localeCompare(b, "es"));
+  // ISO2 -> real country name (lib/worldCountries.ts) for display — the
+  // dropdown VALUE stays the ISO2 code (matches Person.country and the
+  // segment filter's own `countries`), only the LABEL is the human name.
+  const countryOptions = countryRows
+    .map((r) => r.country)
+    .filter((c): c is string => !!c)
+    .map((iso2) => ({ iso2, name: findCountry(iso2)?.name ?? iso2 }))
+    .sort((a, b) => a.name.localeCompare(b.name, "es"));
 
   // Real stage per person, computed in a handful of batched queries — see
   // getLifecycleStagesBulk's own comment for why this isn't the same
   // per-row approximation an earlier version of this page used.
   const stageByPerson = await getLifecycleStagesBulk(people.map((p) => p.id));
   const recurrentesTotal = Array.from(stageByPerson.values()).filter((s) => s === "RECURRENTE").length;
+
+  const hasAnyFilter = Boolean(q || cityFilter || professionFilter || countryFilter);
 
   return (
     <div>
@@ -108,10 +121,18 @@ export default async function PersonasPage({
             </option>
           ))}
         </select>
+        <select name="country" defaultValue={countryFilter ?? ""} style={{ padding: "8px 12px", border: "1px solid #e3e1dc", borderRadius: 8 }}>
+          <option value="">Todos los países</option>
+          {countryOptions.map((c) => (
+            <option key={c.iso2} value={c.iso2}>
+              {c.name}
+            </option>
+          ))}
+        </select>
         <button type="submit" className="primary" style={{ width: "auto", padding: "8px 16px" }}>
           Filtrar
         </button>
-        {(q || cityFilter || professionFilter) && (
+        {hasAnyFilter && (
           <Link href="/admin/crm/personas" style={{ fontSize: 13 }}>
             Quitar filtros
           </Link>
@@ -125,6 +146,7 @@ export default async function PersonasPage({
               <th style={{ padding: "10px 12px" }}>Nombre</th>
               <th style={{ padding: "10px 12px" }}>Correo</th>
               <th style={{ padding: "10px 12px" }}>Ciudad</th>
+              <th style={{ padding: "10px 12px" }}>País</th>
               <th style={{ padding: "10px 12px" }}>Registros</th>
               <th style={{ padding: "10px 12px" }}>Etapa</th>
               <th style={{ padding: "10px 12px" }}>Cliente desde</th>
@@ -140,6 +162,7 @@ export default async function PersonasPage({
                 </td>
                 <td style={{ padding: "10px 12px", color: "#5b5f6b" }}>{p.email}</td>
                 <td style={{ padding: "10px 12px" }}>{p.city ?? "—"}</td>
+                <td style={{ padding: "10px 12px" }}>{p.country ? findCountry(p.country)?.name ?? p.country : "—"}</td>
                 <td style={{ padding: "10px 12px" }}>{p._count.registrations}</td>
                 <td style={{ padding: "10px 12px" }}>
                   <StageBadge stage={stageByPerson.get(p.id) ?? "LEAD"} />
@@ -151,8 +174,8 @@ export default async function PersonasPage({
             ))}
             {people.length === 0 && (
               <tr>
-                <td colSpan={6} style={{ padding: "10px 12px", color: "#5b5f6b" }}>
-                  {q || cityFilter || professionFilter ? "Nadie coincide con esa búsqueda/filtro." : "Aún no hay personas registradas."}
+                <td colSpan={7} style={{ padding: "10px 12px", color: "#5b5f6b" }}>
+                  {hasAnyFilter ? "Nadie coincide con esa búsqueda/filtro." : "Aún no hay personas registradas."}
                 </td>
               </tr>
             )}
