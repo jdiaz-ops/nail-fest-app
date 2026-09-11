@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { resolveSegment, type SegmentFilter } from "@/lib/segments/builder";
+import { countSegment, type SegmentFilter } from "@/lib/segments/builder";
 import { requirePageUser } from "@/lib/auth/guard";
 import BroadcastComposer from "@/components/BroadcastComposer";
 import CrmPageHeader from "../CrmPageHeader";
@@ -31,12 +31,15 @@ export default async function BroadcastsPage() {
 
   // Live member count per segment, same as Segmentos' own list — a
   // broadcast should show the audience size it'd actually send to today,
-  // not a stale number.
+  // not a stale number. countSegment, not resolveSegment(...).length —
+  // see that function's own comment (this page had the same "fetch every
+  // full Person row for every segment just to count them" bug Difusiones
+  // did).
   const segments = await Promise.all(
     segmentRows.map(async (s) => ({
       id: s.id,
       name: s.name,
-      memberCount: (await resolveSegment(s.filter as unknown as SegmentFilter)).length,
+      memberCount: await countSegment(s.filter as unknown as SegmentFilter),
     }))
   );
 

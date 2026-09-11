@@ -119,3 +119,40 @@ export async function resolveSegment(rawFilter: SegmentFilter): Promise<Person[]
 
   return db.person.findMany({ where: { id: { in: finalIds } } });
 }
+
+/** Same set-membership resolution as resolveSegment, but for wherever
+ * only the SIZE of a segment is needed — never the actual Person rows.
+ * Difusiones (WhatsApp) and Broadcasts (email) both used to call
+ * `(await resolveSegment(filter)).length` for EVERY saved segment, in
+ * parallel, on every page load, just to show "N personas" next to each
+ * one in a <select>. For a broad segment (no include condition = "todos
+ * los registrados", the normal default) that meant fetching every
+ * column of every Person row — tens of thousands — only to throw the
+ * rows away and keep a count: the exact shape of query load that pushed
+ * /admin/crm/segments past its own function timeout before (see that
+ * page's own comment on the fix applied there) and was freezing
+ * Difusiones on open the same way.
+ *
+ * The "everyone" branch in particular resolves via a real DB-side
+ * `count()` instead of pulling every id into Node first — the other
+ * branch (a real filtered segment) already only ever deals in id
+ * strings via matchingPersonIds, so it stays cheap without needing the
+ * same trick. */
+export async function countSegment(rawFilter: SegmentFilter): Promise<number> {
+  const filter = normalizeFilter(rawFilter);
+
+  const excludeSets = await Promise.all(filter.exclude.map(matchingPersonIds));
+  const excluded = union(excludeSets);
+
+  if (filter.include.length === 0) {
+    return excluded.size === 0 ? db.person.count() : db.person.count({ where: { id: { notIn: [...excluded] } } });
+  }
+
+  const includeSets = await Promise.all(filter.include.map(matchingPersonIds));
+  const included = intersect(includeSets);
+  let count = 0;
+  for (const id of included) {
+    if (!excluded.has(id)) count++;
+  }
+  return count;
+}

@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { resolveSegment, type SegmentFilter } from "@/lib/segments/builder";
+import { countSegment, type SegmentFilter } from "@/lib/segments/builder";
 import { WHATSAPP_MERGE_TAGS } from "@/lib/whatsapp/mergeTags";
 import { getBroadcastStats } from "@/lib/whatsapp/broadcasts";
 import { whatsappProvider } from "@/lib/whatsapp";
@@ -50,11 +50,16 @@ export default async function WhatsAppDifusionesPage() {
     getOrgSettings(),
   ]);
 
+  // countSegment, not resolveSegment(...).length — this used to fetch
+  // every FULL Person row for every saved segment, in parallel, on every
+  // page load (for "todos los registrados", that's tens of thousands of
+  // rows just to throw away and keep a number) — see countSegment's own
+  // comment. That's what was actually freezing this page on open.
   const segments = await Promise.all(
     segmentRows.map(async (s) => ({
       id: s.id,
       name: s.name,
-      memberCount: (await resolveSegment(s.filter as unknown as SegmentFilter)).length,
+      memberCount: await countSegment(s.filter as unknown as SegmentFilter),
     }))
   );
 

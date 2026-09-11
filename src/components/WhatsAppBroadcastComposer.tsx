@@ -70,6 +70,18 @@ export default function WhatsAppBroadcastComposer({ segments, templates, mergeTa
   const [eligibilityLoading, setEligibilityLoading] = useState(false);
   const [scheduleKind, setScheduleKind] = useState<ScheduleKind>("IMMEDIATE");
   const [scheduledAtLocal, setScheduledAtLocal] = useState("");
+  // Segmento y plantilla vienen preseleccionados apenas se abre esta
+  // página (el primero de cada lista — ver sus propios useState arriba),
+  // así que un solo clic mal dado, sin revisar nada, podía mandar un
+  // mensaje real — con costo real — a decenas de miles de personas. Esto
+  // separa "enviar" en dos pasos: el submit del form ya no manda nada —
+  // solo abre este resumen y BLOQUEA el resto del formulario mientras
+  // tanto (ver los `disabled={confirming}` más abajo), para que lo que
+  // se confirma sea exactamente lo que se termina enviando — y el envío
+  // de verdad solo ocurre al marcar la casilla y dar clic en el botón de
+  // confirmación aparte.
+  const [confirming, setConfirming] = useState(false);
+  const [confirmChecked, setConfirmChecked] = useState(false);
 
   const selectedSegment = segments.find((s) => s.id === segmentId);
   const selectedTemplate = templates.find((t) => t.id === templateId);
@@ -115,7 +127,9 @@ export default function WhatsAppBroadcastComposer({ segments, templates, mergeTa
     };
   }, [segmentId]);
 
-  async function handleSend(e: React.FormEvent) {
+  // The form's own submit — no longer sends anything. Just validates the
+  // schedule field and opens the confirmation step below.
+  function handleReview(e: React.FormEvent) {
     e.preventDefault();
     setResult(null);
 
@@ -123,6 +137,20 @@ export default function WhatsAppBroadcastComposer({ segments, templates, mergeTa
       setResult("Elige una fecha y hora para programar el envío.");
       return;
     }
+
+    setConfirming(true);
+  }
+
+  function handleCancelConfirm() {
+    setConfirming(false);
+    setConfirmChecked(false);
+  }
+
+  // The actual send — only ever called from the confirmation step's own
+  // button (handleReview above never calls this), and only once
+  // confirmChecked is true (the button stays disabled otherwise).
+  async function handleConfirmSend() {
+    setResult(null);
 
     // Read the datetime-local value against the ORG's configured
     // timezone, not the browser's own — an admin scheduling from
@@ -165,9 +193,13 @@ export default function WhatsAppBroadcastComposer({ segments, templates, mergeTa
       setAssignLabelName("");
       setScheduleKind("IMMEDIATE");
       setScheduledAtLocal("");
+      setConfirming(false);
+      setConfirmChecked(false);
       router.refresh();
     } else {
       setResult(`Error al enviar: ${body?.error ?? "revisa la consola"}`);
+      // Se queda en el paso de confirmación — un error del servidor no
+      // significa que haya que volver a revisar todo desde cero.
     }
   }
 
@@ -195,12 +227,12 @@ export default function WhatsAppBroadcastComposer({ segments, templates, mergeTa
   }
 
   return (
-    <form onSubmit={handleSend} style={{ maxWidth: 900 }}>
+    <form onSubmit={handleReview} style={{ maxWidth: 900 }}>
       <h2 style={{ fontSize: 16 }}>Nueva difusión</h2>
 
       <div className="field">
         <label htmlFor="segmentId">Segmento</label>
-        <select id="segmentId" value={segmentId} onChange={(e) => setSegmentId(e.target.value)} required>
+        <select id="segmentId" value={segmentId} onChange={(e) => setSegmentId(e.target.value)} disabled={confirming} required>
           {segments.map((s) => (
             <option key={s.id} value={s.id}>
               {s.name} — {s.memberCount} {s.memberCount === 1 ? "persona" : "personas"}
@@ -214,7 +246,7 @@ export default function WhatsAppBroadcastComposer({ segments, templates, mergeTa
 
       <div className="field">
         <label htmlFor="templateId">Plantilla (aprobada en Meta)</label>
-        <select id="templateId" value={templateId} onChange={(e) => setTemplateId(e.target.value)} required>
+        <select id="templateId" value={templateId} onChange={(e) => setTemplateId(e.target.value)} disabled={confirming} required>
           {approvedTemplates.map((t) => (
             <option key={t.id} value={t.id}>
               {t.name} ({t.language})
@@ -233,6 +265,7 @@ export default function WhatsAppBroadcastComposer({ segments, templates, mergeTa
                 id={`var_${slot}`}
                 value={mapping[slot] ?? ""}
                 onChange={(e) => setMapping((m) => ({ ...m, [slot]: e.target.value }))}
+                disabled={confirming}
                 required
               >
                 <option value="" disabled>
@@ -263,6 +296,7 @@ export default function WhatsAppBroadcastComposer({ segments, templates, mergeTa
           value={assignLabelName}
           onChange={(e) => setAssignLabelName(e.target.value)}
           placeholder="ej. contactado-cali-2026"
+          disabled={confirming}
         />
         <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>
           Útil para excluirlos de una próxima tanda desde Segmentos — se crea sola si no existe.
@@ -271,7 +305,7 @@ export default function WhatsAppBroadcastComposer({ segments, templates, mergeTa
 
       <div className="field">
         <label htmlFor="scheduleKind">Enviar</label>
-        <select id="scheduleKind" value={scheduleKind} onChange={(e) => setScheduleKind(e.target.value as ScheduleKind)}>
+        <select id="scheduleKind" value={scheduleKind} onChange={(e) => setScheduleKind(e.target.value as ScheduleKind)} disabled={confirming}>
           <option value="IMMEDIATE">Inmediatamente</option>
           <option value="AT_DATETIME">A una fecha y hora programada</option>
         </select>
@@ -285,6 +319,7 @@ export default function WhatsAppBroadcastComposer({ segments, templates, mergeTa
             type="datetime-local"
             value={scheduledAtLocal}
             onChange={(e) => setScheduledAtLocal(e.target.value)}
+            disabled={confirming}
             required
           />
           <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>
@@ -328,9 +363,56 @@ export default function WhatsAppBroadcastComposer({ segments, templates, mergeTa
         )}
       </div>
 
-      <button className="primary" type="submit" disabled={sending} style={{ width: "auto", padding: "10px 24px" }}>
-        {sending ? "Enviando..." : scheduleKind === "IMMEDIATE" ? "Enviar difusión" : "Programar envío"}
-      </button>
+      {!confirming ? (
+        <button className="primary" type="submit" style={{ width: "auto", padding: "10px 24px" }}>
+          {scheduleKind === "IMMEDIATE" ? "Revisar y enviar" : "Revisar y programar"}
+        </button>
+      ) : (
+        <div style={{ border: "1px solid var(--danger)", borderRadius: 10, padding: 16, background: "#fdf2f4" }}>
+          <p style={{ fontWeight: 700, margin: "0 0 10px", color: "var(--danger)" }}>⚠ Confirma antes de enviar — esto no se puede deshacer</p>
+          <ul style={{ margin: "0 0 12px", paddingLeft: 20, fontSize: 13.5, lineHeight: 1.7 }}>
+            <li>
+              Segmento: <strong>{selectedSegment?.name}</strong>
+            </li>
+            <li>
+              Le llegará realmente a <strong>{eligibility?.eligible ?? selectedSegment?.memberCount ?? 0}</strong>{" "}
+              {(eligibility?.eligible ?? selectedSegment?.memberCount ?? 0) === 1 ? "persona" : "personas"}
+            </li>
+            <li>
+              Plantilla: <strong>{selectedTemplate?.name}</strong> ({selectedTemplate?.language})
+            </li>
+            <li>
+              Envío:{" "}
+              <strong>
+                {scheduleKind === "IMMEDIATE"
+                  ? "inmediato — sale apenas confirmes"
+                  : `programado para ${scheduledAtLocal.replace("T", " ")} (hora ${orgTimezone})`}
+              </strong>
+            </li>
+          </ul>
+          <label style={{ display: "flex", gap: 8, alignItems: "flex-start", fontSize: 13.5, marginBottom: 14 }}>
+            <input type="checkbox" checked={confirmChecked} onChange={(e) => setConfirmChecked(e.target.checked)} style={{ marginTop: 3 }} />
+            <span>
+              Confirmo que revisé el segmento y la plantilla de arriba, y quiero {scheduleKind === "IMMEDIATE" ? "enviar esto ahora" : "programar este envío"}{" "}
+              a {eligibility?.eligible ?? selectedSegment?.memberCount ?? 0} {(eligibility?.eligible ?? selectedSegment?.memberCount ?? 0) === 1 ? "persona" : "personas"}.
+            </span>
+          </label>
+          <div style={{ display: "flex", gap: 10 }}>
+            <button type="button" onClick={handleCancelConfirm} disabled={sending} style={{ padding: "10px 20px", background: "#fff", border: "1px solid #e3e1dc", borderRadius: 8, cursor: "pointer" }}>
+              Cancelar
+            </button>
+            <button
+              type="button"
+              className="primary"
+              onClick={handleConfirmSend}
+              disabled={!confirmChecked || sending}
+              style={{ width: "auto", padding: "10px 24px" }}
+            >
+              {sending ? "Enviando..." : scheduleKind === "IMMEDIATE" ? "Sí, enviar difusión ahora" : "Sí, programar envío"}
+            </button>
+          </div>
+        </div>
+      )}
       {result && <p style={{ marginTop: 12 }}>{result}</p>}
     </form>
   );
