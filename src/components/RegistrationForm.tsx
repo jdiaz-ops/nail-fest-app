@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { attributionFromSearchParams } from "@/lib/utm";
 import CityAutocomplete from "./CityAutocomplete";
 import { isKnownCityLabel } from "@/lib/cityMatch";
+import { suggestEmailCorrection } from "@/lib/emailTypo";
 import { COUNTRY_CODES } from "@/lib/countryCodes";
 
 export interface QuestionView {
@@ -113,6 +114,21 @@ export default function RegistrationForm({
   const searchParams = useSearchParams();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [countryCode, setCountryCode] = useState("+57");
+  // "¿hay posibilidad de tener un detector de correos mal redactados?" —
+  // a live suggestion while typing (gmial.com -> ¿quisiste decir
+  // gmail.com?), never a hard block — see emailTypo.ts's own comment.
+  const [emailSuggestion, setEmailSuggestion] = useState<string | null>(null);
+  const emailInputRef = useRef<HTMLInputElement>(null);
+
+  function handleEmailChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setEmailSuggestion(suggestEmailCorrection(e.currentTarget.value));
+  }
+
+  function applyEmailSuggestion() {
+    if (!emailSuggestion || !emailInputRef.current) return;
+    emailInputRef.current.value = emailSuggestion;
+    setEmailSuggestion(null);
+  }
 
   // Real abandoned-cart tracking: the first moment we know who someone is,
   // before they've necessarily finished (or even started) the rest of the
@@ -320,7 +336,38 @@ export default function RegistrationForm({
             {email.label}
             <Req required />
           </label>
-          <input id="field_email" name="field_email" type="email" autoComplete="email" required onBlur={handleEmailBlur} />
+          <input
+            id="field_email"
+            name="field_email"
+            type="email"
+            autoComplete="email"
+            required
+            ref={emailInputRef}
+            onChange={handleEmailChange}
+            onBlur={handleEmailBlur}
+          />
+          {emailSuggestion && (
+            <p style={{ fontSize: 12, color: "#8a6d3b", margin: "4px 0 0" }}>
+              ¿Quisiste decir{" "}
+              <button
+                type="button"
+                onClick={applyEmailSuggestion}
+                style={{
+                  background: "none",
+                  border: "none",
+                  padding: 0,
+                  font: "inherit",
+                  fontWeight: 600,
+                  color: "inherit",
+                  textDecoration: "underline",
+                  cursor: "pointer",
+                }}
+              >
+                {emailSuggestion}
+              </button>
+              ?
+            </p>
+          )}
         </div>
       )}
 

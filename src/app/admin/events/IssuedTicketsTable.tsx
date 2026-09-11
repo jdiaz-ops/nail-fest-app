@@ -38,6 +38,13 @@ export interface TicketRow {
   utmSource: string | null;
 }
 
+// "¿por ejemplo, nosotros podemos detectar que esta persona rebotó el
+// correo... es muy posible que esta persona entró mal el correo?" — the
+// reactive half of catching a bad email address: everything that means
+// the confirmation email plainly never reached a real inbox (as opposed
+// to SENT/DELIVERED/OPENED/CLICKED, which all mean it likely did).
+const PROBLEM_EMAIL_STATUSES = new Set(["BOUNCED", "COMPLAINED", "FAILED"]);
+
 const SCAN_RESULT_LABEL: Record<string, string> = {
   VALID_FIRST: "Entrada válida",
   VALID_REENTRY: "Reingreso",
@@ -76,9 +83,11 @@ export default function IssuedTicketsTable({
   const [query, setQuery] = useState("");
   const [ticketTypeFilter, setTicketTypeFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "checked_in" | "not_checked_in" | "cancelled">("all");
+  const [emailFilter, setEmailFilter] = useState<"all" | "problem">("all");
   const [openId, setOpenId] = useState<string | null>(null);
 
   const ticketTypeNames = useMemo(() => Array.from(new Set(rows.map((r) => r.ticketTypeName).filter(Boolean))) as string[], [rows]);
+  const problemCount = useMemo(() => rows.filter((r) => r.emailStatus && PROBLEM_EMAIL_STATUSES.has(r.emailStatus)).length, [rows]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -88,6 +97,7 @@ export default function IssuedTicketsTable({
       if (statusFilter !== "cancelled" && r.status === "CANCELLED") return false;
       if (statusFilter === "checked_in" && r.checkedInCount === 0) return false;
       if (statusFilter === "not_checked_in" && r.checkedInCount > 0) return false;
+      if (emailFilter === "problem" && !(r.emailStatus && PROBLEM_EMAIL_STATUSES.has(r.emailStatus))) return false;
       if (!q) return true;
       return (
         fullName(r.person).toLowerCase().includes(q) ||
@@ -96,7 +106,7 @@ export default function IssuedTicketsTable({
         (r.qrToken ?? "").toLowerCase().includes(q)
       );
     });
-  }, [rows, query, ticketTypeFilter, statusFilter]);
+  }, [rows, query, ticketTypeFilter, statusFilter, emailFilter]);
 
   const openRow = rows.find((r) => r.id === openId) ?? null;
 
@@ -108,6 +118,25 @@ export default function IssuedTicketsTable({
     <div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
         <h2 style={{ fontSize: 18, margin: 0 }}>Entradas emitidas ({filtered.length})</h2>
+        {problemCount > 0 && (
+          <button
+            type="button"
+            onClick={() => setEmailFilter("problem")}
+            title="Correos que rebotaron, fallaron al enviarse o fueron marcados como spam — es muy posible que la dirección esté mal escrita."
+            style={{
+              padding: "4px 10px",
+              borderRadius: 999,
+              fontSize: 12,
+              fontWeight: 600,
+              background: "#fbe9ea",
+              color: "#a3212b",
+              border: "1px solid #f3c6ca",
+              cursor: "pointer",
+            }}
+          >
+            ⚠ {problemCount} correo{problemCount === 1 ? "" : "s"} con problema
+          </button>
+        )}
       </div>
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
@@ -130,6 +159,10 @@ export default function IssuedTicketsTable({
           <option value="checked_in">Ya entraron</option>
           <option value="not_checked_in">Aún no entran</option>
           <option value="cancelled">Canceladas</option>
+        </select>
+        <select value={emailFilter} onChange={(e) => setEmailFilter(e.target.value as typeof emailFilter)} style={{ padding: "8px 10px" }}>
+          <option value="all">Todos los correos</option>
+          <option value="problem">Solo correos con problema ({problemCount})</option>
         </select>
       </div>
 
