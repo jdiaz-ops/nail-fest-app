@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import { Suspense } from "react";
 import { db } from "@/lib/db";
+import { probeImageDimensions } from "@/lib/imageDimensions";
 import { getOrderedProfessionOptions } from "@/lib/professions";
 import { getOrgSettings } from "@/lib/settings";
 import { formatDateInTz } from "@/lib/dateFormat";
@@ -31,12 +32,16 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
     );
   }
 
-  const [professionOptions, metaConnection, orgSettings, checkoutQuestions, ticketTypes] = await Promise.all([
+  const [professionOptions, metaConnection, orgSettings, checkoutQuestions, ticketTypes, imageDimensions] = await Promise.all([
     getOrderedProfessionOptions(),
     db.metaConnection.findFirst({ orderBy: { createdAt: "desc" }, select: { pixelId: true } }),
     getOrgSettings(),
     getCheckoutQuestions(),
     getPublicTicketTypes(event.id),
+    // Real aspect ratio of THIS event's own hero image — see
+    // imageDimensions.ts's own comment for why a hardcoded guess broke
+    // mobile. Skipped entirely when there's no image at all.
+    event.imageUrl ? probeImageDimensions(event.imageUrl) : Promise.resolve(null),
   ]);
   const questions: QuestionView[] = checkoutQuestions.map((q) => ({
     key: q.key,
@@ -67,7 +72,7 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
     <main className="event-page">
       <MetaPixelScript pixelId={metaConnection?.pixelId ?? null} />
 
-      {event.imageUrl && (
+      {event.imageUrl && imageDimensions && (
         // next/image, not a plain <img> — this is the single most-loaded
         // page in the app (the public landing page), and an admin can
         // upload up to 5MB (see uploads/event-image/route.ts's
@@ -75,22 +80,25 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
         // every connection. Next resizes/re-encodes per device and serves
         // through Vercel's image CDN instead.
         //
-        // fill mode, not width/height={1600}/{900} — an earlier version
-        // hardcoded a 16:9 width/height as "only a hint for srcset math",
-        // but width/height ALSO sets the img's real intrinsic
-        // aspect-ratio, which forces every event's hero into a 16:9 crop
-        // window regardless of the real uploaded photo's own shape (most
-        // event photos aren't 16:9 — a square or portrait upload got
-        // cropped far more aggressively than before, which is what broke
-        // mobile specifically after that change). fill removes that
-        // guess entirely: the wrapping .event-page-hero div now owns a
-        // real, fixed height (see globals.css), and this just covers
-        // that box using the image's ACTUAL shape — the same visual
-        // result the plain <img> this replaces always had. priority
-        // since this is almost always the page's LCP element — the
-        // default lazy-loading would be wrong for something visible
-        // before any scroll.
-        <div className="event-page-hero">
+        // fill + aspect-ratio on the WRAPPING div, not width/height on
+        // the <img> itself — verified directly (see globals.css's own
+        // comment) that an <img> with object-fit and only max-height (no
+        // explicit height) always renders at max-height regardless of
+        // its real intrinsic ratio, in every browser tested; passing the
+        // real width/height as Image props doesn't change that, because
+        // the img's OWN computed aspect-ratio gets overridden by that
+        // same quirk. Setting aspect-ratio on this plain div instead
+        // (not a replaced/object-fit element, not subject to the quirk)
+        // is what actually makes a wide banner shrink to its own real
+        // shape instead of getting cropped to fill a fixed box — Nail
+        // Fest's own event images are wide banner graphics with
+        // edge-to-edge headline text, nowhere near 16:9, and that
+        // cropping (worse the narrower the screen) is what broke mobile.
+        // priority since this is almost always the page's LCP element.
+        <div
+          className="event-page-hero"
+          style={{ aspectRatio: `${imageDimensions.width} / ${imageDimensions.height}` }}
+        >
           <Image
             src={event.imageUrl}
             alt={event.name}

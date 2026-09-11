@@ -246,23 +246,30 @@ button.primary:disabled {
   }
 }
 
-/* Wraps the next/image `fill` element (see [eventSlug]/page.tsx's own
-   comment on why fill, not width/height, is what makes this crop the
-   REAL uploaded photo's shape instead of forcing a guessed 16:9 ratio).
-   position:relative + a real height (not just max-height) is what fill
-   needs to have a box to fill in the first place — an absolutely
-   positioned child can't size itself from a max-height alone. */
+/* The box shrinks to the REAL image's own shape (a wide banner renders
+   short, not cropped to fill a forced box) and only clamps for an
+   unusually TALL upload. `aspect-ratio` is set on THIS plain div, not on
+   the <img> itself — an <img> with `object-fit` and only `max-height`
+   (no explicit `height`) empirically resolves its computed height to
+   max-height regardless of its own intrinsic ratio in every browser
+   tested (verified directly — this is what silently broke the mobile
+   hero the first two times this was "fixed" this session, real or
+   guessed width/height on the <img> made no difference). A plain div
+   isn't subject to that quirk, so aspect-ratio here — set inline per
+   event from the REAL probed dimensions, see [eventSlug]/page.tsx's own
+   comment — actually shrinks for a wide image and only clamps via
+   max-height for a genuinely tall one. */
 .event-page-hero {
   position: relative;
   width: 100%;
-  height: 260px;
+  max-height: 260px;
   border-radius: 12px;
   margin-bottom: 20px;
   overflow: hidden;
 }
 @media (min-width: 900px) {
   .event-page-hero {
-    height: 420px;
+    max-height: 420px;
   }
 }
 

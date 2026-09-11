@@ -378,10 +378,30 @@ export default function RegistrationForm({
         </div>
       )}
 
-      {/* Phone gets its own full-width row — it already splits internally
-          into a country select + number input, so pairing it side by side
-          with Email (each getting half the modal's width) squeezed that
-          number input down to a few characters and made it unreadable. */}
+      {/* "después del email debería ir un seleccionador de país... según
+          lo que escoge ahí pues se adapta el código país del celular" —
+          Cúcuta ya trae tráfico real de Venezuela, no solo Colombia, y
+          "mañana Ecuador o Perú" — un solo selector aquí (no otro
+          escondido junto al teléfono) es lo único que decide countryCode:
+          maneja el prefijo del celular, el ejemplo de cédula/NIT/RIF/DNI
+          de countryCodes.ts, y si el campo Ciudad usa el autocompletar
+          colombiano o texto libre. Colombia preseleccionado — es
+          efectivamente toda la audiencia hoy. */}
+      <div className="field">
+        <label htmlFor="field_country">País</label>
+        <select id="field_country" value={countryCode} onChange={(e) => setCountryCode(e.target.value)}>
+          {COUNTRY_CODES.map((c) => (
+            <option key={c.code} value={c.code}>
+              {c.label} {c.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Phone gets its own full-width row — el prefijo de país (del
+          selector "País" de arriba) se muestra como una insignia fija
+          aquí, ya no como su propio desplegable editable — un solo
+          selector maneja los dos, no dos que se puedan desincronizar. */}
       {phone && (
         <div className="field">
           <label htmlFor="phone">
@@ -389,23 +409,22 @@ export default function RegistrationForm({
             <Req required={phone.required} />
           </label>
           <div style={{ display: "flex", gap: 8 }}>
-            <select
-              aria-label="Código de país"
-              value={countryCode}
-              onChange={(e) => setCountryCode(e.target.value)}
-              // .field select in globals.css sets width:100% — inside this
-              // flex row that becomes this select's flex-basis (flex-basis:
-              // auto defers to `width`), so it was eating almost the whole
-              // row and squeezing the number input into a sliver. A fixed
-              // width here overrides that instead of fighting the cascade.
-              style={{ flex: "0 0 auto", width: 112 }}
+            <span
+              aria-hidden="true"
+              style={{
+                flex: "0 0 auto",
+                width: 72,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                border: "1px solid var(--border, #e3e1dc)",
+                borderRadius: 8,
+                background: "#f6f5f2",
+                fontSize: 14,
+              }}
             >
-              {COUNTRY_CODES.map((c) => (
-                <option key={c.code} value={c.code}>
-                  {c.label}
-                </option>
-              ))}
-            </select>
+              {selectedCountry.label}
+            </span>
             <input
               id="phone"
               name="phone"

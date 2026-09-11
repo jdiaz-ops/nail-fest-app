@@ -72,6 +72,13 @@ function isAutoApplicable(row: CityCleanupRow): boolean {
 
 const MAX_SUGGESTIONS = 8;
 
+// Computed once at module load (not per-row, not per-keystroke) — the
+// starting "browse" list shown before an admin types anything into the
+// "otra ciudad" search. Sorted so that starting list is at least
+// coherent (A first) rather than whatever order colombiaCities.ts
+// happens to declare them in.
+const ALPHABETICAL_CITIES = [...COLOMBIA_CITIES].sort((a, b) => a.label.localeCompare(b.label, "es"));
+
 // The per-row action picker — deliberately NOT a plain <select> with every
 // one of the ~1,100 COLOMBIA_CITIES entries as a static <option>, the way
 // this used to work. That was fine for a handful of rows, but this page's
@@ -100,12 +107,29 @@ function CityActionPicker({
   const [pickingOther, setPickingOther] = useState(false);
   const [query, setQuery] = useState("");
 
-  const selectValue = isBuiltIn ? action : "other";
+  // Choosing "Elegir otra ciudad..." doesn't change `action` right away
+  // (there's nothing to commit until an actual city is picked from the
+  // search below) — it only flips this row into "picking" mode. Without
+  // `pickingOther` here too, the <select> immediately snapped back to
+  // whatever `action` already was (e.g. "keep") the moment isBuiltIn was
+  // recomputed on the next render, which visually looked like the click
+  // did nothing and the search box never actually appeared — "no carga
+  // ninguna lista" wasn't just the empty starting list (fixed above),
+  // the search box was never even showing itself.
+  const selectValue = pickingOther || !isBuiltIn ? "other" : action;
   const customLabel = !isBuiltIn && action.startsWith("merge:") ? action.slice("merge:".length) : null;
 
   const suggestions = useMemo(() => {
     const q = normalizeCityString(query);
-    if (!q) return [];
+    // Empty query right after choosing "Elegir otra ciudad..." — show a
+    // real starting list (alphabetical) instead of nothing. An empty
+    // list here read as "no carga ninguna lista" (broken), even though
+    // typing DID filter correctly — CityAutocomplete.tsx's own
+    // empty-query-shows-nothing behavior works there because focusing a
+    // blank field naturally invites typing; here the admin just clicked
+    // an explicit "choose from the list" action, so something has to
+    // actually show up before they type anything.
+    if (!q) return ALPHABETICAL_CITIES.slice(0, MAX_SUGGESTIONS);
     const startsWith = COLOMBIA_CITIES.filter((c) => normalizeCityString(c.label).startsWith(q));
     const contains = COLOMBIA_CITIES.filter(
       (c) => !normalizeCityString(c.label).startsWith(q) && normalizeCityString(c.label).includes(q)
