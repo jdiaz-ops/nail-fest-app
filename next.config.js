@@ -1,6 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // The public event page's hero image (event.imageUrl) is an
+  // admin-uploaded Vercel Blob URL, not a build-time-known local asset —
+  // next/image refuses to optimize a remote host it doesn't know about,
+  // so it has to be allowlisted explicitly. Vercel Blob public URLs are
+  // always `<random-id>.public.blob.vercel-storage.com` — the wildcard
+  // covers every store/account, not just this project's current one.
+  images: {
+    remotePatterns: [{ protocol: "https", hostname: "*.public.blob.vercel-storage.com" }],
+  },
   // pdfkit (used by lib/ticketPdf.ts — the PDF ticket attached to the
   // confirmation email, and served live by /api/ticket-pdf/[token] for
   // the WhatsApp resend button) resolves its built-in standard fonts

@@ -29,6 +29,13 @@ export interface TicketRow {
   scans: ScanEntry[];
   emailStatus: string | null;
   emailAt: string | null;
+  // De dónde vino ESTA inscripción — null cuando el link no traía
+  // utm_source (tráfico orgánico, o un link sin etiquetar). Ya no vive
+  // solo en /admin/crm/registrations ("Inscritos", eliminada — ver el
+  // comentario en crm/layout.tsx) — es la única columna que esa lista
+  // tenía y esta no, así que se movió aquí en vez de duplicarse en dos
+  // sitios.
+  utmSource: string | null;
 }
 
 const SCAN_RESULT_LABEL: Record<string, string> = {
@@ -133,6 +140,7 @@ export default function IssuedTicketsTable({
               <th style={{ padding: "8px 12px" }}>Nombre</th>
               <th style={{ padding: "8px 12px" }}>Tipo de entrada</th>
               <th style={{ padding: "8px 12px" }}>Emitida</th>
+              <th style={{ padding: "8px 12px" }}>Fuente</th>
               <th style={{ padding: "8px 12px" }}>Check-in</th>
               <th style={{ padding: "8px 12px" }}>Correo</th>
               <th style={{ padding: "8px 12px" }}>Estado</th>
@@ -155,6 +163,7 @@ export default function IssuedTicketsTable({
                   <td style={{ padding: "10px 12px", color: "#5b5f6b" }}>
                     {formatDateInTz(new Date(r.createdAt), { dateStyle: "medium" }, timezone, language)}
                   </td>
+                  <td style={{ padding: "10px 12px", color: "#5b5f6b" }}>{r.utmSource ?? "orgánico"}</td>
                   <td style={{ padding: "10px 12px" }}>
                     {r.checkedInCount} / {r.ticketCount}
                   </td>
@@ -183,7 +192,7 @@ export default function IssuedTicketsTable({
             })}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={6} style={{ padding: "10px 12px", color: "#5b5f6b" }}>
+                <td colSpan={7} style={{ padding: "10px 12px", color: "#5b5f6b" }}>
                   {rows.length === 0 ? "Aún no hay entradas emitidas para este evento." : "Nadie coincide con esa búsqueda/filtro."}
                 </td>
               </tr>

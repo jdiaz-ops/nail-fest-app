@@ -7,10 +7,15 @@ import { requirePageUser } from "@/lib/auth/guard";
 // separate top-nav tabs.
 const fraunces = Fraunces({ subsets: ["latin"], weight: ["600", "900"] });
 
+// "Inscritos" (una fila por inscripción, con su fuente de tráfico —
+// vivía en /admin/crm/registrations) se eliminó — duplicaba casi toda su
+// tabla con Entradas emitidas (dentro de cada evento), y la única
+// columna real que no tenía equivalente ahí (Fuente/utmSource) se movió
+// a Entradas emitidas en vez de seguir mostrándose en dos sitios. Ver el
+// historial de git si hace falta recuperar la página.
 const NAV: { href: string; label: string; adminOnly?: boolean }[] = [
   { href: "/admin/crm/personas", label: "Personas" },
   { href: "/admin/crm/ciudades", label: "Limpiar ciudades" },
-  { href: "/admin/crm/registrations", label: "Inscritos" },
   { href: "/admin/crm/abandonados", label: "Abandonados" },
   // Importar/Broadcasts/Segmentos: COORDINADOR doesn't get these — hidden
   // here AND gated again on each own page (see those pages' own

@@ -64,6 +64,10 @@ const bodySchema = z.object({
   // RegistrationForm.tsx) so Meta dedupes the pair instead of double-
   // counting — see MetaPixelScript.tsx for the full explanation.
   purchaseEventId: z.string().optional(),
+  // Honeypot — see RegistrationForm.tsx's own comment on the field
+  // itself. Always empty from the real form; a script filling every
+  // input it finds is the only thing likely to populate it.
+  website: z.string().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -73,6 +77,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "invalid_body", issues: parsed.error.issues }, { status: 400 });
   }
   const input = parsed.data;
+
+  // Honeypot tripped — same response shape as any other validation
+  // failure (nothing that tells an automated caller WHY this failed
+  // differently from a normal bad request), and nothing touches the DB:
+  // no Person, no Registration, no email/WhatsApp send, no Meta event.
+  if (input.website) {
+    return NextResponse.json({ error: "invalid_body" }, { status: 400 });
+  }
 
   const event = await db.event.findUnique({ where: { slug: input.eventSlug } });
   if (!event) {
@@ -84,6 +96,13 @@ export async function POST(req: NextRequest) {
   if (event.status === "DRAFT") {
     return NextResponse.json({ error: "event_not_found" }, { status: 404 });
   }
+  // A second, narrowed-non-null binding used only inside the
+  // attemptRegistration transaction closure further down — TS doesn't
+  // carry the `if (!event) return` narrowing above through that nested
+  // function declaration, even though `event` itself is a plain `const`.
+  // Every other, non-nested use of `event` in this route keeps using the
+  // original binding unchanged.
+  const confirmedEvent = event;
 
   // Required-ness for phone/city/profession/cedula/every custom question
   // comes from live /admin/settings/checkout-form config, not a fixed zod
@@ -161,18 +180,29 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "not_permitted" }, { status: 403 });
   }
 
-  // Fetched before the ticket-type capacity check below so a resend can
-  // exclude the person's OWN prior reservation from "how many are already
-  // taken" — otherwise resubmitting the same order would look like it's
-  // competing with itself for the last spot.
+  // Fetched before the capacity checks below so a resend can exclude the
+  // person's OWN prior reservation from "how many are already taken" —
+  // otherwise resubmitting the same order would look like it's competing
+  // with itself for the last spot.
   const existingPerson = await db.person.findUnique({ where: { email: normalizedEmail } });
   const existingRegistrationForCapacityCheck = existingPerson
     ? await db.registration.findUnique({ where: { personId_eventId: { personId: existingPerson.id, eventId: event.id } } })
     : null;
 
   let ticketCount = 1;
+  // Declared out here (not just inside the `if` below) so the transaction
+  // closure further down can still read its `.quantity` — see that
+  // closure's own comment on why the actual remaining-count check happens
+  // there instead of right here.
+  let ticketType: Awaited<ReturnType<typeof db.ticketType.findUnique>> = null;
   if (input.ticketTypeId) {
-    const ticketType = await db.ticketType.findUnique({ where: { id: input.ticketTypeId } });
+    // Only the type-existence/status/min-max checks happen here, outside
+    // the transaction below — those never change based on a concurrent
+    // registration, so there's nothing to protect them from. The actual
+    // quantity-remaining check moves inside the transaction (see its own
+    // comment) since THAT one is exactly the race a concurrent request can
+    // hit.
+    ticketType = await db.ticketType.findUnique({ where: { id: input.ticketTypeId } });
     if (!ticketType || ticketType.eventId !== event.id || ticketType.status !== "ON_SALE") {
       return NextResponse.json({ error: "invalid_ticket_type" }, { status: 400 });
     }
@@ -180,94 +210,167 @@ export async function POST(req: NextRequest) {
     if (ticketCount < ticketType.minPerOrder || ticketCount > ticketType.maxPerOrder) {
       return NextResponse.json({ error: "invalid_ticket_quantity" }, { status: 400 });
     }
-    // Only CONFIRMED registrations compete for real inventory — a STARTED
-    // draft from someone who abandoned checkout (see /api/register/draft)
-    // must not block a real buyer from the last spot.
-    const sold = await db.registration.aggregate({
-      where: {
-        ticketTypeId: input.ticketTypeId,
-        status: "CONFIRMED",
-        id: existingRegistrationForCapacityCheck ? { not: existingRegistrationForCapacityCheck.id } : undefined,
+  }
+
+  const customFields = input.customFields;
+
+  // Capacity check + the person/registration writes, all inside ONE
+  // Serializable transaction — closes a real race that existed before
+  // this: reading "how many sold" and then writing the new registration
+  // used to be two separate, unprotected queries, so two requests
+  // arriving for the true last spot at the same moment could BOTH read
+  // "1 remaining" and both succeed, overselling past the real cap. Under
+  // Serializable isolation Postgres itself detects that overlap (a write
+  // that would conflict with what the other transaction read) and fails
+  // ONE of the two transactions outright — caught below and retried once,
+  // which is enough: the retry re-reads the now-committed count and
+  // correctly reports sold_out if the other request really did take the
+  // last spot.
+  //
+  // Two independent caps enforced here, not one: TicketType.quantity (the
+  // real, always-enforced one whenever a ticket type exists — mandatory
+  // field, no "unlimited" option) AND Event.capacity (the "aforo" number
+  // shown on Eventos/Resumen, previously decorative — see this route's
+  // own history). An event can have ticket types whose quantities sum to
+  // MORE than its own stated aforo (e.g. two ticket types at 60 each on a
+  // 100-person venue) — enforcing capacity too, not just quantity, is
+  // what makes THAT number mean what it says instead of just being a
+  // number on a dashboard.
+  async function attemptRegistration() {
+    return db.$transaction(
+      async (tx) => {
+        if (input.ticketTypeId) {
+          const sold = await tx.registration.aggregate({
+            where: {
+              ticketTypeId: input.ticketTypeId,
+              status: "CONFIRMED",
+              id: existingRegistrationForCapacityCheck ? { not: existingRegistrationForCapacityCheck.id } : undefined,
+            },
+            _sum: { ticketCount: true },
+          });
+          const remaining = ticketType!.quantity - (sold._sum.ticketCount ?? 0);
+          if (ticketCount > remaining) {
+            return { error: "sold_out" as const };
+          }
+        }
+
+        if (confirmedEvent.capacity != null) {
+          const soldEvent = await tx.registration.aggregate({
+            where: {
+              eventId: confirmedEvent.id,
+              status: "CONFIRMED",
+              id: existingRegistrationForCapacityCheck ? { not: existingRegistrationForCapacityCheck.id } : undefined,
+            },
+            _sum: { ticketCount: true },
+          });
+          const remainingEvent = confirmedEvent.capacity - (soldEvent._sum.ticketCount ?? 0);
+          if (ticketCount > remainingEvent) {
+            return { error: "sold_out" as const };
+          }
+        }
+
+        // Dedup on email — the whole point of the CRM being "one profile
+        // per person" rather than one row per registration. city/profession
+        // here are exactly what /admin/crm/segments and Broadcasts filter
+        // on (see lib/segments/builder.ts) — same live value, not a
+        // separate copy.
+        const person = await tx.person.upsert({
+          where: { email: normalizedEmail },
+          create: {
+            email: normalizedEmail,
+            phone: input.phone || null,
+            firstName,
+            lastName,
+            city: input.city || null,
+            profession: input.profession || null,
+          },
+          update: {
+            phone: input.phone || null,
+            firstName,
+            lastName,
+            city: input.city || null,
+            profession: input.profession || null,
+          },
+        });
+
+        // People re-submit the form for an event they already registered
+        // for constantly — they forgot they did, or (most often) they
+        // just lost the QR email and want it resent.
+        // `@@unique([personId, eventId])` means a second `create()` here
+        // would throw instead of quietly duplicating — reuse the
+        // existing registration and treat this as "resend my ticket",
+        // which is what they actually want, rather than surfacing a DB
+        // error.
+        //
+        // The existing row can also be a STARTED draft (an
+        // abandoned-cart row — see /api/register/draft) that never
+        // reached this real submit before. That's not a resend, it's a
+        // first real confirmation, so it's tracked separately from "was
+        // this row already CONFIRMED" below — that's the question that
+        // actually matters for the Meta Purchase CAPI gate further down,
+        // not merely "did some row already exist".
+        const existingRegistration = await tx.registration.findUnique({
+          where: { personId_eventId: { personId: person.id, eventId: confirmedEvent.id } },
+        });
+        const isResend = Boolean(existingRegistration);
+        const wasAlreadyConfirmed = existingRegistration?.status === "CONFIRMED";
+
+        const registration = existingRegistration
+          ? await tx.registration.update({
+              where: { id: existingRegistration.id },
+              data: {
+                customFields,
+                ticketTypeId: input.ticketTypeId ?? null,
+                ticketCount,
+                status: "CONFIRMED",
+                confirmedAt: existingRegistration.confirmedAt ?? new Date(),
+              },
+            })
+          : await tx.registration.create({
+              data: {
+                eventId: confirmedEvent.id,
+                personId: person.id,
+                status: "CONFIRMED",
+                confirmedAt: new Date(),
+                customFields,
+                ticketTypeId: input.ticketTypeId ?? null,
+                ticketCount,
+                utmSource: input.attribution?.utmSource,
+                utmMedium: input.attribution?.utmMedium,
+                utmCampaign: input.attribution?.utmCampaign,
+                fbclid: input.attribution?.fbclid,
+                ttclid: input.attribution?.ttclid,
+                gclid: input.attribution?.gclid,
+              },
+            });
+
+        return { error: null, person, registration, isResend, wasAlreadyConfirmed };
       },
-      _sum: { ticketCount: true },
-    });
-    const remaining = ticketType.quantity - (sold._sum.ticketCount ?? 0);
-    if (ticketCount > remaining) {
-      return NextResponse.json({ error: "sold_out" }, { status: 400 });
+      { isolationLevel: "Serializable" }
+    );
+  }
+
+  let result: Awaited<ReturnType<typeof attemptRegistration>>;
+  try {
+    result = await attemptRegistration();
+  } catch (err) {
+    // P2034 = "Transaction failed due to a write conflict or a deadlock" —
+    // Prisma's own code for a Postgres serialization failure. Retrying
+    // once is enough: the retry re-reads whatever the other request just
+    // committed and either succeeds cleanly or correctly returns
+    // sold_out, instead of surfacing a scary 500 for what's actually a
+    // completely normal "two people wanted the last spot at once".
+    if (err instanceof Error && "code" in err && err.code === "P2034") {
+      result = await attemptRegistration();
+    } else {
+      throw err;
     }
   }
 
-  // Dedup on email — the whole point of the CRM being "one profile per
-  // person" rather than one row per registration. city/profession here are
-  // exactly what /admin/crm/segments and Broadcasts filter on (see
-  // lib/segments/builder.ts) — same live value, not a separate copy.
-  const person = await db.person.upsert({
-    where: { email: normalizedEmail },
-    create: {
-      email: normalizedEmail,
-      phone: input.phone || null,
-      firstName,
-      lastName,
-      city: input.city || null,
-      profession: input.profession || null,
-    },
-    update: {
-      phone: input.phone || null,
-      firstName,
-      lastName,
-      city: input.city || null,
-      profession: input.profession || null,
-    },
-  });
-
-  // People re-submit the form for an event they already registered for
-  // constantly — they forgot they did, or (most often) they just lost the
-  // QR email and want it resent. `@@unique([personId, eventId])` means a
-  // second `create()` here would throw instead of quietly duplicating —
-  // reuse the existing registration and treat this as "resend my ticket",
-  // which is what they actually want, rather than surfacing a DB error.
-  //
-  // The existing row can also be a STARTED draft (an abandoned-cart row —
-  // see /api/register/draft) that never reached this real submit before.
-  // That's not a resend, it's a first real confirmation, so it's tracked
-  // separately from "was this row already CONFIRMED" below — that's the
-  // question that actually matters for the Meta Purchase CAPI gate further
-  // down, not merely "did some row already exist".
-  const existingRegistration = await db.registration.findUnique({
-    where: { personId_eventId: { personId: person.id, eventId: event.id } },
-  });
-  const isResend = Boolean(existingRegistration);
-  const wasAlreadyConfirmed = existingRegistration?.status === "CONFIRMED";
-
-  const customFields = input.customFields;
-  const registration = existingRegistration
-    ? await db.registration.update({
-        where: { id: existingRegistration.id },
-        data: {
-          customFields,
-          ticketTypeId: input.ticketTypeId ?? null,
-          ticketCount,
-          status: "CONFIRMED",
-          confirmedAt: existingRegistration.confirmedAt ?? new Date(),
-        },
-      })
-    : await db.registration.create({
-        data: {
-          eventId: event.id,
-          personId: person.id,
-          status: "CONFIRMED",
-          confirmedAt: new Date(),
-          customFields,
-          ticketTypeId: input.ticketTypeId ?? null,
-          ticketCount,
-          utmSource: input.attribution?.utmSource,
-          utmMedium: input.attribution?.utmMedium,
-          utmCampaign: input.attribution?.utmCampaign,
-          fbclid: input.attribution?.fbclid,
-          ttclid: input.attribution?.ttclid,
-          gclid: input.attribution?.gclid,
-        },
-      });
+  if (result.error) {
+    return NextResponse.json({ error: result.error }, { status: 400 });
+  }
+  const { person, registration, isResend, wasAlreadyConfirmed } = result;
 
   let qrToken = registration.qrToken;
   if (!qrToken) {

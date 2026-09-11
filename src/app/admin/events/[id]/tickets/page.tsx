@@ -69,6 +69,7 @@ export default async function IssuedTicketsPage({ params }: { params: { id: stri
       emailAt: latestEmail
         ? (latestEmail.openedAt ?? latestEmail.deliveredAt ?? latestEmail.bouncedAt ?? latestEmail.createdAt).toISOString()
         : null,
+      utmSource: r.utmSource,
     };
   });
 

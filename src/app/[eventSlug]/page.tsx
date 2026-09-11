@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Image from "next/image";
 import { Suspense } from "react";
 import { db } from "@/lib/db";
 import { getOrderedProfessionOptions } from "@/lib/professions";
@@ -67,8 +68,29 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
       <MetaPixelScript pixelId={metaConnection?.pixelId ?? null} />
 
       {event.imageUrl && (
-        // eslint-disable-next-line @next/next/no-img-element -- admin-uploaded Blob URL, not a build-time-known asset
-        <img src={event.imageUrl} alt={event.name} className="event-page-hero" />
+        // next/image, not a plain <img> — this is the single most-loaded
+        // page in the app (the public landing page), and an admin can
+        // upload up to 5MB (see uploads/event-image/route.ts's
+        // MAX_BYTES) that used to go out at full size to every visitor on
+        // every connection. Next resizes/re-encodes per device and serves
+        // through Vercel's image CDN instead. width/height below are only
+        // Next's own hint for its internal srcset math (a landscape 16:9
+        // placeholder — the app doesn't store the real uploaded
+        // dimensions) — the actual rendered box is still entirely
+        // decided by .event-page-hero's own CSS (width:100%, max-height,
+        // object-fit:cover), unchanged from the plain <img> this
+        // replaces. priority since this is almost always the page's LCP
+        // element — the default lazy-loading would be wrong for
+        // something visible before any scroll.
+        <Image
+          src={event.imageUrl}
+          alt={event.name}
+          width={1600}
+          height={900}
+          sizes="(min-width: 900px) 1080px, 100vw"
+          priority
+          className="event-page-hero"
+        />
       )}
 
       <h1 style={{ margin: "4px 0 8px" }}>{event.name}</h1>

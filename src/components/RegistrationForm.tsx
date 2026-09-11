@@ -52,6 +52,11 @@ export interface RegisterPayload {
   // Set by EventRegistration.tsx at the real confirm moment (Resumen
   // step), not here — see its own comment on why.
   purchaseEventId?: string;
+  // Honeypot — see the field's own comment further down and
+  // /api/register's matching check. Always empty for a real person;
+  // named `website` (a field bots commonly auto-fill, unlike something
+  // that reads as obviously fake).
+  website?: string;
 }
 
 interface Props {
@@ -221,6 +226,7 @@ export default function RegistrationForm({
       fbp: readCookie("_fbp"),
       ticketTypeId,
       ticketCount,
+      website: String(form.get("website") ?? ""),
     };
 
     // Same typo-catching purpose as the second input itself — checked
@@ -258,6 +264,23 @@ export default function RegistrationForm({
 
   return (
     <form onSubmit={handleSubmit}>
+      {/* Honeypot — invisible to a real person (off-canvas via absolute
+          positioning, not display:none/visibility:hidden, since some bots
+          specifically skip those two and still fill in a field that just
+          LOOKS present in the DOM), but a plain empty text input to
+          anything scripting the form. tabIndex=-1 keeps it out of
+          keyboard tab order, aria-hidden keeps screen readers from ever
+          announcing it, autoComplete="off" plus a name a form-filler
+          extension might still target on its own. Checked server-side in
+          /api/register — a non-empty value here never touches the DB. */}
+      <input
+        type="text"
+        name="website"
+        tabIndex={-1}
+        autoComplete="off"
+        aria-hidden="true"
+        style={{ position: "absolute", left: "-9999px", width: 1, height: 1, opacity: 0 }}
+      />
       <h2 style={{ fontSize: 18, marginBottom: 4 }}>Tus datos</h2>
       <p style={{ fontSize: 12, color: "var(--danger)", marginTop: 0, marginBottom: 16 }}>* Campos obligatorios</p>
 
