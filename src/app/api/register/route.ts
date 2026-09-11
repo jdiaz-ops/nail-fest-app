@@ -14,6 +14,16 @@ import { getOrgSettings } from "@/lib/settings";
 import { getCheckoutQuestions, LOCKED_KEYS, type LockedKey } from "@/lib/checkoutForm";
 import { isKnownCityLabel } from "@/lib/cityMatch";
 
+// The real registration path — the single busiest route on launch day —
+// synchronously awaits several real external calls in series (Meta CAPI,
+// the ticket email, WhatsApp if that automation is on) after the DB
+// writes; those don't overlap by design (see each call's own comment on
+// why), so their latencies stack. The platform default (15s on Vercel
+// Pro) is normally plenty, but this is cheap insurance against a single
+// slow upstream (SES/Resend, Meta) turning into an avoidable 504 during
+// the exact traffic window this matters most for.
+export const maxDuration = 30;
+
 const bodySchema = z.object({
   eventSlug: z.string(),
   email: z.string().email(),
