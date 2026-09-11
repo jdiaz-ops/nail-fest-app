@@ -73,24 +73,33 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
         // upload up to 5MB (see uploads/event-image/route.ts's
         // MAX_BYTES) that used to go out at full size to every visitor on
         // every connection. Next resizes/re-encodes per device and serves
-        // through Vercel's image CDN instead. width/height below are only
-        // Next's own hint for its internal srcset math (a landscape 16:9
-        // placeholder — the app doesn't store the real uploaded
-        // dimensions) — the actual rendered box is still entirely
-        // decided by .event-page-hero's own CSS (width:100%, max-height,
-        // object-fit:cover), unchanged from the plain <img> this
-        // replaces. priority since this is almost always the page's LCP
-        // element — the default lazy-loading would be wrong for
-        // something visible before any scroll.
-        <Image
-          src={event.imageUrl}
-          alt={event.name}
-          width={1600}
-          height={900}
-          sizes="(min-width: 900px) 1080px, 100vw"
-          priority
-          className="event-page-hero"
-        />
+        // through Vercel's image CDN instead.
+        //
+        // fill mode, not width/height={1600}/{900} — an earlier version
+        // hardcoded a 16:9 width/height as "only a hint for srcset math",
+        // but width/height ALSO sets the img's real intrinsic
+        // aspect-ratio, which forces every event's hero into a 16:9 crop
+        // window regardless of the real uploaded photo's own shape (most
+        // event photos aren't 16:9 — a square or portrait upload got
+        // cropped far more aggressively than before, which is what broke
+        // mobile specifically after that change). fill removes that
+        // guess entirely: the wrapping .event-page-hero div now owns a
+        // real, fixed height (see globals.css), and this just covers
+        // that box using the image's ACTUAL shape — the same visual
+        // result the plain <img> this replaces always had. priority
+        // since this is almost always the page's LCP element — the
+        // default lazy-loading would be wrong for something visible
+        // before any scroll.
+        <div className="event-page-hero">
+          <Image
+            src={event.imageUrl}
+            alt={event.name}
+            fill
+            sizes="(min-width: 900px) 1080px, 100vw"
+            priority
+            style={{ objectFit: "cover" }}
+          />
+        </div>
       )}
 
       <h1 style={{ margin: "4px 0 8px" }}>{event.name}</h1>

@@ -246,17 +246,23 @@ button.primary:disabled {
   }
 }
 
+/* Wraps the next/image `fill` element (see [eventSlug]/page.tsx's own
+   comment on why fill, not width/height, is what makes this crop the
+   REAL uploaded photo's shape instead of forcing a guessed 16:9 ratio).
+   position:relative + a real height (not just max-height) is what fill
+   needs to have a box to fill in the first place — an absolutely
+   positioned child can't size itself from a max-height alone. */
 .event-page-hero {
+  position: relative;
   width: 100%;
-  max-height: 260px;
-  object-fit: cover;
+  height: 260px;
   border-radius: 12px;
   margin-bottom: 20px;
-  display: block;
+  overflow: hidden;
 }
 @media (min-width: 900px) {
   .event-page-hero {
-    max-height: 420px;
+    height: 420px;
   }
 }
 

@@ -114,6 +114,13 @@ export default function RegistrationForm({
   const searchParams = useSearchParams();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [countryCode, setCountryCode] = useState("+57");
+  // Both the phone number's grey example and the cédula/NIT field's grey
+  // example depend on which country is selected — "según la el país que
+  // se escoja, pues se adapte a los celulares, de ejemplo" and "según
+  // cómo seleccione el país... el texto que piden... si no la llaman
+  // cédula en Venezuela". Falls back to Colombia's own entry (index 0)
+  // if countryCode somehow isn't in the list — never undefined.
+  const selectedCountry = COUNTRY_CODES.find((c) => c.code === countryCode) ?? COUNTRY_CODES[0]!;
   // "¿hay posibilidad de tener un detector de correos mal redactados?" —
   // a live suggestion while typing (gmial.com -> ¿quisiste decir
   // gmail.com?), never a hard block — see emailTypo.ts's own comment.
@@ -404,7 +411,7 @@ export default function RegistrationForm({
               name="phone"
               type="tel"
               autoComplete="tel"
-              placeholder="321 1234567"
+              placeholder={selectedCountry.phonePlaceholder}
               required={phone.required}
               style={{ flex: 1, minWidth: 0 }}
             />
@@ -430,7 +437,7 @@ export default function RegistrationForm({
                 {cedula.label}
                 <Req required={cedula.required} />
               </label>
-              <input id="field_cedula" name="field_cedula" required={cedula.required} />
+              <input id="field_cedula" name="field_cedula" required={cedula.required} placeholder={selectedCountry.idPlaceholder} />
             </div>
           )}
           {city && (
@@ -560,6 +567,24 @@ export default function RegistrationForm({
         );
       })}
 
+      {errorMessage && <p style={{ color: "#c2185b" }}>{errorMessage}</p>}
+
+      {/* Botón antes del texto legal, no después — "quiero que el botón
+          sea antes del texto... y más visible" — lo primero que se ve al
+          terminar de llenar el formulario es la acción real, no un
+          párrafo de letra pequeña. Un poco más grande/con sombra que el
+          .primary por defecto (no se tocó la clase global — otros
+          botones .primary en el resto del admin no deben cambiar) para
+          que de verdad se note más que antes. */}
+      <button
+        className="primary"
+        type="submit"
+        disabled={submitting}
+        style={{ fontSize: 16, padding: "16px 20px", boxShadow: "0 4px 14px rgba(0,190,181,0.35)" }}
+      >
+        {submitting ? "Enviando…" : submitLabel}
+      </button>
+
       {/* Ningún checkbox de consentimiento ya — ni logística, ni
           marketing/publicidad, ni WhatsApp. Todo queda implícito en la
           propia acción de enviar el formulario, cubierto por esta misma
@@ -569,7 +594,7 @@ export default function RegistrationForm({
           /terminos y /privacidad que se edita desde el admin). Sigue
           enviando cuatro consentimientos distintos al servidor (ver
           handleSubmit) — solo cambió la UI, no el modelo de datos. */}
-      <p style={{ fontSize: 12, color: "#5b5f6b" }}>
+      <p style={{ fontSize: 12, color: "#5b5f6b", marginTop: 12, marginBottom: 0 }}>
         Al hacer clic en &ldquo;{submitLabel}&rdquo; aceptas nuestros{" "}
         <a href="/terminos" target="_blank" rel="noreferrer">
           términos y condiciones
@@ -583,12 +608,6 @@ export default function RegistrationForm({
         novedades de futuros eventos de Nail Fest y que te mostremos publicidad relevante en Meta
         con tus datos (de forma cifrada).
       </p>
-
-      {errorMessage && <p style={{ color: "#c2185b" }}>{errorMessage}</p>}
-
-      <button className="primary" type="submit" disabled={submitting}>
-        {submitting ? "Enviando…" : submitLabel}
-      </button>
     </form>
   );
 }
