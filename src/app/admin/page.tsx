@@ -9,6 +9,8 @@ function daysUntil(date: Date): number {
   return Math.max(0, Math.ceil((date.getTime() - Date.now()) / 86_400_000));
 }
 
+const DAY_MS = 86_400_000;
+
 export default async function OverviewPage() {
   await requirePageUser(["ADMIN", "COORDINADOR"]);
 
@@ -38,13 +40,61 @@ export default async function OverviewPage() {
 
   const aforoByEvent = new Map(aforo.map((a) => [a.eventId, a]));
 
+  // Scoped to the próximo evento specifically — the three global
+  // StatCards this page used to open with (Inscritos total, Boletas
+  // escaneadas total) answered "how's the whole business done, ever",
+  // not "how's THIS event going", which is what actually matters while
+  // one is actively open for registration. "Boletas escaneadas" doesn't
+  // even make sense here — check-in only happens the day of the event,
+  // so it'd always read 0 for something that hasn't happened yet; the
+  // "ritmo" pair below (24h/7d) is what replaces it as the thing worth
+  // watching pre-evento. Only run these when there IS an upcoming event,
+  // no point querying otherwise.
+  const nextEventStats = nextEvent
+    ? await (async () => {
+        const now = new Date();
+        const [confirmed, last24h, last7d] = await Promise.all([
+          db.registration.count({ where: { eventId: nextEvent.id, status: "CONFIRMED" } }),
+          db.registration.count({ where: { eventId: nextEvent.id, status: "CONFIRMED", createdAt: { gte: new Date(now.getTime() - DAY_MS) } } }),
+          db.registration.count({ where: { eventId: nextEvent.id, status: "CONFIRMED", createdAt: { gte: new Date(now.getTime() - 7 * DAY_MS) } } }),
+        ]);
+        const agg = aforoByEvent.get(nextEvent.id);
+        const issued = agg?._sum.ticketCount ?? 0;
+        const remaining = nextEvent.capacity != null ? Math.max(0, nextEvent.capacity - issued) : null;
+        const pct = nextEvent.capacity ? Math.min(100, (issued / nextEvent.capacity) * 100) : null;
+        return { confirmed, last24h, last7d, issued, remaining, pct };
+      })()
+    : null;
+
   return (
     <div>
       <h1 style={{ fontSize: 24, marginBottom: 4 }}>Resumen</h1>
       <p style={{ color: "#5b5f6b", marginTop: 0 }}>Resumen de toda la operación, todos los eventos.</p>
 
-      <div style={{ display: "flex", gap: 16, flexWrap: "wrap", margin: "24px 0" }}>
-        <StatCard label="Próximo evento en" value={nextEvent ? `${daysUntil(nextEvent.startsAt)} días` : "—"} sub={nextEvent?.name} />
+      {nextEvent && nextEventStats && (
+        <section style={{ border: "1px solid #12966b", background: "#f2faf7", borderRadius: 12, padding: 20, margin: "24px 0" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
+            <h2 style={{ fontSize: 17, margin: 0 }}>Próximo evento: {nextEvent.name}</h2>
+            <span style={{ fontSize: 13, color: "#5b5f6b" }}>
+              {nextEvent.city} · en {daysUntil(nextEvent.startsAt)} días
+            </span>
+          </div>
+          <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+            <StatCard label="Inscritos a este evento" value={String(nextEventStats.confirmed)} />
+            <StatCard
+              label="Cupos restantes"
+              value={nextEventStats.remaining != null ? String(nextEventStats.remaining) : "sin límite"}
+              sub={nextEventStats.pct != null ? `${Math.round(nextEventStats.pct)}% del aforo lleno` : undefined}
+            />
+            <StatCard label="Últimas 24h" value={`+${nextEventStats.last24h}`} sub="nuevos inscritos" />
+            <StatCard label="Últimos 7 días" value={`+${nextEventStats.last7d}`} sub="nuevos inscritos" />
+          </div>
+        </section>
+      )}
+
+      <h2 style={{ fontSize: 15, color: "#5b5f6b", marginTop: 32, marginBottom: 4 }}>Histórico general</h2>
+      <p style={{ fontSize: 13, color: "#5b5f6b", marginTop: 0, marginBottom: 12 }}>Toda la operación, todos los eventos, desde siempre — no solo el próximo.</p>
+      <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 24 }}>
         <StatCard label="Inscritos (total)" value={String(totalRegistrations)} />
         <StatCard label="Boletas escaneadas (total)" value={String(checkedInAgg._sum.checkedInCount ?? 0)} />
       </div>
@@ -86,7 +136,7 @@ export default async function OverviewPage() {
         </section>
 
         <section style={{ flex: "1 1 380px", minWidth: 0 }}>
-          <h2 style={{ fontSize: 16 }}>Eventos</h2>
+          <h2 style={{ fontSize: 16 }}>Todos los eventos</h2>
           {events.map((ev) => {
             const agg = aforoByEvent.get(ev.id);
             const issued = agg?._sum.ticketCount ?? 0;
