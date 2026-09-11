@@ -20,7 +20,6 @@ export const ticketTypeBodySchema = z.object({
   hideAfter: z.string().nullable().optional(),
   hideWhenSoldOut: z.boolean().default(false),
   showRemainingOnPage: z.boolean().default(false),
-  excludeFromLowestPrice: z.boolean().default(false),
 });
 
 export interface TicketTypeInput {
@@ -37,7 +36,6 @@ export interface TicketTypeInput {
   hideAfter: Date | null;
   hideWhenSoldOut: boolean;
   showRemainingOnPage: boolean;
-  excludeFromLowestPrice: boolean;
 }
 
 export async function listTicketTypes(eventId: string): Promise<TicketType[]> {
@@ -62,7 +60,6 @@ export async function createTicketType(eventId: string, input: TicketTypeInput):
       hideAfter: input.hideAfter,
       hideWhenSoldOut: input.hideWhenSoldOut,
       showRemainingOnPage: input.showRemainingOnPage,
-      excludeFromLowestPrice: input.excludeFromLowestPrice,
       order: (maxOrder._max.order ?? -1) + 1,
     },
   });
@@ -85,7 +82,6 @@ export async function updateTicketType(id: string, input: TicketTypeInput): Prom
       hideAfter: input.hideAfter,
       hideWhenSoldOut: input.hideWhenSoldOut,
       showRemainingOnPage: input.showRemainingOnPage,
-      excludeFromLowestPrice: input.excludeFromLowestPrice,
     },
   });
 }

@@ -34,12 +34,26 @@ export function looksLikeNotACity(raw: string): boolean {
 // staleness risk in building these eagerly.
 const byNormalizedLabel = new Map<string, ColombiaCity>();
 const byNormalizedCityName = new Map<string, ColombiaCity[]>(); // one bare city name can map to several departments
+// First-character bucket — see the fuzzy tier's own comment on why this
+// exists: without it, that tier ran a full Levenshtein pass against
+// every one of COLOMBIA_CITIES' ~1,100 entries for EVERY distinct raw
+// value that didn't already resolve as an exact/prefix match, which is
+// exactly what made /admin/crm/ciudades hang on real production data (a
+// bulk-imported CRM has hundreds of genuinely garbled raw city values,
+// not a handful).
+const byFirstChar = new Map<string, ColombiaCity[]>();
 for (const c of COLOMBIA_CITIES) {
   byNormalizedLabel.set(normalizeCityString(c.label), c);
   const key = normalizeCityString(c.city);
   const list = byNormalizedCityName.get(key) ?? [];
   list.push(c);
   byNormalizedCityName.set(key, list);
+  const first = key[0];
+  if (first) {
+    const bucket = byFirstChar.get(first) ?? [];
+    bucket.push(c);
+    byFirstChar.set(first, bucket);
+  }
 }
 
 /** Exact match only — what the live autocomplete (CityAutocomplete.tsx)
@@ -157,9 +171,24 @@ export function matchCity(raw: string): CityMatchResult {
   // normalization above already; this catches things like "Medellin" ->
   // no, also caught by normalization — this tier is for genuine typos,
   // e.g. "Bucaramnga").
+  //
+  // Scoped to cities sharing the raw value's own first letter, not the
+  // full ~1,100-city list — this used to run a full O(n*m) Levenshtein
+  // against every single one for EVERY distinct raw value that reached
+  // this tier, which on real production data (hundreds of genuinely
+  // garbled raw city values from a bulk import, not a handful) is exactly
+  // what made /admin/crm/ciudades hang. A real typo almost always keeps
+  // its first letter — fuzzyThreshold's tolerance is only 1-3 edits for
+  // any realistic city name length, so a first-letter substitution is
+  // the rare exception, not the common case. The honest tradeoff: that
+  // rare case now surfaces as "sin coincidencia" (needs a manual pick
+  // from the dropdown) instead of an automatic fuzzy suggestion — never
+  // a wrong merge, just occasionally one extra click, in exchange for
+  // the page actually loading.
+  const candidatePool = byFirstChar.get(normalized[0] ?? "") ?? [];
   let best: { city: ColombiaCity; dist: number }[] = [];
   let bestDist = Infinity;
-  for (const c of COLOMBIA_CITIES) {
+  for (const c of candidatePool) {
     const name = normalizeCityString(c.city);
     // Skip wildly different lengths up front — cheap filter before the
     // full O(n*m) distance computation.

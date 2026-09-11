@@ -173,7 +173,6 @@ model TicketType {
   hideAfter   DateTime?
   hideWhenSoldOut        Boolean @default(false)
   showRemainingOnPage    Boolean @default(false)
-  excludeFromLowestPrice Boolean @default(false)
   order       Int              @default(0)
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt

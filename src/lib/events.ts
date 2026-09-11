@@ -157,7 +157,6 @@ export async function duplicateEvent(sourceId: string): Promise<Event> {
       hideAfter: tt.hideAfter,
       hideWhenSoldOut: tt.hideWhenSoldOut,
       showRemainingOnPage: tt.showRemainingOnPage,
-      excludeFromLowestPrice: tt.excludeFromLowestPrice,
     });
   }
   return copy;

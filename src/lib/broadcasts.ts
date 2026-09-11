@@ -8,6 +8,7 @@ import { buildUnsubscribeUrl } from "@/lib/unsubscribe";
 import { renderTicketPdfBuffer } from "@/lib/ticketPdf";
 import { getOrgSettings } from "@/lib/settings";
 import { publishChunkContinuation } from "@/lib/qstash";
+import { tagOwnLinksInHtml, tagOwnLinksInText, slugifyForCampaign } from "@/lib/outboundLinkTagging";
 
 const CONCURRENCY = 10;
 // How many recipients one chunk sends before either finishing or handing
@@ -117,7 +118,17 @@ export async function sendEventBroadcast(
           // why an event broadcast doesn't offer one: LOGISTICS can't be
           // revoked while staying registered, so a "darme de baja" link
           // here would be a broken promise, not a real opt-out.
-          const content = broadcastEmailHtml({ subject: broadcast.subject, bodyHtml: broadcast.bodyHtml! });
+          // Auto-tag any link back to the app's own site inside the
+          // admin-authored body BEFORE it's wrapped into the full email —
+          // see outboundLinkTagging.ts's own comment. Tagging the raw
+          // bodyHtml here, not the fully-assembled content.html below,
+          // is deliberate: broadcastEmailHtml also appends a system
+          // footer (nothing for an event broadcast — see its own comment
+          // on why — but the segment path below does add one), and that
+          // kind of link was never meant to carry campaign attribution.
+          const utmParams = { source: "email", medium: "broadcast_evento", campaign: slugifyForCampaign(broadcast.subject) };
+          const taggedBodyHtml = tagOwnLinksInHtml(broadcast.bodyHtml!, utmParams);
+          const content = broadcastEmailHtml({ subject: broadcast.subject, bodyHtml: taggedBodyHtml });
           // Same "never let a PDF problem block the whole send" reasoning
           // as sendTicketEmail.ts — a recipient with no qrToken
           // (shouldn't happen for a CONFIRMED registration, but not
@@ -245,10 +256,16 @@ export async function sendSegmentEmailBroadcast(
             return;
           }
           const unsubscribeUrl = buildUnsubscribeUrl(person.id);
+          // Same reasoning as sendEventBroadcast's own comment — tag the
+          // admin-authored bodyText before it's wrapped with the
+          // unsubscribe footer, not the fully-assembled output, so the
+          // unsubscribe link itself never picks up a campaign tag.
+          const utmParams = { source: "email", medium: "broadcast_marketing", campaign: slugifyForCampaign(broadcast.subject) };
+          const taggedBodyText = tagOwnLinksInText(broadcast.bodyText!, utmParams);
           const content = broadcastEmail({
             firstName: person.firstName ?? "",
             subject: broadcast.subject,
-            bodyText: broadcast.bodyText!,
+            bodyText: taggedBodyText,
             unsubscribeUrl,
           });
           try {

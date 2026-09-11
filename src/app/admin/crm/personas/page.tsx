@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { getLifecycleStagesBulk } from "@/lib/personTimeline";
 import CrmPageHeader from "../CrmPageHeader";
@@ -9,28 +10,56 @@ export const dynamic = "force-dynamic";
 
 const THIRTY_DAYS_AGO = () => new Date(Date.now() - 30 * 86_400_000);
 
-export default async function PersonasPage({ searchParams }: { searchParams: { q?: string } }) {
+export default async function PersonasPage({
+  searchParams,
+}: {
+  searchParams: { q?: string; city?: string; profession?: string };
+}) {
   const q = searchParams.q?.trim();
+  const cityFilter = searchParams.city?.trim();
+  const professionFilter = searchParams.profession?.trim();
 
-  const [people, totalPeople, newLast30Days] = await Promise.all([
+  // Every filter is optional and combines with AND (ciudad = Bucaramanga
+  // Y profesión = Manicurista) — same posture as Segmentos' own builder,
+  // just a fixed two-field version here rather than the full condition
+  // list.
+  const where: Prisma.PersonWhereInput = {};
+  if (q) {
+    where.OR = [
+      { firstName: { contains: q, mode: "insensitive" } },
+      { lastName: { contains: q, mode: "insensitive" } },
+      { email: { contains: q, mode: "insensitive" } },
+      { city: { contains: q, mode: "insensitive" } },
+    ];
+  }
+  if (cityFilter) where.city = cityFilter;
+  if (professionFilter) where.profession = professionFilter;
+
+  const [people, totalPeople, newLast30Days, cityRows, professionRows] = await Promise.all([
     db.person.findMany({
-      where: q
-        ? {
-            OR: [
-              { firstName: { contains: q, mode: "insensitive" } },
-              { lastName: { contains: q, mode: "insensitive" } },
-              { email: { contains: q, mode: "insensitive" } },
-              { city: { contains: q, mode: "insensitive" } },
-            ],
-          }
-        : undefined,
+      where,
       include: { _count: { select: { registrations: true } } },
       orderBy: { createdAt: "desc" },
       take: 200,
     }),
     db.person.count(),
     db.person.count({ where: { createdAt: { gte: THIRTY_DAYS_AGO() } } }),
+    // Real values already on file, not the configured checkout-form
+    // option lists — same reasoning as Segmentos' own city filter: a
+    // dropdown listing an option nobody actually has would just be a
+    // dead end. Distinct here, not resolveSegment/countSegment (there's
+    // no saved SegmentFilter involved, just two plain equality filters).
+    db.person.findMany({ where: { city: { not: null } }, select: { city: true }, distinct: ["city"] }),
+    db.person.findMany({ where: { profession: { not: null } }, select: { profession: true }, distinct: ["profession"] }),
   ]);
+  const cityOptions = cityRows
+    .map((r) => r.city)
+    .filter((c): c is string => !!c && c.trim().length > 0)
+    .sort((a, b) => a.localeCompare(b, "es"));
+  const professionOptions = professionRows
+    .map((r) => r.profession)
+    .filter((p): p is string => !!p && p.trim().length > 0)
+    .sort((a, b) => a.localeCompare(b, "es"));
 
   // Real stage per person, computed in a handful of batched queries — see
   // getLifecycleStagesBulk's own comment for why this isn't the same
@@ -51,14 +80,42 @@ export default async function PersonasPage({ searchParams }: { searchParams: { q
         <StatCard label="Nuevas últimos 30 días" value={String(newLast30Days)} />
       </div>
 
-      <form style={{ marginBottom: 16 }}>
+      <form style={{ marginBottom: 16, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
         <input
           type="search"
           name="q"
           defaultValue={q ?? ""}
           placeholder="Buscar por nombre, correo o ciudad…"
-          style={{ padding: "8px 12px", border: "1px solid #e3e1dc", borderRadius: 8, width: 320, maxWidth: "100%" }}
+          style={{ padding: "8px 12px", border: "1px solid #e3e1dc", borderRadius: 8, width: 260, maxWidth: "100%" }}
         />
+        <select name="city" defaultValue={cityFilter ?? ""} style={{ padding: "8px 12px", border: "1px solid #e3e1dc", borderRadius: 8 }}>
+          <option value="">Todas las ciudades</option>
+          {cityOptions.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
+        <select
+          name="profession"
+          defaultValue={professionFilter ?? ""}
+          style={{ padding: "8px 12px", border: "1px solid #e3e1dc", borderRadius: 8 }}
+        >
+          <option value="">Todas las profesiones</option>
+          {professionOptions.map((p) => (
+            <option key={p} value={p}>
+              {p}
+            </option>
+          ))}
+        </select>
+        <button type="submit" className="primary" style={{ width: "auto", padding: "8px 16px" }}>
+          Filtrar
+        </button>
+        {(q || cityFilter || professionFilter) && (
+          <Link href="/admin/crm/personas" style={{ fontSize: 13 }}>
+            Quitar filtros
+          </Link>
+        )}
       </form>
 
       <div className="admin-table-wrap" style={{ border: "1px solid #e3e1dc", borderRadius: 10 }}>
@@ -95,7 +152,7 @@ export default async function PersonasPage({ searchParams }: { searchParams: { q
             {people.length === 0 && (
               <tr>
                 <td colSpan={6} style={{ padding: "10px 12px", color: "#5b5f6b" }}>
-                  {q ? "Nadie coincide con esa búsqueda." : "Aún no hay personas registradas."}
+                  {q || cityFilter || professionFilter ? "Nadie coincide con esa búsqueda/filtro." : "Aún no hay personas registradas."}
                 </td>
               </tr>
             )}

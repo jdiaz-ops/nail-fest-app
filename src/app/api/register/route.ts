@@ -227,15 +227,19 @@ export async function POST(req: NextRequest) {
   // correctly reports sold_out if the other request really did take the
   // last spot.
   //
-  // Two independent caps enforced here, not one: TicketType.quantity (the
-  // real, always-enforced one whenever a ticket type exists — mandatory
-  // field, no "unlimited" option) AND Event.capacity (the "aforo" number
-  // shown on Eventos/Resumen, previously decorative — see this route's
-  // own history). An event can have ticket types whose quantities sum to
-  // MORE than its own stated aforo (e.g. two ticket types at 60 each on a
-  // 100-person venue) — enforcing capacity too, not just quantity, is
-  // what makes THAT number mean what it says instead of just being a
-  // number on a dashboard.
+  // Only TicketType.quantity is enforced here — the real, always-enforced
+  // cap whenever a ticket type exists (mandatory field, no "unlimited"
+  // option). Event.capacity ("aforo" on Eventos/Resumen) is deliberately
+  // NOT checked: an earlier version of this route enforced both, but that
+  // means the ticket type's own configured quantity — the number an
+  // admin explicitly set as "this many tickets exist" — could get
+  // silently overridden by a smaller, separately-set aforo, including by
+  // mistake (aforo defaults to whatever was typed when the event was
+  // created, easy to leave stale or wrong). The ticket type IS the source
+  // of truth for how many can go out; aforo stays a display-only number
+  // on the dashboards until there's a real design for how the two should
+  // reconcile when they disagree, not silently enforced as a second,
+  // possibly-wrong ceiling underneath it.
   async function attemptRegistration() {
     return db.$transaction(
       async (tx) => {
@@ -250,21 +254,6 @@ export async function POST(req: NextRequest) {
           });
           const remaining = ticketType!.quantity - (sold._sum.ticketCount ?? 0);
           if (ticketCount > remaining) {
-            return { error: "sold_out" as const };
-          }
-        }
-
-        if (confirmedEvent.capacity != null) {
-          const soldEvent = await tx.registration.aggregate({
-            where: {
-              eventId: confirmedEvent.id,
-              status: "CONFIRMED",
-              id: existingRegistrationForCapacityCheck ? { not: existingRegistrationForCapacityCheck.id } : undefined,
-            },
-            _sum: { ticketCount: true },
-          });
-          const remainingEvent = confirmedEvent.capacity - (soldEvent._sum.ticketCount ?? 0);
-          if (ticketCount > remainingEvent) {
             return { error: "sold_out" as const };
           }
         }

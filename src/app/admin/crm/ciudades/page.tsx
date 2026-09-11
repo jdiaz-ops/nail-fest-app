@@ -5,6 +5,11 @@ import StatCard from "../StatCard";
 import CityCleanupClient, { type CityCleanupRow } from "./CityCleanupClient";
 
 export const dynamic = "force-dynamic";
+// Real headroom for matchCity() across every distinct raw city value on
+// real production data — same reasoning as Segmentos' own maxDuration.
+// The first-letter bucketing in cityMatch.ts's fuzzy tier is the actual
+// fix for the slowness itself; this is the safety net underneath it.
+export const maxDuration = 60;
 
 // The "hacia atrás" half of city cleanup (the forward half is
 // CityAutocomplete.tsx on the live registration form) — every DISTINCT

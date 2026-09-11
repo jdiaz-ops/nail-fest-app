@@ -19,7 +19,6 @@ export interface TicketTypeRow {
   hideAfter: string | null;
   hideWhenSoldOut: boolean;
   showRemainingOnPage: boolean;
-  excludeFromLowestPrice: boolean;
 }
 
 const STATUS_BADGE: Record<string, { label: string; bg: string; fg: string }> = {
@@ -51,7 +50,6 @@ function toModalValues(t?: TicketTypeRow): TicketTypeValues {
     hideAfter: t.hideAfter ? t.hideAfter.slice(0, 16) : "",
     hideWhenSoldOut: t.hideWhenSoldOut,
     showRemainingOnPage: t.showRemainingOnPage,
-    excludeFromLowestPrice: t.excludeFromLowestPrice,
   };
 }
 
@@ -88,7 +86,6 @@ export default function TicketTypesSection({ eventId, initialTicketTypes }: { ev
       hideAfter: v.hasHideAfter && v.hideAfter ? new Date(v.hideAfter).toISOString() : null,
       hideWhenSoldOut: v.hideWhenSoldOut,
       showRemainingOnPage: v.showRemainingOnPage,
-      excludeFromLowestPrice: v.excludeFromLowestPrice,
     };
   }
 

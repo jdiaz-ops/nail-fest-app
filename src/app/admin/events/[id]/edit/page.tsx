@@ -63,7 +63,6 @@ export default async function EditEventPage({ params }: { params: { id: string }
             hideAfter: t.hideAfter ? t.hideAfter.toISOString() : null,
             hideWhenSoldOut: t.hideWhenSoldOut,
             showRemainingOnPage: t.showRemainingOnPage,
-            excludeFromLowestPrice: t.excludeFromLowestPrice,
           }))}
         />
       </div>

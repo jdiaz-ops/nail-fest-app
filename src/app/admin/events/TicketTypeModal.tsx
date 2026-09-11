@@ -38,7 +38,6 @@ export interface TicketTypeValues {
   hideAfter: string;
   hideWhenSoldOut: boolean;
   showRemainingOnPage: boolean;
-  excludeFromLowestPrice: boolean;
 }
 
 export const EMPTY_TICKET_TYPE: TicketTypeValues = {
@@ -58,7 +57,6 @@ export const EMPTY_TICKET_TYPE: TicketTypeValues = {
   hideAfter: "",
   hideWhenSoldOut: false,
   showRemainingOnPage: false,
-  excludeFromLowestPrice: false,
 };
 
 export default function TicketTypeModal({
@@ -261,10 +259,11 @@ export default function TicketTypeModal({
             <input type="checkbox" checked={values.showRemainingOnPage} onChange={(e) => set("showRemainingOnPage", e.target.checked)} />
             Show quantity remaining on event page
           </label>
-          <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
-            <input type="checkbox" checked={values.excludeFromLowestPrice} onChange={(e) => set("excludeFromLowestPrice", e.target.checked)} />
-            Exclude from lowest price ticket calculation
-          </label>
+          {/* "Exclude from lowest price ticket calculation" removed — there
+              was never a "lowest price" display anywhere in the app for it
+              to exclude anything FROM, so the checkbox did nothing
+              regardless of how it was set. Build the real feature first if
+              this comes back. */}
         </>
       )}
 
