@@ -27,6 +27,7 @@ WOMPI_ENV=sandbox                   # "sandbox" mientras pruebas, "production" c
 ZOOM_ACCOUNT_ID=...
 ZOOM_CLIENT_ID=...
 ZOOM_CLIENT_SECRET=...
+ZOOM_WEBHOOK_SECRET_TOKEN=...        # de la MISMA app, pestaña Feature -> Event Subscriptions — ver esa sección más abajo. Distinto de ZOOM_CLIENT_SECRET.
 ```
 
 ## Wompi — paso a paso
@@ -57,10 +58,15 @@ ZOOM_CLIENT_SECRET=...
    "OAuth" normal — ese pide login de usuario, este autentica como la
    cuenta misma, que es lo que necesita un registro automático desde el
    servidor).
-2. En **Scopes**, agrega `meeting:write:registrant` (si vas a usar
-   Reuniones normales) o `webinar:write:registrant` (si vas a usar
+2. En **Scopes**, agrega `meeting:write:registrant:admin` (si vas a usar
+   Reuniones normales) o `webinar:write:registrant:admin` (si vas a usar
    Webinars — el add-on pago de Zoom, necesario solo si esperas más
-   asistentes de los que tu plan de Reuniones permite).
+   asistentes de los que tu plan de Reuniones permite). Si además quieres
+   asistencia real y resultados de encuestas (ver más abajo), agrega
+   también `report:read:list_meeting_participants:admin` (funciona con
+   plan Pro — la versión de "Dashboard" del mismo dato exige Business) y
+   `report:read:list_meeting_polls:admin`. Nunca la variante `:master` de
+   ninguno de estos — esa es solo para cuentas con sub-cuentas.
 3. Copia Account ID, Client ID y Client Secret a las variables de arriba.
 4. **En la Reunión/Webinar misma** (zoom.us, no el marketplace): actívale
    **Registration** y ponla en **Aprobación automática** — si queda en
@@ -70,6 +76,26 @@ ZOOM_CLIENT_SECRET=...
    sin el link de acceso.
 5. En el evento (`/admin/events/[id]/edit` → Formato → Virtual/Híbrido →
    Acceso virtual), pega el ID numérico de esa Reunión/Webinar.
+
+## Asistencia en tiempo real (Event Subscriptions) — opcional, un paso más
+
+Esto es lo que llena el panel **"En vivo (Zoom)"** dentro de cada evento
+virtual/híbrido en el admin — quién está conectado en este momento
+mientras el congreso está pasando. Es un paso APARTE de los Scopes de
+arriba, y el orden importa: la URL del webhook tiene que estar realmente
+desplegada y funcionando ANTES de pegarla en Zoom, porque Zoom la
+verifica al instante en cuanto la guardas.
+
+1. En la misma app de Zoom, pestaña **Feature** → activa **"Event
+   Subscriptions"**.
+2. Agrega la URL: `https://<tu-dominio>/api/webhooks/zoom`.
+3. Marca los eventos `meeting.participant_joined` y
+   `meeting.participant_left`.
+4. Zoom te muestra un **Secret Token** al guardar — cópialo a Vercel como
+   `ZOOM_WEBHOOK_SECRET_TOKEN` (distinto del Client Secret de más arriba).
+5. Al guardar la URL, Zoom manda una verificación automática — si el
+   despliegue con este código ya está en producción, pasa sola; si no,
+   Zoom la va a rechazar y toca reintentar después de desplegar.
 
 ## Primera prueba real
 
@@ -101,3 +127,12 @@ Antes de vender la primera entrada real:
 - **Zoom Fase 1, no Fase 2** — el link de Zoom es personal pero no
   de un solo uso real; ver la conversación del chat sobre por qué y
   cuál sería el Fase 2 (una sala propia con token firmado).
+- **Resultados de encuestas de Zoom — todavía NO construido.** El scope
+  (`report:read:list_meeting_polls:admin`) está documentado arriba y se
+  puede agregar desde ya, pero la llamada real a la API que trae esos
+  resultados y los guarda en algún lado no existe todavía en el código —
+  quedó pendiente para una próxima ronda.
+- **El panel "En vivo (Zoom)" depende 100% de que Event Subscriptions
+  esté bien configurado** (ver esa sección arriba) — sin eso, la página
+  simplemente no tiene datos que mostrar, no es un error, solo se ve
+  vacía.

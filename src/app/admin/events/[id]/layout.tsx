@@ -34,6 +34,7 @@ export default async function EventShellLayout({ children, params }: { children:
       eventWhen={eventWhen}
       statusLabel={event.status === "PUBLISHED" ? "Publicado" : "Borrador"}
       eventSlug={event.slug}
+      eventFormat={event.format}
       isAdmin={user?.role === "ADMIN"}
     >
       {children}

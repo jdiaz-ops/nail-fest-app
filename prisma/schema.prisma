@@ -182,6 +182,7 @@ model Event {
 
   registrations Registration[]
   scans         ScanLog[]
+  zoomAttendance ZoomAttendanceLog[]
   ticketTypes   TicketType[]
   broadcasts    EmailBroadcast[]
   whatsappBroadcasts WhatsAppBroadcast[]
@@ -350,6 +351,7 @@ model Registration {
   metaEvents MetaEvent[]
   scans      ScanLog[]
   payments   Payment[]
+  zoomAttendance ZoomAttendanceLog[]
 
   @@unique([personId, eventId])
   @@index([eventId, status])
@@ -455,6 +457,42 @@ model ScanLog {
 
   @@index([registrationId])
   @@index([scannedForEventId, scannedAt])
+}
+
+// Virtual equivalent of ScanLog — one row per real Zoom join, from the
+// `meeting.participant_joined`/`meeting.participant_left` webhook events
+// (see /api/webhooks/zoom and lib/zoom.ts's own verification comment).
+// Append-only for the same reason ScanLog is: someone can join, drop, and
+// rejoin (bad wifi, closed the laptop) — each join is its own row, matched
+// to its own `leftAt` by zoomParticipantId, never overwritten. This is
+// what /admin/events/[id]/en-vivo reads to show "quién está conectado
+// AHORA" during the event, and what a future post-event report reads for
+// real attendance duration — the door-scanner's live panel, for a
+// congreso virtual instead of a physical door.
+model ZoomAttendanceLog {
+  id             String        @id @default(cuid())
+  event          Event         @relation(fields: [eventId], references: [id])
+  eventId        String
+  // Matched by the participant's email against Person/Registration — null
+  // when Zoom didn't include an email (an anonymous/unmatched joiner) or
+  // no Registration exists for that person+event. Kept even when null,
+  // same "log everything, match what you can" reasoning as
+  // WhatsAppConversation.personId.
+  registration   Registration? @relation(fields: [registrationId], references: [id])
+  registrationId String?
+  participantEmail String?
+  // Zoom's own per-join-session participant id — stable for one
+  // join-to-leave session, a NEW one on every rejoin. This (not the
+  // person's email) is what ties a participant_left event back to the
+  // right row when there's no leftAt yet.
+  zoomParticipantId String
+  joinedAt       DateTime
+  leftAt         DateTime?
+  createdAt      DateTime      @default(now())
+
+  @@index([eventId])
+  @@index([registrationId])
+  @@index([eventId, zoomParticipantId])
 }
 
 // Consent is recorded per purpose, per registration — never one blanket

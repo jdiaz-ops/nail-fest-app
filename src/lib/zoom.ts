@@ -1,3 +1,5 @@
+import { createHmac } from "crypto";
+
 // Zoom — Fase 1 of the virtual-congress integration: one unique join_url
 // per registrant, via Zoom's Server-to-Server OAuth (the current
 // supported auth method; the old JWT app type is retired). This does NOT
@@ -94,4 +96,37 @@ export async function registerParticipant(
     console.error("zoom: registerParticipant threw", meetingOrWebinarId, err);
     return null;
   }
+}
+
+// --- Event Subscriptions (real-time attendance) --------------------------
+//
+// A SEPARATE piece of setup from the OAuth credentials above — configured
+// in the same Zoom app under Feature -> Event Subscriptions, not Scopes.
+// Requires its own env var, ZOOM_WEBHOOK_SECRET_TOKEN (Zoom generates one
+// when you add the subscription — distinct from ZOOM_CLIENT_SECRET, never
+// the same value). See /api/webhooks/zoom, the only caller of these.
+
+/** Zoom's one-time "prove you own this URL" handshake — sent the moment
+ * an admin saves the Event Subscription's endpoint URL, before any real
+ * event ever arrives. Per Zoom's own docs: hash the given `plainToken`
+ * with the webhook secret token (HMAC-SHA256), and echo BOTH values back
+ * — Zoom compares `encryptedToken` itself rather than expecting a
+ * signature header on this one request. */
+export function respondToZoomUrlValidation(plainToken: string): { plainToken: string; encryptedToken: string } {
+  const secret = env("ZOOM_WEBHOOK_SECRET_TOKEN");
+  const encryptedToken = createHmac("sha256", secret).update(plainToken).digest("hex");
+  return { plainToken, encryptedToken };
+}
+
+/** Verifies a real (non-validation) webhook event's signature — Zoom signs
+ * `v0:{timestamp}:{rawBody}` with the webhook secret token and sends the
+ * result as `v0=<hex>` in the `x-zm-signature` header, alongside the same
+ * timestamp in `x-zm-request-timestamp`. Same fail-closed posture as every
+ * other webhook verifier in this app (Wompi, WhatsApp): missing secret or
+ * mismatched hash means false, never a thrown error. */
+export function verifyZoomWebhookSignature(rawBody: string, timestamp: string | null, signatureHeader: string | null): boolean {
+  const secret = process.env.ZOOM_WEBHOOK_SECRET_TOKEN;
+  if (!secret || !timestamp || !signatureHeader) return false;
+  const expected = "v0=" + createHmac("sha256", secret).update(`v0:${timestamp}:${rawBody}`).digest("hex");
+  return expected === signatureHeader;
 }

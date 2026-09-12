@@ -18,6 +18,7 @@ export default function EventModuleShell({
   eventWhen,
   statusLabel,
   eventSlug,
+  eventFormat,
   isAdmin,
   children,
 }: {
@@ -26,6 +27,10 @@ export default function EventModuleShell({
   eventWhen: string;
   statusLabel: string;
   eventSlug: string;
+  // "IN_PERSON" | "VIRTUAL" | "HYBRID" — only used to show/hide the "En
+  // vivo (Zoom)" nav item below, so kept as a plain string here rather
+  // than importing the Prisma enum into a client component.
+  eventFormat: string;
   // COORDINADOR gets Resumen/Reportes/Entradas emitidas — Correos del
   // evento, the whole Configuración group, and the Duplicar/Borrar
   // actions below are ADMIN-only, gated again on each of those pages
@@ -43,6 +48,7 @@ export default function EventModuleShell({
       items: [
         { href: base, label: "Resumen del evento", exact: true },
         { href: `${base}/reports`, label: "Reportes del evento" },
+        ...(eventFormat !== "IN_PERSON" ? [{ href: `${base}/en-vivo`, label: "En vivo (Zoom)" }] : []),
       ],
     },
     {
