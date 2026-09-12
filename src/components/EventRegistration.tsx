@@ -193,10 +193,12 @@ export default function EventRegistration({
     // Shared with the server-side CAPI Purchase call (see /api/register)
     // so Meta dedupes the Pixel + CAPI pair instead of double-counting —
     // same mechanism as track() in tracking.ts, see MetaPixelScript.tsx.
+    // NOT fired here anymore for everyone: a paid ticket type isn't a real
+    // purchase yet at this point, just a checkout attempt about to be sent
+    // to Wompi — firing the pixel now would count people who never
+    // actually pay. It fires below, only once the response confirms this
+    // was an immediate (free) confirmation.
     const purchaseEventId = crypto.randomUUID();
-    if (payload.consents.advertising) {
-      window.fbq?.("track", "Purchase", {}, { eventID: purchaseEventId });
-    }
     const bodyToSend: RegisterPayload = {
       ...payload,
       ticketTypeId: selectedType?.id,
@@ -213,6 +215,17 @@ export default function EventRegistration({
     setSubmitting(false);
     if (res.ok) {
       const body = await res.json().catch(() => ({}));
+      if (body?.requiresPayment && body?.checkoutUrl) {
+        // Paid ticket type — off to Wompi's own hosted checkout. Nothing
+        // else to do here: Wompi redirects back to /[eventSlug]/pago,
+        // which is what actually finishes this (see that page's own
+        // comment) — this tab is about to navigate away regardless.
+        window.location.href = body.checkoutUrl;
+        return;
+      }
+      if (payload.consents.advertising) {
+        window.fbq?.("track", "Purchase", {}, { eventID: purchaseEventId });
+      }
       setSubmittedEmail(payload.email);
       setSubmittedPhone(payload.phone);
       setWhatsappTicketLinkSent(Boolean(body?.whatsappTicketLinkSent));

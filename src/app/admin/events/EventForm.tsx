@@ -9,11 +9,19 @@ import RichTextEditor from "@/components/RichTextEditor";
 const fraunces = Fraunces({ subsets: ["latin"], weight: ["600", "900"] });
 
 type EventStatus = "DRAFT" | "PUBLISHED";
+type EventFormat = "IN_PERSON" | "VIRTUAL" | "HYBRID";
 
 export interface EventFormValues {
   id?: string;
   name: string;
   city: string;
+  // IN_PERSON (default) shows Ubicación below; VIRTUAL replaces it with
+  // Acceso virtual; HYBRID shows both (an in-person feria that also
+  // sells a livestream pass).
+  format: EventFormat;
+  virtualAccessInstructions: string;
+  zoomMeetingId: string;
+  zoomIsWebinar: boolean;
   venueName: string;
   venueAddress: string;
   description: string;
@@ -43,6 +51,8 @@ export interface DuplicateSource {
   id: string;
   name: string;
   city: string;
+  format: EventFormat;
+  virtualAccessInstructions: string;
   venueName: string;
   venueAddress: string;
   description: string;
@@ -87,6 +97,8 @@ export default function EventForm({
       ...v,
       name: `${source.name} (copia)`,
       city: source.city,
+      format: source.format,
+      virtualAccessInstructions: source.virtualAccessInstructions,
       venueName: source.venueName,
       venueAddress: source.venueAddress,
       description: source.description,
@@ -167,6 +179,10 @@ export default function EventForm({
     const body = {
       name: values.name.trim(),
       city: values.city.trim(),
+      format: values.format,
+      virtualAccessInstructions: values.virtualAccessInstructions.trim(),
+      zoomMeetingId: values.zoomMeetingId.trim(),
+      zoomIsWebinar: values.zoomIsWebinar,
       venueName: values.venueName.trim(),
       venueAddress: values.venueAddress.trim(),
       description: values.description.trim(),
@@ -242,6 +258,17 @@ export default function EventForm({
           </div>
         </Section>
 
+        <Section title="Formato">
+          <div className="field" style={{ marginBottom: 0 }}>
+            <label>¿Cómo se hace este evento?</label>
+            <select value={values.format} onChange={(e) => set("format", e.target.value as EventFormat)}>
+              <option value="IN_PERSON">Presencial — la página muestra lugar y dirección</option>
+              <option value="VIRTUAL">Virtual — por Zoom, sin dirección física</option>
+              <option value="HYBRID">Híbrido — presencial y con opción de acceso virtual</option>
+            </select>
+          </div>
+        </Section>
+
         <Section title="Fechas">
           <Row>
             <div className="field" style={{ marginBottom: 0 }}>
@@ -313,18 +340,54 @@ export default function EventForm({
           </button>
         </Section>
 
-        <Section title="Ubicación">
-          <Row>
+        {values.format !== "VIRTUAL" && (
+          <Section title="Ubicación">
+            <Row>
+              <div className="field" style={{ marginBottom: 0 }}>
+                <label>Lugar</label>
+                <input value={values.venueName} onChange={(e) => set("venueName", e.target.value)} placeholder="Auditorio Lumen Unicatólica" />
+              </div>
+              <div className="field" style={{ marginBottom: 0 }}>
+                <label>Dirección</label>
+                <input value={values.venueAddress} onChange={(e) => set("venueAddress", e.target.value)} placeholder="Carrera 94 # 4c – 120" />
+              </div>
+            </Row>
+          </Section>
+        )}
+
+        {values.format !== "IN_PERSON" && (
+          <Section title="Acceso virtual (Zoom)">
             <div className="field" style={{ marginBottom: 0 }}>
-              <label>Lugar</label>
-              <input value={values.venueName} onChange={(e) => set("venueName", e.target.value)} placeholder="Auditorio Lumen Unicatólica" />
+              <label>ID de la reunión o el webinar de Zoom (opcional)</label>
+              <input
+                value={values.zoomMeetingId}
+                onChange={(e) => set("zoomMeetingId", e.target.value)}
+                placeholder="ej. 812345678"
+                style={{ maxWidth: 320 }}
+              />
+              <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>
+                Vacío = no se registra a nadie en Zoom automáticamente (el correo de confirmación
+                sale igual, solo sin link de acceso). La reunión/webinar debe tener la
+                aprobación de registro en &quot;Automática&quot;, no &quot;Manual&quot; — si no,
+                Zoom no devuelve el link personal en la API.
+              </p>
             </div>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14 }}>
+              <input type="checkbox" checked={values.zoomIsWebinar} onChange={(e) => set("zoomIsWebinar", e.target.checked)} />
+              Es un Webinar de Zoom (no una Reunión normal)
+            </label>
             <div className="field" style={{ marginBottom: 0 }}>
-              <label>Dirección</label>
-              <input value={values.venueAddress} onChange={(e) => set("venueAddress", e.target.value)} placeholder="Carrera 94 # 4c – 120" />
+              <label>Instrucciones de acceso (se muestran en la página y en el correo)</label>
+              <textarea
+                value={values.virtualAccessInstructions}
+                onChange={(e) => set("virtualAccessInstructions", e.target.value)}
+                placeholder="Te llega tu link personal de acceso por correo antes del evento — es solo tuyo, no lo compartas."
+                rows={3}
+                style={{ width: "100%" }}
+              />
             </div>
-          </Row>
-        </Section>
+          </Section>
+        )}
 
         <Section title="Configuración">
           {/* Cupo (opcional) quitado — nunca limitó nada de verdad (solo

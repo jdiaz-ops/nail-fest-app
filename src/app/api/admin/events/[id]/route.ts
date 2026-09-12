@@ -25,6 +25,10 @@ const patchSchema = z.object({
   // an explicit [] clears it back to the old single-range display.
   scheduleDays: z.array(scheduleDaySchema).optional(),
   status: z.enum(["DRAFT", "PUBLISHED"]).optional(),
+  format: z.enum(["IN_PERSON", "VIRTUAL", "HYBRID"]).optional(),
+  virtualAccessInstructions: z.string().optional(),
+  zoomMeetingId: z.string().optional(),
+  zoomIsWebinar: z.boolean().optional(),
   slug: z.string().optional(),
 });
 
@@ -76,6 +80,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       capacity: data.capacity === undefined ? existing.capacity : data.capacity,
       scheduleDays: data.scheduleDays ?? parseScheduleDays(existing.scheduleDays),
       status: data.status ?? existing.status,
+      format: data.format ?? existing.format,
+      virtualAccessInstructions: data.virtualAccessInstructions ?? existing.virtualAccessInstructions ?? "",
+      zoomMeetingId: data.zoomMeetingId ?? existing.zoomMeetingId ?? "",
+      zoomIsWebinar: data.zoomIsWebinar ?? existing.zoomIsWebinar,
       slug: data.slug,
     });
     return NextResponse.json({ ok: true, event });

@@ -24,6 +24,12 @@ const bodySchema = z.object({
   // (the old single startsAt–endsAt range display).
   scheduleDays: z.array(scheduleDaySchema).default([]),
   status: z.enum(["DRAFT", "PUBLISHED"]).default("DRAFT"),
+  // See EventFormat's own schema comment. Defaults to IN_PERSON — the
+  // congreso-virtual fields below are only meaningful for VIRTUAL/HYBRID.
+  format: z.enum(["IN_PERSON", "VIRTUAL", "HYBRID"]).default("IN_PERSON"),
+  virtualAccessInstructions: z.string().default(""),
+  zoomMeetingId: z.string().default(""),
+  zoomIsWebinar: z.boolean().default(false),
   slug: z.string().optional(),
 });
 
@@ -63,6 +69,10 @@ export async function POST(req: NextRequest) {
     capacity: data.capacity ?? null,
     scheduleDays: data.scheduleDays,
     status: data.status,
+    format: data.format,
+    virtualAccessInstructions: data.virtualAccessInstructions,
+    zoomMeetingId: data.zoomMeetingId,
+    zoomIsWebinar: data.zoomIsWebinar,
     slug: data.slug,
   });
   return NextResponse.json({ ok: true, event });

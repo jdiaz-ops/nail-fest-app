@@ -58,6 +58,14 @@ export function confirmationEmail(params: {
   /** OrgSettings.timezone/.language — fall back to Colombia/Spanish, same as before these existed. */
   timezone?: string;
   language?: string;
+  /** This registrant's own personal Zoom join link (see lib/zoom.ts) —
+   * only set for a VIRTUAL/HYBRID event with Zoom configured, and only
+   * once lib/registrationConfirmation.ts's best-effort registerParticipant
+   * call actually succeeded. Rendered as its own prominent block ABOVE
+   * the QR (the QR stays — it still doubles as a scannable confirmation
+   * code even with nothing to physically scan it against) rather than
+   * replacing anything, so a HYBRID event's email makes sense either way. */
+  zoomJoinUrl?: string;
 }): { subject: string; text: string; html: string } {
   const orgName = params.orgName || "Nail Fest";
   const tz = params.timezone || "America/Bogota";
@@ -94,6 +102,9 @@ export function confirmationEmail(params: {
     ...(ticketTypeLine ? [`Entrada: ${ticketTypeLine}`] : []),
     `Código de confirmación: ${params.confirmationCode}`,
     ``,
+    ...(params.zoomJoinUrl
+      ? [`Únete a la sesión por Zoom con tu link personal (no lo compartas, es solo tuyo):`, params.zoomJoinUrl, ``]
+      : []),
     `Presenta el código QR adjunto en este correo (o una captura de pantalla) en la entrada. Puedes reingresar las veces que necesites durante el evento con el mismo código.`,
     ``,
     `Nos vemos ahí — ${orgName}`,
@@ -143,6 +154,23 @@ export function confirmationEmail(params: {
                             <p style="margin:0;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#8a8478;">Lugar</p>
                             ${params.venueName ? `<p style="margin:2px 0 0;font-size:14px;font-weight:600;color:${INK};">${escapeHtml(params.venueName)}</p>` : ""}
                             ${params.venueAddress ? `<p style="margin:2px 0 0;font-size:13px;color:${INK_MUTED};">${escapeHtml(params.venueAddress)}</p>` : ""}
+                          </td>
+                        </tr>`
+                      : ""
+                  }
+                  ${
+                    params.zoomJoinUrl
+                      ? `<tr>
+                          <td style="padding:14px 24px 0;">
+                            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${PAPER};border-radius:10px;">
+                              <tr>
+                                <td style="padding:14px 16px;">
+                                  <p style="margin:0 0 8px;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#8a8478;">Tu acceso por Zoom</p>
+                                  <a href="${escapeHtml(params.zoomJoinUrl)}" style="display:inline-block;background:${ACCENT};color:${ACCENT_INK};font-weight:700;font-size:14px;text-decoration:none;padding:10px 20px;border-radius:999px;">Unirme a la sesión</a>
+                                  <p style="margin:8px 0 0;font-size:12px;color:${INK_MUTED};">Este link es personal — no lo compartas, es solo tuyo.</p>
+                                </td>
+                              </tr>
+                            </table>
                           </td>
                         </tr>`
                       : ""

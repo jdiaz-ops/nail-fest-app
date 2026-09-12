@@ -39,6 +39,11 @@ export async function sendTicketEmail(params: {
   // TicketType's own name here (one lookup, one place) rather than
   // making every caller fetch and pass a name string.
   registration?: { id: string; ticketTypeId?: string | null; ticketCount?: number | null };
+  // This registrant's own personal Zoom join link — see
+  // lib/registrationConfirmation.ts, the only real caller that ever sets
+  // this (a VIRTUAL/HYBRID event with Zoom configured). Undefined for
+  // every other event, unchanged from before this existed.
+  zoomJoinUrl?: string;
 }): Promise<{ ok: boolean }> {
   try {
     const orgSettings = await getOrgSettings();
@@ -96,6 +101,7 @@ export async function sendTicketEmail(params: {
           orgName: orgSettings.name,
           timezone: orgSettings.timezone,
           language: orgSettings.language,
+          zoomJoinUrl: params.zoomJoinUrl,
         });
     // A real, self-contained ticket (event name/date/venue, attendee,
     // ticket type, the QR itself) instead of the old bare QR-only PNG — a

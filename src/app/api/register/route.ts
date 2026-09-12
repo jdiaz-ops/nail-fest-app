@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { randomUUID } from "crypto";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { queueMetaEvent } from "@/lib/meta/capi";
+import type { RegistrationStatus } from "@prisma/client";
 import { pushNewRegistrantToEventAudiences } from "@/lib/meta/audiences";
-import { recordConsents, hasActiveConsent } from "@/lib/consent";
-import { issueQrToken } from "@/lib/ticket";
-import { sendTicketEmail } from "@/lib/sendTicketEmail";
-import { sendTicketLinkViaWhatsApp } from "@/lib/whatsapp/sendTicketLink";
+import { recordConsents } from "@/lib/consent";
+import { finalizeConfirmedRegistration } from "@/lib/registrationConfirmation";
+import { buildCheckoutUrl } from "@/lib/payments/wompi";
 import { clientIpFromHeaders, userAgentFromHeaders } from "@/lib/request";
 import { splitName } from "@/lib/name";
 import { getOrgSettings } from "@/lib/settings";
@@ -355,6 +353,16 @@ export async function POST(req: NextRequest) {
         const isResend = Boolean(existingRegistration);
         const wasAlreadyConfirmed = existingRegistration?.status === "CONFIRMED";
 
+        // A paid ticket type (TicketType.price > 0) goes to PENDING_PAYMENT
+        // instead of straight to CONFIRMED — see /api/webhooks/wompi and
+        // lib/payments/confirmRegistrationPayment.ts for what actually
+        // confirms it once Wompi says the transaction is APPROVED. A
+        // resend of something ALREADY confirmed (they paid before, this is
+        // just a re-submit — e.g. they lost the ticket email) must never
+        // regress back to PENDING_PAYMENT and ask them to pay twice.
+        const isPaidTicket = Boolean(ticketType && ticketType.price > 0);
+        const nextStatus: RegistrationStatus = wasAlreadyConfirmed ? "CONFIRMED" : isPaidTicket ? "PENDING_PAYMENT" : "CONFIRMED";
+
         const registration = existingRegistration
           ? await tx.registration.update({
               where: { id: existingRegistration.id },
@@ -362,16 +370,16 @@ export async function POST(req: NextRequest) {
                 customFields,
                 ticketTypeId: input.ticketTypeId ?? null,
                 ticketCount,
-                status: "CONFIRMED",
-                confirmedAt: existingRegistration.confirmedAt ?? new Date(),
+                status: nextStatus,
+                confirmedAt: nextStatus === "CONFIRMED" ? existingRegistration.confirmedAt ?? new Date() : existingRegistration.confirmedAt,
               },
             })
           : await tx.registration.create({
               data: {
                 eventId: confirmedEvent.id,
                 personId: person.id,
-                status: "CONFIRMED",
-                confirmedAt: new Date(),
+                status: nextStatus,
+                confirmedAt: nextStatus === "CONFIRMED" ? new Date() : null,
                 customFields,
                 ticketTypeId: input.ticketTypeId ?? null,
                 ticketCount,
@@ -426,16 +434,14 @@ export async function POST(req: NextRequest) {
   }
   const { person, registration, isResend, wasAlreadyConfirmed } = result;
 
-  let qrToken = registration.qrToken;
-  if (!qrToken) {
-    qrToken = issueQrToken(registration.id);
-    await db.registration.update({ where: { id: registration.id }, data: { qrToken } });
-  }
-
   // Record their consent choice from THIS submission either way — even on
   // a resend, it's a fresh explicit answer (they might have changed their
   // mind on marketing/ads since the first time) and consent is append-only
-  // by design, so this never overwrites the earlier record, just adds to it.
+  // by design, so this never overwrites the earlier record, just adds to
+  // it. Recorded regardless of paid/free and regardless of whether the
+  // payment ever actually completes — they gave this answer the moment
+  // they submitted the form, which is the real "condition of registering"
+  // moment, not whichever moment Wompi later confirms the charge.
   await recordConsents({
     personId: person.id,
     registrationId: registration.id,
@@ -453,54 +459,43 @@ export async function POST(req: NextRequest) {
   // pushNewRegistrantToEventAudiences() for what it does and doesn't cover.
   await pushNewRegistrantToEventAudiences(event.slug, person);
 
-  // --- Transactional QR email — always sent; this is the LOGISTICS purpose,
-  // which is a condition of registering at all, not an optional consent.
-  // Never fails the registration itself: sendTicketEmail swallows its own
-  // errors into an EmailLog row for a human to requeue. ---
-  await sendTicketEmail({
+  // --- Paid ticket, not yet confirmed: send them to Wompi instead of
+  // finalizing anything. No QR email, no WhatsApp, no Purchase CAPI yet —
+  // all of that waits for a real APPROVED transaction (see
+  // /api/webhooks/wompi and /[eventSlug]/pago). A retried checkout (they
+  // abandoned Wompi and resubmitted the form) lands right back here and
+  // gets a FRESH Payment row/reference — see that model's own comment on
+  // why it's one row per attempt, not one per registration. ---
+  if (registration.status === "PENDING_PAYMENT") {
+    const amountInCents = ticketType!.price * registration.ticketCount * 100;
+    const payment = await db.payment.create({
+      data: { registrationId: registration.id, amountInCents, currency: "COP" },
+    });
+    const checkoutUrl = buildCheckoutUrl({
+      reference: payment.id,
+      amountInCents,
+      currency: "COP",
+      redirectUrl: `${process.env.APP_BASE_URL ?? ""}/${event.slug}/pago?registrationId=${registration.id}`,
+      customerEmail: person.email,
+    });
+    return NextResponse.json({ ok: true, requiresPayment: true, registrationId: registration.id, checkoutUrl });
+  }
+
+  // --- Free ticket, or a resend of something already CONFIRMED — the
+  // exact same finalize step a paid confirmation runs once Wompi approves
+  // it (see lib/registrationConfirmation.ts), so the two paths can never
+  // quietly drift apart on what "confirmed" actually delivers. ---
+  const { whatsappTicketLinkSent } = await finalizeConfirmedRegistration({
     person,
     event,
-    qrToken,
-    registration: { id: registration.id, ticketTypeId: registration.ticketTypeId, ticketCount: registration.ticketCount },
+    registration,
+    wasAlreadyConfirmed,
+    purchaseEventId: input.purchaseEventId,
+    fbc: input.fbc,
+    fbp: input.fbp,
+    clientIpAddress: clientIpFromHeaders(),
+    clientUserAgent: userAgentFromHeaders(),
   });
-
-  // --- Ticket link over WhatsApp, gated by the WHATSAPP consent — an
-  // extra channel on top of the email above, never a replacement for it.
-  // No-op until an admin turns on the REGISTRATION_CONFIRMED automation
-  // (/admin/crm/whatsapp/automatizaciones); never fails the registration
-  // itself, same swallow-and-log posture as sendTicketEmail. The return
-  // value (did it actually attempt a send, not whether the provider call
-  // itself succeeded) goes back to the client below so the confirmation
-  // modal only claims "ya va camino a tu WhatsApp" when that's true. ---
-  const whatsappTicketLinkSent = await sendTicketLinkViaWhatsApp({ person, event, qrToken });
-
-  // --- Purchase → Meta CAPI, gated by the ADVERTISING consent, not just
-  // "did they register". Sharing hashed identifiers with Meta is a distinct
-  // purpose under Ley 1581 and needs its own opt-in. Skipped only when the
-  // row was ALREADY CONFIRMED before this request (a real resend — same
-  // registration, not a second purchase; firing it again would inflate the
-  // conversion count Meta uses for ad optimization). A STARTED→CONFIRMED
-  // graduation is a first real purchase and must still fire. ---
-  if (!wasAlreadyConfirmed && (await hasActiveConsent(person.id, "ADVERTISING"))) {
-    await queueMetaEvent({
-      eventId: input.purchaseEventId ?? randomUUID(),
-      eventName: "Purchase",
-      eventSourceUrl: `${process.env.APP_BASE_URL ?? ""}/${event.slug}`,
-      userData: {
-        email: person.email,
-        phone: person.phone ?? undefined,
-        clientIpAddress: clientIpFromHeaders(),
-        clientUserAgent: userAgentFromHeaders(),
-        fbc: input.fbc,
-        fbp: input.fbp,
-      },
-      customData: {
-        value: Number(process.env.META_PURCHASE_PLACEHOLDER_VALUE || "1"),
-        currency: process.env.DEFAULT_CURRENCY || "COP",
-      },
-      registrationId: registration.id,
-    });
-  }
 
   return NextResponse.json({ ok: true, registrationId: registration.id, resent: isResend, whatsappTicketLinkSent });
 }

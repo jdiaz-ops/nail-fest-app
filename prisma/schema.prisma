@@ -85,11 +85,45 @@ enum EventStatus {
   PUBLISHED
 }
 
+// A congreso virtual (Zoom, sold via TicketType.price like anything else)
+// vs. a normal in-person event vs. one event offering both kinds of ticket
+// at once (HYBRID — e.g. an in-person feria that also sells a livestream
+// pass). Drives what the public landing page shows (venue vs. "cómo
+// accedes"), whether the door scanner applies at all, and how the
+// confirmation email delivers access (QR vs. Zoom join instructions).
+// IN_PERSON is the default so every existing event keeps behaving exactly
+// as before this existed.
+enum EventFormat {
+  IN_PERSON
+  VIRTUAL
+  HYBRID
+}
+
 model Event {
   id           String      @id @default(cuid())
   slug         String      @unique // used in the landing URL, e.g. /bogota-2026
   name         String
   city         String
+  format       EventFormat @default(IN_PERSON)
+  // Shown on the public page and in the confirmation email INSTEAD OF
+  // venue/address for a VIRTUAL event (and alongside it for HYBRID) —
+  // plain text the admin writes themselves (e.g. "el link de acceso
+  // personal te llega por correo 1h antes"), not the actual per-person
+  // Zoom link — that's never stored here, see Registration's own Zoom
+  // fields below for why it can't be a single event-level value at all.
+  virtualAccessInstructions String?
+  // Which Zoom meeting/webinar this event's attendees get registered
+  // into (see lib/zoom.ts) — null means "no Zoom integration for this
+  // event" (a HYBRID event might still be in-person-only if the admin
+  // never filled this in). The numeric Zoom meeting/webinar id, as a
+  // string (Zoom's ids exceed JS's safe integer range in rare cases).
+  zoomMeetingId String?
+  // Whether zoomMeetingId is a Webinar (needs the paid Zoom Webinars
+  // add-on, scales past 100/500 depending on plan) instead of a plain
+  // Meeting (works on any Pro+ plan with "Registration" turned on,
+  // capped by the account's own participant limit) — picks which of
+  // Zoom's near-identical registrant endpoints lib/zoom.ts calls.
+  zoomIsWebinar Boolean @default(false)
   // Shown on the public event page and in the confirmation email, not
   // just admin-internal — attendees need to know where to physically go,
   // not only which city (see /admin/events' own screenshots comparison).
@@ -217,7 +251,15 @@ model TicketType {
 
 enum RegistrationStatus {
   STARTED // form opened / InitiateCheckout fired, not yet submitted
-  CONFIRMED // submitted, QR issued, Purchase fired
+  // Submitted a PAID ticket type (TicketType.price > 0) and was sent to
+  // Wompi checkout, but no APPROVED payment has come back yet — see
+  // lib/payments/confirmRegistrationPayment.ts. Never set for a free
+  // ticket, which still goes STARTED -> CONFIRMED directly exactly as
+  // before this existed. A row can sit here indefinitely if the person
+  // abandons the Wompi checkout itself (there's no cron cleaning these up
+  // yet — see that file's own comment).
+  PENDING_PAYMENT
+  CONFIRMED // submitted, QR issued (or Zoom access granted), Purchase fired
   CANCELLED
 }
 
@@ -307,9 +349,63 @@ model Registration {
   consents  Consent[]
   metaEvents MetaEvent[]
   scans      ScanLog[]
+  payments   Payment[]
 
   @@unique([personId, eventId])
   @@index([eventId, status])
+}
+
+enum PaymentProvider {
+  WOMPI
+  // Not built yet — the user only asked for Wompi this round. Reserved so
+  // a future PayPal integration slots into this same Payment model
+  // instead of needing a parallel one.
+  PAYPAL
+}
+
+// Mirrors Wompi's own transaction statuses (APPROVED/DECLINED/VOIDED/
+// ERROR) plus PENDING for "sent to checkout, no word back yet" — same
+// "mirror the real provider's own enum" reasoning as WhatsAppTemplateStatus.
+enum PaymentStatus {
+  PENDING
+  APPROVED
+  DECLINED
+  VOIDED
+  ERROR
+}
+
+// One row per checkout ATTEMPT, not one per Registration — a declined
+// card and a retry are two separate Payment rows against the same
+// Registration (see lib/payments/wompi.ts), each with its own Wompi
+// `reference` (this row's own id) and its own real transaction id from
+// Wompi once one exists. Never deleted: this is the audit trail for
+// "the customer says they paid, what actually happened."
+model Payment {
+  id             String          @id @default(cuid())
+  registration   Registration    @relation(fields: [registrationId], references: [id])
+  registrationId String
+  provider       PaymentProvider @default(WOMPI)
+  // Wompi's own transaction id — null until the checkout redirect or the
+  // webhook first reports one (this row's OWN id is what's sent to Wompi
+  // as `reference` before that point, see wompi.ts's buildCheckoutUrl).
+  providerReference String?      @unique
+  // Whole cents of `currency` (Wompi's own unit — COP has no sub-unit in
+  // practice, so this is ticketType.price * 100), not
+  // TicketType.price's own whole-COP convention — kept in the provider's
+  // own unit here specifically so a raw amount from a webhook payload
+  // can be compared directly with no conversion bug in between.
+  amountInCents  Int
+  currency       String          @default("COP")
+  status         PaymentStatus   @default(PENDING)
+  // Last webhook/status payload received, verbatim — for support ("el
+  // cliente dice que le cobraron, ¿qué dice Wompi de verdad?") without
+  // needing to go dig through Wompi's own dashboard.
+  rawPayload     Json?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([registrationId])
+  @@index([status])
 }
 
 // Append-only — see lib/ticket.ts's note on why the QR token itself never

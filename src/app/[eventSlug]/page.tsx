@@ -60,7 +60,18 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
       ? ` – ${formatDateInTz(event.endsAt, { dateStyle: "full", timeStyle: "short" }, orgSettings.timezone, orgSettings.language)}`
       : "",
   ].join("");
-  const eventVenue = [event.venueName, event.venueAddress].filter(Boolean).join(" — ");
+  // A VIRTUAL event never has a real physical venue line — swap it for a
+  // short "evento virtual" note instead (the admin's own
+  // virtualAccessInstructions, or a generic fallback so this never shows
+  // blank). A HYBRID event shows BOTH: the real venue AND this same note,
+  // since it's selling both an in-person and a virtual ticket at once.
+  const physicalVenue = [event.venueName, event.venueAddress].filter(Boolean).join(" — ");
+  const eventVenue =
+    event.format === "VIRTUAL"
+      ? event.virtualAccessInstructions || "Evento virtual — el acceso llega por correo antes del evento"
+      : event.format === "HYBRID"
+        ? [physicalVenue, event.virtualAccessInstructions || "también disponible de forma virtual"].filter(Boolean).join(" · ")
+        : physicalVenue;
 
   return (
     // .event-page: 480px column on mobile (unchanged — already optimized,
@@ -113,7 +124,7 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
       <h1 style={{ margin: "4px 0 8px" }}>{event.name}</h1>
       {eventVenue && (
         <p className="event-page-meta">
-          📍 {eventVenue}
+          {event.format === "VIRTUAL" ? "🌐" : "📍"} {eventVenue}
         </p>
       )}
 

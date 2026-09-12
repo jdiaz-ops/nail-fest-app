@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { Prisma } from "@prisma/client";
-import type { Event, EventStatus } from "@prisma/client";
+import type { Event, EventStatus, EventFormat } from "@prisma/client";
 import { sanitizeEventDescription } from "@/lib/sanitizeHtml";
 import { createTicketType } from "@/lib/ticketTypes";
 import type { EventScheduleDay } from "@/lib/eventSchedule";
@@ -54,6 +54,12 @@ export interface EventInput {
   // startsAt–endsAt range display exactly as before.
   scheduleDays: EventScheduleDay[];
   status: EventStatus;
+  // See EventFormat's own schema comment — IN_PERSON keeps every existing
+  // event's behavior unchanged.
+  format: EventFormat;
+  virtualAccessInstructions: string;
+  zoomMeetingId: string;
+  zoomIsWebinar: boolean;
   // Only used on create when the admin wants a specific URL instead of
   // the auto-generated one (e.g. matching an already-promoted link from
   // our previous ticketing platform) — left blank, the name is slugified instead.
@@ -80,6 +86,10 @@ export async function createEvent(input: EventInput): Promise<Event> {
       capacity: input.capacity,
       scheduleDays: input.scheduleDays.length > 0 ? (input.scheduleDays as unknown as Prisma.InputJsonValue) : Prisma.JsonNull,
       status: input.status,
+      format: input.format,
+      virtualAccessInstructions: input.virtualAccessInstructions.trim() || null,
+      zoomMeetingId: input.zoomMeetingId.trim() || null,
+      zoomIsWebinar: input.zoomIsWebinar,
     },
   });
 }
@@ -104,6 +114,10 @@ export async function updateEvent(id: string, input: EventInput): Promise<Event>
       capacity: input.capacity,
       scheduleDays: input.scheduleDays.length > 0 ? (input.scheduleDays as unknown as Prisma.InputJsonValue) : Prisma.JsonNull,
       status: input.status,
+      format: input.format,
+      virtualAccessInstructions: input.virtualAccessInstructions.trim() || null,
+      zoomMeetingId: input.zoomMeetingId.trim() || null,
+      zoomIsWebinar: input.zoomIsWebinar,
     },
   });
 }
@@ -148,6 +162,14 @@ export async function duplicateEvent(sourceId: string): Promise<Event> {
       endsAt: null,
       capacity: source.capacity,
       status: "DRAFT",
+      format: source.format,
+      virtualAccessInstructions: source.virtualAccessInstructions,
+      // zoomMeetingId deliberately NOT copied — it's one specific Zoom
+      // session; copying it would register two different events' worth
+      // of people into the exact same room. A copy needs its own,
+      // freshly-created Zoom meeting, same reasoning as dates not being
+      // copied either (see this function's own comment above).
+      zoomIsWebinar: source.zoomIsWebinar,
     },
   });
   for (const tt of source.ticketTypes.sort((a, b) => a.order - b.order)) {
