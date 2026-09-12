@@ -4,35 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import { Fraunces } from "next/font/google";
 import RegistrationForm, { type QuestionView, type RegisterPayload } from "./RegistrationForm";
 import { track, ensureFbcCookie } from "./tracking";
-import { COUNTRY_CODES } from "@/lib/countryCodes";
-
-// Purely cosmetic — the phone the person submitted is stored/sent as raw
-// E.164 ("+573001234567", see RegistrationForm's phoneCountry.dialCode +
-// localPhone concat), so this just re-groups it for the confirmation pill: country
-// code, then the rest in groups of 3 with the last group taking any
-// remainder (so a 10-digit CO mobile reads "+57 300 123 4567", matching
-// how the app already asks for it). Falls back to the raw string when the
-// prefix isn't one of the app's own COUNTRY_CODES — never throws.
-function formatPhoneDisplay(raw: string): string {
-  const country = COUNTRY_CODES.find((c) => raw.startsWith(c.code));
-  if (!country) return raw;
-  let rest = raw.slice(country.code.length);
-  const groups: string[] = [];
-  while (rest.length > 4) {
-    groups.push(rest.slice(0, 3));
-    rest = rest.slice(3);
-  }
-  if (rest) groups.push(rest);
-  return [country.code, ...groups].join(" ");
-}
+import { formatPhoneDisplay, INSTAGRAM_HANDLE, INSTAGRAM_URL } from "@/lib/brand";
 
 // Same face the admin already uses for its own brand/celebratory moments
 // (EventForm.tsx, the CRM/Settings section headers) — one display font for
 // "this is a brand moment" across the whole app, not a second one just for
 // this screen.
 const fraunces = Fraunces({ subsets: ["latin"], weight: ["800", "900"] });
-
-const INSTAGRAM_URL = "https://www.instagram.com/nailfest_co";
 
 export interface PublicTicketTypeView {
   id: string;
@@ -593,7 +571,7 @@ export default function EventRegistration({
                       </svg>
                     </span>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: 12.5, fontWeight: 800, margin: 0 }}>@nailfest_co</p>
+                      <p style={{ fontSize: 12.5, fontWeight: 800, margin: 0 }}>{INSTAGRAM_HANDLE}</p>
                       <p style={{ fontSize: 11, color: "#5b5f6b", margin: "1px 0 0" }}>Síguenos para más noticias del evento</p>
                     </div>
                     <a
