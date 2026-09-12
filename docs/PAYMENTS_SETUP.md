@@ -159,6 +159,27 @@ Un evento VIRTUAL ya no manda el mismo correo/WhatsApp que uno presencial
   tal cual (nada cambia hasta que la agregues). Ver
   `docs/WHATSAPP_SETUP.md` para cómo mapear las variables de cualquiera
   de los dos disparadores.
+- **Pedirlo por WhatsApp, o reenviarlo tú manualmente** — si alguien
+  escribe pidiendo su link de acceso, el agente de IA de Bandeja (si
+  está activo en esa conversación) lo detecta y lo manda solo, igual que
+  ya hacía con el PDF de la entrada. También puedes mandarlo tú a mano
+  desde `/admin/crm/whatsapp/bandeja` → abre la conversación → sección
+  "Entradas" → botón "Enviar link de Zoom por WhatsApp" (solo aparece
+  para inscripciones a eventos virtuales/híbridos). En ambos casos, si
+  el link todavía no se había generado, se genera ahí mismo antes de
+  enviarlo.
+- **Verlo en el admin** — en `/admin/events/[id]/tickets` ("Entradas emitidas"), cada evento
+  virtual/híbrido tiene una columna "Zoom" (Generado/Pendiente) en la
+  tabla, y el detalle de cada inscripción muestra el link completo (con
+  botón "Copiar") o, si todavía no existe, un botón "Generar ahora" para
+  reintentarlo a mano.
+- **Incluirlo en un "Correo del evento"** — el editor de
+  `/admin/events/[id]/broadcasts` (para eventos virtuales/híbridos) tiene
+  un botón "Insertar link personal de Zoom" que agrega `{{ZOOM_LINK}}` —
+  cada destinatario recibe su propio link real al enviarse. Pensado para
+  un correo que mandes cerca del evento (el mismo día, o programado
+  "antes de que empiece"): usarlo en un correo con mucha anticipación
+  contradice la razón de ser del recordatorio automático.
 
 ## Asistencia en tiempo real (Event Subscriptions) — opcional, un paso más
 

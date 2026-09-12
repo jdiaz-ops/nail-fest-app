@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import RichTextEditor from "@/components/RichTextEditor";
+import type { EventFormat } from "@prisma/client";
+import RichTextEditor, { type RichTextEditorHandle } from "@/components/RichTextEditor";
 
 type ScheduleKind = "IMMEDIATE" | "AT_DATETIME" | "BEFORE_EVENT_START" | "AFTER_EVENT_END";
 
@@ -45,12 +46,18 @@ function minutesToOffset(totalMinutes: number): { value: number; unit: "minutos"
 
 export default function EventBroadcastComposer({
   eventId,
+  eventFormat,
   ticketTypes,
   allBuyersCount,
   initial,
   editing,
 }: {
   eventId: string;
+  // Only VIRTUAL/HYBRID events have a Zoom link to insert — see the
+  // "Insertar link de Zoom" button below. Optional so an older/other
+  // caller without it just never shows that button (same as before it
+  // existed).
+  eventFormat?: EventFormat;
   ticketTypes: { id: string; name: string; count: number }[];
   allBuyersCount: number;
   // Set when this composer opened from "Duplicar" on an existing
@@ -72,6 +79,7 @@ export default function EventBroadcastComposer({
   editing?: EditingBroadcast;
 }) {
   const router = useRouter();
+  const editorRef = useRef<RichTextEditorHandle>(null);
   const [ticketTypeId, setTicketTypeId] = useState(editing?.ticketTypeId ?? initial?.ticketTypeId ?? "");
   const [subject, setSubject] = useState(editing?.subject ?? initial?.subject ?? "");
   const [bodyHtml, setBodyHtml] = useState(editing?.bodyHtml ?? initial?.bodyHtml ?? "");
@@ -173,7 +181,23 @@ export default function EventBroadcastComposer({
 
       <div className="field">
         <label>Mensaje</label>
-        <RichTextEditor value={bodyHtml} onChange={setBodyHtml} />
+        {eventFormat && eventFormat !== "IN_PERSON" && (
+          <div style={{ marginBottom: 6 }}>
+            <button
+              type="button"
+              onClick={() => editorRef.current?.insertAtCursor("{{ZOOM_LINK}} ")}
+              style={{ fontSize: 12, padding: "4px 10px", borderRadius: 999, border: "1px solid #e3e1dc", background: "#fff", cursor: "pointer" }}
+            >
+              + Insertar link personal de Zoom
+            </button>
+            <p style={{ fontSize: 11, color: "#8a8478", margin: "4px 0 0" }}>
+              Cada destinatario recibe SU propio link — pero úsalo solo en un correo que envíes cerca del evento (el
+              mismo día, o programado "antes de que empiece"): mandarlo con mucha anticipación es justo lo que el
+              recordatorio automático por WhatsApp evita.
+            </p>
+          </div>
+        )}
+        <RichTextEditor ref={editorRef} value={bodyHtml} onChange={setBodyHtml} />
       </div>
 
       <div className="field">

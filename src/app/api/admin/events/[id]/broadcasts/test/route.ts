@@ -24,7 +24,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "invalid_body", issues: parsed.error.issues }, { status: 400 });
   }
   const { subject, bodyHtml, to } = parsed.data;
-  const safeHtml = sanitizeEventDescription(bodyHtml);
+  // No real registrant to pull a link from in a test send — a clearly
+  // fake example instead of leaving the raw {{ZOOM_LINK}} tag visible,
+  // so the preview still reads like a real email. Same tag
+  // sendEventBroadcast substitutes for real, see that function's own
+  // comment.
+  const previewBodyHtml = bodyHtml.split("{{ZOOM_LINK}}").join("https://zoom.us/j/000000000 (ejemplo)");
+  const safeHtml = sanitizeEventDescription(previewBodyHtml);
   const html = `<div style="font-family: -apple-system, Segoe UI, Roboto, sans-serif; max-width: 560px; margin: 0 auto; color:#1a1a1a;">
     <p style="background:#fdf1e6; color:#8a5a1f; padding:8px 12px; border-radius:6px; font-size:13px;">Este es un correo de PRUEBA — no se envió a ningún inscrito real.</p>
     ${safeHtml}

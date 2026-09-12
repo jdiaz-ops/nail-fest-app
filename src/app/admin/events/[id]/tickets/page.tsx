@@ -14,7 +14,8 @@ export const dynamic = "force-dynamic";
 // highlights ("Email bounced" vs "Email opened" — the specific thing the user called out as
 // important for deciding who to follow up with).
 export default async function IssuedTicketsPage({ params }: { params: { id: string } }) {
-  const [registrations, questions, orgSettings] = await Promise.all([
+  const [event, registrations, questions, orgSettings] = await Promise.all([
+    db.event.findUnique({ where: { id: params.id }, select: { format: true, zoomMeetingId: true } }),
     db.registration.findMany({
       where: { eventId: params.id, status: { in: ["CONFIRMED", "CANCELLED"] } },
       orderBy: { createdAt: "desc" },
@@ -27,6 +28,10 @@ export default async function IssuedTicketsPage({ params }: { params: { id: stri
     getCheckoutQuestions(),
     getOrgSettings(),
   ]);
+  // Whether THIS event even has a Zoom access concept at all — drives
+  // whether IssuedTicketsTable shows the "Zoom" column/section at all
+  // (a presencial event has nothing to show there).
+  const hasZoomAccess = Boolean(event && event.format !== "IN_PERSON" && event.zoomMeetingId);
 
   const personIds = registrations.map((r) => r.personId);
   // Latest TRANSACTIONAL email per person (the ticket-confirmation send,
@@ -70,8 +75,11 @@ export default async function IssuedTicketsPage({ params }: { params: { id: stri
         ? (latestEmail.openedAt ?? latestEmail.deliveredAt ?? latestEmail.bouncedAt ?? latestEmail.createdAt).toISOString()
         : null,
       utmSource: r.utmSource,
+      zoomJoinUrl: r.zoomJoinUrl,
     };
   });
 
-  return <IssuedTicketsTable eventId={params.id} rows={rows} timezone={orgSettings.timezone} language={orgSettings.language} />;
+  return (
+    <IssuedTicketsTable eventId={params.id} rows={rows} timezone={orgSettings.timezone} language={orgSettings.language} hasZoomAccess={hasZoomAccess} />
+  );
 }

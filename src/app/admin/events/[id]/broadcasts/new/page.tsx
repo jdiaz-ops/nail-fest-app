@@ -45,6 +45,7 @@ export default async function NewEventBroadcastPage({
       <h2 style={{ fontSize: 18, marginBottom: 16 }}>{source ? "Duplicar correo" : "Nuevo correo"}</h2>
       <EventBroadcastComposer
         eventId={params.id}
+        eventFormat={event.format}
         ticketTypes={ticketTypeCounts}
         allBuyersCount={allBuyersCount}
         initial={

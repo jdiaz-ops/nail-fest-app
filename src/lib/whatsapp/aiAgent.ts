@@ -12,6 +12,7 @@ import { whatsappProvider } from "./index";
 import { recordOutboundMessage } from "./inbox";
 import { addNote } from "./notes";
 import { sendTicketPdfViaWhatsApp, listResendableRegistrations } from "./sendTicketPdf";
+import { sendZoomLinkViaWhatsApp, listZoomResendableRegistrations } from "./sendZoomLink";
 
 const WINDOW_MS = 24 * 60 * 60 * 1000;
 const MODEL = "claude-sonnet-5";
@@ -113,10 +114,13 @@ async function buildConversationHistory(conversationId: string): Promise<Timelin
  * conversation this was scoped from: answers real questions about the
  * event using ONLY get_event_info's data (never invented), can resend a
  * confirmed ticket's PDF (reuses the exact same send path the Bandeja
- * "Reenviar PDF por WhatsApp" button uses), and hands off to a human the
- * moment the customer asks for one — nothing beyond that scope (no
- * chat-based registration, no anything that writes new Person/
- * Registration data) is in the agent's tool surface.
+ * "Reenviar PDF por WhatsApp" button uses) or a virtual event's personal
+ * Zoom link (same idea, its own send path — retries generating the link
+ * on the spot if it isn't ready yet, see sendZoomLinkViaWhatsApp's own
+ * comment), and hands off to a human the moment the customer asks for
+ * one — nothing beyond that scope (no chat-based registration, no
+ * anything that writes new Person/Registration data) is in the agent's
+ * tool surface.
  *
  * Called from lib/whatsapp/inbox.ts right after a real inbound message is
  * logged. Never throws past this module — a failure here must never break
@@ -186,6 +190,40 @@ export async function respondWithAi(conversationId: string): Promise<void> {
     },
   });
 
+  const resendZoomLinkTool = betaZodTool({
+    name: "resend_zoom_link",
+    description:
+      "Envía por WhatsApp el link personal de Zoom para unirse a un evento VIRTUAL o HÍBRIDO en el que esta persona tiene una inscripción confirmada. Úsalo cuando pida su link de acceso, pregunte cómo entrar a la reunión, o diga que lo perdió. Si tiene más de una inscripción virtual, este tool te devuelve la lista para que le preguntes cuál — no adivines. NO uses esto para pedir la entrada/boleta de un evento presencial (para eso está resend_ticket_pdf).",
+    inputSchema: z.object({
+      eventId: z
+        .string()
+        .optional()
+        .describe("El id del evento cuyo link de Zoom enviar — solo hace falta si la persona tiene más de una inscripción virtual y ya sabes cuál quiere."),
+    }),
+    run: async (input) => {
+      if (!conversation.personId) {
+        return "Esta conversación no está vinculada a ningún contacto del CRM — no hay ningún link de Zoom que enviar. Dile que verifique el número con el que se inscribió.";
+      }
+      const registrations = await listZoomResendableRegistrations(conversation.personId);
+      if (registrations.length === 0) {
+        return "Esta persona no tiene ninguna inscripción confirmada a un evento virtual/híbrido con Zoom configurado — no hay ningún link que enviar.";
+      }
+      const target = input.eventId ? registrations.find((r) => r.eventId === input.eventId) : registrations[0];
+      if (!target) {
+        return "No encontré esa inscripción específica.";
+      }
+      if (!input.eventId && registrations.length > 1) {
+        return `Esta persona tiene ${registrations.length} inscripciones a eventos virtuales: ${registrations
+          .map((r) => `"${r.event.name}" (eventId: ${r.eventId})`)
+          .join(", ")}. Pregúntale cuál quiere antes de enviar, y vuelve a llamar este tool con el eventId correcto.`;
+      }
+      const result = await sendZoomLinkViaWhatsApp(target.id, conversation.phone);
+      return result.ok
+        ? `Listo — se envió el link de Zoom para "${target.event.name}" por este mismo WhatsApp.`
+        : `No se pudo enviar el link (${result.error}). Dile a la persona que un asesor se lo va a mandar en un momento, y considera usar escalate_to_human.`;
+    },
+  });
+
   const escalateToHumanTool = betaZodTool({
     name: "escalate_to_human",
     description:
@@ -205,7 +243,7 @@ export async function respondWithAi(conversationId: string): Promise<void> {
     "",
     "REGLAS ESTRICTAS:",
     "- Nunca inventes fechas, precios, direcciones ni ningún dato del evento — toda esa información real está en el bloque 'INFORMACIÓN REAL DE EVENTOS' de abajo. Si no está ahí, dilo con honestidad y ofrece escalar con escalate_to_human.",
-    "- Nunca digas que enviaste algo (como la entrada en PDF) a menos que el resultado del tool resend_ticket_pdf te confirme que sí se envió.",
+    "- Nunca digas que enviaste algo (como la entrada en PDF o el link de Zoom) a menos que el resultado del tool correspondiente (resend_ticket_pdf / resend_zoom_link) te confirme que sí se envió.",
     "- Si la persona pide hablar con un humano/asesor/persona real, o la situación se sale de lo que puedes resolver, usa escalate_to_human de inmediato — no sigas intentando resolverlo solo.",
     "- Escribe como se escribe por WhatsApp: mensajes cortos (1-4 líneas), tono cálido y cercano, colombiano, nunca corporativo ni robótico. Usa emojis con moderación, como los que ya usa la marca (✨💗📍🕐), nunca en exceso.",
     "- Nunca uses markdown (nada de **negrita** con doble asterisco, nada de encabezados con #). Si necesitas resaltar algo, usa *un solo asterisco* como hace WhatsApp de verdad.",
@@ -242,7 +280,7 @@ export async function respondWithAi(conversationId: string): Promise<void> {
       // cheap without hurting quality here (see the claude-api skill's
       // own cost-tuning guidance for this workload shape).
       output_config: { effort: "low" },
-      tools: [resendTicketPdfTool, escalateToHumanTool],
+      tools: [resendTicketPdfTool, resendZoomLinkTool, escalateToHumanTool],
       messages,
     });
   } catch (err) {

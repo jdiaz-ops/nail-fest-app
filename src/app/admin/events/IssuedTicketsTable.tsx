@@ -36,6 +36,11 @@ export interface TicketRow {
   // tenía y esta no, así que se movió aquí en vez de duplicarse en dos
   // sitios.
   utmSource: string | null;
+  // This registrant's own personal Zoom join link — see
+  // lib/registrationConfirmation.ts. Null means either the event isn't
+  // virtual/hybrid, or the automatic registration at confirmation time
+  // hasn't succeeded yet (see the "Generar ahora" action in the modal).
+  zoomJoinUrl: string | null;
 }
 
 // "¿por ejemplo, nosotros podemos detectar que esta persona rebotó el
@@ -73,11 +78,16 @@ export default function IssuedTicketsTable({
   rows: initialRows,
   timezone,
   language,
+  hasZoomAccess,
 }: {
   eventId: string;
   rows: TicketRow[];
   timezone: string;
   language: string;
+  // Whether THIS event is VIRTUAL/HYBRID with Zoom configured at all —
+  // a presencial event has nothing to show in a "Zoom" column, so it's
+  // just not rendered rather than showing an all-"—" column.
+  hasZoomAccess: boolean;
 }) {
   const [rows, setRows] = useState(initialRows);
   const [query, setQuery] = useState("");
@@ -176,6 +186,7 @@ export default function IssuedTicketsTable({
               <th style={{ padding: "8px 12px" }}>Fuente</th>
               <th style={{ padding: "8px 12px" }}>Check-in</th>
               <th style={{ padding: "8px 12px" }}>Correo</th>
+              {hasZoomAccess && <th style={{ padding: "8px 12px" }}>Zoom</th>}
               <th style={{ padding: "8px 12px" }}>Estado</th>
             </tr>
           </thead>
@@ -209,6 +220,19 @@ export default function IssuedTicketsTable({
                       <span style={{ color: "#8a8478", fontSize: 12 }}>Sin envíos</span>
                     )}
                   </td>
+                  {hasZoomAccess && (
+                    <td style={{ padding: "10px 12px" }}>
+                      {r.zoomJoinUrl ? (
+                        <span style={{ padding: "3px 10px", borderRadius: 999, fontSize: 12, fontWeight: 600, background: "#e8f6ef", color: "#0e6b4c" }}>
+                          Generado
+                        </span>
+                      ) : (
+                        <span style={{ padding: "3px 10px", borderRadius: 999, fontSize: 12, fontWeight: 600, background: "#f6f5f2", color: "#5b5f6b" }}>
+                          Pendiente
+                        </span>
+                      )}
+                    </td>
+                  )}
                   <td style={{ padding: "10px 12px" }}>
                     {r.status === "CANCELLED" ? (
                       <span style={{ padding: "3px 10px", borderRadius: 999, fontSize: 12, fontWeight: 600, background: "#fbe9ea", color: "#a3212b" }}>
@@ -225,7 +249,7 @@ export default function IssuedTicketsTable({
             })}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={7} style={{ padding: "10px 12px", color: "#5b5f6b" }}>
+                <td colSpan={hasZoomAccess ? 8 : 7} style={{ padding: "10px 12px", color: "#5b5f6b" }}>
                   {rows.length === 0 ? "Aún no hay entradas emitidas para este evento." : "Nadie coincide con esa búsqueda/filtro."}
                 </td>
               </tr>
@@ -242,6 +266,7 @@ export default function IssuedTicketsTable({
           onUpdate={(patch) => updateRow(openRow.id, patch)}
           timezone={timezone}
           language={language}
+          hasZoomAccess={hasZoomAccess}
         />
       )}
     </div>
@@ -254,6 +279,7 @@ function TicketModal({
   onUpdate,
   timezone,
   language,
+  hasZoomAccess,
 }: {
   eventId: string;
   row: TicketRow;
@@ -261,6 +287,7 @@ function TicketModal({
   onUpdate: (patch: Partial<TicketRow>) => void;
   timezone: string;
   language: string;
+  hasZoomAccess: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(() => Object.fromEntries(row.buyerFields.map((f) => [f.key, f.value])));
@@ -268,8 +295,38 @@ function TicketModal({
   const [resending, setResending] = useState(false);
   const [toggling, setToggling] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [generatingZoom, setGeneratingZoom] = useState(false);
+  const [zoomMessage, setZoomMessage] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const emailBadge = row.emailStatus ? EMAIL_STATUS[row.emailStatus] : null;
+
+  async function handleGenerateZoomLink() {
+    setGeneratingZoom(true);
+    setZoomMessage(null);
+    const res = await fetch(`/api/admin/registrations/${row.id}/zoom-link`, { method: "POST" });
+    const body = await res.json().catch(() => ({}));
+    setGeneratingZoom(false);
+    if (res.ok && body.zoomJoinUrl) {
+      onUpdate({ zoomJoinUrl: body.zoomJoinUrl });
+    } else {
+      setZoomMessage("No se pudo generar el link todavía — revisa que Zoom esté bien configurado para este evento.");
+    }
+  }
+
+  async function handleCopyZoomLink() {
+    if (!row.zoomJoinUrl) return;
+    try {
+      await navigator.clipboard.writeText(row.zoomJoinUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard access can fail silently in some contexts (permissions,
+      // non-secure origin) — the link is still visible as plain text
+      // right below the button either way, so this is a nice-to-have,
+      // not something worth surfacing an error for.
+    }
+  }
 
   async function handleSave() {
     setSaving(true);
@@ -399,6 +456,36 @@ function TicketModal({
             {row.ticketTypeName ?? "Entrada general"} — {row.checkedInCount} de {row.ticketCount} {row.ticketCount === 1 ? "escaneada" : "escaneadas"}
           </p>
         </div>
+
+        {hasZoomAccess && (
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 12, color: "#5b5f6b", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>
+              Acceso virtual (Zoom)
+            </div>
+            {row.zoomJoinUrl ? (
+              <div>
+                <p style={{ margin: "0 0 6px", fontSize: 13, wordBreak: "break-all" }}>{row.zoomJoinUrl}</p>
+                <button type="button" className="secondary" onClick={handleCopyZoomLink} style={{ padding: "5px 12px", fontSize: 12 }}>
+                  {copied ? "Copiado ✓" : "Copiar link"}
+                </button>
+                <p style={{ margin: "6px 0 0", fontSize: 11, color: "#8a8478" }}>
+                  Se le manda solo por WhatsApp cerca del evento — este link personal es visible aquí para tu propio
+                  seguimiento, no para reenviarlo tú manualmente por otro canal antes de tiempo.
+                </p>
+              </div>
+            ) : (
+              <div>
+                <p style={{ margin: "0 0 6px", fontSize: 13, color: "#5b5f6b" }}>
+                  Todavía no se ha generado — puede que el registro automático en Zoom haya fallado.
+                </p>
+                <button type="button" className="secondary" disabled={generatingZoom} onClick={handleGenerateZoomLink} style={{ padding: "5px 12px", fontSize: 12 }}>
+                  {generatingZoom ? "Generando…" : "Generar ahora"}
+                </button>
+                {zoomMessage && <p style={{ fontSize: 12, color: "#c2185b", margin: "6px 0 0" }}>{zoomMessage}</p>}
+              </div>
+            )}
+          </div>
+        )}
 
         <div style={{ marginBottom: 16 }}>
           <div style={{ fontSize: 12, color: "#5b5f6b", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>

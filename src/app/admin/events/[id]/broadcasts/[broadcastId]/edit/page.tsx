@@ -60,6 +60,7 @@ export default async function EditEventBroadcastPage({
       <h2 style={{ fontSize: 18, marginBottom: 16 }}>Editar correo</h2>
       <EventBroadcastComposer
         eventId={params.id}
+        eventFormat={event.format}
         ticketTypes={ticketTypeCounts}
         allBuyersCount={allBuyersCount}
         editing={{

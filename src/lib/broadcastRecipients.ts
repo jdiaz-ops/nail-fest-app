@@ -2,13 +2,17 @@ import { db } from "@/lib/db";
 import type { Person } from "@prisma/client";
 
 // Registration fields needed to build a personalized entrada PDF for a
-// recipient (see broadcasts.ts's use of renderTicketPdfBuffer) — kept to
-// exactly what that needs, not the whole Registration row.
+// recipient (see broadcasts.ts's use of renderTicketPdfBuffer), plus
+// zoomJoinUrl — this registrant's own personal Zoom link, so an admin
+// can insert {{ZOOM_LINK}} into a "Correo del evento" (see
+// sendEventBroadcast's own comment on why this is opt-in, admin-timed,
+// unlike the automatic ZOOM_ACCESS_REMINDER).
 export interface RecipientRegistration {
   id: string;
   qrToken: string | null;
   ticketTypeId: string | null;
   ticketCount: number;
+  zoomJoinUrl: string | null;
 }
 
 export interface EventBroadcastRecipient {
@@ -39,7 +43,7 @@ export async function resolveEventBroadcastRecipients(eventId: string, ticketTyp
   });
   return registrations.map((r) => ({
     person: r.person,
-    registration: { id: r.id, qrToken: r.qrToken, ticketTypeId: r.ticketTypeId, ticketCount: r.ticketCount },
+    registration: { id: r.id, qrToken: r.qrToken, ticketTypeId: r.ticketTypeId, ticketCount: r.ticketCount, zoomJoinUrl: r.zoomJoinUrl },
   }));
 }
 

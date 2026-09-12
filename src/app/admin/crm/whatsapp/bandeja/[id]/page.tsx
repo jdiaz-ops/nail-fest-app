@@ -10,6 +10,7 @@ import WhatsAppAssignAgent from "@/components/WhatsAppAssignAgent";
 import WhatsAppPersonLabels from "@/components/WhatsAppPersonLabels";
 import WhatsAppPersonEditForm from "@/components/WhatsAppPersonEditForm";
 import WhatsAppSendTicketButton from "@/components/WhatsAppSendTicketButton";
+import WhatsAppSendZoomLinkButton from "@/components/WhatsAppSendZoomLinkButton";
 import WhatsAppAiToggle from "@/components/WhatsAppAiToggle";
 
 export const dynamic = "force-dynamic";
@@ -225,7 +226,18 @@ export default async function WhatsAppThreadPage({ params }: { params: { id: str
                 <div key={r.id} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                   <span style={{ fontSize: 12.5, fontWeight: 500 }}>{r.event.name}</span>
                   <span style={{ fontSize: 11, color: "#8a8478" }}>{r.id.slice(-8).toUpperCase()}</span>
-                  {withinWindow && <WhatsAppSendTicketButton conversationId={conversation.id} registrationId={r.id} />}
+                  {withinWindow && (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                      <WhatsAppSendTicketButton conversationId={conversation.id} registrationId={r.id} />
+                      {/* Solo tiene sentido para un evento VIRTUAL/HÍBRIDO
+                          con Zoom configurado — sendZoomLinkViaWhatsApp
+                          reintenta generarlo si todavía no existe, así que
+                          se muestra igual aunque r.zoomJoinUrl esté vacío. */}
+                      {r.event.format !== "IN_PERSON" && r.event.zoomMeetingId && (
+                        <WhatsAppSendZoomLinkButton conversationId={conversation.id} registrationId={r.id} />
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

@@ -128,7 +128,16 @@ export async function sendEventBroadcast(
           // kind of link was never meant to carry campaign attribution.
           const utmParams = { source: "email", medium: "broadcast_evento", campaign: slugifyForCampaign(broadcast.subject) };
           const taggedBodyHtml = tagOwnLinksInHtml(broadcast.bodyHtml!, utmParams);
-          const content = broadcastEmailHtml({ subject: broadcast.subject, bodyHtml: taggedBodyHtml });
+          // The ONE merge tag this composer supports today (see
+          // EventBroadcastComposer.tsx's own "Insertar link de Zoom"
+          // button) — an admin-timed, opt-in alternative to the automatic
+          // ZOOM_ACCESS_REMINDER, e.g. for a same-day "ya estamos en
+          // vivo" email. Empty string when this registrant has no
+          // zoomJoinUrl yet (event isn't virtual/hybrid, or Zoom
+          // registration hasn't succeeded) — same "nothing to substitute"
+          // fallback as every other merge tag in this app.
+          const personalizedBodyHtml = taggedBodyHtml.split("{{ZOOM_LINK}}").join(registration.zoomJoinUrl ?? "");
+          const content = broadcastEmailHtml({ subject: broadcast.subject, bodyHtml: personalizedBodyHtml });
           // Same "never let a PDF problem block the whole send" reasoning
           // as sendTicketEmail.ts — a recipient with no qrToken
           // (shouldn't happen for a CONFIRMED registration, but not
