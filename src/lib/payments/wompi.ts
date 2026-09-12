@@ -131,12 +131,21 @@ export function verifyEventChecksum(rawBody: string): WompiWebhookEvent | null {
   let parsed: WompiWebhookEvent;
   try {
     parsed = JSON.parse(rawBody);
-  } catch {
+  } catch (err) {
+    console.error("wompi checksum: raw body wasn't valid JSON", rawBody.slice(0, 500), err);
     return null;
   }
   const properties = parsed?.signature?.properties;
   const checksum = parsed?.signature?.checksum;
-  if (!Array.isArray(properties) || typeof checksum !== "string") return null;
+  if (!Array.isArray(properties) || typeof checksum !== "string") {
+    // TEMP DEBUG (see chat: chasing real 401s against a live sandbox
+    // webhook) — dumps the actual payload shape so we can see whether
+    // Wompi's real event even HAS signature.properties/checksum the way
+    // docs.wompi.co describes, without ever logging the secret itself.
+    // Safe to remove once this is confirmed working.
+    console.error("wompi checksum: unexpected payload shape — no signature.properties/checksum found", JSON.stringify(parsed).slice(0, 2000));
+    return null;
+  }
 
   const concatenated = properties
     .map((path) => path.split(".").reduce<unknown>((acc, key) => (acc && typeof acc === "object" ? (acc as Record<string, unknown>)[key] : undefined), parsed))
@@ -144,9 +153,25 @@ export function verifyEventChecksum(rawBody: string): WompiWebhookEvent | null {
     .join("");
 
   const secret = process.env.WOMPI_EVENTS_SECRET;
-  if (!secret) return null; // never authorize a webhook when the secret isn't even configured
+  if (!secret) {
+    console.error("wompi checksum: WOMPI_EVENTS_SECRET is not set");
+    return null;
+  }
   const expected = createHash("sha256").update(`${concatenated}${parsed.timestamp}${secret}`).digest("hex");
-  return expected === checksum ? parsed : null;
+  if (expected !== checksum) {
+    // TEMP DEBUG — same reasoning as above. Never logs `secret` itself,
+    // only inputs/outputs that are already visible in the payload or are
+    // this app's own computed (non-secret) result.
+    console.error("wompi checksum: mismatch", {
+      properties,
+      concatenated,
+      timestamp: parsed.timestamp,
+      expected,
+      received: checksum,
+    });
+    return null;
+  }
+  return parsed;
 }
 
 /** This Wompi comercio is SHARED with another integration (a Shopify
