@@ -177,6 +177,14 @@ model Event {
   // design). Null (the default) means this event just uses whatever the
   // account-wide template resolves to.
   confirmationEmailHtml String?
+  // Same fallback chain as confirmationEmailHtml, but for the SUBJECT
+  // line — these were never actually configurable before (the subject
+  // was hardcoded to "Tu entrada para <evento>" in code), which is why
+  // this is a plain string, not rich-text HTML. Supports the same
+  // {{EVENTO_NOMBRE}}/{{EVENTO_FECHA_RANGO}}/{{EVENTO_FORMATO}} merge
+  // tags as the body — see lib/confirmationTemplate.ts's
+  // renderSubjectFromTemplate.
+  confirmationEmailSubject String?
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 
@@ -902,6 +910,15 @@ model WhatsAppTemplate {
 // handle any number of them, one automation per trigger.
 enum WhatsAppAutomationTrigger {
   REGISTRATION_CONFIRMED
+  // Fired shortly BEFORE a VIRTUAL/HYBRID event starts (see
+  // lib/qstash.ts's scheduleZoomAccessReminder + /api/zoom/send-access-
+  // reminder), not right at registration — this is what actually
+  // delivers the personal Zoom join_url. Kept as its own trigger, not a
+  // second REGISTRATION_CONFIRMED send, on purpose: registering for a
+  // congress 6 months out shouldn't hand out a join link that just sits
+  // unused (and easy to lose) for half a year — see this session's own
+  // reasoning for why the link is withheld until it's actually useful.
+  ZOOM_ACCESS_REMINDER
 }
 
 // A WhatsApp template's body text is fixed, pre-approved by Meta — it
@@ -934,6 +951,16 @@ model WhatsAppAutomation {
   formatScope AutomationFormatScope     @default(DEFAULT)
   template    WhatsAppTemplate          @relation(fields: [templateId], references: [id])
   templateId  String
+  // Which merge tag (lib/whatsapp/mergeTags.ts's WHATSAPP_MERGE_TAGS)
+  // fills each numbered {{1}}, {{2}}, ... placeholder in the template
+  // body — e.g. {"1": "EVENTO_NOMBRE", "2": "EVENTO_FECHA_RANGO"}. Same
+  // shape and same resolver as WhatsAppBroadcast.variableMapping, reused
+  // here instead of the old hardcoded "always [firstName, eventName]"
+  // convention, since a real admin-authored template (see the chat this
+  // was requested in) won't always want firstName first, or at all.
+  // Null means the OLD fixed convention still applies — every
+  // automation configured before this existed keeps working unchanged.
+  variableMapping Json?
   enabled     Boolean                   @default(true)
   createdAt   DateTime                  @default(now())
   updatedAt   DateTime                  @updatedAt
@@ -1177,6 +1204,10 @@ model OrgSettings {
   // lib/confirmationTemplate.ts for the merge-tag substitution and the
   // real fallback chain (event -> global -> hand-built default).
   confirmationEmailHtml String?
+  // See Event.confirmationEmailSubject's own comment — same fallback
+  // chain, just for the subject line. Null means the hardcoded default
+  // ("Tu entrada para {{EVENTO_NOMBRE}}") exactly as before this existed.
+  confirmationEmailSubject String?
 
   // Our previous ticketing platform's own "Attach ticket vouchers as a
   // PDF" checkbox — global on/off for the printable PDF ticket

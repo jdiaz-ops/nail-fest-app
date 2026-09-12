@@ -154,6 +154,51 @@ export async function scheduleAbandonedCartEmail(registrationId: string, step: 1
   }
 }
 
+// --- Zoom access-link reminder (WhatsApp, sent close to the event) ----
+//
+// See WhatsAppAutomationTrigger.ZOOM_ACCESS_REMINDER's own schema comment
+// for WHY this exists as a delayed send rather than handing out the
+// personal Zoom join_url right at confirmation: someone registering for a
+// congress 6 months out shouldn't get a link that just sits there. Same
+// QStash notBefore mechanism as the abandoned-cart reminders below —
+// this ALSO works precisely regardless of how far in the future the
+// event is (QStash schedules against an absolute unix timestamp, not a
+// relative delay), which the Vercel Hobby daily cron cap couldn't do at
+// all for something event-time-relative like this.
+
+export function zoomAccessReminderCallbackUrl(): string {
+  return `${process.env.APP_BASE_URL || ""}/api/zoom/send-access-reminder`;
+}
+
+/** Schedules the one WhatsApp reminder for this registration, to fire at
+ * `at` (see registrationConfirmation.ts for how that's computed —
+ * event.startsAt minus a fixed lead time, clamped to "now" if the event
+ * is sooner than that). Same best-effort contract as every other
+ * schedule* function here: null means QStash isn't configured or the
+ * publish failed, and the caller just accepts the reminder won't go out
+ * rather than failing the registration itself.
+ *
+ * Known limitation, documented rather than solved here: if an admin
+ * later reschedules the event (Event.startsAt changes), this
+ * already-scheduled message still fires at the ORIGINAL time — there's
+ * no stored messageId to cancel/reschedule against on an event edit (see
+ * docs/PAYMENTS_SETUP.md's own "Lo que falta" section). */
+export async function scheduleZoomAccessReminder(registrationId: string, at: Date): Promise<string | null> {
+  const client = getClient();
+  if (!client) return null;
+  try {
+    const result = await client.publishJSON({
+      url: zoomAccessReminderCallbackUrl(),
+      body: { registrationId },
+      notBefore: Math.floor(at.getTime() / 1000),
+    });
+    return result.messageId;
+  } catch (err) {
+    console.error("qstash: failed to schedule zoom access reminder", registrationId, err);
+    return null;
+  }
+}
+
 /** Verifies an inbound QStash callback's signature against this app's own
  * signing keys — shared by every route QStash calls back into (the
  * scheduled-send route and both chunk-continuation routes) so there's one

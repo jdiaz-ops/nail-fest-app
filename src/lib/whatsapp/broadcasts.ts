@@ -20,7 +20,7 @@ const CHUNK_SIZE = 500;
 
 interface Recipient {
   person: Person;
-  event: Pick<Event, "name" | "startsAt" | "venueName"> | null;
+  event: Pick<Event, "name" | "startsAt" | "endsAt" | "venueName" | "venueAddress" | "format" | "scheduleDays"> | null;
 }
 
 type BroadcastWithTemplate = WhatsAppBroadcast & { template: WhatsAppTemplate };
@@ -42,7 +42,7 @@ function renderBody(template: string | null, variables: string[]): string | null
 async function sendOneTemplateMessage(
   broadcast: BroadcastWithTemplate,
   person: Person,
-  event: Pick<Event, "name" | "startsAt" | "venueName"> | null,
+  event: Pick<Event, "name" | "startsAt" | "endsAt" | "venueName" | "venueAddress" | "format" | "scheduleDays"> | null,
   orgSettings: OrgSettingsValue
 ): Promise<"sent" | "failed"> {
   const mapping = (broadcast.variableMapping ?? {}) as Record<string, string>;

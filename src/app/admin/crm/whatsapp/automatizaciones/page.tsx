@@ -1,4 +1,5 @@
 import { AUTOMATION_TRIGGERS, AUTOMATION_TRIGGER_LIST, listAutomations, listEligibleAutomationTemplates } from "@/lib/whatsapp/automations";
+import { WHATSAPP_MERGE_TAGS } from "@/lib/whatsapp/mergeTags";
 import { requirePageUser } from "@/lib/auth/guard";
 import AutomationCard from "@/components/AutomationCard";
 import CrmPageHeader from "../../CrmPageHeader";
@@ -35,14 +36,28 @@ export default async function WhatsAppAutomationsPage() {
             label={meta.label}
             description={meta.description}
             eligibleTemplates={eligibleTemplates}
+            mergeTags={WHATSAPP_MERGE_TAGS}
+            supportsVirtualOverride={meta.supportsVirtualOverride}
             automation={
               row
-                ? { templateId: row.templateId, templateName: row.template.name, templateLanguage: row.template.language, enabled: row.enabled }
+                ? {
+                    templateId: row.templateId,
+                    templateName: row.template.name,
+                    templateLanguage: row.template.language,
+                    enabled: row.enabled,
+                    variableMapping: (row.variableMapping as Record<string, string> | null) ?? null,
+                  }
                 : null
             }
             virtualOverride={
               virtualRow
-                ? { templateId: virtualRow.templateId, templateName: virtualRow.template.name, templateLanguage: virtualRow.template.language, enabled: virtualRow.enabled }
+                ? {
+                    templateId: virtualRow.templateId,
+                    templateName: virtualRow.template.name,
+                    templateLanguage: virtualRow.template.language,
+                    enabled: virtualRow.enabled,
+                    variableMapping: (virtualRow.variableMapping as Record<string, string> | null) ?? null,
+                  }
                 : null
             }
           />

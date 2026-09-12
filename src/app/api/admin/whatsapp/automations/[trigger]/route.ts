@@ -26,8 +26,12 @@ function parseScope(raw: string | null): AutomationFormatScope {
 
 // Picks (or repoints) the template for one automation — always comes back
 // enabled, same "picking a template activates it" reasoning as
-// upsertAutomation's own comment.
-const putSchema = z.object({ templateId: z.string().min(1) });
+// upsertAutomation's own comment. variableMapping is optional: omitted
+// entirely means "leave whatever mapping is already saved untouched"
+// (lets "Cambiar plantilla" repoint the template without wiping a
+// mapping set moments before), {} explicitly clears it back to the old
+// fixed convention.
+const putSchema = z.object({ templateId: z.string().min(1), variableMapping: z.record(z.string()).optional() });
 
 export async function PUT(req: NextRequest, { params }: { params: { trigger: string } }) {
   const auth = await requireUser(["ADMIN"]);
@@ -43,7 +47,7 @@ export async function PUT(req: NextRequest, { params }: { params: { trigger: str
   }
 
   try {
-    const automation = await upsertAutomation(trigger, parsed.data.templateId, formatScope);
+    const automation = await upsertAutomation(trigger, parsed.data.templateId, formatScope, parsed.data.variableMapping);
     return NextResponse.json({ ok: true, automation });
   } catch (err) {
     if (err instanceof AutomationValidationError) {

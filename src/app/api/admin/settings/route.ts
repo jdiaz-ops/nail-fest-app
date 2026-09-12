@@ -20,6 +20,8 @@ const patchSchema = z
     // "" means "clear it, revert to the original hand-built design" — see
     // lib/confirmationTemplate.ts's fallback chain.
     confirmationEmailHtml: z.string(),
+    // Same "" = clear convention, for the subject line.
+    confirmationEmailSubject: z.string(),
     // Matches our previous ticketing platform's "Attach ticket vouchers as
     // a PDF" checkbox — see OrgSettings.attachTicketPdf's own schema comment.
     attachTicketPdf: z.boolean(),
@@ -65,6 +67,7 @@ export async function POST(req: NextRequest) {
   const {
     replyToEmail,
     confirmationEmailHtml,
+    confirmationEmailSubject,
     homepageImageUrl,
     homepageVideoUrl,
     homepageTagline,
@@ -80,6 +83,7 @@ export async function POST(req: NextRequest) {
     ...(confirmationEmailHtml !== undefined
       ? { confirmationEmailHtml: confirmationEmailHtml ? sanitizeEventDescription(confirmationEmailHtml) : null }
       : {}),
+    ...(confirmationEmailSubject !== undefined ? { confirmationEmailSubject: confirmationEmailSubject || null } : {}),
     ...(homepageImageUrl !== undefined ? { homepageImageUrl: homepageImageUrl || null } : {}),
     ...(homepageVideoUrl !== undefined ? { homepageVideoUrl: homepageVideoUrl || null } : {}),
     ...(homepageTagline !== undefined ? { homepageTagline: homepageTagline || null } : {}),

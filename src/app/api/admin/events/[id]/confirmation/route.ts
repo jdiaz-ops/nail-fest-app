@@ -8,7 +8,8 @@ import { sanitizeEventDescription } from "@/lib/sanitizeHtml";
 // (Applies to all events)" in the editor's own radio choice — falling
 // back to whatever the account-wide template resolves to. See
 // Event.confirmationEmailHtml's own schema comment for the full chain.
-const bodySchema = z.object({ confirmationEmailHtml: z.string() });
+// confirmationEmailSubject follows the exact same "" = clear convention.
+const bodySchema = z.object({ confirmationEmailHtml: z.string(), confirmationEmailSubject: z.string().optional() });
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const auth = await requireUser(["ADMIN"]);
@@ -20,10 +21,14 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 
   const html = parsed.data.confirmationEmailHtml;
+  const subject = parsed.data.confirmationEmailSubject;
   try {
     await db.event.update({
       where: { id: params.id },
-      data: { confirmationEmailHtml: html ? sanitizeEventDescription(html) : null },
+      data: {
+        confirmationEmailHtml: html ? sanitizeEventDescription(html) : null,
+        ...(subject !== undefined ? { confirmationEmailSubject: subject || null } : {}),
+      },
     });
   } catch {
     return NextResponse.json({ error: "not_found" }, { status: 404 });

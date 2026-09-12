@@ -17,7 +17,7 @@ export default async function GlobalConfirmationSettingsPage() {
         El correo que recibe cada persona al inscribirse — incluye su entrada. Cada evento puede tener el suyo
         propio en su propia página; esta es la plantilla que se usa cuando un evento no la reemplaza.
       </p>
-      <SaveConfirmationClient initialHtml={orgSettings.confirmationEmailHtml} />
+      <SaveConfirmationClient initialHtml={orgSettings.confirmationEmailHtml} initialSubject={orgSettings.confirmationEmailSubject} />
       <AttachPdfForm initialEnabled={orgSettings.attachTicketPdf} />
     </div>
   );

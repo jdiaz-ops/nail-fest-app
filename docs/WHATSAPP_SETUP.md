@@ -69,36 +69,65 @@ Moving off WhatChimp to a direct Cloud API connection:
   `WhatsAppAutomation.trigger` is unique — one automation per trigger, so
   there's never two rows racing to fire on the same event.
 
-  The one trigger built today, **"Cuando alguien se registra"**
-  (`REGISTRATION_CONFIRMED`): fires right after the confirmation email,
-  every new registration and every resend, sending a UTILITY template
-  whose one button is a dynamic URL — same "your own link, not the same
-  as everyone else's" pattern as an airline's WhatsApp boarding-pass
-  message (see the commit this feature shipped with for the real example
-  it's modeled on). The button's `{{1}}` gets filled with that
-  registration's own `qrToken`, so it opens the same
-  `/api/ticket-pdf/[token]` link `sendTicketPdfViaWhatsApp` (Bandeja's
-  "Reenviar PDF por WhatsApp") already uses — the difference is this one
-  works outside the 24h customer-service window, because it's a template
-  send, not a freeform document. Gated by the `WHATSAPP` consent, same as
-  everything else here; never a replacement for the email ticket, an
-  extra channel on top of it (`lib/whatsapp/sendTicketLink.ts`, called
-  from `/api/register`). Only an APPROVED template with a dynamic URL
-  button is offered when picking one (`listEligibleAutomationTemplates`)
-  — a static link would send the exact same URL to every recipient,
-  defeating the point. A **plantilla sugerida** to submit for review:
-  body `Hola {{1}}, tu entrada para {{2}} ya está lista. Tócala abajo
-  para verla.` (examples: `Maria`, `Nail Fest Bogotá`), footer `Nail
-  Fest`, one URL button `Ver mi entrada` →
-  `https://<tu-dominio>/api/ticket-pdf/{{1}}` (example: any real ticket
-  link, marking "el enlace es distinto para cada persona" in Plantillas)
-  — the body's two variables are a fixed convention (`{{1}}` = nombre,
-  `{{2}}` = nombre del evento), not a configurable mapping, since this
-  isn't a Difusión with its own variable-mapping UI. Adding a second
-  trigger later (check-in, recordatorio 24h antes del evento, ...) means:
-  add it to the enum, add the entry in `AUTOMATION_TRIGGERS`, and add the
-  actual firing call wherever that event happens in the app — the page
-  and API route pick it up automatically, no new UI to build.
+  Two triggers built today:
+  - **"Cuando alguien se registra"** (`REGISTRATION_CONFIRMED`): fires
+    right after the confirmation email, every new registration and every
+    resend. Its button (if the template has one) is a dynamic URL — same
+    "your own link, not the same as everyone else's" pattern as an
+    airline's WhatsApp boarding-pass message — filled with that
+    registration's own `qrToken`, opening the same
+    `/api/ticket-pdf/[token]` link `sendTicketPdfViaWhatsApp` (Bandeja's
+    "Reenviar PDF por WhatsApp") already uses. Works outside the 24h
+    customer-service window, because it's a template send, not a
+    freeform document.
+  - **"Poco antes de un evento virtual"** (`ZOOM_ACCESS_REMINDER`): fires
+    on its OWN, shortly before a VIRTUAL/HYBRID event starts (see
+    `lib/registrationConfirmation.ts`'s `ZOOM_ACCESS_REMINDER_MINUTES_BEFORE`),
+    to every already-CONFIRMED registrant with Zoom access — carrying
+    their personal join link. This is a SEPARATE send from
+    `REGISTRATION_CONFIRMED`, on purpose: the join link is deliberately
+    withheld from the confirmation email/WhatsApp/payment-return page,
+    so someone who registers months ahead doesn't get a link that just
+    sits there unused until then.
+
+  Both are gated by the `WHATSAPP` consent, same as everything else
+  here; never a replacement for the email ticket, an extra channel on
+  top of it (`lib/whatsapp/sendTicketLink.ts` /
+  `lib/whatsapp/sendZoomAccessReminder.ts`). Only an APPROVED template
+  with at least one body variable OR a dynamic URL button is offered
+  when picking one (`listEligibleAutomationTemplates`) — a template with
+  neither would send the exact same static text to every recipient.
+
+  **Variables (`{{1}}`, `{{2}}`, ...) are a configurable mapping**, not a
+  fixed convention — after picking a template, the card shows one select
+  per `{{n}}` in its body, each choosing which real field fills it
+  (`WhatsAppAutomation.variableMapping`, same `{slot: mergeTagKey}` shape
+  and same field list as Difusiones' own mapping — see
+  `lib/whatsapp/mergeTags.ts`'s `WHATSAPP_MERGE_TAGS`, which includes
+  `ZOOM_LINK` for the reminder trigger). A **plantilla sugerida** for
+  `REGISTRATION_CONFIRMED` on a virtual event (no button needed — this
+  one leans entirely on body variables): body `🎉 ¡Tu registro está
+  confirmado! Hola, tu cupo para {{1}} quedó reservado. 📅 Fecha: {{2}}
+  📍 Modalidad: {{3}} Importante: Unos minutos antes de iniciar el
+  congreso te enviaremos por este mismo WhatsApp el enlace de acceso a
+  Zoom. ¡Nos vemos muy pronto! 💜`, mapped `{{1}}`→`EVENTO_NOMBRE`,
+  `{{2}}`→`EVENTO_FECHA_RANGO`, `{{3}}`→`EVENTO_UBICACION_LINEA`. A
+  **plantilla sugerida** for `ZOOM_ACCESS_REMINDER`: body `¡Ya casi
+  empezamos! Tu acceso a {{1}} está listo — únete aquí: {{2}}`, mapped
+  `{{1}}`→`EVENTO_NOMBRE`, `{{2}}`→`ZOOM_LINK`.
+
+  A template configured before this mapping existed keeps working
+  identically without it (see `sendTicketLinkViaWhatsApp`'s own fallback
+  to the OLD fixed `[firstName, eventName]` convention when no mapping
+  is saved) — only `REGISTRATION_CONFIRMED` has that fallback;
+  `ZOOM_ACCESS_REMINDER` is new enough that it requires a mapping to send
+  at all (no mapping configured = silent no-op, same as no automation
+  configured).
+
+  Adding a further trigger later (check-in, ...) means: add it to the
+  enum, add the entry in `AUTOMATION_TRIGGERS`, and add the actual firing
+  call wherever that event happens in the app — the page and API route
+  pick it up automatically, no new UI to build.
 - **Difusiones** (`/admin/crm/whatsapp/difusiones`) — sends an approved
   template to an existing, named segment (same segment engine as email
   broadcasts — `resolveSegment()`, including a `label` condition — see

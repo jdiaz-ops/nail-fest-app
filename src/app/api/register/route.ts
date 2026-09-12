@@ -485,7 +485,11 @@ export async function POST(req: NextRequest) {
   // exact same finalize step a paid confirmation runs once Wompi approves
   // it (see lib/registrationConfirmation.ts), so the two paths can never
   // quietly drift apart on what "confirmed" actually delivers. ---
-  const { whatsappTicketLinkSent, zoomJoinUrl } = await finalizeConfirmedRegistration({
+  // zoomJoinUrl (in finalizeConfirmedRegistration's own return value) is
+  // deliberately NOT surfaced here — see that function's own comment on
+  // why the personal join link isn't handed out at registration time at
+  // all, on any channel.
+  const { whatsappTicketLinkSent } = await finalizeConfirmedRegistration({
     person,
     event,
     registration,
@@ -497,5 +501,5 @@ export async function POST(req: NextRequest) {
     clientUserAgent: userAgentFromHeaders(),
   });
 
-  return NextResponse.json({ ok: true, registrationId: registration.id, resent: isResend, whatsappTicketLinkSent, zoomJoinUrl });
+  return NextResponse.json({ ok: true, registrationId: registration.id, resent: isResend, whatsappTicketLinkSent });
 }

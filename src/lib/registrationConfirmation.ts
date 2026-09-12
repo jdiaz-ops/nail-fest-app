@@ -6,7 +6,16 @@ import { issueQrToken } from "@/lib/ticket";
 import { sendTicketEmail } from "@/lib/sendTicketEmail";
 import { sendTicketLinkViaWhatsApp } from "@/lib/whatsapp/sendTicketLink";
 import { registerParticipant } from "@/lib/zoom";
+import { scheduleZoomAccessReminder } from "@/lib/qstash";
 import type { Event, Person, Registration } from "@prisma/client";
+
+// How long before a VIRTUAL/HYBRID event starts the personal Zoom link
+// actually goes out (see WhatsAppAutomationTrigger.ZOOM_ACCESS_REMINDER's
+// own schema comment for why it's withheld until then). 30 minutes is a
+// reasonable default for "unos minutos antes" — change this single
+// constant if the business wants a different lead time; there is no
+// per-event override today.
+const ZOOM_ACCESS_REMINDER_MINUTES_BEFORE = 30;
 
 /** Everything that has to happen the MOMENT a registration becomes real
  * (status -> CONFIRMED) — shared by /api/register's own free/immediate
@@ -48,8 +57,12 @@ export async function finalizeConfirmedRegistration(params: {
   // credentials, Zoom's own API being down) must never block a paid
   // confirmation. Only for a genuinely virtual/hybrid event with a
   // meeting actually configured; every IN_PERSON event behaves exactly
-  // as before this existed (zoomJoinUrl stays undefined, sendTicketEmail
-  // renders no Zoom block at all).
+  // as before this existed (zoomJoinUrl stays undefined). Registering
+  // now, even though the link isn't handed out yet, is deliberate: it's
+  // what lets the delayed reminder below have a real link ready the
+  // moment it's due, instead of calling Zoom's API again right before
+  // the event (one more thing that could fail at the worst possible
+  // time).
   let zoomJoinUrl: string | undefined;
   if (event.format !== "IN_PERSON" && event.zoomMeetingId) {
     zoomJoinUrl =
@@ -61,12 +74,30 @@ export async function finalizeConfirmedRegistration(params: {
         console.error("finalizeConfirmedRegistration: zoom registration failed", registration.id, err);
         return null;
       })) ?? undefined;
-    // Persisted, not just handed to sendTicketEmail below — so a second
-    // reader (the /[eventSlug]/pago return-page render, see that file's
-    // own comment) can show this same personal link right away too,
-    // instead of it only ever reaching the person via email/WhatsApp.
+    // Persisted, but deliberately NOT handed to sendTicketEmail below —
+    // see ZOOM_ACCESS_REMINDER_MINUTES_BEFORE above: the personal join
+    // link doesn't go out anywhere yet (not the confirmation email, not
+    // the payment-return landing page) until the delayed WhatsApp
+    // reminder fires closer to the event. Persisting it here is only so
+    // that later, delayed send can still find it.
     if (zoomJoinUrl) {
       await db.registration.update({ where: { id: registration.id }, data: { zoomJoinUrl } });
+      // Only on the FIRST real confirmation — same "don't repeat a
+      // side effect on a resend" gate as the Meta Purchase event below,
+      // for the same reason: this function also runs again for a
+      // resend of an already-CONFIRMED registration (see this
+      // function's own top comment), and that must never queue a
+      // second reminder for the same person. Best-effort, same posture
+      // as the Zoom registration call above — a scheduling hiccup must
+      // never fail the confirmation itself. Clamped to "now" when the
+      // event is already sooner than the lead time (a last-minute
+      // registration), instead of scheduling a call into the past
+      // (QStash would just fire it immediately anyway, but being
+      // explicit here is clearer than relying on that).
+      if (!wasAlreadyConfirmed) {
+        const sendAt = new Date(Math.max(event.startsAt.getTime() - ZOOM_ACCESS_REMINDER_MINUTES_BEFORE * 60_000, Date.now()));
+        await scheduleZoomAccessReminder(registration.id, sendAt);
+      }
     }
   }
 
@@ -75,7 +106,8 @@ export async function finalizeConfirmedRegistration(params: {
     event,
     qrToken,
     registration: { id: registration.id, ticketTypeId: registration.ticketTypeId, ticketCount: registration.ticketCount },
-    zoomJoinUrl,
+    // NOT zoomJoinUrl — see this function's own comment above on why the
+    // confirmation email doesn't include it either.
   });
 
   const whatsappTicketLinkSent = await sendTicketLinkViaWhatsApp({ person, event, qrToken });

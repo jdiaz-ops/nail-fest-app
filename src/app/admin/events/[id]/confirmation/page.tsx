@@ -21,7 +21,7 @@ export default async function EventConfirmationPage({ params }: { params: { id: 
       <p style={{ color: "#5b5f6b", marginTop: 0, marginBottom: 20 }}>
         El correo que recibe cada persona al completar su inscripción para {event.name} — incluye su entrada.
       </p>
-      <SaveEventConfirmationClient eventId={event.id} initialHtml={event.confirmationEmailHtml} />
+      <SaveEventConfirmationClient eventId={event.id} initialHtml={event.confirmationEmailHtml} initialSubject={event.confirmationEmailSubject} />
     </div>
   );
 }

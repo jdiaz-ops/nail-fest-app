@@ -38,17 +38,6 @@ export default async function PaymentReturnPage({
     result = registration?.status === "CONFIRMED" ? "approved" : registration?.status === "PENDING_PAYMENT" ? "pending" : "not_found";
   }
 
-  // Read back regardless of which branch above actually confirmed the
-  // payment — by the time either one returns, confirmRegistrationPayment
-  // has already persisted zoomJoinUrl onto the row (see
-  // registrationConfirmation.ts's own comment on why it's persisted, not
-  // just handed to the email). Lets THIS page show the join button right
-  // away too, instead of the person only getting it by opening their
-  // email — the whole point of adapting this landing page.
-  const registration = searchParams.registrationId
-    ? await db.registration.findUnique({ where: { id: searchParams.registrationId }, select: { zoomJoinUrl: true } })
-    : null;
-
   const brandName = orgSettings.name;
   const eventName = event?.name ?? "tu evento";
   const isVirtualOnly = event?.format === "VIRTUAL";
@@ -56,8 +45,15 @@ export default async function PaymentReturnPage({
   const COPY: Record<ConfirmResult | "unknown", { title: string; body: string; tone: "ok" | "warn" | "bad" }> = {
     approved: {
       title: "¡Pago confirmado!",
+      // Deliberately NOT a Zoom join button here, even though this
+      // page/the registration already have zoomJoinUrl by this point —
+      // see WhatsAppAutomationTrigger.ZOOM_ACCESS_REMINDER's own schema
+      // comment for why: someone can pay for this months before the
+      // congress, and a link handed out this early just sits unused
+      // (and easy to lose) until then. It goes out closer to the date
+      // instead, by WhatsApp.
       body: isVirtualOnly
-        ? `Tu registro para ${eventName} quedó listo. Únete por Zoom con el botón de abajo, o revisa tu correo — ahí también te llega el mismo link.`
+        ? `Tu registro para ${eventName} quedó listo. Guarda esta confirmación — el link para unirte por Zoom te llega más cerca de la fecha.`
         : `Tu entrada para ${eventName} quedó lista — revisa tu correo, ahí te llega toda la información.`,
       tone: "ok",
     },
@@ -120,24 +116,6 @@ export default async function PaymentReturnPage({
       </div>
       <h1 style={{ fontSize: 22, fontWeight: 800, margin: "0 0 10px" }}>{copy.title}</h1>
       <p style={{ fontSize: 14.5, color: "#5b5f6b", margin: "0 0 24px" }}>{copy.body}</p>
-      {result === "approved" && registration?.zoomJoinUrl && (
-        <a
-          href={registration.zoomJoinUrl}
-          style={{
-            display: "inline-block",
-            textDecoration: "none",
-            background: "var(--accent)",
-            color: "var(--accent-ink)",
-            borderRadius: 8,
-            padding: "12px 24px",
-            fontWeight: 700,
-            marginBottom: 16,
-          }}
-        >
-          Entrar a la sesión de Zoom
-        </a>
-      )}
-      {result === "approved" && registration?.zoomJoinUrl && <br />}
       {event && copy.tone === "bad" ? (
         <a
           href={`/${event.slug}`}

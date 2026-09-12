@@ -10,11 +10,25 @@ import type { WhatsAppTemplateButton } from "./provider";
  * call wherever that event happens (see REGISTRATION_CONFIRMED's own call
  * site, sendTicketLinkViaWhatsApp() below, called from /api/register), and
  * add its entry here — the page and API route pick it up automatically. */
-export const AUTOMATION_TRIGGERS: Record<WhatsAppAutomationTrigger, { label: string; description: string }> = {
+export const AUTOMATION_TRIGGERS: Record<
+  WhatsAppAutomationTrigger,
+  { label: string; description: string; supportsVirtualOverride: boolean }
+> = {
   REGISTRATION_CONFIRMED: {
     label: "Cuando alguien se registra",
     description:
       "Justo después de la confirmación (registro nuevo o un reenvío), le llega un WhatsApp con un botón que abre su propia entrada — mismo enlace que \"Reenviar PDF por WhatsApp\" en Bandeja, pero funciona incluso fuera de la ventana de 24h porque es una plantilla, no un documento suelto.",
+    supportsVirtualOverride: true,
+  },
+  ZOOM_ACCESS_REMINDER: {
+    label: "Poco antes de un evento virtual",
+    description:
+      "Se manda solo, poco antes de que empiece un evento VIRTUAL o HÍBRIDO (ver ZOOM_ACCESS_REMINDER_MINUTES_BEFORE), a cada persona ya confirmada con acceso a Zoom — con su link personal de unirse. El link no se manda antes de eso (ni en el correo de confirmación ni en la landing de pago), para no entregar un enlace que se pierda si alguien se registra con mucha anticipación.",
+    // Solo aplica a eventos virtuales/híbridos por definición — no tiene
+    // sentido un "override para virtuales" de algo que YA es solo para
+    // virtuales, a diferencia de REGISTRATION_CONFIRMED (que también
+    // dispara en eventos presenciales).
+    supportsVirtualOverride: false,
   },
 };
 
@@ -24,14 +38,21 @@ function isDynamicUrlButton(b: WhatsAppTemplateButton): boolean {
   return b.type === "URL" && b.url.includes("{{");
 }
 
-/** APPROVED templates with a dynamic URL button — the only kind any
- * automation built today can use (each one fires per-person, so a static
- * link would just send the same URL to everyone, defeating the point). */
-export async function listEligibleAutomationTemplates(): Promise<{ id: string; name: string; language: string }[]> {
+/** APPROVED templates an automation can use — either kind of
+ * personalization qualifies: a dynamic URL button (the original design —
+ * "open your own ticket") OR at least one body variable (filled via
+ * variableMapping, see WhatsAppAutomation's own schema comment). A
+ * template with neither would send identical text to everyone, which
+ * defeats the point of a per-person automation. bodyText/variableCount
+ * are returned too so the admin UI can render the variable-mapping
+ * selects and a live preview, same as WhatsAppBroadcastComposer's own. */
+export async function listEligibleAutomationTemplates(): Promise<
+  { id: string; name: string; language: string; bodyText: string; variableCount: number }[]
+> {
   const templates = await db.whatsAppTemplate.findMany({ where: { status: "APPROVED" }, orderBy: { name: "asc" } });
   return templates
-    .filter((t) => ((t.buttons as unknown as WhatsAppTemplateButton[] | null) ?? []).some(isDynamicUrlButton))
-    .map((t) => ({ id: t.id, name: t.name, language: t.language }));
+    .filter((t) => t.variableCount > 0 || ((t.buttons as unknown as WhatsAppTemplateButton[] | null) ?? []).some(isDynamicUrlButton))
+    .map((t) => ({ id: t.id, name: t.name, language: t.language, bodyText: t.bodyText ?? "", variableCount: t.variableCount }));
 }
 
 /** One row per configured (trigger, formatScope) pair — unconfigured ones
@@ -71,15 +92,26 @@ export class AutomationValidationError extends Error {}
  * either way it comes back enabled, since picking a template is an
  * "activate" action; use setAutomationEnabled to turn it off without
  * losing the pairing. */
-export async function upsertAutomation(trigger: WhatsAppAutomationTrigger, templateId: string, formatScope: AutomationFormatScope = "DEFAULT") {
+export async function upsertAutomation(
+  trigger: WhatsAppAutomationTrigger,
+  templateId: string,
+  formatScope: AutomationFormatScope = "DEFAULT",
+  // {slot: mergeTagKey} — e.g. {"1": "EVENTO_NOMBRE", "2": "ZOOM_LINK"}.
+  // Passing undefined leaves whatever mapping (if any) was already saved
+  // untouched — lets the "Cambiar plantilla" select (which only sends
+  // templateId) repoint the template without wiping a mapping the admin
+  // set up moments before via a separate save. Pass {} explicitly to
+  // clear it back to the old fixed convention.
+  variableMapping?: Record<string, string>
+) {
   const eligible = await listEligibleAutomationTemplates();
   if (!eligible.some((t) => t.id === templateId)) {
-    throw new AutomationValidationError("Esa plantilla no está aprobada o no tiene un botón de enlace dinámico.");
+    throw new AutomationValidationError("Esa plantilla no está aprobada, o no tiene ni variables ni un botón de enlace dinámico.");
   }
   return db.whatsAppAutomation.upsert({
     where: { trigger_formatScope: { trigger, formatScope } },
-    create: { trigger, formatScope, templateId, enabled: true },
-    update: { templateId, enabled: true },
+    create: { trigger, formatScope, templateId, enabled: true, variableMapping: variableMapping ?? undefined },
+    update: { templateId, enabled: true, ...(variableMapping !== undefined ? { variableMapping } : {}) },
     include: { template: true },
   });
 }

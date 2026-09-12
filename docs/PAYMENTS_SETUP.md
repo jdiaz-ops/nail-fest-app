@@ -125,25 +125,40 @@ Un evento VIRTUAL ya no manda el mismo correo/WhatsApp que uno presencial
   "Confirmación del evento" (`/admin/events/[id]/confirmation` y
   `/admin/settings/confirmation`) ya adaptan solo, según
   `Event.format`: un evento VIRTUAL no incluye el bloque de código QR
-  (no hay puerta donde escanearlo) y en su lugar destaca el botón de
-  Zoom; uno HÍBRIDO muestra ambos. Si ya tenías guardada la plantilla
-  con el texto original ("Lugar: {{...}} — {{...}}"), se actualiza sola
-  al usar los nuevos merge tags (`{{EVENTO_UBICACION_LINEA}}`,
-  `{{EVENTO_ACCESO_VIRTUAL_BOTON}}`, `{{EVENTO_INSTRUCCION_ENTRADA}}`)
-  — no hace falta volver a guardarla a mano.
-- **WhatsApp** — a diferencia del correo, una plantilla de WhatsApp
-  aprobada por Meta tiene el texto FIJO, así que no se puede adaptar
-  sola. En **Automatizaciones** (`/admin/crm/whatsapp/automatizaciones`)
-  cada disparador ahora acepta, además de la plantilla de siempre, una
-  plantilla aparte solo para eventos VIRTUALES ("+ Usar una plantilla
-  distinta para eventos virtuales") — necesitas crear y hacer aprobar
-  esa segunda plantilla en Meta con el texto correcto antes de poder
-  elegirla aquí. Sin configurarla, un evento virtual sigue usando la
-  plantilla de siempre tal cual (nada cambia hasta que la agregues).
-- **Landing de pago** (`/[evento]/pago`, a donde Wompi regresa al
-  cliente) — si el pago quedó aprobado y el evento es virtual, ahora
-  muestra directamente el botón "Entrar a la sesión de Zoom", sin
-  depender de que la persona revise su correo.
+  (no hay puerta donde escanearlo); uno HÍBRIDO sí lo mantiene. Si ya
+  tenías guardada la plantilla con el texto original ("Lugar: {{...}} —
+  {{...}}"), se actualiza sola al usar los nuevos merge tags
+  (`{{EVENTO_UBICACION_LINEA}}`, `{{EVENTO_ACCESO_VIRTUAL_BOTON}}`,
+  `{{EVENTO_INSTRUCCION_ENTRADA}}`) — no hace falta volver a guardarla a
+  mano. También puedes cambiar el **asunto** del correo ahora (antes
+  estaba fijo en código) — mismo editor, campo "Asunto del correo",
+  arriba del cuerpo.
+- **El link personal de Zoom NO se manda en ningún lado al momento de
+  inscribirse** (ni en el correo, ni por WhatsApp, ni en la landing de
+  pago) — deliberado: alguien puede inscribirse meses antes del
+  congreso, y ese link no debe quedar ahí sin usarse (y fácil de
+  perder) todo ese tiempo. En cambio, se manda solo por **WhatsApp**,
+  poco antes de que empiece el evento (`ZOOM_ACCESS_REMINDER_MINUTES_BEFORE`
+  en `lib/registrationConfirmation.ts`, 30 minutos por defecto — cámbialo
+  ahí si quieres otro tiempo). Ese envío usa la misma automatización de
+  Automatizaciones, con su propio disparador **"Poco antes de un evento
+  virtual"** — necesitas crear y hacer aprobar en Meta una plantilla para
+  ese disparador (con una variable mapeada a `ZOOM_LINK`, ver
+  `docs/WHATSAPP_SETUP.md`) antes de que este envío funcione; sin eso,
+  el recordatorio simplemente no sale (no es un error, solo no está
+  configurado todavía).
+- **WhatsApp — "Cuando alguien se registra"** — a diferencia del correo,
+  una plantilla de WhatsApp aprobada por Meta tiene el texto FIJO, así
+  que no se puede adaptar sola. En **Automatizaciones**
+  (`/admin/crm/whatsapp/automatizaciones`) este disparador acepta,
+  además de la plantilla de siempre, una plantilla aparte solo para
+  eventos VIRTUALES ("+ Usar una plantilla distinta para eventos
+  virtuales") — necesitas crear y hacer aprobar esa segunda plantilla en
+  Meta con el texto correcto antes de poder elegirla aquí. Sin
+  configurarla, un evento virtual sigue usando la plantilla de siempre
+  tal cual (nada cambia hasta que la agregues). Ver
+  `docs/WHATSAPP_SETUP.md` para cómo mapear las variables de cualquiera
+  de los dos disparadores.
 
 ## Asistencia en tiempo real (Event Subscriptions) — opcional, un paso más
 
@@ -195,6 +210,13 @@ Antes de vender la primera entrada real:
 - **Zoom Fase 1, no Fase 2** — el link de Zoom es personal pero no
   de un solo uso real; ver la conversación del chat sobre por qué y
   cuál sería el Fase 2 (una sala propia con token firmado).
+- **El recordatorio de acceso a Zoom no se reprograma si editas la
+  fecha del evento** — se agenda (vía QStash) en el momento en que la
+  persona se confirma, para la fecha de inicio que el evento tenía EN
+  ESE MOMENTO. Si después cambias `Event.startsAt` en Editar evento, los
+  recordatorios ya agendados no se mueven — seguirían saliendo a la hora
+  original. Un mecanismo para cancelar/reprogramar esos envíos al editar
+  el evento es un buen próximo paso, no construido en esta ronda.
 - **Resultados de encuestas de Zoom — todavía NO construido.** El scope
   (`report:read:list_meeting_polls:admin`) está documentado arriba y se
   puede agregar desde ya, pero la llamada real a la API que trae esos

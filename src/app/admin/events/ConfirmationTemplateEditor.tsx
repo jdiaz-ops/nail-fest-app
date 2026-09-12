@@ -17,6 +17,15 @@ const STARTER_HTML =
   "<p>{{EVENTO_INSTRUCCION_ENTRADA}}</p>" +
   "{{ENTRADAS}}<p>Nos vemos ahí.</p>";
 
+// Same subject for every event, format included, until an admin
+// overrides it — matches what sendTicketEmail.ts falls back to when
+// neither Event.confirmationEmailSubject nor OrgSettings.
+// confirmationEmailSubject is set. Only a small subset of merge tags
+// work here (see renderSubjectFromTemplate's own comment on why it's a
+// separate, simpler substitution than the body's).
+const STARTER_SUBJECT = "Tu entrada para {{EVENTO_NOMBRE}}";
+const SUBJECT_MERGE_TAGS = ["EVENTO_NOMBRE", "EVENTO_FECHA_RANGO", "EVENTO_FORMATO"];
+
 // Shared by /admin/events/[id]/confirmation (per-event override) and
 // /admin/settings/confirmation (the account-wide default it falls back
 // to) — same editor either way, see sendTicketEmail.ts for the actual
@@ -27,14 +36,17 @@ const STARTER_HTML =
 export default function ConfirmationTemplateEditor({
   scope,
   initialHtml,
+  initialSubject,
   onSave,
 }: {
   scope: "event" | "global";
   initialHtml: string | null;
-  onSave: (html: string) => Promise<{ ok: boolean }>;
+  initialSubject: string | null;
+  onSave: (html: string, subject: string) => Promise<{ ok: boolean }>;
 }) {
-  const [useOverride, setUseOverride] = useState(scope === "global" ? true : initialHtml != null);
+  const [useOverride, setUseOverride] = useState(scope === "global" ? true : initialHtml != null || initialSubject != null);
   const [html, setHtml] = useState(initialHtml ?? STARTER_HTML);
+  const [subject, setSubject] = useState(initialSubject ?? STARTER_SUBJECT);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const editorRef = useRef<RichTextEditorHandle>(null);
@@ -43,10 +55,14 @@ export default function ConfirmationTemplateEditor({
     editorRef.current?.insertAtCursor(`{{${key}}} `);
   }
 
+  function insertSubjectTag(key: string) {
+    setSubject((s) => `${s}{{${key}}}`);
+  }
+
   async function handleSave() {
     setSaving(true);
     setMessage(null);
-    const result = await onSave(useOverride ? html || STARTER_HTML : "");
+    const result = await onSave(useOverride ? html || STARTER_HTML : "", useOverride ? subject || STARTER_SUBJECT : "");
     setSaving(false);
     setMessage(result.ok ? "Guardado." : "No se pudo guardar.");
   }
@@ -55,9 +71,10 @@ export default function ConfirmationTemplateEditor({
     if (!confirm("¿Volver al diseño original? Se borra el contenido personalizado.")) return;
     setSaving(true);
     setMessage(null);
-    const result = await onSave("");
+    const result = await onSave("", "");
     setSaving(false);
     setHtml(STARTER_HTML);
+    setSubject(STARTER_SUBJECT);
     setMessage(result.ok ? "Se volvió al diseño original." : "No se pudo revertir.");
   }
 
@@ -89,6 +106,26 @@ export default function ConfirmationTemplateEditor({
 
       {useOverride && (
         <>
+          <div className="field" style={{ marginBottom: 16 }}>
+            <label htmlFor="confirmationSubject">Asunto del correo</label>
+            <input id="confirmationSubject" type="text" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder={STARTER_SUBJECT} />
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
+              {SUBJECT_MERGE_TAGS.map((key) => {
+                const tag = CONFIRMATION_MERGE_TAGS.find((t) => t.key === key);
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => insertSubjectTag(key)}
+                    style={{ fontSize: 11, padding: "3px 8px", borderRadius: 999, border: "1px solid #e3e1dc", background: "#fff", cursor: "pointer" }}
+                  >
+                    {tag?.label ?? key}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <p style={{ fontSize: 12, color: "#5b5f6b", marginBottom: 8 }}>
             Haz clic en una etiqueta para insertarla donde esté el cursor — se reemplaza por el dato real de cada
             evento al enviarse.

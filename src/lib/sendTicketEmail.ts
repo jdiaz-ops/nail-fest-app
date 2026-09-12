@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import type { EventFormat } from "@prisma/client";
 import { emailProvider } from "@/lib/email";
 import { confirmationEmail } from "@/lib/email/templates";
-import { renderConfirmationFromTemplate } from "@/lib/confirmationTemplate";
+import { renderConfirmationFromTemplate, renderSubjectFromTemplate } from "@/lib/confirmationTemplate";
 import { renderTicketPdfBuffer } from "@/lib/ticketPdf";
 import { getOrgSettings } from "@/lib/settings";
 
@@ -37,6 +37,13 @@ export async function sendTicketEmail(params: {
     // caller that doesn't have it; Prisma's own Event rows already carry
     // it since none of the existing call sites use a narrowing `select`.
     confirmationEmailHtml?: string | null;
+    // Same fallback chain as confirmationEmailHtml, for the subject line
+    // — see Event.confirmationEmailSubject's own schema comment. Was
+    // never actually configurable before this existed (hardcoded to "Tu
+    // entrada para <evento>" in both render functions below); optional
+    // here for the exact same "any older/other caller" reason as the
+    // sibling field above.
+    confirmationEmailSubject?: string | null;
   };
   qrToken: string;
   // Registration.id/ticketTypeId/ticketCount — optional so this keeps
@@ -72,7 +79,7 @@ export async function sendTicketEmail(params: {
     // whole branch is additive, not a rewrite of the default path.
     const format = params.event.format ?? "IN_PERSON";
     const customTemplate = params.event.confirmationEmailHtml ?? orgSettings.confirmationEmailHtml;
-    const { subject, text, html } = customTemplate
+    const { text, html } = customTemplate
       ? renderConfirmationFromTemplate(customTemplate, {
           firstName: params.person.firstName ?? "",
           lastName: params.person.lastName ?? undefined,
@@ -113,6 +120,23 @@ export async function sendTicketEmail(params: {
           format,
           zoomJoinUrl: params.zoomJoinUrl,
         });
+
+    // Same fallback chain as the body, computed independently of which
+    // body path ran above — an admin can set a custom subject without
+    // touching the body HTML at all (and vice versa). Ignores whatever
+    // `subject` the two render calls above returned; those only exist so
+    // each function stays independently testable/callable.
+    const subjectTemplate = params.event.confirmationEmailSubject ?? orgSettings.confirmationEmailSubject ?? "Tu entrada para {{EVENTO_NOMBRE}}";
+    const subject = renderSubjectFromTemplate(subjectTemplate, {
+      eventName: params.event.name,
+      startsAt: params.event.startsAt,
+      endsAt: params.event.endsAt ?? undefined,
+      scheduleDays: params.event.scheduleDays,
+      timezone: orgSettings.timezone,
+      language: orgSettings.language,
+      format,
+    });
+
     // A real, self-contained ticket (event name/date/venue, attendee,
     // ticket type, the QR itself) instead of the old bare QR-only PNG — a
     // lone QR image, saved or printed on its own, carries no event or

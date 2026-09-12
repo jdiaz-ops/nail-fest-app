@@ -6,15 +6,15 @@ import ConfirmationTemplateEditor from "../../events/ConfirmationTemplateEditor"
 // function, which can't cross the server/client boundary as a prop from
 // a Server Component, so this owns the actual fetch() and hands the
 // editor a plain callback.
-export default function SaveConfirmationClient({ initialHtml }: { initialHtml: string | null }) {
-  async function handleSave(html: string): Promise<{ ok: boolean }> {
+export default function SaveConfirmationClient({ initialHtml, initialSubject }: { initialHtml: string | null; initialSubject: string | null }) {
+  async function handleSave(html: string, subject: string): Promise<{ ok: boolean }> {
     const res = await fetch("/api/admin/settings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ confirmationEmailHtml: html }),
+      body: JSON.stringify({ confirmationEmailHtml: html, confirmationEmailSubject: subject }),
     });
     return { ok: res.ok };
   }
 
-  return <ConfirmationTemplateEditor scope="global" initialHtml={initialHtml} onSave={handleSave} />;
+  return <ConfirmationTemplateEditor scope="global" initialHtml={initialHtml} initialSubject={initialSubject} onSave={handleSave} />;
 }

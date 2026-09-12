@@ -205,3 +205,34 @@ export function renderConfirmationFromTemplate(templateHtml: string, data: Confi
   const subject = `Tu entrada para ${data.eventName}`;
   return { subject, text, html };
 }
+
+/** The subject line's own tiny merge-tag substitution — deliberately NOT
+ * the same `replacements` map renderConfirmationFromTemplate builds for
+ * the body: those values are HTML-escaped (right for dropping into
+ * markup, wrong for a plain-text subject — "&amp;" would show up
+ * literally in an inbox's subject list). A subject only needs a handful
+ * of short, plain fields, so this substitutes straight from the raw
+ * data instead of sharing that map. Used for BOTH the custom-template
+ * subject override and the hardcoded default's subject (see
+ * sendTicketEmail.ts, which always calls this rather than trusting the
+ * `subject` either render function above returns) — so "Tu entrada para
+ * {{EVENTO_NOMBRE}}" and an admin's own subject text go through the
+ * exact same substitution logic. */
+export function renderSubjectFromTemplate(
+  subjectTemplate: string,
+  data: Pick<ConfirmationTemplateData, "eventName" | "startsAt" | "endsAt" | "scheduleDays" | "timezone" | "language" | "format">
+): string {
+  const whenLines = formatEventScheduleLines(
+    { startsAt: data.startsAt, endsAt: data.endsAt ?? null, scheduleDays: data.scheduleDays },
+    data.timezone,
+    data.language
+  );
+  const formatLabel = data.format === "VIRTUAL" ? "Virtual" : data.format === "HYBRID" ? "Híbrido" : "Presencial";
+  return subjectTemplate
+    .split("{{EVENTO_NOMBRE}}")
+    .join(data.eventName)
+    .split("{{EVENTO_FECHA_RANGO}}")
+    .join(whenLines.join(" / "))
+    .split("{{EVENTO_FORMATO}}")
+    .join(formatLabel);
+}
