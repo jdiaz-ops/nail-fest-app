@@ -147,8 +147,13 @@ export function verifyEventChecksum(rawBody: string): WompiWebhookEvent | null {
     return null;
   }
 
+  // Confirmed live against a real sandbox webhook: `signature.properties`
+  // entries (e.g. "transaction.id") are paths INTO `data`, not into the
+  // envelope as a whole — resolving them from `parsed` itself always came
+  // up empty (every lookup landed on `parsed.transaction...`, which
+  // doesn't exist; the real data lives at `parsed.data.transaction...`).
   const concatenated = properties
-    .map((path) => path.split(".").reduce<unknown>((acc, key) => (acc && typeof acc === "object" ? (acc as Record<string, unknown>)[key] : undefined), parsed))
+    .map((path) => path.split(".").reduce<unknown>((acc, key) => (acc && typeof acc === "object" ? (acc as Record<string, unknown>)[key] : undefined), parsed.data as unknown))
     .map((value) => String(value ?? ""))
     .join("");
 
