@@ -406,6 +406,15 @@ export default function RegistrationForm({
               ?
             </p>
           )}
+          {/* One-line disclosure at the exact point the email is captured —
+              see /api/register/draft's own comment (this is also where the
+              abandoned-cart draft row gets created) and lib/abandonedCart.ts.
+              Small and factual, not a consent checkbox: it just tells the
+              person up front that not finishing means a reminder, instead
+              of that being a surprise later. */}
+          <p style={{ fontSize: 11, color: "#8a8f9c", margin: "4px 0 0" }}>
+            Guardamos tu progreso — si no terminas, te recordamos por correo.
+          </p>
         </div>
       )}
 

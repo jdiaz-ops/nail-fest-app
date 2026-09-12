@@ -20,6 +20,7 @@ const EDIT_NAV: { href: string; label: string }[] = [
   { href: "/admin/settings/banned-emails", label: "Correos bloqueados" },
   { href: "/admin/settings/cookie-consent", label: "Aviso de cookies" },
   { href: "/admin/settings/self-serve", label: "Autoservicio" },
+  { href: "/admin/settings/analytics", label: "Analítica" },
 ];
 
 const MANAGE_NAV: { href: string; label: string }[] = [

@@ -14,7 +14,7 @@ const ABANDONED_AFTER_MINUTES = 20;
 export default async function AbandonedCartsPage() {
   const cutoff = new Date(Date.now() - ABANDONED_AFTER_MINUTES * 60_000);
 
-  const [abandoned, stillFilling] = await Promise.all([
+  const [abandoned, stillFilling, email1Sent, email2Sent, remindedCount, remindedThenConfirmed] = await Promise.all([
     db.registration.findMany({
       where: { status: "STARTED", createdAt: { lt: cutoff } },
       orderBy: { createdAt: "desc" },
@@ -22,7 +22,16 @@ export default async function AbandonedCartsPage() {
       include: { person: true, event: true, ticketType: true },
     }),
     db.registration.count({ where: { status: "STARTED", createdAt: { gte: cutoff } } }),
+    db.registration.count({ where: { cartEmail1SentAt: { not: null } } }),
+    db.registration.count({ where: { cartEmail2SentAt: { not: null } } }),
+    // Denominator for the conversion stat below: everyone who ever got at
+    // least the first reminder — not everyone who ever abandoned, since
+    // someone who converts inside the first 15 minutes never gets one at
+    // all, and counting them would understate how well the reminders work.
+    db.registration.count({ where: { cartEmail1SentAt: { not: null } } }),
+    db.registration.count({ where: { cartEmail1SentAt: { not: null }, status: "CONFIRMED" } }),
   ]);
+  const reminderConversionRate = remindedCount > 0 ? Math.round((remindedThenConfirmed / remindedCount) * 100) : 0;
 
   return (
     <div>
@@ -34,18 +43,27 @@ export default async function AbandonedCartsPage() {
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 24 }}>
         <StatCard label="Abandonados" value={String(abandoned.length)} />
         <StatCard label="Llenando el formulario ahora" value={String(stillFilling)} />
+        <StatCard label="Correo de 15 min enviado" value={String(email1Sent)} />
+        <StatCard label="Correo de 2h enviado" value={String(email2Sent)} />
+        <StatCard label="Confirmaron tras recordatorio" value={`${reminderConversionRate}%`} sub={`de ${remindedCount} que recibieron el primer correo`} />
       </div>
 
-      {/* Deliberately no "recuperar" / send-reminder button here. Estas
-          personas nunca llegaron al envío real del formulario, que es
-          donde vive hoy TODO el consentimiento (logística, marketing y
-          publicidad quedan implícitos en esa acción — ver
-          RegistrationForm.tsx). No autorizaron nada todavía, así que la
-          Ley 1581 (habeas data) no permite tratarlos como si lo hubieran
-          hecho. Esta lista es para que un humano decida manualmente si
-          vale la pena contactarlos por un canal fuera de este flujo de
-          consentimiento automático — no es un botón de "enviar correo de
-          recuperación" automatizado. */}
+      {/* COMPLIANCE NOTE — this comment used to say this list was
+          deliberately passive: someone who abandons the form never gave
+          any real consent (Ley 1581/habeas data), so nothing here should
+          treat them as if they had. That reasoning still holds for
+          WhatsApp — there is still no automated WhatsApp send to anyone
+          on this list. It no longer holds for email: there is now an
+          automated send (see lib/abandonedCart.ts), exactly 2 reminders
+          (~15 min and ~2h after they type their email), explicitly
+          requested by the business with that specific cap after the same
+          consent question was raised and discussed. The position taken:
+          continuing an interaction the PERSON THEMSELVES already started
+          (they typed their email intending to register) is treated as
+          different from marketing to a purchased list — but it rests on
+          the same Ley 1581 ground this comment used to flag as
+          insufficient for WhatsApp, so this is a real, open compliance
+          question worth a genuine legal review, not a settled one. */}
       <div className="admin-table-wrap" style={{ border: "1px solid #e3e1dc", borderRadius: 10 }}>
         <table style={{ borderCollapse: "collapse", fontSize: 14 }}>
           <thead>

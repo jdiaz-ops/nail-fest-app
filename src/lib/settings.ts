@@ -14,6 +14,9 @@ export interface OrgSettingsValue {
   selfServeResendEnabled: boolean;
   confirmationEmailHtml: string | null;
   attachTicketPdf: boolean;
+  // Microsoft Clarity project id (see /admin/settings/analytics) — null
+  // means the script is never injected (today's behavior).
+  clarityProjectId: string | null;
   homepageImageUrl: string | null;
   homepageVideoUrl: string | null;
   homepageTagline: string | null;
@@ -34,6 +37,7 @@ const DEFAULTS: OrgSettingsValue = {
   selfServeResendEnabled: true,
   confirmationEmailHtml: null,
   attachTicketPdf: true,
+  clarityProjectId: null,
   homepageImageUrl: null,
   homepageVideoUrl: null,
   homepageTagline: null,
@@ -60,6 +64,7 @@ export async function getOrgSettings(): Promise<OrgSettingsValue> {
     selfServeResendEnabled: row.selfServeResendEnabled,
     confirmationEmailHtml: row.confirmationEmailHtml,
     attachTicketPdf: row.attachTicketPdf,
+    clarityProjectId: row.clarityProjectId,
     homepageImageUrl: row.homepageImageUrl,
     homepageVideoUrl: row.homepageVideoUrl,
     homepageTagline: row.homepageTagline,
@@ -87,6 +92,7 @@ export async function updateOrgSettings(patch: Partial<OrgSettingsValue>): Promi
     selfServeResendEnabled: row.selfServeResendEnabled,
     confirmationEmailHtml: row.confirmationEmailHtml,
     attachTicketPdf: row.attachTicketPdf,
+    clarityProjectId: row.clarityProjectId,
     homepageImageUrl: row.homepageImageUrl,
     homepageVideoUrl: row.homepageVideoUrl,
     homepageTagline: row.homepageTagline,

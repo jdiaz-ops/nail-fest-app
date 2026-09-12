@@ -148,6 +148,17 @@ export default function EventRegistration({
     if (!firedCheckoutStart.current) {
       firedCheckoutStart.current = true;
       track("InitiateCheckout");
+      // Our own top-of-funnel counter (see /api/funnel/open's own comment)
+      // — Meta's own InitiateCheckout above lives in Meta's dashboard, not
+      // ours, so there was no way to show "abrió vs. escribió correo vs.
+      // confirmó" on one report page without this. Fire-and-forget, same
+      // posture as track() itself.
+      fetch("/api/funnel/open", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventSlug }),
+        keepalive: true,
+      }).catch(() => {});
     }
   }
 

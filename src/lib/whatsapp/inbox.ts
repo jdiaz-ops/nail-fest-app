@@ -96,6 +96,17 @@ interface WebhookMessage {
   timestamp: string; // unix seconds, as a string
   type: string;
   text?: { body: string };
+  // Present when type === "button" — a tap on one of a TEMPLATE message's
+  // own QUICK_REPLY buttons (see WhatsAppTemplateButton). `text` is the
+  // button's visible label, exactly as it was defined on the template —
+  // that's what resolveAttendancePollReply below matches against.
+  button?: { text: string; payload?: string };
+  // Present on any reply Meta considers "in reply to" an earlier message —
+  // for a button tap this is the wamid of the TEMPLATE message the button
+  // lived on, which is exactly the providerMessageId recordOutboundMessage
+  // stored for that send. That's the one reliable way back to which
+  // broadcast/template this reply is actually about.
+  context?: { id: string };
 }
 
 interface WebhookStatus {
@@ -145,7 +156,12 @@ export async function processWebhookPayload(payload: WebhookPayload): Promise<vo
 async function handleInboundMessage(msg: WebhookMessage): Promise<void> {
   const phone = `+${digitsOnly(msg.from)}`;
   const conversation = await getOrCreateConversation(phone);
-  const body = msg.type === "text" ? msg.text?.body ?? null : `[mensaje tipo ${msg.type}, no soportado aún]`;
+  const body =
+    msg.type === "text"
+      ? msg.text?.body ?? null
+      : msg.type === "button"
+        ? msg.button?.text ?? null
+        : `[mensaje tipo ${msg.type}, no soportado aún]`;
 
   await db.whatsAppMessage.create({
     data: {
@@ -161,6 +177,18 @@ async function handleInboundMessage(msg: WebhookMessage): Promise<void> {
     where: { id: conversation.id },
     data: { lastInboundAt: new Date(), unreadCount: { increment: 1 } },
   });
+
+  // A tap on the attendance-poll template's own Sí/No buttons — see
+  // resolveAttendancePollReply's own comment for the full chain back to a
+  // registration. Never touches the LLM agent path below (this is a
+  // button, not free text it could reply to) and never throws past this
+  // point — same "log everything, never break the webhook's 200" posture
+  // as the rest of this file.
+  if (msg.type === "button" && msg.button && msg.context?.id) {
+    await resolveAttendancePollReply(conversation.personId, msg.context.id, msg.button.text).catch((err) =>
+      console.error("whatsapp webhook: attendance poll reply failed", err)
+    );
+  }
 
   // The LLM agent (lib/whatsapp/aiAgent.ts) — only for real text messages
   // it can actually read, and only while this thread hasn't been escalated
@@ -179,6 +207,43 @@ async function handleInboundMessage(msg: WebhookMessage): Promise<void> {
     const { respondWithAi } = await import("./aiAgent");
     await respondWithAi(conversation.id).catch((err) => console.error("whatsapp webhook: ai agent failed", err));
   }
+}
+
+// Some 2-3 words at most ("Sí voy", "Sí, voy", "No puedo") is all this
+// template asks for, so a simple case-insensitive "starts with sí/si" is
+// enough to tell CONFIRMED from DECLINED without needing to store which of
+// the template's own buttons was which — matches the actual ask ("vienes
+// este fin de semana, sí/no"), not a general free-text intent parser.
+function classifyAttendanceReply(buttonText: string): "CONFIRMED" | "DECLINED" {
+  return /^s[ií]\b/i.test(buttonText.trim()) ? "CONFIRMED" : "DECLINED";
+}
+
+/** Resolves one quick-reply button tap back to a Registration and records
+ * its attendance intent — only when the tap traces back (via Meta's own
+ * `context.id`, the wamid of the template message the button lived on) to
+ * an outbound broadcast send whose template is flagged isAttendancePoll
+ * (see that field's own schema comment). Every other quick-reply template
+ * — or a reply Meta didn't attach a context to — falls through as a no-op;
+ * the plain inbound message this reply already got logged as (above) is
+ * all that happens for those, unchanged from before this existed. */
+async function resolveAttendancePollReply(personId: string | null, contextMessageId: string, buttonText: string): Promise<void> {
+  if (!personId) return; // no matched CRM contact — nothing to attach this to
+
+  const originalMessage = await db.whatsAppMessage.findFirst({
+    where: { providerMessageId: contextMessageId },
+    include: { template: true, broadcast: true },
+  });
+  if (!originalMessage?.template?.isAttendancePoll || !originalMessage.broadcast?.eventId) return;
+
+  const registration = await db.registration.findUnique({
+    where: { personId_eventId: { personId, eventId: originalMessage.broadcast.eventId } },
+  });
+  if (!registration) return;
+
+  await db.registration.update({
+    where: { id: registration.id },
+    data: { attendanceIntent: classifyAttendanceReply(buttonText) },
+  });
 }
 
 async function handleStatusUpdate(status: WebhookStatus): Promise<void> {

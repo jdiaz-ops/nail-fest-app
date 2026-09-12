@@ -23,6 +23,9 @@ const patchSchema = z
     // Matches our previous ticketing platform's "Attach ticket vouchers as
     // a PDF" checkbox — see OrgSettings.attachTicketPdf's own schema comment.
     attachTicketPdf: z.boolean(),
+    // "" means "clear it, stop injecting the Clarity script" — same
+    // pattern as replyToEmail below.
+    clarityProjectId: z.string(),
     // nailfest.co homepage (/admin/homepage) — see OrgSettings.
     // homepageImageUrl's own schema comment. "" on the image/video/
     // tagline means "clear it", same reasoning as confirmationEmailHtml
@@ -67,11 +70,13 @@ export async function POST(req: NextRequest) {
     homepageTagline,
     linksPageImageUrl,
     linksPageVideoUrl,
+    clarityProjectId,
     ...rest
   } = parsed.data;
   const updated = await updateOrgSettings({
     ...rest,
     ...(replyToEmail !== undefined ? { replyToEmail: replyToEmail || null } : {}),
+    ...(clarityProjectId !== undefined ? { clarityProjectId: clarityProjectId.trim() || null } : {}),
     ...(confirmationEmailHtml !== undefined
       ? { confirmationEmailHtml: confirmationEmailHtml ? sanitizeEventDescription(confirmationEmailHtml) : null }
       : {}),

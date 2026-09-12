@@ -121,6 +121,39 @@ export async function publishChunkContinuation(channel: "email" | "whatsapp", br
   }
 }
 
+// --- Abandoned-cart reminder emails -----------------------------------
+//
+// Same reasoning as scheduleWhatsAppBroadcastSend above: a 15-minute and a
+// 2-hour reminder need real precision, and the daily /api/whatsapp/send-due-
+// style cron (Vercel Hobby's once-a-day cap) can't deliver that — QStash's
+// notBefore is what actually lands these on time. See lib/abandonedCart.ts,
+// which calls this right when a registration first goes STARTED.
+
+export function abandonedCartCallbackUrl(): string {
+  return `${process.env.APP_BASE_URL || ""}/api/abandoned-cart/send`;
+}
+
+/** Schedules one of the two abandoned-cart reminder emails. Same
+ * best-effort contract as scheduleWhatsAppBroadcastSend — null means
+ * QStash isn't configured or the publish call failed, and the caller
+ * (lib/abandonedCart.ts) just accepts that this particular reminder won't
+ * go out rather than failing the registration itself. */
+export async function scheduleAbandonedCartEmail(registrationId: string, step: 1 | 2, at: Date): Promise<string | null> {
+  const client = getClient();
+  if (!client) return null;
+  try {
+    const result = await client.publishJSON({
+      url: abandonedCartCallbackUrl(),
+      body: { registrationId, step },
+      notBefore: Math.floor(at.getTime() / 1000),
+    });
+    return result.messageId;
+  } catch (err) {
+    console.error("qstash: failed to schedule abandoned cart email", registrationId, step, err);
+    return null;
+  }
+}
+
 /** Verifies an inbound QStash callback's signature against this app's own
  * signing keys — shared by every route QStash calls back into (the
  * scheduled-send route and both chunk-continuation routes) so there's one

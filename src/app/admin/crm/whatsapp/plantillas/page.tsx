@@ -3,6 +3,7 @@ import type { WhatsAppTemplateButton } from "@/lib/whatsapp/provider";
 import { requirePageUser } from "@/lib/auth/guard";
 import WhatsAppTemplateSyncButton from "@/components/WhatsAppTemplateSyncButton";
 import WhatsAppTemplateCreateForm from "@/components/WhatsAppTemplateCreateForm";
+import AttendancePollToggle from "@/components/AttendancePollToggle";
 import CrmPageHeader from "../../CrmPageHeader";
 
 export const dynamic = "force-dynamic";
@@ -38,6 +39,13 @@ export default async function WhatsAppTemplatesPage() {
         <WhatsAppTemplateSyncButton />
       </div>
 
+      <p style={{ fontSize: 13, color: "#5b5f6b", maxWidth: 720, marginTop: 16 }}>
+        ¿Tienes una plantilla de UTILIDAD con 2 botones de respuesta rápida tipo &quot;Sí voy&quot; /
+        &quot;No puedo&quot;, para preguntar antes del evento si la gente sigue viniendo? Márcala como
+        &quot;Encuesta de asistencia&quot; abajo — a partir de ahí, cada respuesta que llegue por ese
+        canal queda registrada y se ve en el reporte de cada evento (pestaña Reportes).
+      </p>
+
       <div className="admin-table-wrap" style={{ border: "1px solid #e3e1dc", borderRadius: 10, marginTop: 24 }}>
         <table style={{ borderCollapse: "collapse", fontSize: 14, width: "100%" }}>
           <thead>
@@ -48,6 +56,7 @@ export default async function WhatsAppTemplatesPage() {
               <th style={{ padding: "10px 12px" }}>Estado</th>
               <th style={{ padding: "10px 12px" }}>Variables</th>
               <th style={{ padding: "10px 12px" }}>Contenido</th>
+              <th style={{ padding: "10px 12px" }}>Encuesta de asistencia</th>
             </tr>
           </thead>
           <tbody>
@@ -79,12 +88,21 @@ export default async function WhatsAppTemplatesPage() {
                       </div>
                     )}
                   </td>
+                  <td style={{ padding: "10px 12px" }}>
+                    {buttons.filter((b) => b.type === "QUICK_REPLY").length >= 2 ? (
+                      <AttendancePollToggle templateId={t.id} initialValue={t.isAttendancePoll} />
+                    ) : (
+                      <span style={{ fontSize: 12, color: "#b5b0a6" }} title="Necesita al menos 2 botones de respuesta rápida (ej. Sí voy / No puedo)">
+                        —
+                      </span>
+                    )}
+                  </td>
                 </tr>
               );
             })}
             {templates.length === 0 && (
               <tr>
-                <td colSpan={6} style={{ padding: "10px 12px", color: "#5b5f6b" }}>
+                <td colSpan={7} style={{ padding: "10px 12px", color: "#5b5f6b" }}>
                   Aún no hay ninguna plantilla — créala arriba, o créala en el WhatsApp Manager de Meta y dale a
                   &quot;Sincronizar con Meta&quot;.
                 </td>

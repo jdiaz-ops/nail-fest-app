@@ -181,6 +181,99 @@ export function confirmationEmail(params: {
   return { subject, text, html };
 }
 
+// The abandoned-cart reminder (see lib/abandonedCart.ts / /api/abandoned-
+// cart/send) — sent to someone who typed their email into the registration
+// form but never actually submitted it. Deliberately NOT the ticket/QR
+// design (confirmationEmail above): there's no registration to confirm
+// yet, this is a "come finish this" nudge, so it reuses the same brand
+// header/colors but a much simpler single-card layout with one clear CTA
+// button back to the event page. step 1 (~15 min) reads as a soft
+// reminder; step 2 (~2h) reads a little more direct, same tone shift the
+// product brief asked for — never pushy, never fake urgency (no countdown,
+// no "solo quedan X" unless that's genuinely true, which this function has
+// no way to know).
+export function abandonedCartEmail(params: {
+  step: 1 | 2;
+  firstName: string;
+  eventName: string;
+  eventCity: string;
+  eventUrl: string;
+  ticketTypeName?: string;
+  orgName?: string;
+}): { subject: string; text: string; html: string } {
+  const orgName = params.orgName || "Nail Fest";
+  const greetingName = params.firstName || "hola";
+  const ticketLine = params.ticketTypeName ? ` (${params.ticketTypeName})` : "";
+
+  const subject =
+    params.step === 1
+      ? `¿Te faltó algo, ${params.firstName || ""}? Tu lugar en ${params.eventName} sigue disponible`.trim()
+      : `Última llamada: tu registro a ${params.eventName} sigue sin terminar`;
+
+  const introText =
+    params.step === 1
+      ? `Notamos que empezaste tu registro para ${params.eventName}${ticketLine} en ${params.eventCity}, pero no llegaste a enviarlo.`
+      : `Han pasado un par de horas y tu registro para ${params.eventName}${ticketLine} en ${params.eventCity} todavía no quedó completo.`;
+
+  const closingText =
+    params.step === 1
+      ? `Termínalo cuando quieras — toma menos de un minuto.`
+      : `Si sigues interesada/o, este es un buen momento para terminarlo antes de que se te olvide.`;
+
+  const text = [
+    `Hola ${greetingName},`,
+    ``,
+    introText,
+    ``,
+    closingText,
+    `${params.eventUrl}`,
+    ``,
+    `— ${orgName}`,
+  ].join("\n");
+
+  const html = `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${PAPER};padding:24px 0;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="max-width:480px;width:100%;font-family:-apple-system,Segoe UI,Roboto,sans-serif;">
+            <tr>
+              <td style="background:#ffffff;border:1px solid ${BORDER};border-radius:14px;overflow:hidden;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="background:${ACCENT};padding:16px 24px;">
+                      <p style="margin:0;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:${ACCENT_INK};opacity:.7;">${escapeHtml(orgName)}</p>
+                      <p style="margin:4px 0 0;font-size:18px;font-weight:700;color:${ACCENT_INK};">${escapeHtml(params.eventName)}</p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:24px 24px 8px;">
+                      <p style="margin:0 0 12px;font-size:15px;color:${INK};">Hola ${escapeHtml(greetingName)},</p>
+                      <p style="margin:0 0 12px;font-size:14px;color:${INK_MUTED};">${escapeHtml(introText)}</p>
+                      <p style="margin:0;font-size:14px;color:${INK_MUTED};">${escapeHtml(closingText)}</p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:8px 24px 28px;text-align:center;">
+                      <a href="${escapeHtml(params.eventUrl)}" style="display:inline-block;background:${ACCENT};color:${ACCENT_INK};font-weight:700;font-size:14px;text-decoration:none;padding:12px 28px;border-radius:999px;margin-top:8px;">Completar mi registro</a>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:16px 8px 0;text-align:center;">
+                <p style="margin:0;font-size:12px;color:#8a8478;">${escapeHtml(orgName)}</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  `;
+
+  return { subject, text, html };
+}
+
 export function broadcastEmail(params: {
   firstName: string;
   subject: string;

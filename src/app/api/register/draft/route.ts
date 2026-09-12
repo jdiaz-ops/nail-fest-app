@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { splitName } from "@/lib/name";
 import { getOrgSettings } from "@/lib/settings";
+import { scheduleAbandonedCartReminders } from "@/lib/abandonedCart";
 
 // Real abandoned-cart tracking: fired from RegistrationForm.tsx's email
 // field onBlur — the earliest point in the flow where we know who someone
@@ -122,7 +123,7 @@ export async function POST(req: NextRequest) {
         },
       });
     } else {
-      await db.registration.create({
+      const created = await db.registration.create({
         data: {
           eventId: event.id,
           personId: person.id,
@@ -134,6 +135,13 @@ export async function POST(req: NextRequest) {
           utmCampaign: input.utmCampaign,
         },
       });
+      // Exactly once per registration — a genuinely new STARTED row, never
+      // a later update to one that already exists (see lib/abandonedCart.ts's
+      // own comment). Fire-and-forget: scheduling the reminders must never
+      // fail or delay this draft save.
+      scheduleAbandonedCartReminders(created.id).catch((err) =>
+        console.error("failed to schedule abandoned cart reminders", created.id, err)
+      );
     }
 
     return NextResponse.json({ ok: true });

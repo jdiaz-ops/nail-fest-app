@@ -15,7 +15,7 @@ import { Section, EmptyNote, ScrollBox, BarList, StatCard } from "../StatsUI";
 // own comment for what's still door-side-only (the live per-scan log,
 // the emergency CSV export).
 export default async function EventDecisionStats({ eventId }: { eventId: string }) {
-  const [event, orgSettings, ticketAgg, abandonedCount, confirmedRegs, checkedInAgg, scanCounts, byTicketType, checkInScans] = await Promise.all([
+  const [event, orgSettings, ticketAgg, abandonedCount, confirmedRegs, checkedInAgg, scanCounts, byTicketType, checkInScans, reachedEmailStep, pickedTicketType] = await Promise.all([
     db.event.findUnique({ where: { id: eventId } }),
     getOrgSettings(),
     db.registration.aggregate({ where: { eventId, status: "CONFIRMED" }, _sum: { ticketCount: true } }),
@@ -52,7 +52,26 @@ export default async function EventDecisionStats({ eventId }: { eventId: string 
       where: { scannedForEventId: eventId, result: { in: ["VALID_FIRST", "VALID_REENTRY"] } },
       select: { scannedAt: true },
     }),
+    // Embudo de registro — every row ever created for this event counts,
+    // regardless of current status (STARTED that never converted, or
+    // CONFIRMED whether or not it ever passed through a STARTED draft
+    // first) — @@unique([personId, eventId]) means this is exactly "how
+    // many distinct people got at least as far as typing their email."
+    db.registration.count({ where: { eventId, status: { not: "CANCELLED" } } }),
+    db.registration.count({ where: { eventId, status: { not: "CANCELLED" }, ticketTypeId: { not: null } } }),
   ]);
+
+  // Proyección de asistencia real — respuestas al poll de WhatsApp
+  // "¿vienes?" (ver AttendanceIntent y lib/whatsapp/inbox.ts's
+  // resolveAttendancePollReply), sobre la gente que ya confirmó su
+  // registro (a nadie más se le pregunta si "viene" a algo que ni
+  // completó). Solo tiene contenido real una vez que se envía ese poll —
+  // antes de eso, las tres cuentan como "sin respuesta", que es correcto.
+  const [attendanceConfirmed, attendanceDeclined] = await Promise.all([
+    db.registration.count({ where: { eventId, status: "CONFIRMED", attendanceIntent: "CONFIRMED" } }),
+    db.registration.count({ where: { eventId, status: "CONFIRMED", attendanceIntent: "DECLINED" } }),
+  ]);
+  const attendanceNoReply = confirmedRegs.length - attendanceConfirmed - attendanceDeclined;
 
   if (!event) return null;
 
@@ -129,6 +148,49 @@ export default async function EventDecisionStats({ eventId }: { eventId: string 
         <StatCard label="Escaneadas (entraron)" value={String(checkedIn)} sub={`${checkInRate}% de las emitidas`} />
         <StatCard label="Reingresos" value={String(reentryCount)} sub={checkedIn > 0 ? `${reentryRate} por cada 100 entradas` : undefined} />
       </div>
+
+      <Section
+        title="Embudo de registro"
+        note="En qué punto del formulario se cae la gente — no solo si se registró o no. 'Abrió el formulario' solo cuenta desde que esta métrica existe, así que un evento viejo puede verse incompleto ahí."
+      >
+        {event.checkoutOpenedCount === 0 && reachedEmailStep === 0 ? (
+          <EmptyNote text="Aún no hay datos de embudo para este evento." />
+        ) : (
+          (() => {
+            const funnelTop = Math.max(1, event.checkoutOpenedCount, reachedEmailStep);
+            const withPct = (count: number) => ({ count, pct: Math.round((count / funnelTop) * 100) });
+            return (
+              <BarList
+                rows={[
+                  { label: "Abrió el formulario", ...withPct(event.checkoutOpenedCount) },
+                  { label: "Escribió su correo", ...withPct(reachedEmailStep) },
+                  ...(byTicketType.length > 0 ? [{ label: "Eligió tipo de entrada", ...withPct(pickedTicketType) }] : []),
+                  { label: "Confirmó", ...withPct(confirmedRegs.length) },
+                ]}
+                max={funnelTop}
+                showPct
+              />
+            );
+          })()
+        )}
+      </Section>
+
+      {(attendanceConfirmed > 0 || attendanceDeclined > 0) && (
+        <Section
+          title="Confirmación de asistencia (encuesta de WhatsApp)"
+          note="Respuestas al recordatorio '¿vienes este fin de semana?' — para proyectar aforo real, no solo boletas emitidas. No bloquea el check-in: alguien que respondió 'No puedo' y aparece igual entra sin problema."
+        >
+          <BarList
+            rows={[
+              { label: "Sí voy", count: attendanceConfirmed, pct: Math.round((attendanceConfirmed / totalConfirmed) * 100) },
+              { label: "No puedo", count: attendanceDeclined, pct: Math.round((attendanceDeclined / totalConfirmed) * 100) },
+              { label: "Sin respuesta", count: attendanceNoReply, pct: Math.round((attendanceNoReply / totalConfirmed) * 100) },
+            ]}
+            max={totalConfirmed}
+            showPct
+          />
+        </Section>
+      )}
 
       <Section
         title="Inscripciones por día"

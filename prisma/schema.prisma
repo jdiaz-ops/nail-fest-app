@@ -128,6 +128,15 @@ model Event {
   // same reasoning as Registration.customFields. Shape: an array of
   // { opensAt: ISO string, closesAt: ISO string }, one entry per real day.
   scheduleDays Json?
+  // Raw count of "abrió el formulario de registro" (EventRegistration.tsx's
+  // openModal — fire-and-forget POST to /api/funnel/open, same pattern as
+  // LinkPageLink.clickCount) — the one real top-of-funnel number this app
+  // had NO record of before: Meta Pixel's InitiateCheckout fires the same
+  // moment, but that lives in Meta's dashboard, not ours, so there was no
+  // way to show "cuántos abrieron vs. cuántos llegaron a escribir su
+  // correo vs. cuántos confirmaron" on one report page. See
+  // EventDecisionStats.tsx's "Embudo de registro" section.
+  checkoutOpenedCount Int @default(0)
   // Per-event override of the confirmation email — see OrgSettings.
   // confirmationEmailHtml's own comment for the full fallback chain
   // (this -> the account-wide template -> the original hand-built
@@ -212,6 +221,18 @@ enum RegistrationStatus {
   CANCELLED
 }
 
+// Whether a person tapped "Sí voy" / "No puedo" on the pre-event WhatsApp
+// attendance poll (a UTILITY-category quick-reply template, see
+// WhatsAppTemplate.isAttendancePoll) — null means no poll was sent yet, or
+// it was sent and never answered. Used purely for door-day headcount
+// projection (see /admin/events/[id]/reports's own "Confirmación de
+// asistencia" section) — never gates check-in itself, someone who tapped
+// "No puedo" and shows up anyway still scans in fine.
+enum AttendanceIntent {
+  CONFIRMED
+  DECLINED
+}
+
 model Registration {
   id        String             @id @default(cuid())
   event     Event              @relation(fields: [eventId], references: [id])
@@ -253,6 +274,23 @@ model Registration {
   qrToken   String?  @unique // signed token encoded in the ticket QR
   createdAt DateTime @default(now())
   confirmedAt DateTime?
+
+  // Abandoned-cart email reminders (see lib/abandonedCart.ts) — exactly
+  // two, scheduled via QStash right when this row is first created as
+  // STARTED: one ~15 minutes in, one ~2 hours in. Null until each actually
+  // sends; both the "already sent, don't repeat" guard and the Abandonados
+  // admin page's own send-rate stat read straight from these instead of a
+  // separate log table, same reasoning as Registration.confirmedAt.
+  cartEmail1SentAt DateTime?
+  cartEmail2SentAt DateTime?
+
+  // Reply to the pre-event WhatsApp attendance poll (see AttendanceIntent's
+  // own comment) — resolved from the inbound webhook via the outbound
+  // message's own wamid (Meta's `context.id` on the button reply), never
+  // guessed from "whichever registration is soonest" once a template is
+  // flagged WhatsAppTemplate.isAttendancePoll. Null = never asked, or asked
+  // and no reply yet.
+  attendanceIntent AttendanceIntent?
 
   // How many tickets this registration represents (titular + up to 1
   // acompañante slot — our previous ticketing platform allows max 2 per order today) and how
@@ -691,6 +729,16 @@ model WhatsAppTemplate {
   // builds — a per-recipient link (see WhatsAppTemplateButton in
   // lib/whatsapp/provider.ts) — everything else here stays static.
   buttons       Json?
+  // Admin-only flag (toggled from Plantillas, never touched by
+  // syncTemplates()'s upsert — see that function's own comment) marking
+  // this as THE pre-event "¿vienes este fin de semana?" quick-reply poll.
+  // Only meaningful for a template with two QUICK_REPLY buttons; the
+  // inbound webhook (lib/whatsapp/inbox.ts) only interprets a button
+  // reply as attendance intent when it traces back (via Meta's own
+  // `context.id` on the reply) to a broadcast that used a template with
+  // this set — every other quick-reply template still just logs a plain
+  // inbound message, unchanged.
+  isAttendancePoll Boolean               @default(false)
   lastSyncedAt  DateTime                 @default(now())
   createdAt     DateTime                 @default(now())
   updatedAt     DateTime                 @updatedAt
@@ -974,6 +1022,13 @@ model OrgSettings {
   // PDF"). Unlike confirmationEmailHtml above, this has no per-event
   // override — one account-wide switch, same as that platform's own single checkbox.
   attachTicketPdf Boolean @default(true)
+
+  // Microsoft Clarity project id (see /admin/settings/analytics) — null
+  // means the script is never injected (today's behavior). Just an id,
+  // not a secret: Clarity's tracking snippet is public-facing JS by
+  // design, same posture as the Meta Pixel id already embedded in every
+  // public event page.
+  clarityProjectId String?
 
   // The nailfest.co homepage (src/app/page.tsx) — editable via
   // /admin/homepage. The "next city and dates" block itself is NOT stored
