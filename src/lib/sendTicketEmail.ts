@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import type { EventFormat } from "@prisma/client";
 import { emailProvider } from "@/lib/email";
 import { confirmationEmail } from "@/lib/email/templates";
 import { renderConfirmationFromTemplate } from "@/lib/confirmationTemplate";
@@ -24,6 +25,11 @@ export async function sendTicketEmail(params: {
     venueName?: string | null;
     venueAddress?: string | null;
     imageUrl?: string | null;
+    // Drives whether this email reads as "preséntate en la entrada" vs.
+    // "únete por Zoom" (see confirmationEmail's/renderConfirmationFromTemplate's
+    // own comments) — optional, defaulting to IN_PERSON, so any older/other
+    // caller without it keeps behaving exactly as before this existed.
+    format?: EventFormat;
     // Per-event override of the confirmation template — see
     // Event.confirmationEmailHtml's own schema comment for the fallback
     // chain (this -> the account-wide template -> the hand-built
@@ -64,6 +70,7 @@ export async function sendTicketEmail(params: {
     // exactly as before this feature existed. Whoever never opens
     // Confirmación del evento gets IDENTICAL behavior to before — this
     // whole branch is additive, not a rewrite of the default path.
+    const format = params.event.format ?? "IN_PERSON";
     const customTemplate = params.event.confirmationEmailHtml ?? orgSettings.confirmationEmailHtml;
     const { subject, text, html } = customTemplate
       ? renderConfirmationFromTemplate(customTemplate, {
@@ -82,6 +89,8 @@ export async function sendTicketEmail(params: {
           orgName: orgSettings.name,
           timezone: orgSettings.timezone,
           language: orgSettings.language,
+          format,
+          zoomJoinUrl: params.zoomJoinUrl,
         })
       : confirmationEmail({
           firstName: params.person.firstName ?? "",
@@ -101,6 +110,7 @@ export async function sendTicketEmail(params: {
           orgName: orgSettings.name,
           timezone: orgSettings.timezone,
           language: orgSettings.language,
+          format,
           zoomJoinUrl: params.zoomJoinUrl,
         });
     // A real, self-contained ticket (event name/date/venue, attendee,
@@ -110,8 +120,12 @@ export async function sendTicketEmail(params: {
     // ticketing platform's own "Attach ticket vouchers as a PDF" checkbox (OrgSettings.
     // attachTicketPdf, /admin/settings/confirmation) decides whether this
     // gets built at all — off means no attachment, not a fallback to the
-    // old bare-QR PNG.
-    const pdfAttachment = orgSettings.attachTicketPdf
+    // old bare-QR PNG. Never for a pure VIRTUAL event, org setting or
+    // not: this PDF's entire content is "here's your QR, present it at
+    // the door" — there is no door, so attaching it would just confuse a
+    // virtual-only attendee. HYBRID still gets it (some attendees really
+    // do walk in).
+    const pdfAttachment = orgSettings.attachTicketPdf && format !== "VIRTUAL"
       ? await renderTicketPdfBuffer({
           firstName: params.person.firstName ?? "",
           lastName: params.person.lastName ?? undefined,

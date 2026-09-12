@@ -35,7 +35,7 @@ export async function finalizeConfirmedRegistration(params: {
   // leave these undefined rather than misattributing Wompi's own.
   clientIpAddress?: string;
   clientUserAgent?: string;
-}): Promise<{ whatsappTicketLinkSent: boolean; qrToken: string }> {
+}): Promise<{ whatsappTicketLinkSent: boolean; qrToken: string; zoomJoinUrl?: string }> {
   const { person, event, registration, wasAlreadyConfirmed } = params;
 
   let qrToken = registration.qrToken;
@@ -61,6 +61,13 @@ export async function finalizeConfirmedRegistration(params: {
         console.error("finalizeConfirmedRegistration: zoom registration failed", registration.id, err);
         return null;
       })) ?? undefined;
+    // Persisted, not just handed to sendTicketEmail below — so a second
+    // reader (the /[eventSlug]/pago return-page render, see that file's
+    // own comment) can show this same personal link right away too,
+    // instead of it only ever reaching the person via email/WhatsApp.
+    if (zoomJoinUrl) {
+      await db.registration.update({ where: { id: registration.id }, data: { zoomJoinUrl } });
+    }
   }
 
   await sendTicketEmail({
@@ -94,5 +101,5 @@ export async function finalizeConfirmedRegistration(params: {
     });
   }
 
-  return { whatsappTicketLinkSent, qrToken };
+  return { whatsappTicketLinkSent, qrToken, zoomJoinUrl };
 }

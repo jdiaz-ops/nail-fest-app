@@ -318,6 +318,16 @@ model Registration {
   createdAt DateTime @default(now())
   confirmedAt DateTime?
 
+  // This registrant's own personal Zoom join link (see lib/zoom.ts's
+  // registerParticipant / lib/registrationConfirmation.ts) — only ever
+  // set for a VIRTUAL/HYBRID event with Zoom configured, and only once
+  // that best-effort registration call actually succeeded. Persisted
+  // (not just passed in-memory to the confirmation email) so a second
+  // reader — today, /[eventSlug]/pago's own return-page render — can
+  // show the same link right away too, instead of it only ever reaching
+  // the person via email/WhatsApp.
+  zoomJoinUrl String?
+
   // Abandoned-cart email reminders (see lib/abandonedCart.ts) — exactly
   // two, scheduled via QStash right when this row is first created as
   // STARTED: one ~15 minutes in, one ~2 hours in. Null until each actually
@@ -894,22 +904,41 @@ enum WhatsAppAutomationTrigger {
   REGISTRATION_CONFIRMED
 }
 
+// A WhatsApp template's body text is fixed, pre-approved by Meta — it
+// can't be adapted per event the way an email template can (no merge-tag
+// conditionals inside an approved template). So instead of one automation
+// per trigger, there can be up to two: DEFAULT (used for IN_PERSON and
+// HYBRID events — both still have a real physical entrada, so the usual
+// "preséntala al ingresar" copy is still true) and VIRTUAL (an optional
+// override, only consulted for a pure VIRTUAL event, where there's no
+// physical entry at all and that copy would be wrong). Unconfigured
+// VIRTUAL just falls back to DEFAULT, same "absence means use the
+// general one" as before this scope existed — see getEnabledAutomation.
+enum AutomationFormatScope {
+  DEFAULT
+  VIRTUAL
+}
+
 // "Automatizaciones" — the WhatsApp equivalent of a Zapier/n8n trigger,
 // not something an admin sends by hand (that's Difusiones): each row
 // pairs one trigger with the APPROVED template it fires, and can be
 // turned off without losing that pairing (`enabled`) — same "keep the
 // config, just stop firing" reasoning as WhatsAppConversation.
-// aiAutoReplyEnabled. @@unique on trigger — never two automations racing
-// to fire on the same event; disable the old one and edit its template
-// instead of creating a second row.
+// aiAutoReplyEnabled. @@unique on (trigger, formatScope) — never two
+// automations racing to fire the same trigger for the same scope;
+// disable the old one and edit its template instead of creating a
+// second row within the same scope.
 model WhatsAppAutomation {
-  id         String                    @id @default(cuid())
-  trigger    WhatsAppAutomationTrigger @unique
-  template   WhatsAppTemplate          @relation(fields: [templateId], references: [id])
-  templateId String
-  enabled    Boolean                   @default(true)
-  createdAt  DateTime                  @default(now())
-  updatedAt  DateTime                  @updatedAt
+  id          String                    @id @default(cuid())
+  trigger     WhatsAppAutomationTrigger
+  formatScope AutomationFormatScope     @default(DEFAULT)
+  template    WhatsAppTemplate          @relation(fields: [templateId], references: [id])
+  templateId  String
+  enabled     Boolean                   @default(true)
+  createdAt   DateTime                  @default(now())
+  updatedAt   DateTime                  @updatedAt
+
+  @@unique([trigger, formatScope])
 }
 
 model WhatsAppBroadcast {

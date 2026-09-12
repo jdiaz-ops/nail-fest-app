@@ -40,13 +40,16 @@ import { recordOutboundMessage } from "./inbox";
  */
 export async function sendTicketLinkViaWhatsApp(params: {
   person: Person;
-  event: Pick<Event, "name">;
+  event: Pick<Event, "name" | "format">;
   qrToken: string;
 }): Promise<boolean> {
   const { person, event, qrToken } = params;
   if (!person.phone) return false;
 
-  const automation = await getEnabledAutomation("REGISTRATION_CONFIRMED");
+  // A pure VIRTUAL event can have its own APPROVED template configured
+  // (see AutomationFormatScope's own comment) — falls back to the usual
+  // one when nobody's set that up, same as before this scope existed.
+  const automation = await getEnabledAutomation("REGISTRATION_CONFIRMED", event.format);
   if (!automation) return false;
 
   if (!(await hasActiveConsent(person.id, "WHATSAPP"))) return false;

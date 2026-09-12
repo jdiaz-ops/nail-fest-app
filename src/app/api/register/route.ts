@@ -485,7 +485,7 @@ export async function POST(req: NextRequest) {
   // exact same finalize step a paid confirmation runs once Wompi approves
   // it (see lib/registrationConfirmation.ts), so the two paths can never
   // quietly drift apart on what "confirmed" actually delivers. ---
-  const { whatsappTicketLinkSent } = await finalizeConfirmedRegistration({
+  const { whatsappTicketLinkSent, zoomJoinUrl } = await finalizeConfirmedRegistration({
     person,
     event,
     registration,
@@ -497,5 +497,5 @@ export async function POST(req: NextRequest) {
     clientUserAgent: userAgentFromHeaders(),
   });
 
-  return NextResponse.json({ ok: true, registrationId: registration.id, resent: isResend, whatsappTicketLinkSent });
+  return NextResponse.json({ ok: true, registrationId: registration.id, resent: isResend, whatsappTicketLinkSent, zoomJoinUrl });
 }

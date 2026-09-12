@@ -12,7 +12,10 @@ export const dynamic = "force-dynamic";
 export default async function WhatsAppAutomationsPage() {
   await requirePageUser(["ADMIN"]);
   const [automations, eligibleTemplates] = await Promise.all([listAutomations(), listEligibleAutomationTemplates()]);
-  const byTrigger = new Map(automations.map((a) => [a.trigger, a]));
+  // Two rows possible per trigger now (DEFAULT + an optional VIRTUAL
+  // override — see AutomationFormatScope's own schema comment), keyed
+  // together so each AutomationCard gets both at once.
+  const byTriggerAndScope = new Map(automations.map((a) => [`${a.trigger}:${a.formatScope}`, a]));
 
   return (
     <div>
@@ -23,7 +26,8 @@ export default async function WhatsAppAutomationsPage() {
 
       {AUTOMATION_TRIGGER_LIST.map((trigger) => {
         const meta = AUTOMATION_TRIGGERS[trigger];
-        const row = byTrigger.get(trigger);
+        const row = byTriggerAndScope.get(`${trigger}:DEFAULT`);
+        const virtualRow = byTriggerAndScope.get(`${trigger}:VIRTUAL`);
         return (
           <AutomationCard
             key={trigger}
@@ -34,6 +38,11 @@ export default async function WhatsAppAutomationsPage() {
             automation={
               row
                 ? { templateId: row.templateId, templateName: row.template.name, templateLanguage: row.template.language, enabled: row.enabled }
+                : null
+            }
+            virtualOverride={
+              virtualRow
+                ? { templateId: virtualRow.templateId, templateName: virtualRow.template.name, templateLanguage: virtualRow.template.language, enabled: virtualRow.enabled }
                 : null
             }
           />

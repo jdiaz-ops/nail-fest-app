@@ -116,6 +116,35 @@ exclusivamente para Nail Fest (más trámite, cero riesgo compartido).
 5. En el evento (`/admin/events/[id]/edit` → Formato → Virtual/Híbrido →
    Acceso virtual), pega el ID numérico de esa Reunión/Webinar.
 
+## Notificaciones adaptadas al formato del evento
+
+Un evento VIRTUAL ya no manda el mismo correo/WhatsApp que uno presencial
+("preséntala en la entrada" no aplica cuando no hay entrada física):
+
+- **Correo** — tanto la plantilla por defecto como el editor de
+  "Confirmación del evento" (`/admin/events/[id]/confirmation` y
+  `/admin/settings/confirmation`) ya adaptan solo, según
+  `Event.format`: un evento VIRTUAL no incluye el bloque de código QR
+  (no hay puerta donde escanearlo) y en su lugar destaca el botón de
+  Zoom; uno HÍBRIDO muestra ambos. Si ya tenías guardada la plantilla
+  con el texto original ("Lugar: {{...}} — {{...}}"), se actualiza sola
+  al usar los nuevos merge tags (`{{EVENTO_UBICACION_LINEA}}`,
+  `{{EVENTO_ACCESO_VIRTUAL_BOTON}}`, `{{EVENTO_INSTRUCCION_ENTRADA}}`)
+  — no hace falta volver a guardarla a mano.
+- **WhatsApp** — a diferencia del correo, una plantilla de WhatsApp
+  aprobada por Meta tiene el texto FIJO, así que no se puede adaptar
+  sola. En **Automatizaciones** (`/admin/crm/whatsapp/automatizaciones`)
+  cada disparador ahora acepta, además de la plantilla de siempre, una
+  plantilla aparte solo para eventos VIRTUALES ("+ Usar una plantilla
+  distinta para eventos virtuales") — necesitas crear y hacer aprobar
+  esa segunda plantilla en Meta con el texto correcto antes de poder
+  elegirla aquí. Sin configurarla, un evento virtual sigue usando la
+  plantilla de siempre tal cual (nada cambia hasta que la agregues).
+- **Landing de pago** (`/[evento]/pago`, a donde Wompi regresa al
+  cliente) — si el pago quedó aprobado y el evento es virtual, ahora
+  muestra directamente el botón "Entrar a la sesión de Zoom", sin
+  depender de que la persona revise su correo.
+
 ## Asistencia en tiempo real (Event Subscriptions) — opcional, un paso más
 
 Esto es lo que llena el panel **"En vivo (Zoom)"** dentro de cada evento

@@ -1,3 +1,4 @@
+import type { EventFormat } from "@prisma/client";
 import { formatEventScheduleLines } from "@/lib/eventSchedule";
 
 // Colors match the app's own brand tokens (src/app/globals.css: --ink,
@@ -58,6 +59,11 @@ export function confirmationEmail(params: {
   /** OrgSettings.timezone/.language — fall back to Colombia/Spanish, same as before these existed. */
   timezone?: string;
   language?: string;
+  /** Event.format — defaults to IN_PERSON so any older caller without
+   * this keeps getting the exact original presencial copy/layout. Drives
+   * the intro line's wording and whether the QR block renders at all
+   * (omitted for a pure VIRTUAL event — there's no door to scan it at). */
+  format?: EventFormat;
   /** This registrant's own personal Zoom join link (see lib/zoom.ts) —
    * only set for a VIRTUAL/HYBRID event with Zoom configured, and only
    * once lib/registrationConfirmation.ts's best-effort registerParticipant
@@ -86,6 +92,19 @@ export function confirmationEmail(params: {
       ? `${params.ticketTypeName} · x${params.ticketCount}`
       : params.ticketTypeName;
   const venueLine = [params.venueName, params.venueAddress].filter(Boolean).join(" — ") || undefined;
+  const format = params.format ?? "IN_PERSON";
+  const isVirtualOnly = format === "VIRTUAL";
+
+  // The entry instruction is the one line that's flatly wrong for the
+  // wrong format — "preséntala en la entrada" promises a door that a
+  // pure VIRTUAL event doesn't have, and staying silent on a HYBRID
+  // event would hide that Zoom is also an option for people who won't
+  // travel in. IN_PERSON keeps the exact original wording.
+  const entryInstructionText = isVirtualOnly
+    ? `Únete por Zoom con tu link personal — lo tienes más abajo.`
+    : format === "HYBRID"
+      ? `Presenta el código QR adjunto en este correo (o una captura de pantalla) en la entrada si asistes presencialmente. Puedes reingresar las veces que necesites con el mismo código. También puedes unirte por Zoom con tu link personal, más abajo.`
+      : `Presenta el código QR adjunto en este correo (o una captura de pantalla) en la entrada. Puedes reingresar las veces que necesites durante el evento con el mismo código.`;
 
   const subject = `Tu entrada para ${params.eventName}`;
   const text = [
@@ -105,7 +124,7 @@ export function confirmationEmail(params: {
     ...(params.zoomJoinUrl
       ? [`Únete a la sesión por Zoom con tu link personal (no lo compartas, es solo tuyo):`, params.zoomJoinUrl, ``]
       : []),
-    `Presenta el código QR adjunto en este correo (o una captura de pantalla) en la entrada. Puedes reingresar las veces que necesites durante el evento con el mismo código.`,
+    entryInstructionText,
     ``,
     `Nos vemos ahí — ${orgName}`,
   ].join("\n");
@@ -124,7 +143,13 @@ export function confirmationEmail(params: {
             <tr>
               <td style="padding:0 8px 16px;">
                 <p style="margin:0 0 4px;font-size:20px;font-weight:700;color:${INK};">¡Listo, ${escapeHtml(params.firstName)}!</p>
-                <p style="margin:0;font-size:14px;color:${INK_MUTED};">Tu entrada para <strong>${escapeHtml(params.eventName)}</strong> quedó confirmada. Preséntala en la entrada — puedes reingresar las veces que necesites con el mismo código.</p>
+                <p style="margin:0;font-size:14px;color:${INK_MUTED};">${
+                  isVirtualOnly
+                    ? `Tu registro para <strong>${escapeHtml(params.eventName)}</strong> quedó confirmado. Únete por Zoom con tu link personal, más abajo.`
+                    : format === "HYBRID"
+                      ? `Tu entrada para <strong>${escapeHtml(params.eventName)}</strong> quedó confirmada. Preséntala en la entrada si asistes presencialmente, o únete por Zoom con tu link personal — ambas opciones más abajo.`
+                      : `Tu entrada para <strong>${escapeHtml(params.eventName)}</strong> quedó confirmada. Preséntala en la entrada — puedes reingresar las veces que necesites con el mismo código.`
+                }</p>
               </td>
             </tr>
             <tr>
@@ -175,23 +200,30 @@ export function confirmationEmail(params: {
                         </tr>`
                       : ""
                   }
-                  <tr>
-                    <td style="padding:20px 24px 0;">
-                      <div style="border-top:2px dashed ${BORDER};"></div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding:20px 24px 24px;text-align:center;">
-                      <img src="${escapeHtml(params.qrImageUrl)}" alt="Código QR de tu entrada" width="180" height="180" style="display:block;margin:0 auto 16px;" />
-                      ${attendeeName ? `<p style="margin:0;font-size:16px;font-weight:700;color:${INK};">${escapeHtml(attendeeName)}</p>` : ""}
-                      ${
-                        ticketTypeLine
-                          ? `<p style="margin:8px 0 0;"><span style="display:inline-block;background:${PAPER};border:1px solid ${BORDER};border-radius:999px;padding:4px 12px;font-size:12px;color:${INK_MUTED};">${escapeHtml(ticketTypeLine)}</span></p>`
-                          : ""
-                      }
-                      <p style="margin:12px 0 0;font-size:11px;letter-spacing:.05em;color:#8a8478;">CÓDIGO ${escapeHtml(params.confirmationCode)}</p>
-                    </td>
-                  </tr>
+                  ${
+                    // No door to scan a QR at on a pure VIRTUAL event — see
+                    // this file's own `isVirtualOnly` comment. HYBRID keeps
+                    // it: some attendees really do walk in.
+                    isVirtualOnly
+                      ? ""
+                      : `<tr>
+                          <td style="padding:20px 24px 0;">
+                            <div style="border-top:2px dashed ${BORDER};"></div>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td style="padding:20px 24px 24px;text-align:center;">
+                            <img src="${escapeHtml(params.qrImageUrl)}" alt="Código QR de tu entrada" width="180" height="180" style="display:block;margin:0 auto 16px;" />
+                            ${attendeeName ? `<p style="margin:0;font-size:16px;font-weight:700;color:${INK};">${escapeHtml(attendeeName)}</p>` : ""}
+                            ${
+                              ticketTypeLine
+                                ? `<p style="margin:8px 0 0;"><span style="display:inline-block;background:${PAPER};border:1px solid ${BORDER};border-radius:999px;padding:4px 12px;font-size:12px;color:${INK_MUTED};">${escapeHtml(ticketTypeLine)}</span></p>`
+                                : ""
+                            }
+                            <p style="margin:12px 0 0;font-size:11px;letter-spacing:.05em;color:#8a8478;">CÓDIGO ${escapeHtml(params.confirmationCode)}</p>
+                          </td>
+                        </tr>`
+                  }
                 </table>
               </td>
             </tr>

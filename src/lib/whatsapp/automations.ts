@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import type { WhatsAppAutomationTrigger } from "@prisma/client";
+import type { AutomationFormatScope, EventFormat, WhatsAppAutomationTrigger } from "@prisma/client";
 import type { WhatsAppTemplateButton } from "./provider";
 
 /** Registry of every trigger this app knows how to fire — the single
@@ -34,47 +34,65 @@ export async function listEligibleAutomationTemplates(): Promise<{ id: string; n
     .map((t) => ({ id: t.id, name: t.name, language: t.language }));
 }
 
-/** One row per configured trigger — unconfigured ones just aren't in this
- * list, same "absence means off" reasoning as everywhere else in the app.
- * The Automatizaciones page cross-references this against
- * AUTOMATION_TRIGGER_LIST to also show the not-yet-configured ones. */
+/** One row per configured (trigger, formatScope) pair — unconfigured ones
+ * just aren't in this list, same "absence means off" reasoning as
+ * everywhere else in the app. The Automatizaciones page cross-references
+ * this against AUTOMATION_TRIGGER_LIST to also show the not-yet-
+ * configured ones, and splits DEFAULT vs. VIRTUAL rows into the card's
+ * two sections. */
 export async function listAutomations() {
   return db.whatsAppAutomation.findMany({ include: { template: true } });
 }
 
-export async function getEnabledAutomation(trigger: WhatsAppAutomationTrigger) {
-  return db.whatsAppAutomation.findFirst({ where: { trigger, enabled: true }, include: { template: true } });
+/** A WhatsApp template's body text is fixed and pre-approved by Meta —
+ * unlike the confirmation EMAIL, there's no rendering a different
+ * sentence per event here. So "adapt per format" means picking between
+ * up to two APPROVED templates per trigger (see AutomationFormatScope's
+ * own schema comment): the VIRTUAL one, only for a pure VIRTUAL event,
+ * when an admin has actually configured one; DEFAULT otherwise (also the
+ * one used for IN_PERSON and HYBRID, both of which still have a real
+ * entrada). Format omitted (older/other callers) behaves exactly as
+ * before this scope existed — DEFAULT only. */
+export async function getEnabledAutomation(trigger: WhatsAppAutomationTrigger, format?: EventFormat) {
+  if (format === "VIRTUAL") {
+    const override = await db.whatsAppAutomation.findFirst({
+      where: { trigger, formatScope: "VIRTUAL", enabled: true },
+      include: { template: true },
+    });
+    if (override) return override;
+  }
+  return db.whatsAppAutomation.findFirst({ where: { trigger, formatScope: "DEFAULT", enabled: true }, include: { template: true } });
 }
 
 export class AutomationValidationError extends Error {}
 
 /** Creates the automation (first time picking a template for this
- * trigger) or repoints an existing one at a different template — either
- * way it comes back enabled, since picking a template is an "activate"
- * action; use setAutomationEnabled to turn it off without losing the
- * pairing. */
-export async function upsertAutomation(trigger: WhatsAppAutomationTrigger, templateId: string) {
+ * trigger + scope) or repoints an existing one at a different template —
+ * either way it comes back enabled, since picking a template is an
+ * "activate" action; use setAutomationEnabled to turn it off without
+ * losing the pairing. */
+export async function upsertAutomation(trigger: WhatsAppAutomationTrigger, templateId: string, formatScope: AutomationFormatScope = "DEFAULT") {
   const eligible = await listEligibleAutomationTemplates();
   if (!eligible.some((t) => t.id === templateId)) {
     throw new AutomationValidationError("Esa plantilla no está aprobada o no tiene un botón de enlace dinámico.");
   }
   return db.whatsAppAutomation.upsert({
-    where: { trigger },
-    create: { trigger, templateId, enabled: true },
+    where: { trigger_formatScope: { trigger, formatScope } },
+    create: { trigger, formatScope, templateId, enabled: true },
     update: { templateId, enabled: true },
     include: { template: true },
   });
 }
 
-export async function setAutomationEnabled(trigger: WhatsAppAutomationTrigger, enabled: boolean) {
-  return db.whatsAppAutomation.update({ where: { trigger }, data: { enabled }, include: { template: true } });
+export async function setAutomationEnabled(trigger: WhatsAppAutomationTrigger, enabled: boolean, formatScope: AutomationFormatScope = "DEFAULT") {
+  return db.whatsAppAutomation.update({ where: { trigger_formatScope: { trigger, formatScope } }, data: { enabled }, include: { template: true } });
 }
 
 /** Removes the pairing entirely — back to "not configured", not just
- * off. Use setAutomationEnabled(trigger, false) instead for a temporary
- * pause that keeps the chosen template. */
-export async function deleteAutomation(trigger: WhatsAppAutomationTrigger) {
-  await db.whatsAppAutomation.delete({ where: { trigger } }).catch(() => {
+ * off. Use setAutomationEnabled(trigger, false, formatScope) instead for
+ * a temporary pause that keeps the chosen template. */
+export async function deleteAutomation(trigger: WhatsAppAutomationTrigger, formatScope: AutomationFormatScope = "DEFAULT") {
+  await db.whatsAppAutomation.delete({ where: { trigger_formatScope: { trigger, formatScope } } }).catch(() => {
     // Already unconfigured — deleting a non-existent row is a no-op, not
     // an error the caller needs to handle.
   });

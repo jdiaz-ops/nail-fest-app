@@ -105,6 +105,13 @@ export default function EventRegistration({
   // (automation off, no WHATSAPP consent, or no phone).
   const [submittedPhone, setSubmittedPhone] = useState<string | null>(null);
   const [whatsappTicketLinkSent, setWhatsappTicketLinkSent] = useState(false);
+  // This registrant's own personal Zoom join link — see
+  // lib/registrationConfirmation.ts. Only ever set for the immediate
+  // (free-ticket) confirmation path on a VIRTUAL/HYBRID event with Zoom
+  // configured; the paid path shows its own equivalent button on
+  // /[eventSlug]/pago instead, since that's where Wompi sends the
+  // customer back to.
+  const [zoomJoinUrl, setZoomJoinUrl] = useState<string | null>(null);
   // Only pre-select when there's exactly one type AND it actually has
   // stock — a single sold-out type must NOT default to a nonzero
   // quantity, or the submit button would wrongly enable with nothing
@@ -229,6 +236,7 @@ export default function EventRegistration({
       setSubmittedEmail(payload.email);
       setSubmittedPhone(payload.phone);
       setWhatsappTicketLinkSent(Boolean(body?.whatsappTicketLinkSent));
+      setZoomJoinUrl(typeof body?.zoomJoinUrl === "string" ? body.zoomJoinUrl : null);
       setStep("resumen");
     } else {
       const body = await res.json().catch(() => ({}));
@@ -559,6 +567,26 @@ export default function EventRegistration({
                       </div>
                     )}
                   </div>
+
+                  {zoomJoinUrl && (
+                    <a
+                      href={zoomJoinUrl}
+                      style={{
+                        display: "inline-block",
+                        textDecoration: "none",
+                        background: "var(--accent)",
+                        color: "var(--accent-ink)",
+                        borderRadius: 8,
+                        padding: "10px 20px",
+                        fontWeight: 700,
+                        fontSize: 13.5,
+                        marginTop: 10,
+                        position: "relative",
+                      }}
+                    >
+                      Entrar a la sesión de Zoom
+                    </a>
+                  )}
 
                   <div
                     style={{

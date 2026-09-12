@@ -4,10 +4,17 @@ import { useRef, useState } from "react";
 import RichTextEditor, { type RichTextEditorHandle } from "@/components/RichTextEditor";
 import { CONFIRMATION_MERGE_TAGS } from "@/lib/confirmationTemplate";
 
+// EVENTO_UBICACION_LINEA / EVENTO_ACCESO_VIRTUAL_BOTON / EVENTO_INSTRUCCION_ENTRADA
+// (see lib/confirmationTemplate.ts) each already resolve to the right
+// copy for IN_PERSON, VIRTUAL and HYBRID — so this one starter works for
+// every event format without an admin having to write their own
+// conditional; it just renders empty where something doesn't apply
+// (e.g. no Zoom button on a presencial event).
 const STARTER_HTML =
   "<p>Hola,</p><p>Tu registro para <strong>{{EVENTO_NOMBRE}}</strong> quedó confirmado.</p>" +
-  "<p>Fecha: {{EVENTO_FECHA_RANGO}}<br/>Lugar: {{EVENTO_LUGAR_NOMBRE}} — {{EVENTO_LUGAR_DIRECCION}}</p>" +
-  "<p>Presenta el código QR de abajo en la entrada. Puedes reingresar las veces que necesites durante el evento.</p>" +
+  "<p>Fecha: {{EVENTO_FECHA_RANGO}}<br/>{{EVENTO_UBICACION_LINEA}}</p>" +
+  "{{EVENTO_ACCESO_VIRTUAL_BOTON}}" +
+  "<p>{{EVENTO_INSTRUCCION_ENTRADA}}</p>" +
   "{{ENTRADAS}}<p>Nos vemos ahí.</p>";
 
 // Shared by /admin/events/[id]/confirmation (per-event override) and
