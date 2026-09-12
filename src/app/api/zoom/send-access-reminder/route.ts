@@ -38,6 +38,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, skipped: true });
   }
 
-  await sendZoomAccessReminder({ person: registration.person, event: registration.event, zoomJoinUrl: registration.zoomJoinUrl });
+  await sendZoomAccessReminder({
+    person: registration.person,
+    event: registration.event,
+    zoomJoinUrl: registration.zoomJoinUrl,
+    qrToken: registration.qrToken,
+  });
   return NextResponse.json({ ok: true });
 }

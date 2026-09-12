@@ -143,10 +143,11 @@ Un evento VIRTUAL ya no manda el mismo correo/WhatsApp que uno presencial
   ahí si quieres otro tiempo). Ese envío usa la misma automatización de
   Automatizaciones, con su propio disparador **"Poco antes de un evento
   virtual"** — necesitas crear y hacer aprobar en Meta una plantilla para
-  ese disparador (con una variable mapeada a `ZOOM_LINK`, ver
-  `docs/WHATSAPP_SETUP.md`) antes de que este envío funcione; sin eso,
-  el recordatorio simplemente no sale (no es un error, solo no está
-  configurado todavía).
+  ese disparador (con una variable mapeada a `ZOOM_LINK`, o con un botón
+  de acción cuyo enlace apunte a `/api/zoom-join/{{1}}` — ver
+  `docs/WHATSAPP_SETUP.md` para las dos formas) antes de que este envío
+  funcione; sin eso, el recordatorio simplemente no sale (no es un
+  error, solo no está configurado todavía).
 - **WhatsApp — "Cuando alguien se registra"** — a diferencia del correo,
   una plantilla de WhatsApp aprobada por Meta tiene el texto FIJO, así
   que no se puede adaptar sola. En **Automatizaciones**

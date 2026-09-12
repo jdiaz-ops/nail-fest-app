@@ -34,7 +34,12 @@ export const AUTOMATION_TRIGGERS: Record<
 
 export const AUTOMATION_TRIGGER_LIST = Object.keys(AUTOMATION_TRIGGERS) as WhatsAppAutomationTrigger[];
 
-function isDynamicUrlButton(b: WhatsAppTemplateButton): boolean {
+// Exported — sendTicketLinkViaWhatsApp/sendZoomAccessReminder each need
+// this same check at send time, to decide whether to pass buttonUrlParam
+// at all (Meta rejects a template send whose components don't match the
+// approved template's own shape — passing a button parameter for a
+// template with no button component is exactly that mismatch).
+export function isDynamicUrlButton(b: WhatsAppTemplateButton): boolean {
   return b.type === "URL" && b.url.includes("{{");
 }
 

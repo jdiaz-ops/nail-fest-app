@@ -111,18 +111,37 @@ Moving off WhatChimp to a direct Cloud API connection:
   📍 Modalidad: {{3}} Importante: Unos minutos antes de iniciar el
   congreso te enviaremos por este mismo WhatsApp el enlace de acceso a
   Zoom. ¡Nos vemos muy pronto! 💜`, mapped `{{1}}`→`EVENTO_NOMBRE`,
-  `{{2}}`→`EVENTO_FECHA_RANGO`, `{{3}}`→`EVENTO_UBICACION_LINEA`. A
-  **plantilla sugerida** for `ZOOM_ACCESS_REMINDER`: body `¡Ya casi
-  empezamos! Tu acceso a {{1}} está listo — únete aquí: {{2}}`, mapped
-  `{{1}}`→`EVENTO_NOMBRE`, `{{2}}`→`ZOOM_LINK`.
+  `{{2}}`→`EVENTO_FECHA_RANGO`, `{{3}}`→`EVENTO_UBICACION_LINEA`.
 
-  A template configured before this mapping existed keeps working
-  identically without it (see `sendTicketLinkViaWhatsApp`'s own fallback
-  to the OLD fixed `[firstName, eventName]` convention when no mapping
-  is saved) — only `REGISTRATION_CONFIRMED` has that fallback;
-  `ZOOM_ACCESS_REMINDER` is new enough that it requires a mapping to send
-  at all (no mapping configured = silent no-op, same as no automation
-  configured).
+  For `ZOOM_ACCESS_REMINDER`, the personal link can go out either of two
+  ways (pick one, or both):
+  - **As a plain body variable** (like any other tag) — plantilla
+    sugerida: body `¡Ya casi empezamos! Tu acceso a {{1}} está listo —
+    únete aquí: {{2}}`, mapped `{{1}}`→`EVENTO_NOMBRE`,
+    `{{2}}`→`ZOOM_LINK`. The URL just sits in the message as text.
+  - **As a dynamic URL button** — the same "Ver mi entrada" pattern
+    `REGISTRATION_CONFIRMED` can use, just pointed at a different route:
+    body with no link mentioned at all (e.g. `Estamos a punto de
+    empezar el evento, dale clic para ingresar al Zoom.`), plus one URL
+    button `Ingresar al Zoom` → `https://<tu-dominio>/api/zoom-join/{{1}}`
+    (mark "el enlace es distinto para cada persona" in Plantillas, same
+    checkbox as the ticket button). **Never** point this button straight
+    at a real `zoom.us/...` link — Zoom's own join URL differs by
+    *event* too (a different meetingId/domain each congress), so it
+    could never stay one stable, reusable template; `/api/zoom-join/`
+    is this app's own redirect, whose base URL never changes, that looks
+    up the right person's real Zoom link server-side and 302s there —
+    see that route's own comment. No variable mapping needed for the
+    button itself; the app fills it in automatically from this
+    registration's own ticket token (`buttonUrlParam`, same mechanism
+    `REGISTRATION_CONFIRMED`'s own button uses for `/api/ticket-pdf/`).
+
+  Either a template with body variables but nothing mapped, or one with
+  neither a mapped `ZOOM_LINK` nor a button, still SENDS — it just won't
+  say anything personal, which is an authoring mistake to fix in
+  Automatizaciones, not something the app silently blocks (only "no
+  automation configured at all" is a no-op, same as every other trigger
+  here).
 
   Adding a further trigger later (check-in, ...) means: add it to the
   enum, add the entry in `AUTOMATION_TRIGGERS`, and add the actual firing
