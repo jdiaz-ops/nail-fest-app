@@ -28,6 +28,12 @@ ZOOM_ACCOUNT_ID=...
 ZOOM_CLIENT_ID=...
 ZOOM_CLIENT_SECRET=...
 ZOOM_WEBHOOK_SECRET_TOKEN=...        # de la MISMA app, pestaña Feature -> Event Subscriptions — ver esa sección más abajo. Distinto de ZOOM_CLIENT_SECRET.
+
+# Solo si este comercio de Wompi es compartido con otra integración (ver
+# "Cuenta compartida con Shopify" más abajo) — la URL que HOY está puesta
+# en "URL de Eventos" del dashboard de Wompi, ANTES de reemplazarla por la
+# nuestra. Cópiala primero, no la pierdas.
+WOMPI_SHOPIFY_RELAY_URL=https://wompi-event-shopify.conexa.ai/api/v1/shopify/webhooks/...
 ```
 
 ## Wompi — paso a paso
@@ -50,6 +56,39 @@ ZOOM_WEBHOOK_SECRET_TOKEN=...        # de la MISMA app, pestaña Feature -> Even
    el webhook de Eventos también esté configurado en el modo producción
    del dashboard (Wompi separa sandbox/producción como dos "comercios"
    distintos, cada uno con su propia config de webhooks).
+
+## Cuenta compartida con Shopify — por qué el webhook hace un "relevo"
+
+Este comercio de Wompi (el mismo `pago a H la Cosedora` que verás en el
+checkout — Wompi no deja personalizar ese nombre por transacción) ya
+tenía su "URL de Eventos" apuntando a una integración con Shopify
+(`wompi-event-shopify.conexa.ai/...`) antes de que Nail Fest la
+necesitara también. Wompi solo permite UNA URL de eventos por comercio —
+no una lista — así que no se puede simplemente agregar la nuestra al
+lado.
+
+La solución (ver `lib/payments/wompi.ts`'s `relayToOtherIntegration` y
+`/api/webhooks/wompi`'s propio comentario): esta ruta ahora es la ÚNICA
+URL de eventos del comercio. Cada evento que le llega se revisa contra
+las propias transacciones de Nail Fest (`Payment` en la base de datos);
+si es nuestro, se procesa normal; si NO es nuestro, se reenvía intacto a
+la URL que antes tenía Shopify — que sigue recibiendo exactamente lo
+mismo que recibía antes, sin enterarse de que pasó por acá.
+
+**Antes de cambiar nada en el dashboard de Wompi:**
+1. Copia el valor ACTUAL de "URL de Eventos" (Configuración → Webhooks)
+   → guárdalo en Vercel como `WOMPI_SHOPIFY_RELAY_URL`.
+2. Espera a que ese cambio esté desplegado (mismo motivo que con Zoom:
+   la variable nueva necesita un redeploy).
+3. Solo entonces, en el dashboard de Wompi, reemplaza "URL de Eventos"
+   por `https://<tu-dominio>/api/webhooks/wompi`.
+
+**El riesgo real que esto acepta**: si el servidor de Nail Fest tiene un
+problema, la integración de Shopify se queda sin su aviso de pagos
+también, hasta que se resuelva — antes, cada una era independiente. Es
+un riesgo aceptado a propósito, no un descuido — si algún día prefieres
+eliminarlo del todo, la alternativa es un comercio de Wompi separado
+exclusivamente para Nail Fest (más trámite, cero riesgo compartido).
 
 ## Zoom — paso a paso
 

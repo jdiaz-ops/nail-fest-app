@@ -148,3 +148,40 @@ export function verifyEventChecksum(rawBody: string): WompiWebhookEvent | null {
   const expected = createHash("sha256").update(`${concatenated}${parsed.timestamp}${secret}`).digest("hex");
   return expected === checksum ? parsed : null;
 }
+
+/** This Wompi comercio is SHARED with another integration (a Shopify
+ * store, wired through a third party — see /api/webhooks/wompi's own
+ * comment) that already owned the account's one-and-only "URL de
+ * Eventos" before Nail Fest needed it too. Wompi has no concept of
+ * multiple webhook URLs per comercio, so instead of losing that
+ * integration's events, this app becomes the single entry point and
+ * relays anything that isn't its own straight through, byte-for-byte —
+ * the receiving end's own checksum check still passes, since Wompi's
+ * checksum is computed over the event's own fields + the shared account
+ * secret, never tied to which URL received it.
+ *
+ * Best-effort by design: a relay failure must never surface back to
+ * Wompi as this app's own failure (that would make Wompi retry against
+ * BOTH integrations for something that was never this app's event to
+ * begin with) — logged, never thrown. WOMPI_SHOPIFY_RELAY_URL unset
+ * means "nothing else shares this comercio," a silent no-op, not an error. */
+export async function relayToOtherIntegration(rawBody: string, headers: { get(name: string): string | null }): Promise<void> {
+  const url = process.env.WOMPI_SHOPIFY_RELAY_URL;
+  if (!url) return;
+  try {
+    const checksumHeader = headers.get("x-event-checksum");
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": headers.get("content-type") ?? "application/json",
+        ...(checksumHeader ? { "X-Event-Checksum": checksumHeader } : {}),
+      },
+      body: rawBody,
+    });
+    if (!res.ok) {
+      console.error("wompi webhook relay: downstream integration responded", res.status, await res.text().catch(() => ""));
+    }
+  } catch (err) {
+    console.error("wompi webhook relay: failed to reach downstream integration", err);
+  }
+}
