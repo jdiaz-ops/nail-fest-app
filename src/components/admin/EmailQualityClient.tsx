@@ -32,6 +32,19 @@ const REASON_LABEL: Record<Reason, string> = {
 // the rest need a human glance before acting.
 const REASON_ORDER: Reason[] = ["no_mail_server", "no_mx_has_a", "disposable_domain", "likely_typo", "role_based"];
 
+// Every category the one-click "suprimir de una vez" button covers —
+// all but role_based. A role-based local part (info@, admin@...) isn't
+// "this will bounce", just "probably not a person" — a real inbox
+// someone might still read — so that one stays a look-then-decide
+// category instead of a bulk action. The other four all mean, in
+// practice, "this address was never going to reach the person who wrote
+// it" — worth suppressing even on a mere likely-typo/disposable-domain
+// match: the cost of a false positive is low (they just stop getting
+// marketing, nothing destructive, and a future registration re-grants
+// consent normally) against the real, compounding cost of retrying a
+// dead address on every future wave.
+const SUPPRESSABLE_REASONS: Reason[] = ["no_mail_server", "no_mx_has_a", "disposable_domain", "likely_typo"];
+
 export default function EmailQualityClient() {
   const [state, setState] = useState<"idle" | "loading" | "error">("idle");
   const [summary, setSummary] = useState<Summary | null>(null);
@@ -53,9 +66,7 @@ export default function EmailQualityClient() {
     }
   }
 
-  async function suppressReason(reason: Reason) {
-    if (!summary) return;
-    const emails = summary.findings.filter((f) => f.reasons.includes(reason)).map((f) => f.email);
+  async function submitSuppression(emails: string[]) {
     if (emails.length === 0) return;
     setSuppressState("loading");
     const res = await fetch("/api/admin/crm/suppress-emails", {
@@ -67,6 +78,27 @@ export default function EmailQualityClient() {
     setSuppressState("done");
     if (res.ok && body.ok) setSuppressResult({ matched: body.matched });
   }
+
+  function suppressReason(reason: Reason) {
+    if (!summary) return;
+    submitSuppression(summary.findings.filter((f) => f.reasons.includes(reason)).map((f) => f.email));
+  }
+
+  // The "no tener que hacer esto uno por uno" button — every email
+  // caught by ANY suppressable category (see SUPPRESSABLE_REASONS'S own
+  // comment on why role_based is the one left out), deduplicated, in one
+  // request instead of clicking through each category's own button.
+  function suppressAllProblematic() {
+    if (!summary) return;
+    const emails = [
+      ...new Set(summary.findings.filter((f) => f.reasons.some((r) => SUPPRESSABLE_REASONS.includes(r))).map((f) => f.email)),
+    ];
+    submitSuppression(emails);
+  }
+
+  const problematicCount = summary
+    ? new Set(summary.findings.filter((f) => f.reasons.some((r) => SUPPRESSABLE_REASONS.includes(r))).map((f) => f.email)).size
+    : 0;
 
   const shownFindings = activeReason ? (summary?.findings.filter((f) => f.reasons.includes(activeReason)) ?? []) : (summary?.findings ?? []);
 
@@ -83,6 +115,23 @@ export default function EmailQualityClient() {
             {summary.totalChecked.toLocaleString("es-CO")} correos revisados, en {summary.totalDomains.toLocaleString("es-CO")} dominios
             distintos.
           </p>
+
+          {problematicCount > 0 && (
+            <div style={{ marginBottom: 20 }}>
+              <button type="button" onClick={suppressAllProblematic} disabled={suppressState === "loading"}>
+                {suppressState === "loading"
+                  ? "Suprimiendo..."
+                  : `Suprimir los ${problematicCount.toLocaleString("es-CO")} problemáticos de una vez`}
+              </button>
+              <p style={{ fontSize: 12, color: "#5b5f6b", margin: "6px 0 0" }}>
+                Junta sin servidor + sin MX + desechable + posible typo en un solo clic. No incluye "correo de rol" — esos sí conviene
+                mirarlos primero.
+              </p>
+              {suppressResult && (
+                <p style={{ fontSize: 12.5, color: "#5b5f6b", margin: "8px 0 0" }}>✓ {suppressResult.matched} suprimidos de marketing.</p>
+              )}
+            </div>
+          )}
 
           <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 20 }}>
             {REASON_ORDER.map((reason) => {
@@ -111,12 +160,9 @@ export default function EmailQualityClient() {
             })}
           </div>
 
-          {/* Suprimir de una vez está disponible en las dos categorías donde el
-              dominio en sí mismo ya es la prueba (no MX, ni A/AAAA — o A pero
-              sin MX, casi siempre un dominio parqueado que nunca recibe
-              correo) — no en typo/desechable/rol, donde la decisión final le
-              corresponde a un humano mirando la lista. */}
-          {(activeReason === "no_mail_server" || activeReason === "no_mx_has_a") && summary.countByReason[activeReason] > 0 && (
+          {/* Suprimir de una vez — ver SUPPRESSABLE_REASONS's own comment
+              arriba para por qué "correo de rol" se queda fuera. */}
+          {activeReason && SUPPRESSABLE_REASONS.includes(activeReason) && summary.countByReason[activeReason] > 0 && (
             <div style={{ marginBottom: 16 }}>
               <button type="button" onClick={() => suppressReason(activeReason)} disabled={suppressState === "loading"}>
                 {suppressState === "loading" ? "Suprimiendo..." : `Suprimir estos ${summary.countByReason[activeReason]} de una vez`}
