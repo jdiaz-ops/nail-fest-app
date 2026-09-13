@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import EmailFileUploadButton from "./EmailFileUploadButton";
 
 // Same email-extraction approach as SuppressEmailsForm — robust to a raw
 // CSV export pasted as-is, not just a clean one-per-line list.
@@ -9,6 +10,7 @@ const EMAIL_PATTERN = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
 export default function TagEmailsForm({ defaultLabel }: { defaultLabel: string }) {
   const [label, setLabel] = useState(defaultLabel);
   const [text, setText] = useState("");
+  const [fileName, setFileName] = useState<string | null>(null);
   const [state, setState] = useState<"idle" | "loading" | "error">("idle");
   const [result, setResult] = useState<{ label: string; submitted: number; matched: number; notFound: number } | null>(null);
 
@@ -40,6 +42,16 @@ export default function TagEmailsForm({ defaultLabel }: { defaultLabel: string }
         <input type="text" value={label} onChange={(e) => setLabel(e.target.value)} />
       </label>
 
+      <div style={{ margin: "12px 0 10px" }}>
+        <EmailFileUploadButton
+          onText={(fileText, name) => {
+            setText(fileText);
+            setFileName(name);
+          }}
+        />
+        {fileName && <span style={{ fontSize: 12.5, color: "#5b5f6b", marginLeft: 10 }}>{fileName} cargado abajo ↓</span>}
+      </div>
+      <p style={{ fontSize: 12, color: "#5b5f6b", margin: "0 0 8px" }}>o pega la lista directamente aquí:</p>
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
