@@ -131,3 +131,35 @@ export async function revokeConsentBulk(personIds: string[], purpose: ConsentPur
     data: personIds.map((personId) => ({ personId, purpose, granted: false, revokedAt: now })),
   });
 }
+
+/** The actual reachable pool for a channel — everyone whose LATEST
+ * Consent row for this purpose is granted and not revoked (same rule as
+ * hasActiveConsent/bulkActiveConsent), returned as {id, email} instead of
+ * just a count — for anything that needs to actually DO something with
+ * that list (the "Con consentimiento de marketing" tile only needed the
+ * count; the email-quality checker in lib/email/qualityCheck.ts needs
+ * the real addresses). One DISTINCT ON query for the matching person
+ * ids, then a chunked findMany for their emails — a 40k+ IN-list in one
+ * shot is one raw query away from awkward, chunking it is one extra loop
+ * for a lot less risk. */
+export async function getActiveConsentEmails(purpose: ConsentPurpose): Promise<{ id: string; email: string }[]> {
+  const rows = await db.$queryRaw<Array<{ personId: string }>>(Prisma.sql`
+    SELECT "personId" FROM (
+      SELECT DISTINCT ON ("personId") "personId", granted, "revokedAt"
+      FROM "Consent"
+      WHERE purpose = ${purpose}::"ConsentPurpose"
+      ORDER BY "personId", "grantedAt" DESC
+    ) latest
+    WHERE granted = true AND "revokedAt" IS NULL
+  `);
+  const personIds = rows.map((r) => r.personId);
+
+  const CHUNK_SIZE = 2000;
+  const people: { id: string; email: string }[] = [];
+  for (let i = 0; i < personIds.length; i += CHUNK_SIZE) {
+    const chunk = personIds.slice(i, i + CHUNK_SIZE);
+    const rowsChunk = await db.person.findMany({ where: { id: { in: chunk } }, select: { id: true, email: true } });
+    people.push(...rowsChunk);
+  }
+  return people;
+}
