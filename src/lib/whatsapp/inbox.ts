@@ -1,5 +1,7 @@
 import { db } from "@/lib/db";
 import type { WhatsAppMessageKind, WhatsAppMessageStatus } from "@prisma/client";
+import { revokeConsent } from "@/lib/consent";
+import { whatsappProvider } from "./index";
 
 // Digits only — Meta's webhook payload identifies contacts by "wa_id"
 // (e.g. "573001234567", no "+"), while Person.phone is stored with the
@@ -21,6 +23,42 @@ async function findPersonByPhone(phone: string) {
   const last10 = digits.slice(-10);
   if (last10.length < 7) return null; // too short to safely match on
   return db.person.findFirst({ where: { phone: { endsWith: last10 } } });
+}
+
+// Common ways a Colombian WhatsApp contact asks to stop hearing from us —
+// checked before handing a text reply to the AI agent (aiAgent.ts), since
+// a deterministic keyword match is more reliable here than trusting an
+// LLM to always catch this and never miss it. Phrase-based on purpose,
+// not single ambiguous words ("baja" alone would false-positive on
+// "necesito bajar el precio") — the one exception is a message that's
+// JUST "stop", the universal SMS/WhatsApp opt-out convention. Compared
+// after stripping accents (see normalizeForMatch), so the list only
+// needs the unaccented spelling once.
+const OPT_OUT_PHRASES = [
+  "no mas mensajes",
+  "no me escriban mas",
+  "dejen de escribirme",
+  "dejen de escribir",
+  "no quiero recibir mas mensajes",
+  "desuscribirme",
+  "desuscribeme",
+  "quitame de la lista",
+  "sacame de la lista",
+  "eliminame de esta lista",
+];
+
+function normalizeForMatch(text: string): string {
+  return text
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function isWhatsAppOptOutMessage(text: string): boolean {
+  const normalized = normalizeForMatch(text);
+  if (normalized === "stop" || normalized === "unsubscribe") return true;
+  return OPT_OUT_PHRASES.some((phrase) => normalized.includes(phrase));
 }
 
 /** One conversation per phone number, created on first contact either
@@ -113,6 +151,9 @@ interface WebhookStatus {
   id: string; // wamid this status is about
   status: "sent" | "delivered" | "read" | "failed";
   timestamp: string;
+  // Present on a "failed" status — Meta's own error code/title for why.
+  // Only populated for `failed`; every other status omits it.
+  errors?: { code: number; title: string; message?: string }[];
 }
 
 interface WebhookValue {
@@ -190,6 +231,41 @@ async function handleInboundMessage(msg: WebhookMessage): Promise<void> {
     );
   }
 
+  // A deterministic "stop writing to me" catch, checked BEFORE the AI
+  // agent — same posture as email's one-click unsubscribe (revokeConsent,
+  // lib/consent.ts), just triggered by a keyword instead of a link tap.
+  // Revokes WHATSAPP consent (never MARKETING/ADVERTISING/LOGISTICS —
+  // this is specifically "stop messaging me on WhatsApp") so every future
+  // WhatsAppBroadcast — already gated the same way email Difusiones are —
+  // skips this person automatically from here on. Only when the number
+  // resolves to a known Person; an unmatched number has no consent row to
+  // revoke, and the confirmation reply below still sends regardless
+  // (there's no CRM profile to update, but the person still asked to stop
+  // and deserves to hear that it worked). Short-circuits the AI agent
+  // entirely for this message — a fixed, predictable confirmation instead
+  // of trusting the LLM to always recognize an opt-out the same way.
+  if (msg.type === "text" && body && isWhatsAppOptOutMessage(body)) {
+    if (conversation.personId) {
+      await revokeConsent(conversation.personId, "WHATSAPP").catch((err) =>
+        console.error("whatsapp webhook: opt-out consent revoke failed", err)
+      );
+    }
+    const confirmationText = "Listo, no te vamos a volver a escribir por aquí. Si cambias de opinión, puedes registrarte de nuevo a un evento cuando quieras.";
+    await whatsappProvider
+      .sendFreeform({ to: phone, text: confirmationText })
+      .then((result) =>
+        recordOutboundMessage({
+          phone,
+          kind: "FREEFORM",
+          body: confirmationText,
+          providerMessageId: result.providerMessageId,
+          status: "SENT",
+        })
+      )
+      .catch((err) => console.error("whatsapp webhook: opt-out confirmation send failed", err));
+    return;
+  }
+
   // The LLM agent (lib/whatsapp/aiAgent.ts) — only for real text messages
   // it can actually read, and only while this thread hasn't been escalated
   // to a human (respondWithAi re-checks aiAutoReplyEnabled itself too,
@@ -246,15 +322,58 @@ async function resolveAttendancePollReply(personId: string | null, contextMessag
   });
 }
 
+// Meta's "Message Undeliverable" code — the number isn't reachable/valid
+// on WhatsApp. Deliberately the ONLY failure code this file reacts to for
+// list hygiene: most other "failed" statuses have nothing to do with the
+// recipient at all — most commonly 131047 (a freeform reply attempted
+// outside Meta's 24h customer-service window, routine in this app's own
+// automations) — and auto-suppressing on those would silently cut off
+// perfectly good numbers.
+const UNDELIVERABLE_ERROR_CODE = 131026;
+
 async function handleStatusUpdate(status: WebhookStatus): Promise<void> {
   const mapped = STATUS_MAP[status.status];
   if (!mapped) return;
-  const data: { status: WhatsAppMessageStatus; deliveredAt?: Date; readAt?: Date } = { status: mapped };
+
+  // A plain findFirst+update, not the old updateMany — this needs the
+  // row's own conversation/personId to react to a repeated undeliverable
+  // failure below, which updateMany's "no rows returned" shape can't
+  // give back. Still just as tolerant of "nothing matched" (a status
+  // event racing our own create(), or naming a wamid from before this
+  // table existed) — that's a no-op, not an error.
+  const existing = await db.whatsAppMessage.findFirst({
+    where: { providerMessageId: status.id },
+    select: { id: true, conversationId: true, conversation: { select: { personId: true } } },
+  });
+  if (!existing) return;
+
+  const firstError = status.errors?.[0];
+  const data: { status: WhatsAppMessageStatus; deliveredAt?: Date; readAt?: Date; errorMessage?: string } = { status: mapped };
   if (mapped === "DELIVERED") data.deliveredAt = new Date();
   if (mapped === "READ") data.readAt = new Date();
-  // updateMany, not update: a status event can arrive before our own
-  // create() finishes writing the row in a very tight race, or reference
-  // a wamid we never logged at all (e.g. from before this table existed)
-  // — either way, "nothing matched" is fine to ignore, not an error.
-  await db.whatsAppMessage.updateMany({ where: { providerMessageId: status.id }, data });
+  if (mapped === "FAILED" && firstError) {
+    // Code kept in the stored string (not just the human title) so the
+    // repeated-failure count below can match on it specifically, without
+    // a dedicated column just for this.
+    data.errorMessage = `[${firstError.code}] ${firstError.title}${firstError.message ? ` — ${firstError.message}` : ""}`;
+  }
+  await db.whatsAppMessage.update({ where: { id: existing.id }, data });
+
+  if (mapped === "FAILED" && firstError?.code === UNDELIVERABLE_ERROR_CODE && existing.conversation.personId) {
+    const personId = existing.conversation.personId;
+    // Conservative on purpose — even this one specific code could in
+    // principle be a one-off transient issue, so this only acts once the
+    // SAME conversation has hit it twice, same "repeated soft bounce ==
+    // functionally dead" reasoning as email (lib/email/tracking.ts's own
+    // comment). onlyIfActive keeps a chronically-undeliverable number
+    // from growing a new Consent row on every future attempt.
+    const priorFailures = await db.whatsAppMessage.count({
+      where: { conversationId: existing.conversationId, status: "FAILED", errorMessage: { startsWith: `[${UNDELIVERABLE_ERROR_CODE}]` } },
+    });
+    if (priorFailures >= 2) {
+      await revokeConsent(personId, "WHATSAPP", { onlyIfActive: true }).catch((err) =>
+        console.error("whatsapp webhook: undeliverable consent revoke failed", err)
+      );
+    }
+  }
 }
