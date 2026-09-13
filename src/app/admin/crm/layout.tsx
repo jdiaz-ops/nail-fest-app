@@ -26,6 +26,7 @@ const NAV: { href: string; label: string; adminOnly?: boolean }[] = [
   { href: "/admin/crm/whatsapp", label: "WhatsApp" },
   { href: "/admin/crm/segments", label: "Segmentos", adminOnly: true },
   { href: "/admin/crm/supresiones", label: "Supresiones", adminOnly: true },
+  { href: "/admin/crm/etiquetar", label: "Etiquetar por lista", adminOnly: true },
 ];
 
 export default async function CrmLayout({ children }: { children: React.ReactNode }) {

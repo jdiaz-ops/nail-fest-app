@@ -1,23 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth/guard";
-
-// How many person ids one Label.update's `connect` call takes at once —
-// same reasoning as lib/broadcasts.ts's own CHUNK_SIZE: a real Nail Fest
-// segment runs in the thousands, and one query trying to connect all of
-// them at once is worth avoiding even though Prisma could technically do
-// it in one call.
-const CONNECT_CHUNK_SIZE = 500;
-
-async function connectPeopleToLabel(labelId: string, personIds: string[]) {
-  for (let i = 0; i < personIds.length; i += CONNECT_CHUNK_SIZE) {
-    const chunk = personIds.slice(i, i + CONNECT_CHUNK_SIZE);
-    await db.label.update({
-      where: { id: labelId },
-      data: { people: { connect: chunk.map((id) => ({ id })) } },
-    });
-  }
-}
+import { addPeopleToLabel } from "@/lib/labels";
 
 // Turns "quién abrió este correo" into something the existing segment
 // builder can target directly — labels a person "Abrió" or "No abrió"
@@ -68,12 +52,7 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
   const openedLabelName = `Abrió — ${broadcast.subject} (${idSuffix})`;
   const notOpenedLabelName = `No abrió — ${broadcast.subject} (${idSuffix})`;
 
-  const [openedLabel, notOpenedLabel] = await Promise.all([
-    db.label.upsert({ where: { name: openedLabelName }, create: { name: openedLabelName }, update: {} }),
-    db.label.upsert({ where: { name: notOpenedLabelName }, create: { name: notOpenedLabelName }, update: {} }),
-  ]);
-
-  await Promise.all([connectPeopleToLabel(openedLabel.id, openedIds), connectPeopleToLabel(notOpenedLabel.id, notOpenedIds)]);
+  await Promise.all([addPeopleToLabel(openedLabelName, openedIds), addPeopleToLabel(notOpenedLabelName, notOpenedIds)]);
 
   return NextResponse.json({
     ok: true,
