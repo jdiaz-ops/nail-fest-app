@@ -111,10 +111,15 @@ export default function EmailQualityClient() {
             })}
           </div>
 
-          {activeReason === "no_mail_server" && summary.countByReason.no_mail_server > 0 && (
+          {/* Suprimir de una vez está disponible en las dos categorías donde el
+              dominio en sí mismo ya es la prueba (no MX, ni A/AAAA — o A pero
+              sin MX, casi siempre un dominio parqueado que nunca recibe
+              correo) — no en typo/desechable/rol, donde la decisión final le
+              corresponde a un humano mirando la lista. */}
+          {(activeReason === "no_mail_server" || activeReason === "no_mx_has_a") && summary.countByReason[activeReason] > 0 && (
             <div style={{ marginBottom: 16 }}>
-              <button type="button" onClick={() => suppressReason("no_mail_server")} disabled={suppressState === "loading"}>
-                {suppressState === "loading" ? "Suprimiendo..." : `Suprimir estos ${summary.countByReason.no_mail_server} de una vez`}
+              <button type="button" onClick={() => suppressReason(activeReason)} disabled={suppressState === "loading"}>
+                {suppressState === "loading" ? "Suprimiendo..." : `Suprimir estos ${summary.countByReason[activeReason]} de una vez`}
               </button>
               {suppressResult && (
                 <p style={{ fontSize: 12.5, color: "#5b5f6b", margin: "8px 0 0" }}>
