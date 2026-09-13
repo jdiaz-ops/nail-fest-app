@@ -1,6 +1,7 @@
 import { requirePageUser } from "@/lib/auth/guard";
 import EmailQualityClient from "@/components/admin/EmailQualityClient";
 import DomainAuthStatus from "@/components/admin/DomainAuthStatus";
+import DuplicateCheckClient from "@/components/admin/DuplicateCheckClient";
 import CrmPageHeader from "../CrmPageHeader";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +34,16 @@ export default async function HigienePage() {
         terminar en spam.
       </p>
       <DomainAuthStatus />
+
+      <hr style={{ border: "none", borderTop: "1px solid #e3e1dc", margin: "36px 0" }} />
+
+      <h2 style={{ fontSize: 16, marginBottom: 6 }}>¿Son personas realmente únicas?</h2>
+      <p style={{ fontSize: 13, color: "#5b5f6b", marginBottom: 16, maxWidth: 720 }}>
+        Person.email tiene una restricción única a nivel de base de datos — dos correos idénticos son imposibles por diseño, no solo
+        improbables. Lo que el correo SÍ puede esconder es la misma persona real registrada dos veces con dos correos distintos — el
+        teléfono es la señal más fuerte que hay para detectar eso.
+      </p>
+      <DuplicateCheckClient />
     </div>
   );
 }
