@@ -5,6 +5,10 @@
 // re-exports everything here for backward compatibility — every existing
 // `from "@/lib/segments/builder"` import keeps working unchanged.
 
+// Type-only — erased at compile time, so this stays true to the file's
+// own "no Prisma runtime in the client bundle" rule above.
+import type { ConsentPurpose } from "@prisma/client";
+
 export type SegmentCondition =
   | { field: "event"; eventSlugs: string[] }
   | { field: "attended"; eventSlugs: string[] }
@@ -25,7 +29,19 @@ export type SegmentCondition =
   // where they say they LIVE, filled from the registration form's own
   // required "País" question. `countries` holds ISO2 codes ("VE"), OR'd
   // together same as every other multi-select condition.
-  | { field: "country"; countries: string[] };
+  | { field: "country"; countries: string[] }
+  // "Personas que HOY tienen (o no tienen) consentimiento activo para
+  // este canal" — rebotaron, se quejaron de spam, se desuscribieron, o
+  // se importaron ya suprimidas (ver lib/consent.ts) todas terminan
+  // igual: la última fila de Consent para ese purpose queda
+  // granted:false. El mismo tipo de segmento que Brevo dejaba armar
+  // ("bounces + unsubscribes"), y una forma de auditar directamente que
+  // bulkActiveConsent (lo que de verdad gatea cada envío) está viendo lo
+  // que uno espera, no solo confiar a ciegas en que ya excluye a alguien.
+  // No es multi-select como los demás — un propósito + estado por
+  // condición, ya que "marketing inactivo O whatsapp inactivo" no es un
+  // caso real que este constructor necesite resolver hoy.
+  | { field: "consent"; purpose: ConsentPurpose; state: "active" | "inactive" };
 
 export interface SegmentFilter {
   include: SegmentCondition[];
@@ -60,6 +76,12 @@ function normalizeCondition(raw: any): SegmentCondition {
       return { field: "phoneCountry", codes: raw.codes ?? [] };
     case "country":
       return { field: "country", countries: raw.countries ?? [] };
+    case "consent": {
+      const validPurposes: ConsentPurpose[] = ["LOGISTICS", "MARKETING", "ADVERTISING", "WHATSAPP"];
+      const purpose: ConsentPurpose = validPurposes.includes(raw.purpose) ? raw.purpose : "MARKETING";
+      const state: "active" | "inactive" = raw.state === "active" ? "active" : "inactive";
+      return { field: "consent", purpose, state };
+    }
     default:
       throw new Error(`Unknown segment condition field: ${raw?.field}`);
   }

@@ -15,6 +15,11 @@ export const conditionSchema = z.union([
   z.object({ field: z.literal("label"), labels: z.array(z.string()).min(1) }),
   z.object({ field: z.literal("phoneCountry"), codes: z.array(z.string()).min(1) }),
   z.object({ field: z.literal("country"), countries: z.array(z.string()).min(1) }),
+  z.object({
+    field: z.literal("consent"),
+    purpose: z.enum(["LOGISTICS", "MARKETING", "ADVERTISING", "WHATSAPP"]),
+    state: z.enum(["active", "inactive"]),
+  }),
 ]);
 
 export const filterSchema = z.object({

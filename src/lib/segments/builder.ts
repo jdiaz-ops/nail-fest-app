@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import type { Person } from "@prisma/client";
+import { Prisma, type Person } from "@prisma/client";
 
 /**
  * One shared segment engine, two consumers: Meta/TikTok/Google audience
@@ -94,6 +94,27 @@ async function matchingPersonIds(condition: SegmentCondition): Promise<Set<strin
         select: { id: true },
       });
       return new Set(rows.map((r) => r.id));
+    }
+    case "consent": {
+      // "Active" = latest Consent row for this purpose is granted and not
+      // revoked (same "latest row wins" rule as hasActiveConsent/
+      // bulkActiveConsent in lib/consent.ts). "Inactive" is the mirror —
+      // has a row, and it's currently NOT active — not "no row at all":
+      // someone with zero Consent rows for this purpose was simply never
+      // asked (a data gap), which isn't the same thing as "bounced or
+      // unsubscribed", and lumping the two together would inflate this
+      // segment with people who never had a deliverability problem.
+      const rows = await db.$queryRaw<Array<{ personId: string; granted: boolean; revokedAt: Date | null }>>(Prisma.sql`
+        SELECT DISTINCT ON ("personId") "personId", granted, "revokedAt"
+        FROM "Consent"
+        WHERE purpose = ${condition.purpose}::"ConsentPurpose"
+        ORDER BY "personId", "grantedAt" DESC
+      `);
+      const matches = rows.filter((r) => {
+        const isActive = r.granted && !r.revokedAt;
+        return condition.state === "active" ? isActive : !isActive;
+      });
+      return new Set(matches.map((r) => r.personId));
     }
   }
 }

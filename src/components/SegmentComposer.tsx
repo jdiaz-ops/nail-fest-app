@@ -79,6 +79,38 @@ function extract(conditions: SegmentFilter["include"], field: string, key: strin
   return (found?.[key] as string[] | undefined) ?? [];
 }
 
+// Same idea as extract() above, but for the "consent" condition's scalar
+// {purpose, state} shape instead of a list — encoded back into the same
+// "PURPOSE:state" string the <select> below uses as its value.
+function extractConsent(conditions: SegmentFilter["include"], field: string): string {
+  const found = conditions.find((c) => c.field === field) as { purpose?: string; state?: string } | undefined;
+  return found?.purpose && found?.state ? `${found.purpose}:${found.state}` : "";
+}
+
+// The inverse of extractConsent — turns the <select>'s "PURPOSE:state"
+// value back into a real condition object, or null when nothing's picked.
+function parseConsentValue(value: string): { field: "consent"; purpose: string; state: "active" | "inactive" } | null {
+  if (!value) return null;
+  const [purpose, state] = value.split(":");
+  if (!purpose || (state !== "active" && state !== "inactive")) return null;
+  return { field: "consent", purpose, state };
+}
+
+// Encodes {purpose, state} as one "PURPOSE:state" select value — this
+// condition isn't multi-select like the rest (see its own comment in
+// normalize.ts), so one <select> per include/exclude column is enough,
+// no MultiCheckList needed. LOGISTICS is left out on purpose — it's
+// required just to register at all (lib/consent.ts), so "inactivo" for
+// it isn't a real segment anyone here needs to build.
+const CONSENT_OPTIONS: { value: string; label: string }[] = [
+  { value: "MARKETING:inactive", label: "Marketing: inactivo (rebotó / se quejó / se desuscribió)" },
+  { value: "MARKETING:active", label: "Marketing: activo" },
+  { value: "WHATSAPP:inactive", label: "WhatsApp: inactivo" },
+  { value: "WHATSAPP:active", label: "WhatsApp: activo" },
+  { value: "ADVERTISING:inactive", label: "Publicidad (Meta/TikTok/Google): inactivo" },
+  { value: "ADVERTISING:active", label: "Publicidad (Meta/TikTok/Google): activo" },
+];
+
 const emptyForm = {
   name: "",
   includeEvent: [] as string[],
@@ -88,6 +120,7 @@ const emptyForm = {
   includeLabel: [] as string[],
   includePhoneCountry: [] as string[],
   includeCountry: [] as string[],
+  includeConsent: "",
   excludeEvent: [] as string[],
   excludeAttended: [] as string[],
   excludeCity: [] as string[],
@@ -95,6 +128,7 @@ const emptyForm = {
   excludeLabel: [] as string[],
   excludePhoneCountry: [] as string[],
   excludeCountry: [] as string[],
+  excludeConsent: "",
 };
 
 export default function SegmentComposer({ events, professionOptions, cityOptions, labelOptions, editingSegment, onDone }: Props) {
@@ -107,6 +141,7 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
   const [includeLabel, setIncludeLabel] = useState<string[]>([]);
   const [includePhoneCountry, setIncludePhoneCountry] = useState<string[]>([]);
   const [includeCountry, setIncludeCountry] = useState<string[]>([]);
+  const [includeConsent, setIncludeConsent] = useState("");
   const [excludeEvent, setExcludeEvent] = useState<string[]>([]);
   const [excludeAttended, setExcludeAttended] = useState<string[]>([]);
   const [excludeCity, setExcludeCity] = useState<string[]>([]);
@@ -114,6 +149,7 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
   const [excludeLabel, setExcludeLabel] = useState<string[]>([]);
   const [excludePhoneCountry, setExcludePhoneCountry] = useState<string[]>([]);
   const [excludeCountry, setExcludeCountry] = useState<string[]>([]);
+  const [excludeConsent, setExcludeConsent] = useState("");
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const isEditing = !!editingSegment;
@@ -132,6 +168,7 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
       setIncludeLabel(emptyForm.includeLabel);
       setIncludePhoneCountry(emptyForm.includePhoneCountry);
       setIncludeCountry(emptyForm.includeCountry);
+      setIncludeConsent(emptyForm.includeConsent);
       setExcludeEvent(emptyForm.excludeEvent);
       setExcludeAttended(emptyForm.excludeAttended);
       setExcludeCity(emptyForm.excludeCity);
@@ -139,6 +176,7 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
       setExcludeLabel(emptyForm.excludeLabel);
       setExcludePhoneCountry(emptyForm.excludePhoneCountry);
       setExcludeCountry(emptyForm.excludeCountry);
+      setExcludeConsent(emptyForm.excludeConsent);
       return;
     }
     const normalized = normalizeFilter(editingSegment.filter as SegmentFilter);
@@ -150,6 +188,7 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
     setIncludeLabel(extract(normalized.include, "label", "labels"));
     setIncludePhoneCountry(extract(normalized.include, "phoneCountry", "codes"));
     setIncludeCountry(extract(normalized.include, "country", "countries"));
+    setIncludeConsent(extractConsent(normalized.include, "consent"));
     setExcludeEvent(extract(normalized.exclude, "event", "eventSlugs"));
     setExcludeAttended(extract(normalized.exclude, "attended", "eventSlugs"));
     setExcludeCity(extract(normalized.exclude, "city", "cities"));
@@ -157,6 +196,7 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
     setExcludeLabel(extract(normalized.exclude, "label", "labels"));
     setExcludePhoneCountry(extract(normalized.exclude, "phoneCountry", "codes"));
     setExcludeCountry(extract(normalized.exclude, "country", "countries"));
+    setExcludeConsent(extractConsent(normalized.exclude, "consent"));
     setResult(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editingSegment?.id]);
@@ -177,6 +217,7 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
       includeLabel.length ? { field: "label", labels: includeLabel } : null,
       includePhoneCountry.length ? { field: "phoneCountry", codes: includePhoneCountry } : null,
       includeCountry.length ? { field: "country", countries: includeCountry } : null,
+      parseConsentValue(includeConsent),
     ].filter(Boolean);
     const exclude = [
       excludeEvent.length ? { field: "event", eventSlugs: excludeEvent } : null,
@@ -186,6 +227,7 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
       excludeLabel.length ? { field: "label", labels: excludeLabel } : null,
       excludePhoneCountry.length ? { field: "phoneCountry", codes: excludePhoneCountry } : null,
       excludeCountry.length ? { field: "country", countries: excludeCountry } : null,
+      parseConsentValue(excludeConsent),
     ].filter(Boolean);
     return { include, exclude };
   }, [
@@ -196,6 +238,7 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
     includeLabel,
     includePhoneCountry,
     includeCountry,
+    includeConsent,
     excludeEvent,
     excludeAttended,
     excludeCity,
@@ -203,6 +246,7 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
     excludeLabel,
     excludePhoneCountry,
     excludeCountry,
+    excludeConsent,
   ]);
 
   const hasAnyFilter = filter.include.length > 0 || filter.exclude.length > 0;
@@ -271,6 +315,7 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
         setIncludeLabel([]);
         setIncludePhoneCountry([]);
         setIncludeCountry([]);
+        setIncludeConsent("");
         setExcludeEvent([]);
         setExcludeAttended([]);
         setExcludeCity([]);
@@ -278,6 +323,7 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
         setExcludeLabel([]);
         setExcludePhoneCountry([]);
         setExcludeCountry([]);
+        setExcludeConsent("");
       }
       router.refresh();
     } else {
@@ -361,6 +407,17 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
               <label>País (dónde vive)</label>
               <MultiCheckList options={countryCheckOptions} selected={includeCountry} onChange={setIncludeCountry} emptyLabel="" />
             </div>
+            <div className="field">
+              <label>Consentimiento</label>
+              <select value={includeConsent} onChange={(e) => setIncludeConsent(e.target.value)}>
+                <option value="">— No filtrar por esto —</option>
+                {CONSENT_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div>
@@ -394,6 +451,17 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
             <div className="field">
               <label>País (dónde vive)</label>
               <MultiCheckList options={countryCheckOptions} selected={excludeCountry} onChange={setExcludeCountry} emptyLabel="" />
+            </div>
+            <div className="field">
+              <label>Consentimiento</label>
+              <select value={excludeConsent} onChange={(e) => setExcludeConsent(e.target.value)}>
+                <option value="">— No filtrar por esto —</option>
+                {CONSENT_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
         </div>
