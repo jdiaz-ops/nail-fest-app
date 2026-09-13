@@ -117,9 +117,8 @@ export default async function PaymentReturnPage({
 
   return (
     <main style={{ maxWidth: 480, margin: "0 auto", padding: "60px 20px", textAlign: "center" }}>
-      <p style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.22em", textTransform: "uppercase", color: "var(--link)", margin: "0 0 16px" }}>
-        {brandName}
-      </p>
+      {/* eslint-disable-next-line @next/next/no-img-element -- fixed logo mark, same as the homepage's own use of it */}
+      <img src="/logo.png" alt={brandName} style={{ height: 44, width: "auto", margin: "0 auto 16px", display: "block" }} />
       <div
         style={{
           width: 64,
