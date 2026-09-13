@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { findCountry } from "@/lib/worldCountries";
 import { getLifecycleStagesBulk } from "@/lib/personTimeline";
@@ -74,9 +74,56 @@ export default async function PersonasPage({
 
   // Real stage per person, computed in a handful of batched queries — see
   // getLifecycleStagesBulk's own comment for why this isn't the same
-  // per-row approximation an earlier version of this page used.
+  // per-row approximation an earlier version of this page used. Feeds
+  // the "Etapa" badge in the table below — correctly scoped to just the
+  // ≤200 rows actually shown there.
   const stageByPerson = await getLifecycleStagesBulk(people.map((p) => p.id));
-  const recurrentesTotal = Array.from(stageByPerson.values()).filter((s) => s === "RECURRENTE").length;
+
+  // The "Recurrentes" STAT TILE, by contrast, has to be a real
+  // whole-database count — it used to be computed from stageByPerson
+  // above (i.e., only among whichever ≤200 people the current page/
+  // filter happens to show), which reads as a global total but silently
+  // wasn't one. On the unfiltered default view (newest-first, capped at
+  // 200) that's dominated by whatever the single most recent bulk import
+  // was, so a flat CSV import with no real per-event history behind it
+  // makes this tile read "0" — not because nobody has ever attended
+  // twice, but because the 200 people it was actually counting over
+  // were never the right 200 to ask. Counted directly in SQL instead of
+  // via getLifecycleStagesBulk over every person id — that function's
+  // per-call query cost is fine for ≤200 people, not for the whole table
+  // on every page load. Distinct CONFIRMED events ≥ 2 is the same
+  // threshold computeLifecycleStage uses for RECURRENTE (its `attended`
+  // half can't add anyone this doesn't already have — a scan is always
+  // tied to a registration in this schema); the one thing intentionally
+  // NOT reproduced here is that function's 180-day-inactive override,
+  // since a "how many people have ever come back" KPI shouldn't hide
+  // someone just because it's been a while since their last event.
+  const [recurrentesGlobal] = await db.$queryRaw<[{ count: bigint }]>(Prisma.sql`
+    SELECT COUNT(*) AS count FROM (
+      SELECT "personId" FROM "Registration"
+      WHERE status = 'CONFIRMED'
+      GROUP BY "personId"
+      HAVING COUNT(DISTINCT "eventId") >= 2
+    ) recurring
+  `);
+  const recurrentesTotal = Number(recurrentesGlobal.count);
+
+  // Same reasoning: the real, addressable size of any future marketing
+  // send — not "Personas totales", which includes everyone regardless of
+  // whether they ever consented to be emailed for marketing. "Latest row
+  // per person wins" (DISTINCT ON ... ORDER BY grantedAt DESC), same
+  // semantics as lib/consent.ts's bulkActiveConsent, just aggregated in
+  // SQL instead of fetched into Node for 49k+ people.
+  const [marketingConsentRow] = await db.$queryRaw<[{ count: bigint }]>(Prisma.sql`
+    SELECT COUNT(*) AS count FROM (
+      SELECT DISTINCT ON ("personId") "personId", granted, "revokedAt"
+      FROM "Consent"
+      WHERE purpose = 'MARKETING'
+      ORDER BY "personId", "grantedAt" DESC
+    ) latest
+    WHERE granted = true AND "revokedAt" IS NULL
+  `);
+  const marketingConsentTotal = Number(marketingConsentRow.count);
 
   const hasAnyFilter = Boolean(q || cityFilter || professionFilter || countryFilter);
 
@@ -91,6 +138,11 @@ export default async function PersonasPage({
         <StatCard label="Personas totales" value={String(totalPeople)} />
         <StatCard label="Recurrentes (2+ eventos)" value={String(recurrentesTotal)} />
         <StatCard label="Nuevas últimos 30 días" value={String(newLast30Days)} />
+        <StatCard
+          label="Con consentimiento de marketing"
+          value={String(marketingConsentTotal)}
+          sub={totalPeople > 0 ? `${Math.round((marketingConsentTotal / totalPeople) * 100)}% del total` : undefined}
+        />
       </div>
 
       <form style={{ marginBottom: 16, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
