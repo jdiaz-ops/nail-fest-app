@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import type { EmailLogStatus } from "@prisma/client";
+import { revokeConsent } from "@/lib/consent";
 
 // Shared by both provider webhooks (/api/webhooks/ses's SNS-based events
 // and /api/webhooks/resend's Svix-based ones) — each just maps its own
@@ -45,5 +46,27 @@ export async function applyEmailTrackingEvent(providerMessageId: string, stage: 
 
   if (Object.keys(patch).length > 0) {
     await db.emailLog.update({ where: { id: existing.id }, data: patch });
+  }
+
+  // Reputation protection for a large/cold list (see the 49k-contact
+  // reactivation campaign this was built for): a bounce or a spam
+  // complaint is the strongest signal this app ever gets that an address
+  // should stop receiving MARKETING email. Deliberately NOT trying to
+  // tell a "hard" bounce from a "soft" one — neither provider's webhook
+  // shape for that is something this app can verify from here — so this
+  // reacts to any BOUNCED/COMPLAINED alike, on any kind of email (a
+  // transactional confirmation that bounces is just as real a signal as
+  // a broadcast that does), regardless of which provider sent it. Scoped
+  // to MARKETING consent only, never LOGISTICS/WHATSAPP/ADVERTISING — a
+  // dead or complaining address shouldn't silently stop a real ticket
+  // delivery for an event this person actually registered for, only
+  // future broadcast sends (which is exactly what bulkActiveConsent(...,
+  // "MARKETING") already gates in lib/broadcasts.ts, so this alone is
+  // enough to keep every future send away from them, no separate
+  // suppression list needed). `onlyIfActive` keeps a chronically-bouncing
+  // dead address from growing a new Consent row on every single future
+  // redelivery of the same event.
+  if ((stage === "BOUNCED" || stage === "COMPLAINED") && existing.personId) {
+    await revokeConsent(existing.personId, "MARKETING", { onlyIfActive: true });
   }
 }

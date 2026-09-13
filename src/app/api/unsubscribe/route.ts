@@ -1,27 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
 import { verifyUnsubscribeToken } from "@/lib/unsubscribe";
+import { revokeConsent } from "@/lib/consent";
 
 // RFC 8058 one-click unsubscribe: mail clients POST here automatically with
 // no human interaction when someone hits "unsubscribe" in Gmail/Outlook's
 // own UI. GET handles a human clicking the link in the email body. Both
 // revoke MARKETING consent immediately — one-click unsubscribe explicitly
-// must not require a confirmation step.
+// must not require a confirmation step. The actual write (see its own
+// comment on the exact two-step shape) is shared with the bounce/spam
+// -complaint auto-suppression in lib/email/tracking.ts.
 
 async function revoke(token: string) {
   const { valid, personId } = verifyUnsubscribeToken(token);
   if (!valid || !personId) return false;
-
-  const latest = await db.consent.findFirst({
-    where: { personId, purpose: "MARKETING" },
-    orderBy: { grantedAt: "desc" },
-  });
-  if (latest) {
-    await db.consent.update({ where: { id: latest.id }, data: { revokedAt: new Date() } });
-  }
-  await db.consent.create({
-    data: { personId, purpose: "MARKETING", granted: false, revokedAt: new Date() },
-  });
+  await revokeConsent(personId, "MARKETING");
   return true;
 }
 

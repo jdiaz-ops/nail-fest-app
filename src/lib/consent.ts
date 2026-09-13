@@ -66,3 +66,34 @@ export async function bulkActiveConsent(personIds: string[], purpose: ConsentPur
   }
   return active;
 }
+
+/** The one place that actually revokes a consent — both the person's own
+ * one-click unsubscribe (/api/unsubscribe) and a bounce/spam-complaint
+ * webhook (lib/email/tracking.ts's reputation-protection check) call this
+ * instead of each writing their own copy. Matches the append-only shape
+ * hasActiveConsent/bulkActiveConsent already read ("latest row wins"):
+ * closes out the latest row's own revokedAt AND appends a fresh
+ * granted:false row, same two writes /api/unsubscribe always did.
+ * `registrationId` is left null — a revoke isn't tied to any one
+ * registration. Pass `onlyIfActive: true` to skip the write entirely when
+ * there's nothing active to revoke — the tracking-webhook caller uses
+ * this so a dead address that keeps bouncing on every future send
+ * doesn't grow a new Consent row on every single redelivery. */
+export async function revokeConsent(
+  personId: string,
+  purpose: ConsentPurpose,
+  opts?: { onlyIfActive?: boolean }
+): Promise<void> {
+  const latest = await db.consent.findFirst({
+    where: { personId, purpose },
+    orderBy: { grantedAt: "desc" },
+  });
+  if (opts?.onlyIfActive && !(latest?.granted && !latest.revokedAt)) return;
+
+  if (latest) {
+    await db.consent.update({ where: { id: latest.id }, data: { revokedAt: new Date() } });
+  }
+  await db.consent.create({
+    data: { personId, purpose, granted: false, revokedAt: new Date() },
+  });
+}
