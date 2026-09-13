@@ -3,19 +3,18 @@
 import { useState } from "react";
 
 // One-tap trigger for /api/admin/dev/seed-sales-copy — the phone-friendly
-// counterpart to scripts/seed-manicuristas-sales-page.ts. Same content,
-// same "don't overwrite something already written by hand" guardrail.
+// counterpart to scripts/seed-manicuristas-sales-page.ts. Writes to
+// Event.salesPageContent (the structured hero/table/schedule/speaker
+// landing), not the plain rich-text description.
 export default function SeedSalesCopyButton({
   eventId,
-  hasDescription,
-  descriptionLength,
+  hasSalesPageContent,
 }: {
   eventId: string;
-  hasDescription: boolean;
-  descriptionLength: number;
+  hasSalesPageContent: boolean;
 }) {
   const [state, setState] = useState<"idle" | "loading" | "done" | "error" | "blocked">(
-    hasDescription ? "blocked" : "idle"
+    hasSalesPageContent ? "blocked" : "idle"
   );
   const [message, setMessage] = useState<string | null>(null);
 
@@ -32,24 +31,23 @@ export default function SeedSalesCopyButton({
       setState("done");
       return;
     }
-    if (body?.error === "already_has_description") {
+    if (body?.error === "already_has_sales_page_content") {
       setState("blocked");
       return;
     }
     setState("error");
-    setMessage("No se pudo cargar la copy. Intenta de nuevo.");
+    setMessage("No se pudo cargar la landing. Intenta de nuevo.");
   }
 
   if (state === "done") {
-    return <p style={{ color: "var(--accent-ink, #0b2e2c)", fontWeight: 600 }}>✓ Listo — la Descripción ya tiene la landing de venta.</p>;
+    return <p style={{ color: "var(--accent-ink, #0b2e2c)", fontWeight: 600 }}>✓ Listo — ya tiene la landing de venta completa.</p>;
   }
 
   if (state === "blocked") {
     return (
       <div>
         <p style={{ fontSize: 13.5, color: "#5b5f6b", margin: "0 0 8px" }}>
-          Este evento ya tiene una Descripción guardada ({descriptionLength} caracteres) — no la voy a sobrescribir sin
-          confirmar.
+          Este evento ya tiene una landing de venta cargada — no la voy a sobrescribir sin confirmar.
         </p>
         <button type="button" onClick={() => run(true)} style={{ background: "#c2185b", color: "#fff" }}>
           Sobrescribir de todas formas

@@ -11,6 +11,9 @@ import { getPublicTicketTypes } from "@/lib/ticketTypes";
 import { type QuestionView } from "@/components/RegistrationForm";
 import EventRegistration from "@/components/EventRegistration";
 import MetaPixelScript from "@/components/MetaPixelScript";
+import SalesPageHero from "@/components/salesPage/SalesPageHero";
+import SalesPageContent from "@/components/salesPage/SalesPageContent";
+import { parseSalesPageContent } from "@/lib/salesPage/types";
 
 export const dynamic = "force-dynamic";
 
@@ -73,6 +76,8 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
         ? [physicalVenue, event.virtualAccessInstructions || "también disponible de forma virtual"].filter(Boolean).join(" · ")
         : physicalVenue;
 
+  const salesPage = parseSalesPageContent(event.salesPageContent);
+
   return (
     // .event-page: 480px column on mobile (unchanged — already optimized,
     // see globals.css) widening to a real two-column layout with a sticky
@@ -121,11 +126,22 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
         </div>
       )}
 
-      <h1 style={{ margin: "4px 0 8px" }}>{event.name}</h1>
-      {eventVenue && (
-        <p className="event-page-meta">
-          {event.format === "VIRTUAL" ? "🌐" : "📍"} {eventVenue}
-        </p>
+      {salesPage ? (
+        // Bolder hero for an event with a real sales-script landing (see
+        // Event.salesPageContent's own schema comment) — replaces the
+        // plain h1/venue line ONLY here; every event without
+        // salesPageContent falls through to the exact markup below,
+        // unchanged.
+        <SalesPageHero hero={salesPage.hero} />
+      ) : (
+        <>
+          <h1 style={{ margin: "4px 0 8px" }}>{event.name}</h1>
+          {eventVenue && (
+            <p className="event-page-meta">
+              {event.format === "VIRTUAL" ? "🌐" : "📍"} {eventVenue}
+            </p>
+          )}
+        </>
       )}
 
       {/* The registration flow — an inline "Registrarme GRATIS" button, the
@@ -149,6 +165,7 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
           registerButtonLabel={event.registerButtonLabel || "Registrarme GRATIS"}
           brandName={orgSettings.name}
           descriptionHtml={event.description}
+          salesContent={salesPage ? <SalesPageContent content={salesPage} /> : undefined}
         />
       </Suspense>
 

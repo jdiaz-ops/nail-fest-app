@@ -5,19 +5,19 @@ import SeedSalesCopyButton from "@/components/admin/SeedSalesCopyButton";
 export const dynamic = "force-dynamic";
 
 // One-tap admin utility, not linked from any nav — for loading the
-// Manicuristas Imparables sales-page copy (src/lib/salesCopy/
+// Manicuristas Imparables sales-page content (src/lib/salesPage/
 // manicuristasImparables.ts) from a phone, no terminal/DATABASE_URL
 // needed. Same content and guardrails as scripts/seed-manicuristas-sales-page.ts.
 // Safe to leave in place after use: it only ever writes to whichever
-// event you tap "Cargar" on, and never overwrites a non-empty
-// Descripción without an explicit second confirmation.
+// event you tap "Cargar" on, and never overwrites an already-set
+// salesPageContent without an explicit second confirmation.
 export default async function SeedSalesCopyPage() {
   await requirePageUser(["ADMIN"]);
 
   const events = await db.event.findMany({
     where: { OR: [{ name: { contains: "manicurista", mode: "insensitive" } }, { name: { contains: "imparable", mode: "insensitive" } }] },
     orderBy: { startsAt: "desc" },
-    select: { id: true, name: true, slug: true, format: true, description: true },
+    select: { id: true, name: true, slug: true, format: true, salesPageContent: true },
   });
 
   const fallback = events.length === 0;
@@ -25,7 +25,7 @@ export default async function SeedSalesCopyPage() {
     ? await db.event.findMany({
         orderBy: { startsAt: "desc" },
         take: 20,
-        select: { id: true, name: true, slug: true, format: true, description: true },
+        select: { id: true, name: true, slug: true, format: true, salesPageContent: true },
       })
     : events;
 
@@ -33,8 +33,8 @@ export default async function SeedSalesCopyPage() {
     <main style={{ maxWidth: 560, margin: "0 auto", padding: "24px 16px 80px" }}>
       <h1 style={{ fontSize: 20, margin: "0 0 6px" }}>Cargar landing de venta</h1>
       <p style={{ fontSize: 13.5, color: "#5b5f6b", margin: "0 0 20px" }}>
-        Escribe la copy completa del guion de venta de Manicuristas Imparables en la Descripción del evento —
-        el mismo campo que edita "Descripción" en Editar evento, y lo que se ve en la página pública.
+        Carga el hero + tabla de valor + cronograma + speakers + FAQ de Manicuristas Imparables en la página
+        pública del evento (Event.salesPageContent) — no toca la Descripción normal ni ningún otro campo.
       </p>
       {fallback && (
         <p style={{ fontSize: 12.5, color: "#8a5a1f", background: "#fdf1e6", padding: "8px 10px", borderRadius: 8, margin: "0 0 16px" }}>
@@ -49,11 +49,7 @@ export default async function SeedSalesCopyPage() {
             <p style={{ fontSize: 12, color: "#5b5f6b", margin: "0 0 10px" }}>
               /{event.slug} · {event.format}
             </p>
-            <SeedSalesCopyButton
-              eventId={event.id}
-              hasDescription={Boolean(event.description && event.description.trim())}
-              descriptionLength={event.description?.length ?? 0}
-            />
+            <SeedSalesCopyButton eventId={event.id} hasSalesPageContent={Boolean(event.salesPageContent)} />
           </div>
         ))}
         {list.length === 0 && <p style={{ color: "#5b5f6b" }}>No hay eventos creados todavía.</p>}

@@ -1,31 +1,28 @@
-// One-time content load: writes the full "guion de venta" copy for
-// Manicuristas Imparables into that event's own Description field — the
-// SAME field/editor every other event already uses (admin's "Descripción"
-// rich-text box, EventForm.tsx), rendered by the SAME public page code
-// path (EventRegistration.tsx's descriptionHtml, next to the untouched
-// registration/checkout sidebar). No new schema, no new render branch, no
-// new admin screen — this script exists only because that much text is
-// impractical to paste by hand into the rich-text editor once, not
-// because the mechanism itself is new.
+// One-time content load: writes the structured sales-script landing
+// content for Manicuristas Imparables into that event's own
+// salesPageContent column — a separate field from Event.description (see
+// that column's own schema comment), rendered by
+// components/salesPage/{SalesPageHero,SalesPageContent}.tsx instead of
+// the plain rich-text block, right next to the untouched
+// registration/checkout sidebar ([eventSlug]/page.tsx, EventRegistration.tsx).
 //
 // This is the CLI path (needs DATABASE_URL). No terminal handy? Use the
 // one-tap admin page instead: /admin/dev/seed-sales-copy — same content
-// (src/lib/salesCopy/manicuristasImparables.ts), same guardrails, hit
+// (src/lib/salesPage/manicuristasImparables.ts), same guardrails, hit
 // from the phone while logged into /admin.
 //
-// Touches ONLY the Event.description column for the one event you name —
-// never any other field on that event (startsAt, zoomMeetingId, format,
-// etc. are all left exactly as they are), and refuses to run at all
-// without a real --slug so it can never guess the wrong event.
+// Touches ONLY the Event.salesPageContent column for the one event you
+// name — never any other field on that event (startsAt, zoomMeetingId,
+// format, description, etc. are all left exactly as they are), and
+// refuses to run at all without a real --slug so it can never guess the
+// wrong event.
 //
 // Run with:
 //   npx tsx scripts/seed-manicuristas-sales-page.ts --slug <event-slug>
-// Add --force to overwrite a description that isn't empty (without it,
-// the script stops and shows you the current content instead of
-// clobbering something someone already wrote by hand).
-import { PrismaClient } from "@prisma/client";
-import { sanitizeEventDescription } from "../src/lib/sanitizeHtml";
-import { MANICURISTAS_SALES_PAGE_HTML } from "../src/lib/salesCopy/manicuristasImparables";
+// Add --force to overwrite an already-set salesPageContent (without it,
+// the script stops instead of clobbering something already loaded).
+import { PrismaClient, Prisma } from "@prisma/client";
+import { manicuristasImparablesSalesPage } from "../src/lib/salesPage/manicuristasImparables";
 
 const db = new PrismaClient();
 
@@ -50,23 +47,21 @@ async function main() {
     throw new Error(`No existe ningún evento con slug "${slug}". Revísalo en /admin/events.`);
   }
 
-  if (event.description && event.description.trim() && !force) {
+  if (event.salesPageContent && !force) {
     console.log(
-      `El evento "${event.name}" (${slug}) ya tiene una Descripción guardada (${event.description.length} caracteres). ` +
-        "No la voy a sobrescribir sin --force. Descripción actual:\n\n" +
-        event.description
+      `El evento "${event.name}" (${slug}) ya tiene salesPageContent cargado. No lo voy a sobrescribir sin --force.`
     );
     return;
   }
 
   await db.event.update({
     where: { slug },
-    data: { description: sanitizeEventDescription(MANICURISTAS_SALES_PAGE_HTML) },
+    data: { salesPageContent: manicuristasImparablesSalesPage as unknown as Prisma.InputJsonValue },
   });
 
   console.log(
-    `Listo — la Descripción de "${event.name}" (${slug}) ya tiene la landing de venta completa. ` +
-      "Revísala en /admin/events (editar evento) o en la página pública del evento."
+    `Listo — "${event.name}" (${slug}) ya tiene la landing de venta completa (hero, tabla de valor, cronograma, ` +
+      "speakers, FAQ). Revísala en la página pública del evento."
   );
 }
 

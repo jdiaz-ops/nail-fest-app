@@ -44,6 +44,15 @@ interface Props {
   // too instead of needing that state lifted back up into the (server
   // component) page.
   descriptionHtml: string | null;
+  // Optional richer replacement for the descriptionHtml block above — see
+  // Event.salesPageContent's own schema comment. When set (only by
+  // [eventSlug]/page.tsx, only for an event that has salesPageContent),
+  // this renders in the description's exact spot instead of it; every
+  // other event leaves this undefined and keeps rendering descriptionHtml
+  // exactly as before. Nothing else in this component branches on it —
+  // the registration form, modal, CTA buttons and sidebar are identical
+  // either way.
+  salesContent?: React.ReactNode;
 }
 
 // One combined checkout step (Shopify-style, per the admin's own call —
@@ -66,6 +75,7 @@ export default function EventRegistration({
   registerButtonLabel,
   brandName,
   descriptionHtml,
+  salesContent,
 }: Props) {
   const hasTicketTypes = ticketTypes.length > 0;
   const [open, setOpen] = useState(false);
@@ -248,13 +258,17 @@ export default function EventRegistration({
             </button>
           </div>
 
-          {descriptionHtml && (
-            // Sanitized server-side before it was ever stored
-            // (lib/sanitizeHtml.ts, used by lib/events.ts's
-            // createEvent/updateEvent) — this is the one place that
-            // sanitizing has to hold, since this renders on an
-            // unauthenticated public page.
-            <div className="event-description" dangerouslySetInnerHTML={{ __html: descriptionHtml }} />
+          {salesContent ? (
+            <div className="event-description">{salesContent}</div>
+          ) : (
+            descriptionHtml && (
+              // Sanitized server-side before it was ever stored
+              // (lib/sanitizeHtml.ts, used by lib/events.ts's
+              // createEvent/updateEvent) — this is the one place that
+              // sanitizing has to hold, since this renders on an
+              // unauthenticated public page.
+              <div className="event-description" dangerouslySetInnerHTML={{ __html: descriptionHtml }} />
+            )
           )}
         </div>
 

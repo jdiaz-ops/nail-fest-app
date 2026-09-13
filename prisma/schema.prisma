@@ -185,6 +185,20 @@ model Event {
   // tags as the body — see lib/confirmationTemplate.ts's
   // renderSubjectFromTemplate.
   confirmationEmailSubject String?
+  // A richer, structured alternative to `description` for an event that
+  // wants a real sales-script landing (hero/story/value-stack table/
+  // schedule/speakers/FAQ/etc. — see lib/salesPage/types.ts) instead of
+  // one long rich-text block. Deliberately separate from `description`,
+  // never replacing it: [eventSlug]/page.tsx renders THIS instead of
+  // `description` when it's set (never both), and every event that
+  // doesn't set it keeps using `description` through the exact same
+  // EventRegistration.tsx code path as before — this field existing
+  // changes nothing for them. No admin rich-text editor writes this yet;
+  // today it's only populated by lib/salesPage's per-event content
+  // modules (e.g. manicuristasImparables.ts) via the one-tap admin
+  // action, not hand-typed — same reasoning as Registration.customFields
+  // for why this is JSON and not a pile of new columns.
+  salesPageContent Json?
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 
