@@ -1,6 +1,8 @@
+import Link from "next/link";
 import { db } from "@/lib/db";
 import { countSegment, type SegmentFilter } from "@/lib/segments/builder";
 import { requirePageUser } from "@/lib/auth/guard";
+import { getBroadcastEmailStats, statsFor } from "@/lib/email/broadcastStats";
 import BroadcastComposer from "@/components/BroadcastComposer";
 import CrmPageHeader from "../CrmPageHeader";
 
@@ -43,6 +45,10 @@ export default async function BroadcastsPage() {
     }))
   );
 
+  // One aggregate query for the whole page — see getBroadcastEmailStats's
+  // own comment on why this can't be N+1 or a raw-row fetch.
+  const statsByBroadcast = await getBroadcastEmailStats(broadcasts.map((b) => b.id));
+
   return (
     <div>
       <CrmPageHeader title="Broadcasts" subtitle="Envía un correo a un segmento ya guardado — nunca a un filtro improvisado." />
@@ -58,14 +64,28 @@ export default async function BroadcastsPage() {
               <th style={{ padding: "10px 12px" }}>Segmento</th>
               <th style={{ padding: "10px 12px" }}>Estado</th>
               <th style={{ padding: "10px 12px" }}>Enviados</th>
+              <th style={{ padding: "10px 12px" }}>Abiertos</th>
+              <th style={{ padding: "10px 12px" }}>Rebotados</th>
+              <th style={{ padding: "10px 12px" }}>Quejas</th>
             </tr>
           </thead>
           <tbody>
             {broadcasts.map((b) => {
               const style = STATUS_STYLE[b.status] ?? { bg: "#f6f5f2", ink: "#5b5f6b" };
+              const stats = statsFor(statsByBroadcast, b.id);
+              // % sobre entregados, no sobre enviados — un correo que
+              // nunca se entregó no pudo haberse abierto, así que
+              // dividir sobre enviados subestima la tasa real de
+              // apertura de lo que sí llegó.
+              const openRate = stats.delivered > 0 ? Math.round((stats.opened / stats.delivered) * 100) : null;
+              const bounceRate = stats.sent > 0 ? Math.round((stats.bounced / stats.sent) * 100) : null;
               return (
                 <tr key={b.id} style={{ borderTop: "1px solid #f0efec" }}>
-                  <td style={{ padding: "10px 12px" }}>{b.subject}</td>
+                  <td style={{ padding: "10px 12px" }}>
+                    <Link href={`/admin/crm/broadcasts/${b.id}`} style={{ color: "inherit", textDecoration: "none", fontWeight: 600 }}>
+                      {b.subject}
+                    </Link>
+                  </td>
                   <td style={{ padding: "10px 12px", color: "#5b5f6b" }}>{b.segment?.name ?? "—"}</td>
                   <td style={{ padding: "10px 12px" }}>
                     <span
@@ -83,12 +103,21 @@ export default async function BroadcastsPage() {
                     </span>
                   </td>
                   <td style={{ padding: "10px 12px" }}>{b._count.logs}</td>
+                  <td style={{ padding: "10px 12px" }}>
+                    {stats.opened}
+                    {openRate !== null && <span style={{ color: "#5b5f6b" }}> ({openRate}%)</span>}
+                  </td>
+                  <td style={{ padding: "10px 12px", color: stats.bounced > 0 ? "#a3251f" : undefined }}>
+                    {stats.bounced}
+                    {bounceRate !== null && bounceRate > 0 && <span style={{ color: "#5b5f6b" }}> ({bounceRate}%)</span>}
+                  </td>
+                  <td style={{ padding: "10px 12px", color: stats.complained > 0 ? "#a3251f" : undefined }}>{stats.complained}</td>
                 </tr>
               );
             })}
             {broadcasts.length === 0 && (
               <tr>
-                <td colSpan={4} style={{ padding: "10px 12px", color: "#5b5f6b" }}>
+                <td colSpan={7} style={{ padding: "10px 12px", color: "#5b5f6b" }}>
                   Aún no se ha enviado ningún broadcast.
                 </td>
               </tr>
