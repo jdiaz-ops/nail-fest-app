@@ -1,4 +1,4 @@
-import type { ConsentPurpose } from "@prisma/client";
+import { Prisma, type ConsentPurpose } from "@prisma/client";
 import { db } from "@/lib/db";
 
 // Ley 1581 (Colombia): consent is per-purpose and revocable, never one
@@ -95,5 +95,39 @@ export async function revokeConsent(
   }
   await db.consent.create({
     data: { personId, purpose, granted: false, revokedAt: new Date() },
+  });
+}
+
+/** Same write as revokeConsent, for many people at once — built for
+ * importing an external suppression list (e.g. a previous ESP's own
+ * bounced/complained/unsubscribed export, from before this app ever sent
+ * a single email) where looping revokeConsent one person at a time would
+ * mean two round trips PER person; at a few thousand people that's
+ * minutes, easily past a serverless function's timeout. Two queries
+ * total instead: one UPDATE closes out whichever row is each person's
+ * current latest for this purpose (only the latest one can be "active"
+ * per hasActiveConsent's own read rule), one bulk INSERT appends the
+ * fresh granted:false row for every person named — same two-write shape
+ * revokeConsent always does, just batched. Idempotent to call again
+ * later with an overlapping list: a person with no active row just gets
+ * another harmless revoked row appended. */
+export async function revokeConsentBulk(personIds: string[], purpose: ConsentPurpose): Promise<void> {
+  if (personIds.length === 0) return;
+  const now = new Date();
+
+  await db.$executeRaw(Prisma.sql`
+    UPDATE "Consent" c
+    SET "revokedAt" = ${now}
+    FROM (
+      SELECT DISTINCT ON ("personId") id
+      FROM "Consent"
+      WHERE "personId" IN (${Prisma.join(personIds)}) AND purpose = ${purpose}::"ConsentPurpose"
+      ORDER BY "personId", "grantedAt" DESC
+    ) latest
+    WHERE c.id = latest.id
+  `);
+
+  await db.consent.createMany({
+    data: personIds.map((personId) => ({ personId, purpose, granted: false, revokedAt: now })),
   });
 }
