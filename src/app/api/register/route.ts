@@ -11,6 +11,7 @@ import { splitName } from "@/lib/name";
 import { getOrgSettings } from "@/lib/settings";
 import { getCheckoutQuestions, LOCKED_KEYS, type LockedKey } from "@/lib/checkoutForm";
 import { isKnownCityLabel } from "@/lib/cityMatch";
+import { isObviouslyDeadEmail } from "@/lib/emailDomainCheck";
 import { WORLD_COUNTRIES } from "@/lib/worldCountries";
 
 // The real registration path — the single busiest route on launch day —
@@ -204,6 +205,15 @@ export async function POST(req: NextRequest) {
   const normalizedEmail = input.email.trim().toLowerCase();
   if (orgSettings.bannedEmails.includes(normalizedEmail)) {
     return NextResponse.json({ error: "not_permitted" }, { status: 403 });
+  }
+
+  // Certain-bad domains only (no mail server at all, or a known
+  // disposable/temp-mail service) — never the mere typo-suggestion
+  // RegistrationForm.tsx already shows while typing, which stays a
+  // suggestion because it can't be certain. See emailDomainCheck.ts's
+  // own comment on why this fails OPEN on any DNS timeout/error.
+  if (await isObviouslyDeadEmail(normalizedEmail)) {
+    return NextResponse.json({ error: "email_domain_invalid" }, { status: 400 });
   }
 
   // Fetched before the capacity checks below so a resend can exclude the
