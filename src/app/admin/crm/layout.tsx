@@ -25,11 +25,15 @@ const NAV: { href: string; label: string; adminOnly?: boolean }[] = [
   { href: "/admin/crm/broadcasts", label: "Broadcasts", adminOnly: true },
   { href: "/admin/crm/whatsapp", label: "WhatsApp" },
   { href: "/admin/crm/segments", label: "Segmentos", adminOnly: true },
+  // Corrige código de país equivocado/ausente + fusiona duplicados por
+  // teléfono — a diferencia de Supresiones/Etiquetar/Higiene (retiradas,
+  // eran herramientas de migración de una sola vez), esto se queda: cada
+  // tanda nueva de registros produce ambos patrones de nuevo.
+  { href: "/admin/crm/telefonos", label: "Teléfonos y WhatsApp", adminOnly: true },
   // Supresiones / Etiquetar por lista / Higiene de la lista existieron
   // aquí como herramientas de prueba (import de una lista externa de
-  // Brevo, chequeo de calidad de correo/teléfono, fusión de duplicados)
-  // — retiradas a pedido explícito. Ver el historial de git si hace
-  // falta recuperar alguna.
+  // Brevo, chequeo de calidad de correo/teléfono) — retiradas a pedido
+  // explícito. Ver el historial de git si hace falta recuperar alguna.
 ];
 
 export default async function CrmLayout({ children }: { children: React.ReactNode }) {
