@@ -1,5 +1,6 @@
 import { requirePageUser } from "@/lib/auth/guard";
 import EmailQualityClient from "@/components/admin/EmailQualityClient";
+import PhoneQualityClient from "@/components/admin/PhoneQualityClient";
 import DomainAuthStatus from "@/components/admin/DomainAuthStatus";
 import DuplicateCheckClient from "@/components/admin/DuplicateCheckClient";
 import PersonDedupeClient from "@/components/admin/PersonDedupeClient";
@@ -22,9 +23,21 @@ export default async function HigienePage() {
     <div>
       <CrmPageHeader
         title="Higiene de la lista"
-        subtitle="Revisa el universo con consentimiento de marketing activo en busca de dominios que no pueden recibir correo, direcciones desechables, posibles errores de tipeo, y correos de rol — antes de gastar un solo envío en ellos."
+        subtitle="Revisa correos y teléfonos con consentimiento activo en busca de direcciones/números que nunca van a recibir nada — antes de gastar un solo envío en ellos."
       />
       <EmailQualityClient />
+
+      <hr style={{ border: "none", borderTop: "1px solid #e3e1dc", margin: "36px 0" }} />
+
+      <h2 style={{ fontSize: 16, marginBottom: 6 }}>¿Están bien los teléfonos, para WhatsApp?</h2>
+      <p style={{ fontSize: 13, color: "#5b5f6b", marginBottom: 16, maxWidth: 720 }}>
+        Mismo principio que arriba, para el único otro canal con consentimiento propio: sin teléfono, con muy pocos o demasiados
+        dígitos, con caracteres raros, o con un patrón obviamente inventado (0000000000, 1234567890) — antes de gastar un envío de
+        WhatsApp en un número que nunca iba a recibirlo. No hay equivalente al DNS del correo (no existe un "¿este número existe?"
+        gratis) — lo que sí puede confirmar eso es un envío real, que ya queda cubierto por la limpieza automática de dos fallas
+        seguidas en la bandeja de WhatsApp.
+      </p>
+      <PhoneQualityClient />
 
       <hr style={{ border: "none", borderTop: "1px solid #e3e1dc", margin: "36px 0" }} />
 
