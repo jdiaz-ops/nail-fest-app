@@ -47,6 +47,27 @@ model Person {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Dedup bookkeeping — NEVER a delete/merge of the actual row. When two
+  // Person rows are confirmed to be the same real human (see
+  // lib/dedupe/personDedupe.ts for the exact, deliberately conservative
+  // matching rules), the non-canonical one gets mergedIntoId pointed at
+  // the canonical row. Every other relation (registrations, consents,
+  // EmailLog, WhatsApp conversations, labels) is left exactly where it
+  // was — nothing gets re-pointed, nothing breaks, nothing is destroyed.
+  // This column exists purely so "how many unique people do we actually
+  // have" (mergedIntoId IS NULL) can be answered precisely, separately
+  // from "how many Person rows exist" (every row, merged or not) and
+  // separately from "who is still eligible to receive a marketing email"
+  // (Consent, unaffected by merge status — a merged-away profile keeps
+  // whatever consent it already had).
+  mergedIntoId String?
+  mergedInto   Person?   @relation("PersonMerge", fields: [mergedIntoId], references: [id], onDelete: SetNull)
+  mergedFrom   Person[]  @relation("PersonMerge")
+  mergedAt     DateTime?
+  // Short audit code, not free text — e.g. "same_phone_same_local_part"
+  // or "same_phone_same_name" — see lib/dedupe/personDedupe.ts.
+  mergeReason  String?
+
   registrations Registration[]
   consents      Consent[]
   whatsappConversations WhatsAppConversation[]
@@ -56,6 +77,7 @@ model Person {
   @@index([city])
   @@index([profession])
   @@index([country])
+  @@index([mergedIntoId])
 }
 
 // Reusable, organizer-managed list of profession/category options so the

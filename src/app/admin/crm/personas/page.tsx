@@ -37,7 +37,7 @@ export default async function PersonasPage({
   if (professionFilter) where.profession = professionFilter;
   if (countryFilter) where.country = countryFilter;
 
-  const [people, totalPeople, newLast30Days, cityRows, professionRows, countryRows] = await Promise.all([
+  const [people, totalPeople, uniquePeopleTotal, newLast30Days, cityRows, professionRows, countryRows] = await Promise.all([
     db.person.findMany({
       where,
       include: { _count: { select: { registrations: true } } },
@@ -45,6 +45,12 @@ export default async function PersonasPage({
       take: 200,
     }),
     db.person.count(),
+    // "Alcance" real — cuenta cada humano una vez, no cada fila. Un
+    // perfil con mergedIntoId != null quedó marcado (por
+    // /admin/crm/higiene, ver PersonDedupeClient) como el mismo humano
+    // que otro perfil que YA se está contando aquí; nada se borró, solo
+    // se dejó de contar dos veces al mismo contacto.
+    db.person.count({ where: { mergedIntoId: null } }),
     db.person.count({ where: { createdAt: { gte: THIRTY_DAYS_AGO() } } }),
     // Real values already on file, not the configured checkout-form
     // option lists — same reasoning as Segmentos' own city filter: a
@@ -135,7 +141,16 @@ export default async function PersonasPage({
       />
 
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 24 }}>
-        <StatCard label="Personas totales" value={String(totalPeople)} />
+        <StatCard label="Perfiles totales" value={String(totalPeople)} />
+        <StatCard
+          label="Personas únicas (alcance real)"
+          value={String(uniquePeopleTotal)}
+          sub={
+            totalPeople > uniquePeopleTotal
+              ? `${totalPeople - uniquePeopleTotal} perfiles fusionados en Higiene de la lista`
+              : undefined
+          }
+        />
         <StatCard label="Recurrentes (2+ eventos)" value={String(recurrentesTotal)} />
         <StatCard label="Nuevas últimos 30 días" value={String(newLast30Days)} />
         <StatCard

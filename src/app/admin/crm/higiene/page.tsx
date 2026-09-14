@@ -2,6 +2,7 @@ import { requirePageUser } from "@/lib/auth/guard";
 import EmailQualityClient from "@/components/admin/EmailQualityClient";
 import DomainAuthStatus from "@/components/admin/DomainAuthStatus";
 import DuplicateCheckClient from "@/components/admin/DuplicateCheckClient";
+import PersonDedupeClient from "@/components/admin/PersonDedupeClient";
 import CrmPageHeader from "../CrmPageHeader";
 
 export const dynamic = "force-dynamic";
@@ -44,6 +45,17 @@ export default async function HigienePage() {
         teléfono es la señal más fuerte que hay para detectar eso.
       </p>
       <DuplicateCheckClient />
+
+      <hr style={{ border: "none", borderTop: "1px solid #e3e1dc", margin: "36px 0" }} />
+
+      <h2 style={{ fontSize: 16, marginBottom: 6 }}>Fusionar duplicados de alta confianza</h2>
+      <p style={{ fontSize: 13, color: "#5b5f6b", marginBottom: 16, maxWidth: 720 }}>
+        Convierte la señal de arriba en una decisión — pero solo cuando el mismo teléfono además comparte el mismo usuario de correo
+        (con el dominio mal escrito) o el mismo nombre completo. Nada se borra ni se re-asigna: los perfiles quedan marcados como "el
+        mismo humano que" su perfil principal, para que "cuántas personas únicas tengo" deje de depender de una lista de teléfonos que
+        alguien tiene que leer una por una.
+      </p>
+      <PersonDedupeClient />
     </div>
   );
 }

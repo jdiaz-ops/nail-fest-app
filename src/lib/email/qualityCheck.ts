@@ -85,7 +85,10 @@ const DISPOSABLE_DOMAINS = new Set([
 // fixed pairwise map, so this list only needs the CORRECT spellings.
 const MAJOR_PROVIDERS = ["gmail.com", "hotmail.com", "outlook.com", "yahoo.com", "icloud.com", "live.com", "hotmail.es", "yahoo.es"];
 
-function levenshtein(a: string, b: string): number {
+// Exported for reuse by lib/dedupe/personDedupe.ts — same edit-distance
+// primitive, different question (is this domain a typo of a known
+// provider vs. are these two emails typo-variants of the same identity).
+export function levenshtein(a: string, b: string): number {
   // Row-by-row, not a 2D array — sidesteps TS's noUncheckedIndexedAccess
   // flagging every dp[i][j] as possibly undefined (a plain number[][]
   // fill doesn't narrow that away), and it's the standard space
