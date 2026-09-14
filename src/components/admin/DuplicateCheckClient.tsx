@@ -10,7 +10,10 @@ interface PhoneGroup {
 
 interface Result {
   emailDuplicateGroups: { email: string; count: number }[];
+  totalPhoneGroups: number;
+  totalExtraProfiles: number;
   phoneDuplicateGroups: PhoneGroup[];
+  phoneGroupsTruncated: boolean;
 }
 
 export default function DuplicateCheckClient() {
@@ -56,12 +59,21 @@ export default function DuplicateCheckClient() {
           </div>
 
           <h3 style={{ fontSize: 14, marginBottom: 4 }}>
-            {result.phoneDuplicateGroups.length} números de teléfono con 2+ perfiles distintos
+            {result.totalPhoneGroups.toLocaleString("es-CO")} números de teléfono con 2+ perfiles distintos — hasta{" "}
+            {result.totalExtraProfiles.toLocaleString("es-CO")} perfiles podrían ser la misma persona repetida
           </h3>
           <p style={{ fontSize: 12.5, color: "#5b5f6b", marginBottom: 12 }}>
             No significa que sean duplicados de verdad — un teléfono familiar compartido es legítimo — pero es la señal más fuerte que
-            hay de "misma persona, dos correos". Revísalos antes de asumir que 44.333 son 44.333 personas distintas.
+            hay de "misma persona, dos correos". Revísalos antes de asumir que tu base con consentimiento activo son todas personas
+            distintas.
           </p>
+
+          {result.phoneGroupsTruncated && (
+            <p style={{ fontSize: 12, color: "#8a5a1f", marginBottom: 12 }}>
+              Mostrando solo los primeros {result.phoneDuplicateGroups.length.toLocaleString("es-CO")} grupos (los de más perfiles
+              repetidos) — los totales de arriba sí cuentan los {result.totalPhoneGroups.toLocaleString("es-CO")} grupos completos.
+            </p>
+          )}
 
           <div className="admin-table-wrap" style={{ border: "1px solid #e3e1dc", borderRadius: 10, maxHeight: 400, overflowY: "auto" }}>
             <table style={{ borderCollapse: "collapse", fontSize: 13, width: "100%" }}>
