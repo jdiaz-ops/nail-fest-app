@@ -16,7 +16,8 @@ export type PhoneQualityReason =
   | "too_short" // fewer digits than any real phone number has (E.164 floor)
   | "too_long" // more digits than E.164 allows (hard max 15 after the country code)
   | "fake_pattern" // all-same-digit or a straight ascending/descending run — placeholder data, not a real number
-  | "co_length_unexpected"; // starts with +57 but isn't a plausible Colombian mobile length — SOFT, not proof, just worth a look
+  | "co_fixed_line" // a real, validly-formatted Colombian LANDLINE (60 + 1-digit indicativo + 7 digits) — can't receive WhatsApp regardless
+  | "co_length_unexpected"; // starts with +57 but matches neither the mobile nor the fixed-line shape — SOFT, not proof, just worth a look
 
 export interface PhoneQualityFinding {
   personId: string;
@@ -99,14 +100,25 @@ function analyzeOne(phone: string | null): PhoneQualityReason[] {
 
   if (isFakePattern(body)) reasons.push("fake_pattern");
 
-  // Colombia-specific soft check — the large majority of this list —
-  // real mobiles are +57 followed by exactly 10 digits starting with 3.
-  // A mismatch here is NOT proof of anything (a landline with area code
-  // has a different shape, someone may have typed a spare digit), just
-  // worth a human glance, which is why it's never in the auto-
-  // suppressible set below.
-  if (trimmed.startsWith("+57") && !(body.length === 12 && body.slice(2).startsWith("3"))) {
-    reasons.push("co_length_unexpected");
+  // Colombia-specific — the large majority of this list. Since the 2021
+  // unified numbering plan, EVERY Colombian number (mobile or fixed) is
+  // 10 digits nationally: a mobile starts with 3; a landline is "60" +
+  // a one-digit regional indicativo (1 Bogotá, 2 suroccidente, 4
+  // Antioquia, 5 Costa, 6 Eje Cafetero, 7 Santanderes, 8
+  // Orinoquía/Amazonía) + 7 digits. A landline is a REAL, correctly
+  // formatted number — just not one WhatsApp can ever deliver to, which
+  // is exactly as certain a "this can't work" as an outright malformed
+  // one, so it gets its own reason instead of being lumped in with
+  // genuine ambiguity. Anything else CO-prefixed (wrong length, or the
+  // right length but neither shape) stays a soft, human-review-only
+  // signal — could be a typo'd extra/missing digit, not proof of
+  // anything.
+  if (trimmed.startsWith("+57")) {
+    const national = body.slice(2);
+    const isMobile = national.length === 10 && national.startsWith("3");
+    const isFixedLine = national.length === 10 && /^60[1245678]/.test(national);
+    if (isFixedLine) reasons.push("co_fixed_line");
+    else if (!isMobile) reasons.push("co_length_unexpected");
   }
 
   return reasons;
@@ -121,6 +133,7 @@ export function analyzePhoneQuality(people: { id: string; phone: string | null }
     too_short: 0,
     too_long: 0,
     fake_pattern: 0,
+    co_fixed_line: 0,
     co_length_unexpected: 0,
   };
 
