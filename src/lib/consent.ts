@@ -1,4 +1,4 @@
-import { Prisma, type ConsentPurpose } from "@prisma/client";
+import type { ConsentPurpose } from "@prisma/client";
 import { db } from "@/lib/db";
 
 // Ley 1581 (Colombia): consent is per-purpose and revocable, never one
@@ -98,30 +98,8 @@ export async function revokeConsent(
   });
 }
 
-/** Same write as revokeConsent, for many people at once — two queries
- * total instead of two round trips PER person: one UPDATE closes out
- * whichever row is each person's current latest for this purpose (only
- * the latest one can be "active" per hasActiveConsent's own read rule),
- * one bulk INSERT appends the fresh granted:false row for every person
- * named — same two-write shape revokeConsent always does, just batched.
- * Idempotent to call again later with an overlapping list. */
-export async function revokeConsentBulk(personIds: string[], purpose: ConsentPurpose): Promise<void> {
-  if (personIds.length === 0) return;
-  const now = new Date();
-
-  await db.$executeRaw(Prisma.sql`
-    UPDATE "Consent" c
-    SET "revokedAt" = ${now}
-    FROM (
-      SELECT DISTINCT ON ("personId") id
-      FROM "Consent"
-      WHERE "personId" IN (${Prisma.join(personIds)}) AND purpose = ${purpose}::"ConsentPurpose"
-      ORDER BY "personId", "grantedAt" DESC
-    ) latest
-    WHERE c.id = latest.id
-  `);
-
-  await db.consent.createMany({
-    data: personIds.map((personId) => ({ personId, purpose, granted: false, revokedAt: now })),
-  });
-}
+// revokeConsentBulk (a chunked bulk-revoke) lived here — removed again
+// along with Teléfonos y WhatsApp, its only caller. See git history if a
+// future bulk tool needs it; revokeConsent above still covers every
+// live one-person-at-a-time case (unsubscribe, bounce/complaint auto-
+// suppression).
