@@ -165,6 +165,12 @@ export default function SegmentsAdminClient({
                       >
                         {isEditingThisRow ? "Editando…" : "Editar"}
                       </button>
+                      <a
+                        href={`/api/admin/crm/segments/${s.id}/export`}
+                        style={{ color: "#0e6b4c", fontSize: 13, textDecoration: "none" }}
+                      >
+                        Exportar CSV
+                      </a>
                       <DeleteSegmentButton id={s.id} />
                     </div>
                   </td>
