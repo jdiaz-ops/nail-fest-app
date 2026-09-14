@@ -46,10 +46,12 @@ export default async function PersonasPage({
     }),
     db.person.count(),
     // "Alcance" real — cuenta cada humano una vez, no cada fila. Un
-    // perfil con mergedIntoId != null quedó marcado (por
-    // /admin/crm/higiene, ver PersonDedupeClient) como el mismo humano
+    // perfil con mergedIntoId != null quedó marcado como el mismo humano
     // que otro perfil que YA se está contando aquí; nada se borró, solo
-    // se dejó de contar dos veces al mismo contacto.
+    // se dejó de contar dos veces al mismo contacto. La herramienta
+    // interactiva que escribía mergedIntoId (Higiene de la lista) se
+    // retiró, pero la columna y este conteo se dejaron — cualquier
+    // fusión ya aplicada sigue siendo información real.
     db.person.count({ where: { mergedIntoId: null } }),
     db.person.count({ where: { createdAt: { gte: THIRTY_DAYS_AGO() } } }),
     // Real values already on file, not the configured checkout-form

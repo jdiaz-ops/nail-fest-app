@@ -25,9 +25,11 @@ const NAV: { href: string; label: string; adminOnly?: boolean }[] = [
   { href: "/admin/crm/broadcasts", label: "Broadcasts", adminOnly: true },
   { href: "/admin/crm/whatsapp", label: "WhatsApp" },
   { href: "/admin/crm/segments", label: "Segmentos", adminOnly: true },
-  { href: "/admin/crm/supresiones", label: "Supresiones", adminOnly: true },
-  { href: "/admin/crm/etiquetar", label: "Etiquetar por lista", adminOnly: true },
-  { href: "/admin/crm/higiene", label: "Higiene de la lista", adminOnly: true },
+  // Supresiones / Etiquetar por lista / Higiene de la lista existieron
+  // aquí como herramientas de prueba (import de una lista externa de
+  // Brevo, chequeo de calidad de correo/teléfono, fusión de duplicados)
+  // — retiradas a pedido explícito. Ver el historial de git si hace
+  // falta recuperar alguna.
 ];
 
 export default async function CrmLayout({ children }: { children: React.ReactNode }) {
