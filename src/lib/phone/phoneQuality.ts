@@ -17,7 +17,8 @@ export type PhoneQualityReason =
   | "too_long" // more digits than E.164 allows (hard max 15 after the country code)
   | "fake_pattern" // all-same-digit or a straight ascending/descending run — placeholder data, not a real number
   | "co_fixed_line" // a real, validly-formatted Colombian LANDLINE (60 + 1-digit indicativo + 7 digits) — can't receive WhatsApp regardless
-  | "co_length_unexpected"; // starts with +57 but matches neither the mobile nor the fixed-line shape — SOFT, not proof, just worth a look
+  | "co_wrong_length" // starts with +57 but has neither 10 digits nationally — every valid CO number (mobile or fixed) has exactly 10, so this is certain, not a guess
+  | "co_length_unexpected"; // starts with +57, IS 10 digits nationally, but starts with neither 3 nor 60 — genuinely unclear what this is, SOFT
 
 export interface PhoneQualityFinding {
   personId: string;
@@ -105,19 +106,25 @@ function analyzeOne(phone: string | null): PhoneQualityReason[] {
   // 10 digits nationally: a mobile starts with 3; a landline is "60" +
   // a one-digit regional indicativo (1 Bogotá, 2 suroccidente, 4
   // Antioquia, 5 Costa, 6 Eje Cafetero, 7 Santanderes, 8
-  // Orinoquía/Amazonía) + 7 digits. A landline is a REAL, correctly
-  // formatted number — just not one WhatsApp can ever deliver to, which
-  // is exactly as certain a "this can't work" as an outright malformed
-  // one, so it gets its own reason instead of being lumped in with
-  // genuine ambiguity. Anything else CO-prefixed (wrong length, or the
-  // right length but neither shape) stays a soft, human-review-only
-  // signal — could be a typo'd extra/missing digit, not proof of
-  // anything.
+  // Orinoquía/Amazonía) + 7 digits. Three outcomes, in order of
+  // certainty:
+  //   1. A landline — a REAL, correctly formatted number, just not one
+  //      WhatsApp can ever deliver to. Certain, like an outright
+  //      malformed one.
+  //   2. Not 10 digits nationally — no valid CO number of ANY kind has a
+  //      different length, so this is just as certain as (1), regardless
+  //      of WHICH extra/missing digit caused it or whether a human could
+  //      eventually recover the real number by hand. Undeliverable as
+  //      stored is undeliverable as stored.
+  //   3. The right length (10) but starting with neither 3 nor 60 —
+  //      genuinely unclear what this even is. This is the one real soft
+  //      signal left.
   if (trimmed.startsWith("+57")) {
     const national = body.slice(2);
     const isMobile = national.length === 10 && national.startsWith("3");
     const isFixedLine = national.length === 10 && /^60[1245678]/.test(national);
     if (isFixedLine) reasons.push("co_fixed_line");
+    else if (national.length !== 10) reasons.push("co_wrong_length");
     else if (!isMobile) reasons.push("co_length_unexpected");
   }
 
@@ -134,6 +141,7 @@ export function analyzePhoneQuality(people: { id: string; phone: string | null }
     too_long: 0,
     fake_pattern: 0,
     co_fixed_line: 0,
+    co_wrong_length: 0,
     co_length_unexpected: 0,
   };
 

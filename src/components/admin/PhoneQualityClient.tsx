@@ -10,6 +10,7 @@ type Reason =
   | "too_long"
   | "fake_pattern"
   | "co_fixed_line"
+  | "co_wrong_length"
   | "co_length_unexpected";
 
 interface Finding {
@@ -33,19 +34,21 @@ const REASON_LABEL: Record<Reason, string> = {
   invalid_characters: "Tiene letras, espacios o símbolos raros",
   no_plus_prefix: "Sin prefijo de país (+) — puede ser válido, solo mal formateado",
   co_fixed_line: "Es un fijo colombiano real (60 + indicativo) — válido, pero no puede recibir WhatsApp",
-  co_length_unexpected: "Empieza en +57 pero no mide lo que mide un celular (ni un fijo) colombiano",
+  co_wrong_length: "Empieza en +57 pero no tiene los 10 dígitos que mide cualquier número colombiano",
+  co_length_unexpected: "Empieza en +57, mide 10 dígitos, pero no empieza como celular (3) ni como fijo (60)",
 };
 
 // Peores/más ciertos primero — missing/too_short/too_long/fake_pattern/
-// co_fixed_line son "esto no puede recibir WhatsApp, punto"; los dos
-// últimos son formato ambiguo o una señal blanda que merece un vistazo,
-// no un clic.
+// co_fixed_line/co_wrong_length son "esto no puede recibir WhatsApp,
+// punto"; el último es formato ambiguo, una señal blanda que merece un
+// vistazo, no un clic.
 const REASON_ORDER: Reason[] = [
   "missing",
   "too_short",
   "too_long",
   "fake_pattern",
   "co_fixed_line",
+  "co_wrong_length",
   "invalid_characters",
   "no_plus_prefix",
   "co_length_unexpected",
@@ -53,13 +56,23 @@ const REASON_ORDER: Reason[] = [
 
 // A diferencia de no_plus_prefix (puede ser un número real solo le falta
 // el +57 al inicio — arreglable, no hay que perder el contacto) y
-// co_length_unexpected (señal blanda, con falsos positivos reales — un
-// dígito de más, un país mal detectado), estos seis significan en la
-// práctica "esto no puede recibir WhatsApp", igual que no_mail_server
-// para correos — co_fixed_line incluido: es un número colombiano
-// perfectamente válido, solo que es un fijo, y WhatsApp no entrega a
-// fijos sin importar qué tan bien formateado esté.
-const SUPPRESSABLE_REASONS: Reason[] = ["missing", "invalid_characters", "too_short", "too_long", "fake_pattern", "co_fixed_line"];
+// co_length_unexpected (10 dígitos, pero ninguna forma conocida — señal
+// blanda de verdad), estos siete significan en la práctica "esto no
+// puede recibir WhatsApp", igual que no_mail_server para correos —
+// co_fixed_line porque es un fijo (WhatsApp no entrega a fijos sin
+// importar qué tan bien formateado esté), co_wrong_length porque NINGÚN
+// número colombiano válido tiene una longitud distinta a 10 dígitos, sin
+// importar cuál dígito sobra o falta — no hay que adivinar cuál para
+// tener certeza de que como está guardado, no sirve.
+const SUPPRESSABLE_REASONS: Reason[] = [
+  "missing",
+  "invalid_characters",
+  "too_short",
+  "too_long",
+  "fake_pattern",
+  "co_fixed_line",
+  "co_wrong_length",
+];
 
 export default function PhoneQualityClient() {
   const [state, setState] = useState<"idle" | "loading" | "error">("idle");
@@ -136,8 +149,9 @@ export default function PhoneQualityClient() {
               </button>
               <p style={{ fontSize: 12, color: "#5b5f6b", margin: "6px 0 0" }}>
                 Junta sin-teléfono + muy corto/largo + patrón falso + caracteres inválidos + fijos colombianos (válidos, pero WhatsApp
-                no les entrega). No incluye "sin prefijo +" (puede ser un número real mal formateado) ni la longitud colombiana
-                inesperada (señal blanda, mejor mirarla primero).
+                no les entrega) + longitud colombiana equivocada (11+ dígitos, ningún número real mide eso). No incluye "sin prefijo +"
+                (puede ser válido, solo mal formateado) ni el caso de 10 dígitos que no arrancan como celular ni como fijo (señal
+                blanda de verdad, mejor mirarla primero).
               </p>
               {suppressResult && (
                 <p style={{ fontSize: 12.5, color: "#5b5f6b", margin: "8px 0 0" }}>✓ {suppressResult.matched} suprimidos de WhatsApp.</p>
