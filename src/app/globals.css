@@ -883,20 +883,35 @@ button.primary:disabled {
    optional sections below the hero, admin-managed from /admin/homepage.
    Inline styles handle everything else on that page; these two need a
    real media query (mobile column count != desktop), which inline
-   styles can't express. */
+   styles can't express.
+
+   Capped at 1280px, not edge-to-edge: each tile is aspect-ratio:1, so
+   an UNCAPPED 4-column row on a wide desktop monitor (e.g. 1920px) made
+   every tile ~480px tall — one photo row taller than half the screen,
+   reported as "no puedo escrolear más abajo, no se lee" (not literally
+   broken scroll — confirmed no such bug — just an unexpectedly huge
+   row that read as stuck). Capping the row's own width caps its height
+   the same way every other max-width content block on this site already
+   does. */
 .homepage-gallery-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 2px;
+  gap: 10px;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 32px 24px;
 }
 @media (min-width: 720px) {
   .homepage-gallery-grid {
     grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    padding: 56px 32px;
   }
 }
 .homepage-gallery-tile {
   aspect-ratio: 1;
   overflow: hidden;
+  border-radius: 10px;
 }
 .homepage-gallery-tile img {
   width: 100%;
@@ -908,10 +923,14 @@ button.primary:disabled {
 .homepage-brand-logo-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 24px 32px;
 }
 @media (min-width: 720px) {
   .homepage-brand-logo-grid {
     grid-template-columns: repeat(6, 1fr);
+    padding: 0 32px 56px;
   }
 }
 .homepage-brand-logo-tile {
