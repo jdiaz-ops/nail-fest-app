@@ -45,6 +45,8 @@ const patchSchema = z
     // since the editor forms always send the complete current list.
     homepageGalleryImageUrls: z.array(z.string()),
     homepageBrandLogos: z.array(z.object({ url: z.string(), name: z.string() })),
+    // "" = clear, same convention as homepageTagline above.
+    homepageBrandLogosTitle: z.string(),
     // nailfest.co/links (/admin/links) — see OrgSettings.linksPageImageUrl's
     // own schema comment. Same "" = clear, mutually-exclusive-by-form
     // reasoning as the homepage fields above.
@@ -77,6 +79,7 @@ export async function POST(req: NextRequest) {
     homepageImageUrl,
     homepageVideoUrl,
     homepageTagline,
+    homepageBrandLogosTitle,
     linksPageImageUrl,
     linksPageVideoUrl,
     clarityProjectId,
@@ -93,6 +96,7 @@ export async function POST(req: NextRequest) {
     ...(homepageImageUrl !== undefined ? { homepageImageUrl: homepageImageUrl || null } : {}),
     ...(homepageVideoUrl !== undefined ? { homepageVideoUrl: homepageVideoUrl || null } : {}),
     ...(homepageTagline !== undefined ? { homepageTagline: homepageTagline || null } : {}),
+    ...(homepageBrandLogosTitle !== undefined ? { homepageBrandLogosTitle: homepageBrandLogosTitle || null } : {}),
     ...(linksPageImageUrl !== undefined ? { linksPageImageUrl: linksPageImageUrl || null } : {}),
     ...(linksPageVideoUrl !== undefined ? { linksPageVideoUrl: linksPageVideoUrl || null } : {}),
   });

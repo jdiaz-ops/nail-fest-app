@@ -198,14 +198,19 @@ export default async function HomePage() {
         object-fit: contain (unlike the gallery above, these vary in
         aspect ratio and must never crop). */}
     {orgSettings.homepageBrandLogos.length > 0 && (
-      <section className="homepage-brand-logo-grid">
-        {orgSettings.homepageBrandLogos.map((logo, i) => (
-          <div className="homepage-brand-logo-tile" key={logo.url + i}>
-            {/* eslint-disable-next-line @next/next/no-img-element -- admin-uploaded brand logo, arbitrary Blob URL */}
-            <img src={logo.url} alt={logo.name} />
-          </div>
-        ))}
-      </section>
+      <>
+        {orgSettings.homepageBrandLogosTitle && (
+          <h2 className="homepage-brand-logo-title">{orgSettings.homepageBrandLogosTitle}</h2>
+        )}
+        <section className="homepage-brand-logo-grid">
+          {orgSettings.homepageBrandLogos.map((logo, i) => (
+            <div className="homepage-brand-logo-tile" key={logo.url + i}>
+              {/* eslint-disable-next-line @next/next/no-img-element -- admin-uploaded brand logo, arbitrary Blob URL */}
+              <img src={logo.url} alt={logo.name} />
+            </div>
+          ))}
+        </section>
+      </>
     )}
     </>
   );

@@ -1300,12 +1300,16 @@ model OrgSettings {
   // logo image speaks for itself there) but is what makes the admin
   // editor's list usable — without it, "which of these 40 near-identical
   // white squares is Dyson" is unanswerable once you've scrolled past the
-  // upload. Shape: {url: string; name: string}[], same upload-order-is-
-  // display-order and empty-means-hidden rules as the gallery above.
-  // Uploaded and managed one logo at a time (see HomepageBrandLogosEditor.
-  // tsx) — a brand wall grows a handful of logos at a time in practice,
-  // never a bulk import.
+  // upload. Shape: {url: string; name: string}[] — array ORDER is
+  // display order, reorderable from HomepageBrandLogosEditor.tsx (a real
+  // brand wall runs into the dozens, uploaded many at once, so this
+  // isn't a "just re-upload in the right order" situation the way a
+  // 4-photo gallery is).
   homepageBrandLogos Json @default("[]")
+  // Optional heading shown above the logo grid on the public page (e.g.
+  // "Marcas que confían en nosotros") — null/empty means no heading,
+  // same as every other optional homepage text field here.
+  homepageBrandLogosTitle String?
 
   // nailfest.co/links (src/app/links/page.tsx) — editable from the same
   // /admin/links screen as the LinkPageLink list itself. Same shape and

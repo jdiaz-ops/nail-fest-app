@@ -37,6 +37,7 @@ export interface OrgSettingsValue {
   homepageCtaLabel: string;
   homepageGalleryImageUrls: string[];
   homepageBrandLogos: { url: string; name: string }[];
+  homepageBrandLogosTitle: string | null;
   linksPageImageUrl: string | null;
   linksPageVideoUrl: string | null;
 }
@@ -61,6 +62,7 @@ const DEFAULTS: OrgSettingsValue = {
   homepageCtaLabel: "Conseguir entrada gratis",
   homepageGalleryImageUrls: [],
   homepageBrandLogos: [],
+  homepageBrandLogosTitle: null,
   linksPageImageUrl: null,
   linksPageVideoUrl: null,
 };
@@ -91,6 +93,7 @@ export async function getOrgSettings(): Promise<OrgSettingsValue> {
     homepageCtaLabel: row.homepageCtaLabel,
     homepageGalleryImageUrls: row.homepageGalleryImageUrls,
     homepageBrandLogos: parseBrandLogos(row.homepageBrandLogos),
+    homepageBrandLogosTitle: row.homepageBrandLogosTitle,
     linksPageImageUrl: row.linksPageImageUrl,
     linksPageVideoUrl: row.linksPageVideoUrl,
   };
@@ -122,6 +125,7 @@ export async function updateOrgSettings(patch: Partial<OrgSettingsValue>): Promi
     homepageCtaLabel: row.homepageCtaLabel,
     homepageGalleryImageUrls: row.homepageGalleryImageUrls,
     homepageBrandLogos: parseBrandLogos(row.homepageBrandLogos),
+    homepageBrandLogosTitle: row.homepageBrandLogosTitle,
     linksPageImageUrl: row.linksPageImageUrl,
     linksPageVideoUrl: row.linksPageVideoUrl,
   };

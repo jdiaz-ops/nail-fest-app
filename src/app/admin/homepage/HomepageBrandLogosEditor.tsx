@@ -8,65 +8,94 @@ interface BrandLogo {
   name: string;
 }
 
-// "Un módulo para subir uno a uno cada logo" — a brand wall grows a
-// handful at a time in practice, so the flow is: pick the logo image
-// (uploads immediately), type the brand's name, "Agregar a la lista".
-// The name is never shown on the public page (the logo speaks for
-// itself there) — it exists purely so the list below is legible once
-// it's more than a few nearly-identical white squares.
-export default function HomepageBrandLogosEditor({ initialLogos }: { initialLogos: BrandLogo[] }) {
+// A real brand wall runs into the dozens (see the screenshot that
+// prompted this — 53 logo files picked in one file-browser session), so
+// this is built around THAT shape: select every file at once, upload
+// them all (bounded concurrency, not 53 requests fired at the same
+// instant), name each one at your own pace afterward — never required
+// up front, since the name only exists for THIS list to stay legible
+// (it's never shown on the public page) — and reorder with ↑/↓ once
+// they're all in, since "cuál va primero" only makes sense to decide
+// after seeing the whole set.
+const UPLOAD_CONCURRENCY = 4;
+
+export default function HomepageBrandLogosEditor({
+  initialLogos,
+  initialTitle,
+}: {
+  initialLogos: BrandLogo[];
+  initialTitle: string | null;
+}) {
+  const [title, setTitle] = useState(initialTitle ?? "");
   const [logos, setLogos] = useState(initialLogos);
-  const [pendingUrl, setPendingUrl] = useState<string | null>(null);
-  const [pendingName, setPendingName] = useState("");
-  const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
+  const [uploadErrors, setUploadErrors] = useState<string[]>([]);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploading(true);
-    setUploadError(null);
-    try {
-      const form = new FormData();
-      form.append("file", file);
-      const res = await fetch("/api/admin/uploads/homepage-image", { method: "POST", body: form });
-      const body = await res.json().catch(() => ({}));
-      if (res.ok) {
-        setPendingUrl(body.url);
-      } else {
-        setUploadError(
-          body?.error === "blob_not_configured"
-            ? "El almacenamiento de imágenes no está activo todavía."
-            : body?.error === "not_an_image"
-              ? "Ese archivo no es una imagen."
-              : body?.error === "too_large"
-                ? "La imagen pesa más de 5MB."
-                : "No se pudo subir el logo."
-        );
+  async function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
+    setUploadErrors([]);
+    setUploadProgress({ done: 0, total: files.length });
+
+    const results: BrandLogo[] = [];
+    const errors: string[] = [];
+    let cursor = 0;
+    async function worker() {
+      while (cursor < files.length) {
+        const file = files[cursor++]!;
+        const form = new FormData();
+        form.append("file", file);
+        try {
+          const res = await fetch("/api/admin/uploads/homepage-image", { method: "POST", body: form });
+          const body = await res.json().catch(() => ({}));
+          if (res.ok) {
+            // Name left blank — bulk-picked files rarely have a useful
+            // one (the screenshot that prompted this: "NF Square 2026
+            // (53).png"), so nothing is auto-derived. Typed in
+            // afterward, per logo, in the list below — optional, never
+            // blocks the upload or the save.
+            results.push({ url: body.url, name: "" });
+          } else {
+            errors.push(`${file.name}: ${body?.error === "too_large" ? "pesa más de 5MB" : body?.error === "not_an_image" ? "no es una imagen" : "error al subir"}`);
+          }
+        } catch {
+          errors.push(`${file.name}: error de red`);
+        }
+        setUploadProgress((p) => (p ? { ...p, done: p.done + 1 } : p));
       }
-    } finally {
-      setUploading(false);
     }
+    await Promise.all(Array.from({ length: Math.min(UPLOAD_CONCURRENCY, files.length) }, worker));
+
+    setLogos((prev) => [...prev, ...results]);
+    setUploadErrors(errors);
+    setUploadProgress(null);
+    if (inputRef.current) inputRef.current.value = "";
   }
 
-  function addToList() {
-    if (!pendingUrl || !pendingName.trim()) return;
-    setLogos((prev) => [...prev, { url: pendingUrl, name: pendingName.trim() }]);
-    setPendingUrl(null);
-    setPendingName("");
-    if (inputRef.current) inputRef.current.value = "";
+  function renameAt(index: number, name: string) {
+    setLogos((prev) => prev.map((l, i) => (i === index ? { ...l, name } : l)));
   }
 
   function remove(index: number) {
     setLogos((prev) => prev.filter((_, i) => i !== index));
   }
 
+  function move(index: number, direction: -1 | 1) {
+    setLogos((prev) => {
+      const target = index + direction;
+      if (target < 0 || target >= prev.length) return prev;
+      const next = [...prev];
+      [next[index], next[target]] = [next[target]!, next[index]!];
+      return next;
+    });
+  }
+
   async function save() {
     setStatus("saving");
     try {
-      await postSettings({ homepageBrandLogos: logos });
+      await postSettings({ homepageBrandLogos: logos, homepageBrandLogosTitle: title });
       setStatus("saved");
     } catch {
       setStatus("error");
@@ -77,78 +106,75 @@ export default function HomepageBrandLogosEditor({ initialLogos }: { initialLogo
     <div style={{ ...cardStyle, marginTop: 20 }}>
       <label style={{ fontWeight: 600, display: "block", marginBottom: 4 }}>Marcas aliadas (opcional)</label>
       <p style={{ fontSize: 13, color: "#5b5f6b", margin: "0 0 14px" }}>
-        Una pared de logos debajo de la galería — 6 en fila en computador, 3 en celular. Sube cada logo uno por
-        uno; el nombre no se muestra en la página (el logo ya lo dice), es solo para que reconozcas cuál es cuál
-        aquí abajo.
+        Una pared de logos debajo de la galería — 6 en fila en computador, 3 en celular.
       </p>
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "flex-end", marginBottom: 16 }}>
-        <div>
-          <label style={{ fontSize: 12, color: "#5b5f6b", display: "block", marginBottom: 4 }}>1. Logo</label>
-          <input ref={inputRef} type="file" accept="image/*" onChange={handleFile} disabled={uploading} />
-        </div>
-        {pendingUrl && (
-          <>
-            <div>
-              <label style={{ fontSize: 12, color: "#5b5f6b", display: "block", marginBottom: 4 }}>2. Nombre de la marca</label>
-              <input
-                value={pendingName}
-                onChange={(e) => setPendingName(e.target.value)}
-                placeholder="ej. Dyson"
-                style={{ padding: "8px 12px", border: "1px solid #e3e1dc", borderRadius: 8, fontSize: 14 }}
-              />
-            </div>
-            <button type="button" onClick={addToList} disabled={!pendingName.trim()}>
-              Agregar a la lista
-            </button>
-          </>
-        )}
+      <div className="field" style={{ marginBottom: 16 }}>
+        <label>Título arriba de la sección (opcional)</label>
+        <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="ej. Marcas que confían en nosotros" />
       </div>
-      {uploading && <p style={{ fontSize: 13, color: "#5b5f6b" }}>Subiendo…</p>}
-      {uploadError && <p style={{ fontSize: 13, color: "#c2185b" }}>{uploadError}</p>}
-      {pendingUrl && (
-        <div style={{ marginBottom: 16 }}>
-          {/* eslint-disable-next-line @next/next/no-img-element -- admin preview before adding to the list */}
-          <img
-            src={pendingUrl}
-            alt="Logo recién subido"
-            style={{ width: 72, height: 72, objectFit: "contain", background: "#fff", border: "1px solid #e3e1dc", borderRadius: 8, padding: 8 }}
-          />
-        </div>
-      )}
 
-      {logos.length > 0 && (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 16 }}>
-          {logos.map((logo, i) => (
-            <div key={logo.url + i} style={{ position: "relative", textAlign: "center" }}>
-              {/* eslint-disable-next-line @next/next/no-img-element -- admin preview of an arbitrary uploaded URL */}
-              <img
-                src={logo.url}
-                alt={logo.name}
-                style={{
-                  width: 90,
-                  height: 90,
-                  objectFit: "contain",
-                  background: "#fff",
-                  border: "1px solid #e3e1dc",
-                  borderRadius: 8,
-                  padding: 8,
-                  display: "block",
-                }}
-              />
-              <p style={{ fontSize: 11, color: "#5b5f6b", margin: "4px 0 0", maxWidth: 90, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {logo.name}
-              </p>
-              <button type="button" onClick={() => remove(i)} style={removeButtonStyle} aria-label={`Quitar ${logo.name}`}>
-                ×
-              </button>
-            </div>
+      <label style={{ fontSize: 12, color: "#5b5f6b", display: "block", marginBottom: 4 }}>
+        Selecciona todos los logos de una vez
+      </label>
+      <input ref={inputRef} type="file" accept="image/*" multiple onChange={handleFiles} disabled={uploadProgress !== null} />
+      {uploadProgress && (
+        <p style={{ fontSize: 13, color: "#5b5f6b" }}>
+          Subiendo {uploadProgress.done} de {uploadProgress.total}…
+        </p>
+      )}
+      {uploadErrors.length > 0 && (
+        <div style={{ fontSize: 12, color: "#c2185b", marginTop: 6 }}>
+          {uploadErrors.map((e, i) => (
+            <p key={i} style={{ margin: "2px 0" }}>
+              {e}
+            </p>
           ))}
         </div>
       )}
 
+      {logos.length > 0 && (
+        <div style={{ marginTop: 16, marginBottom: 16 }}>
+          <p style={{ fontSize: 12, color: "#5b5f6b", margin: "0 0 8px" }}>
+            {logos.length} logos — usa ↑/↓ para el orden en que se muestran, el nombre es solo para que los reconozcas aquí.
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 480, overflowY: "auto", paddingRight: 4 }}>
+            {logos.map((logo, i) => (
+              <div
+                key={logo.url + i}
+                style={{ display: "flex", alignItems: "center", gap: 10, border: "1px solid #e3e1dc", borderRadius: 8, padding: 8 }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element -- admin preview of an arbitrary uploaded URL */}
+                <img
+                  src={logo.url}
+                  alt={logo.name || `Logo ${i + 1}`}
+                  style={{ width: 44, height: 44, objectFit: "contain", background: "#fff", border: "1px solid #e3e1dc", borderRadius: 6, flexShrink: 0 }}
+                />
+                <input
+                  value={logo.name}
+                  onChange={(e) => renameAt(i, e.target.value)}
+                  placeholder={`Logo ${i + 1} (sin nombre)`}
+                  style={{ flex: 1, padding: "6px 10px", border: "1px solid #e3e1dc", borderRadius: 6, fontSize: 13, minWidth: 0 }}
+                />
+                <div style={{ display: "flex", gap: 2, flexShrink: 0 }}>
+                  <button type="button" onClick={() => move(i, -1)} disabled={i === 0} title="Subir" style={iconButtonStyle}>
+                    ↑
+                  </button>
+                  <button type="button" onClick={() => move(i, 1)} disabled={i === logos.length - 1} title="Bajar" style={iconButtonStyle}>
+                    ↓
+                  </button>
+                  <button type="button" onClick={() => remove(i)} title="Quitar" style={{ ...iconButtonStyle, color: "#c2185b" }}>
+                    ×
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <button type="button" onClick={save} style={saveButtonStyle} disabled={uploading || status === "saving"}>
+        <button type="button" onClick={save} style={saveButtonStyle} disabled={uploadProgress !== null || status === "saving"}>
           {status === "saving" ? "Guardando…" : "Guardar marcas"}
         </button>
         {status === "saved" && <span style={{ color: "#12966b", fontSize: 14 }}>Guardado ✓</span>}
@@ -158,17 +184,13 @@ export default function HomepageBrandLogosEditor({ initialLogos }: { initialLogo
   );
 }
 
-const removeButtonStyle: React.CSSProperties = {
-  position: "absolute",
-  top: 4,
-  right: 4,
-  border: "none",
-  borderRadius: 999,
-  width: 20,
-  height: 20,
-  background: "rgba(28,19,16,0.7)",
-  color: "#fff",
+const iconButtonStyle: React.CSSProperties = {
+  width: 28,
+  height: 28,
+  border: "1px solid #e3e1dc",
+  borderRadius: 6,
+  background: "#fff",
   cursor: "pointer",
-  fontSize: 12,
+  fontSize: 14,
   lineHeight: 1,
 };

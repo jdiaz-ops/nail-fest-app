@@ -30,7 +30,7 @@ export default async function AdminHomepagePage() {
         nextEventLabel={nextEvent ? `${nextEvent.name} — ${nextEvent.city}` : null}
       />
       <HomepageGalleryEditor initialUrls={orgSettings.homepageGalleryImageUrls} />
-      <HomepageBrandLogosEditor initialLogos={orgSettings.homepageBrandLogos} />
+      <HomepageBrandLogosEditor initialLogos={orgSettings.homepageBrandLogos} initialTitle={orgSettings.homepageBrandLogosTitle} />
     </div>
   );
 }
