@@ -14,6 +14,8 @@ import MetaPixelScript from "@/components/MetaPixelScript";
 import SalesPageHero from "@/components/salesPage/SalesPageHero";
 import SalesPageContent from "@/components/salesPage/SalesPageContent";
 import { parseSalesPageContent } from "@/lib/salesPage/types";
+import LandingBlocksContent from "@/components/landingBlocks/LandingBlocksContent";
+import { parseLandingBlocks } from "@/lib/landingBlocks/types";
 
 export const dynamic = "force-dynamic";
 
@@ -77,6 +79,12 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
         : physicalVenue;
 
   const salesPage = parseSalesPageContent(event.salesPageContent);
+  // See Event.useLandingBlocks's own schema comment — only parsed/passed
+  // down when the admin actually turned this on for THIS event; every
+  // other event's landingBlocksContent stays undefined and
+  // EventRegistration.tsx falls through to descriptionHtml exactly as
+  // before.
+  const landingBlocks = event.useLandingBlocks ? parseLandingBlocks(event.landingBlocks) : null;
 
   return (
     // .event-page: 480px column on mobile (unchanged — already optimized,
@@ -166,6 +174,7 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
           brandName={orgSettings.name}
           descriptionHtml={event.description}
           salesContent={salesPage ? <SalesPageContent content={salesPage} /> : undefined}
+          landingBlocksContent={landingBlocks ? <LandingBlocksContent blocks={landingBlocks} /> : undefined}
         />
       </Suspense>
 

@@ -221,6 +221,18 @@ model Event {
   // action, not hand-typed — same reasoning as Registration.customFields
   // for why this is JSON and not a pile of new columns.
   salesPageContent Json?
+  // Self-service alternative to `description` — an ordered array of typed
+  // blocks (text/image/gallery/faq) the admin builds themselves from
+  // LandingBlocksEditor.tsx on the same event form, instead of one long
+  // rich-text field. See lib/landingBlocks/types.ts for the block shapes.
+  // Unlike salesPageContent above, this one IS hand-authored through a
+  // real admin UI, on purpose — that's the whole point of it.
+  landingBlocks Json @default("[]")
+  // Per-event switch, default false: every existing and new event keeps
+  // rendering `description` exactly as before until this is flipped on
+  // for it. [eventSlug]/page.tsx picks the render path from this flag —
+  // description/salesPageContent/landingBlocks never render together.
+  useLandingBlocks Boolean @default(false)
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 

@@ -4,11 +4,25 @@ import { db } from "@/lib/db";
 import { updateEvent, setEventStatus, deleteEvent, EventHasRegistrationsError } from "@/lib/events";
 import { requireUser } from "@/lib/auth/guard";
 import { parseScheduleDays } from "@/lib/eventSchedule";
+import { parseLandingBlocks } from "@/lib/landingBlocks/types";
 
 const scheduleDaySchema = z.object({
   opensAt: z.string().min(1),
   closesAt: z.string().min(1),
 });
+
+// Same shape as the create route's own landingBlockSchema — see that
+// one's comment for why this is always a full-array replace.
+const landingBlockSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("text"), html: z.string() }),
+  z.object({ type: z.literal("image"), url: z.string(), caption: z.string() }),
+  z.object({ type: z.literal("gallery"), images: z.array(z.string()) }),
+  z.object({
+    type: z.literal("faq"),
+    title: z.string(),
+    items: z.array(z.object({ question: z.string(), answer: z.string() })),
+  }),
+]);
 
 const patchSchema = z.object({
   name: z.string().min(1).optional(),
@@ -29,6 +43,8 @@ const patchSchema = z.object({
   virtualAccessInstructions: z.string().optional(),
   zoomMeetingId: z.string().optional(),
   zoomIsWebinar: z.boolean().optional(),
+  landingBlocks: z.array(landingBlockSchema).optional(),
+  useLandingBlocks: z.boolean().optional(),
   slug: z.string().optional(),
 });
 
@@ -84,6 +100,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       virtualAccessInstructions: data.virtualAccessInstructions ?? existing.virtualAccessInstructions ?? "",
       zoomMeetingId: data.zoomMeetingId ?? existing.zoomMeetingId ?? "",
       zoomIsWebinar: data.zoomIsWebinar ?? existing.zoomIsWebinar,
+      landingBlocks: data.landingBlocks ?? parseLandingBlocks(existing.landingBlocks),
+      useLandingBlocks: data.useLandingBlocks ?? existing.useLandingBlocks,
       slug: data.slug,
     });
     return NextResponse.json({ ok: true, event });

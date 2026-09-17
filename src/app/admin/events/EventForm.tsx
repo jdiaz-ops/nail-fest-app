@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Fraunces } from "next/font/google";
 import { zonedTimeToUtc } from "@/lib/dateFormat";
 import RichTextEditor from "@/components/RichTextEditor";
+import LandingBlocksEditor from "./LandingBlocksEditor";
+import type { LandingBlock } from "@/lib/landingBlocks/types";
 
 const fraunces = Fraunces({ subsets: ["latin"], weight: ["600", "900"] });
 
@@ -25,6 +27,11 @@ export interface EventFormValues {
   venueName: string;
   venueAddress: string;
   description: string;
+  // See Event.landingBlocks/useLandingBlocks's own schema comments —
+  // LandingBlocksEditor.tsx below edits landingBlocks; useLandingBlocks
+  // is the switch between it and the plain `description` field above.
+  landingBlocks: LandingBlock[];
+  useLandingBlocks: boolean;
   imageUrl: string | null;
   registerButtonLabel: string;
   startsAtLocal: string; // "YYYY-MM-DDTHH:mm", already in `timezone`
@@ -56,6 +63,8 @@ export interface DuplicateSource {
   venueName: string;
   venueAddress: string;
   description: string;
+  landingBlocks: LandingBlock[];
+  useLandingBlocks: boolean;
   imageUrl: string | null;
   registerButtonLabel: string;
   capacity: string;
@@ -102,6 +111,8 @@ export default function EventForm({
       venueName: source.venueName,
       venueAddress: source.venueAddress,
       description: source.description,
+      landingBlocks: source.landingBlocks,
+      useLandingBlocks: source.useLandingBlocks,
       imageUrl: source.imageUrl,
       registerButtonLabel: source.registerButtonLabel,
       capacity: source.capacity,
@@ -186,6 +197,8 @@ export default function EventForm({
       venueName: values.venueName.trim(),
       venueAddress: values.venueAddress.trim(),
       description: values.description.trim(),
+      landingBlocks: values.landingBlocks,
+      useLandingBlocks: values.useLandingBlocks,
       imageUrl: values.imageUrl,
       registerButtonLabel: values.registerButtonLabel.trim(),
       startsAt: startsAt.toISOString(),
@@ -242,7 +255,7 @@ export default function EventForm({
       </div>
       {!isEdit && duplicateFrom && duplicateFrom.length > 0 && (
         <p style={{ fontSize: 12, color: "#5b5f6b", marginTop: -12, marginBottom: 20, textAlign: "right" }}>
-          Copia nombre, ciudad, lugar, descripción, imagen y cupo. Fecha y URL siempre quedan en blanco.
+          Copia nombre, ciudad, lugar, descripción (o bloques), imagen y cupo. Fecha y URL siempre quedan en blanco.
         </p>
       )}
 
@@ -448,9 +461,31 @@ export default function EventForm({
 
         <Section title="Página del evento" last>
           <div className="field">
-            <label>Description</label>
-            <RichTextEditor value={values.description} onChange={(html) => set("description", html)} />
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 400 }}>
+              <input
+                type="checkbox"
+                checked={values.useLandingBlocks}
+                onChange={(e) => set("useLandingBlocks", e.target.checked)}
+              />
+              Usar el editor por bloques (texto, imágenes, galería, FAQ) en vez de Description
+            </label>
+            <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>
+              Puedes activarlo y desactivarlo cuando quieras — el contenido de cada uno se conserva aparte, nunca se
+              borra al apagarlo.
+            </p>
           </div>
+
+          {values.useLandingBlocks ? (
+            <div className="field">
+              <label>Contenido de la página (por bloques)</label>
+              <LandingBlocksEditor blocks={values.landingBlocks} onChange={(blocks) => set("landingBlocks", blocks)} />
+            </div>
+          ) : (
+            <div className="field">
+              <label>Description</label>
+              <RichTextEditor value={values.description} onChange={(html) => set("description", html)} />
+            </div>
+          )}
 
           <div className="field">
             <label>Imagen de portada (opcional)</label>

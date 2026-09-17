@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { getOrgSettings } from "@/lib/settings";
 import { DEFAULT_REGISTER_BUTTON_LABEL } from "@/lib/events";
 import { requirePageUser } from "@/lib/auth/guard";
+import { parseLandingBlocks } from "@/lib/landingBlocks/types";
 import EventForm from "../EventForm";
 
 export const dynamic = "force-dynamic";
@@ -31,6 +32,8 @@ export default async function NewEventPage() {
           venueName: "",
           venueAddress: "",
           description: "",
+          landingBlocks: [],
+          useLandingBlocks: false,
           imageUrl: null,
           registerButtonLabel: DEFAULT_REGISTER_BUTTON_LABEL,
           startsAtLocal: "",
@@ -51,6 +54,8 @@ export default async function NewEventPage() {
           venueName: ev.venueName ?? "",
           venueAddress: ev.venueAddress ?? "",
           description: ev.description ?? "",
+          landingBlocks: parseLandingBlocks(ev.landingBlocks),
+          useLandingBlocks: ev.useLandingBlocks,
           imageUrl: ev.imageUrl,
           registerButtonLabel: ev.registerButtonLabel ?? DEFAULT_REGISTER_BUTTON_LABEL,
           capacity: ev.capacity != null ? String(ev.capacity) : "",

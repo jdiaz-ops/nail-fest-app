@@ -8,6 +8,20 @@ const scheduleDaySchema = z.object({
   closesAt: z.string().min(1),
 });
 
+// See Event.landingBlocks's own schema comment — LandingBlocksEditor.tsx
+// always sends the complete, current array (a full replace, same as
+// homepageGalleryImageUrls/homepageBrandLogos), never a partial patch.
+const landingBlockSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("text"), html: z.string() }),
+  z.object({ type: z.literal("image"), url: z.string(), caption: z.string() }),
+  z.object({ type: z.literal("gallery"), images: z.array(z.string()) }),
+  z.object({
+    type: z.literal("faq"),
+    title: z.string(),
+    items: z.array(z.object({ question: z.string(), answer: z.string() })),
+  }),
+]);
+
 const bodySchema = z.object({
   name: z.string().min(1),
   city: z.string().min(1),
@@ -30,6 +44,8 @@ const bodySchema = z.object({
   virtualAccessInstructions: z.string().default(""),
   zoomMeetingId: z.string().default(""),
   zoomIsWebinar: z.boolean().default(false),
+  landingBlocks: z.array(landingBlockSchema).default([]),
+  useLandingBlocks: z.boolean().default(false),
   slug: z.string().optional(),
 });
 
@@ -73,6 +89,8 @@ export async function POST(req: NextRequest) {
     virtualAccessInstructions: data.virtualAccessInstructions,
     zoomMeetingId: data.zoomMeetingId,
     zoomIsWebinar: data.zoomIsWebinar,
+    landingBlocks: data.landingBlocks,
+    useLandingBlocks: data.useLandingBlocks,
     slug: data.slug,
   });
   return NextResponse.json({ ok: true, event });

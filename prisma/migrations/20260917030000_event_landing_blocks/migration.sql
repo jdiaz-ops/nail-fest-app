@@ -1,0 +1,2 @@
+ALTER TABLE "Event" ADD COLUMN "landingBlocks" JSONB NOT NULL DEFAULT '[]';
+ALTER TABLE "Event" ADD COLUMN "useLandingBlocks" BOOLEAN NOT NULL DEFAULT false;

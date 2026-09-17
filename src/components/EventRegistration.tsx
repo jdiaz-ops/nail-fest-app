@@ -53,6 +53,11 @@ interface Props {
   // the registration form, modal, CTA buttons and sidebar are identical
   // either way.
   salesContent?: React.ReactNode;
+  // Same idea as salesContent, for Event.landingBlocks — see that
+  // column's own schema comment. Set only when the event has
+  // useLandingBlocks on; salesContent still wins if somehow both are set
+  // (shouldn't happen — mutually exclusive at the data-entry level).
+  landingBlocksContent?: React.ReactNode;
 }
 
 // One combined checkout step (Shopify-style, per the admin's own call —
@@ -76,6 +81,7 @@ export default function EventRegistration({
   brandName,
   descriptionHtml,
   salesContent,
+  landingBlocksContent,
 }: Props) {
   const hasTicketTypes = ticketTypes.length > 0;
   const [open, setOpen] = useState(false);
@@ -262,6 +268,8 @@ export default function EventRegistration({
 
           {salesContent ? (
             <div className="event-description">{salesContent}</div>
+          ) : landingBlocksContent ? (
+            <div className="event-description">{landingBlocksContent}</div>
           ) : (
             descriptionHtml && (
               // Sanitized server-side before it was ever stored

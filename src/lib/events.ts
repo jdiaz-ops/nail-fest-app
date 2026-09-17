@@ -4,6 +4,15 @@ import type { Event, EventStatus, EventFormat } from "@prisma/client";
 import { sanitizeEventDescription } from "@/lib/sanitizeHtml";
 import { createTicketType } from "@/lib/ticketTypes";
 import type { EventScheduleDay } from "@/lib/eventSchedule";
+import type { LandingBlock } from "@/lib/landingBlocks/types";
+
+// Sanitizes every "text" block's HTML the same way `description` already
+// is — this is the one place that has to hold, since landingBlocks
+// renders on the same unauthenticated public page via dangerouslySetInnerHTML
+// (see LandingBlocksContent.tsx).
+function sanitizeLandingBlocks(blocks: LandingBlock[]): LandingBlock[] {
+  return blocks.map((b) => (b.type === "text" ? { ...b, html: sanitizeEventDescription(b.html) } : b));
+}
 
 // The public event page's own default when an event doesn't set its own
 // (see [eventSlug]/page.tsx) — kept here too so a freshly-created event's
@@ -60,6 +69,9 @@ export interface EventInput {
   virtualAccessInstructions: string;
   zoomMeetingId: string;
   zoomIsWebinar: boolean;
+  // See Event.landingBlocks/useLandingBlocks's own schema comments.
+  landingBlocks: LandingBlock[];
+  useLandingBlocks: boolean;
   // Only used on create when the admin wants a specific URL instead of
   // the auto-generated one (e.g. matching an already-promoted link from
   // our previous ticketing platform) — left blank, the name is slugified instead.
@@ -90,6 +102,8 @@ export async function createEvent(input: EventInput): Promise<Event> {
       virtualAccessInstructions: input.virtualAccessInstructions.trim() || null,
       zoomMeetingId: input.zoomMeetingId.trim() || null,
       zoomIsWebinar: input.zoomIsWebinar,
+      landingBlocks: sanitizeLandingBlocks(input.landingBlocks) as unknown as Prisma.InputJsonValue,
+      useLandingBlocks: input.useLandingBlocks,
     },
   });
 }
@@ -118,6 +132,8 @@ export async function updateEvent(id: string, input: EventInput): Promise<Event>
       virtualAccessInstructions: input.virtualAccessInstructions.trim() || null,
       zoomMeetingId: input.zoomMeetingId.trim() || null,
       zoomIsWebinar: input.zoomIsWebinar,
+      landingBlocks: sanitizeLandingBlocks(input.landingBlocks) as unknown as Prisma.InputJsonValue,
+      useLandingBlocks: input.useLandingBlocks,
     },
   });
 }
@@ -170,6 +186,8 @@ export async function duplicateEvent(sourceId: string): Promise<Event> {
       // freshly-created Zoom meeting, same reasoning as dates not being
       // copied either (see this function's own comment above).
       zoomIsWebinar: source.zoomIsWebinar,
+      landingBlocks: source.landingBlocks as Prisma.InputJsonValue,
+      useLandingBlocks: source.useLandingBlocks,
     },
   });
   for (const tt of source.ticketTypes.sort((a, b) => a.order - b.order)) {

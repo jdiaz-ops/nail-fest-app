@@ -4,6 +4,7 @@ import { getOrgSettings } from "@/lib/settings";
 import { utcToZonedInputValue } from "@/lib/dateFormat";
 import { DEFAULT_REGISTER_BUTTON_LABEL } from "@/lib/events";
 import { parseScheduleDays } from "@/lib/eventSchedule";
+import { parseLandingBlocks } from "@/lib/landingBlocks/types";
 import { listTicketTypes } from "@/lib/ticketTypes";
 import { requirePageUser } from "@/lib/auth/guard";
 import EventForm from "../../EventForm";
@@ -38,6 +39,8 @@ export default async function EditEventPage({ params }: { params: { id: string }
           venueName: event.venueName ?? "",
           venueAddress: event.venueAddress ?? "",
           description: event.description ?? "",
+          landingBlocks: parseLandingBlocks(event.landingBlocks),
+          useLandingBlocks: event.useLandingBlocks,
           imageUrl: event.imageUrl,
           registerButtonLabel: event.registerButtonLabel ?? DEFAULT_REGISTER_BUTTON_LABEL,
           startsAtLocal: utcToZonedInputValue(event.startsAt, orgSettings.timezone),

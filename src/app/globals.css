@@ -354,6 +354,41 @@ button.primary:disabled {
   }
 }
 
+/* Event.landingBlocks (LandingBlocksContent.tsx) — the image/gallery
+   block types. Stay within the same column the text/FAQ blocks and the
+   classic `description` already render in, no full-bleed breakout. */
+.landing-block-image {
+  margin: 0;
+}
+.landing-block-image img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 10px;
+}
+.landing-block-image figcaption {
+  font-size: 12.5px;
+  color: var(--ink-muted);
+  text-align: center;
+  margin-top: 6px;
+}
+.landing-block-gallery {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+@media (min-width: 640px) {
+  .landing-block-gallery {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+.landing-block-gallery-img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 8px;
+}
+
 /* WhatsApp Bandeja (/admin/crm/whatsapp/bandeja[/id]) — three fixed-width
    panes (conversation list, thread, thread's own sidebar) built assuming
    real desktop width, with zero narrow-viewport handling until this was
