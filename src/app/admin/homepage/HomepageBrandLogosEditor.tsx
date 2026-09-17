@@ -14,9 +14,10 @@ interface BrandLogo {
 // them all (bounded concurrency, not 53 requests fired at the same
 // instant), name each one at your own pace afterward — never required
 // up front, since the name only exists for THIS list to stay legible
-// (it's never shown on the public page) — and reorder with ↑/↓ once
-// they're all in, since "cuál va primero" only makes sense to decide
-// after seeing the whole set.
+// (it's never shown on the public page) — and drag to reorder once
+// they're all in (↑/↓-per-click was the first version of this and was
+// reported unusable at this scale — moving item 53 to the top took 50+
+// clicks).
 const UPLOAD_CONCURRENCY = 4;
 
 export default function HomepageBrandLogosEditor({
@@ -32,6 +33,27 @@ export default function HomepageBrandLogosEditor({
   const [uploadErrors, setUploadErrors] = useState<string[]>([]);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Native HTML5 drag-and-drop — no library, ↑/↓-click reordering was
+  // reported as unusable once there are dozens of logos (moving one from
+  // the bottom to the top took 50+ clicks). dragIndex is which row is
+  // being dragged; overIndex is whichever row the pointer is currently
+  // over, used only to draw the insertion line — the actual reorder
+  // happens once, on drop.
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [overIndex, setOverIndex] = useState<number | null>(null);
+
+  function handleDrop(targetIndex: number) {
+    setLogos((prev) => {
+      if (dragIndex === null || dragIndex === targetIndex) return prev;
+      const next = [...prev];
+      const [moved] = next.splice(dragIndex, 1);
+      next.splice(targetIndex, 0, moved!);
+      return next;
+    });
+    setDragIndex(null);
+    setOverIndex(null);
+  }
 
   async function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
@@ -82,16 +104,6 @@ export default function HomepageBrandLogosEditor({
     setLogos((prev) => prev.filter((_, i) => i !== index));
   }
 
-  function move(index: number, direction: -1 | 1) {
-    setLogos((prev) => {
-      const target = index + direction;
-      if (target < 0 || target >= prev.length) return prev;
-      const next = [...prev];
-      [next[index], next[target]] = [next[target]!, next[index]!];
-      return next;
-    });
-  }
-
   async function save() {
     setStatus("saving");
     try {
@@ -136,14 +148,43 @@ export default function HomepageBrandLogosEditor({
       {logos.length > 0 && (
         <div style={{ marginTop: 16, marginBottom: 16 }}>
           <p style={{ fontSize: 12, color: "#5b5f6b", margin: "0 0 8px" }}>
-            {logos.length} logos — usa ↑/↓ para el orden en que se muestran, el nombre es solo para que los reconozcas aquí.
+            {logos.length} logos — arrastra del ⠿ para reordenar, el nombre es solo para que los reconozcas aquí.
           </p>
           <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 480, overflowY: "auto", paddingRight: 4 }}>
             {logos.map((logo, i) => (
               <div
-                key={logo.url + i}
-                style={{ display: "flex", alignItems: "center", gap: 10, border: "1px solid #e3e1dc", borderRadius: 8, padding: 8 }}
+                key={logo.url}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  if (dragIndex !== null && i !== overIndex) setOverIndex(i);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  handleDrop(i);
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  border: overIndex === i && dragIndex !== null && dragIndex !== i ? "1px solid #12966b" : "1px solid #e3e1dc",
+                  background: overIndex === i && dragIndex !== null && dragIndex !== i ? "#f0faf6" : "#fff",
+                  borderRadius: 8,
+                  padding: 8,
+                  opacity: dragIndex === i ? 0.4 : 1,
+                }}
               >
+                <span
+                  draggable
+                  onDragStart={() => setDragIndex(i)}
+                  onDragEnd={() => {
+                    setDragIndex(null);
+                    setOverIndex(null);
+                  }}
+                  title="Arrastra para reordenar"
+                  style={{ cursor: "grab", color: "#8a8478", fontSize: 18, flexShrink: 0, touchAction: "none", userSelect: "none" }}
+                >
+                  ⠿
+                </span>
                 {/* eslint-disable-next-line @next/next/no-img-element -- admin preview of an arbitrary uploaded URL */}
                 <img
                   src={logo.url}
@@ -156,17 +197,9 @@ export default function HomepageBrandLogosEditor({
                   placeholder={`Logo ${i + 1} (sin nombre)`}
                   style={{ flex: 1, padding: "6px 10px", border: "1px solid #e3e1dc", borderRadius: 6, fontSize: 13, minWidth: 0 }}
                 />
-                <div style={{ display: "flex", gap: 2, flexShrink: 0 }}>
-                  <button type="button" onClick={() => move(i, -1)} disabled={i === 0} title="Subir" style={iconButtonStyle}>
-                    ↑
-                  </button>
-                  <button type="button" onClick={() => move(i, 1)} disabled={i === logos.length - 1} title="Bajar" style={iconButtonStyle}>
-                    ↓
-                  </button>
-                  <button type="button" onClick={() => remove(i)} title="Quitar" style={{ ...iconButtonStyle, color: "#c2185b" }}>
-                    ×
-                  </button>
-                </div>
+                <button type="button" onClick={() => remove(i)} title="Quitar" style={{ ...iconButtonStyle, color: "#c2185b", flexShrink: 0 }}>
+                  ×
+                </button>
               </div>
             ))}
           </div>
