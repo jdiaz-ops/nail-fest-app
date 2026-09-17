@@ -55,6 +55,35 @@ export default function HomepageBrandLogosEditor({
     setOverIndex(null);
   }
 
+  // Checkbox multi-select + "mover arriba/abajo" — drag-and-drop handles
+  // fine positioning one at a time; this handles the "grab 15 of these
+  // and send them all to the front" case in one click instead of 15
+  // separate drags. Keyed by url (stable across reorders), not index.
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  function toggleSelected(url: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(url)) next.delete(url);
+      else next.add(url);
+      return next;
+    });
+  }
+
+  // Pulls every selected logo out (keeping their relative order to each
+  // other) and drops the whole group at the front or back of the list;
+  // everyone else keeps their existing relative order too. Selection
+  // itself is left alone afterward — grab another batch and move again,
+  // or move the same batch again, without re-selecting.
+  function moveSelected(edge: "top" | "bottom") {
+    setLogos((prev) => {
+      const chosen = prev.filter((l) => selected.has(l.url));
+      const rest = prev.filter((l) => !selected.has(l.url));
+      if (chosen.length === 0) return prev;
+      return edge === "top" ? [...chosen, ...rest] : [...rest, ...chosen];
+    });
+  }
+
   async function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
     if (files.length === 0) return;
@@ -101,7 +130,16 @@ export default function HomepageBrandLogosEditor({
   }
 
   function remove(index: number) {
+    const removedUrl = logos[index]?.url;
     setLogos((prev) => prev.filter((_, i) => i !== index));
+    if (removedUrl) {
+      setSelected((prev) => {
+        if (!prev.has(removedUrl)) return prev;
+        const next = new Set(prev);
+        next.delete(removedUrl);
+        return next;
+      });
+    }
   }
 
   async function save() {
@@ -148,8 +186,28 @@ export default function HomepageBrandLogosEditor({
       {logos.length > 0 && (
         <div style={{ marginTop: 16, marginBottom: 16 }}>
           <p style={{ fontSize: 12, color: "#5b5f6b", margin: "0 0 8px" }}>
-            {logos.length} logos — arrastra del ⠿ para reordenar, el nombre es solo para que los reconozcas aquí.
+            {logos.length} logos — arrastra del ⠿ para mover uno, o marca varios y usa los botones para moverlos todos de una vez. El
+            nombre es solo para que los reconozcas aquí.
           </p>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, flexWrap: "wrap" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: "#5b5f6b" }}>
+              <input
+                type="checkbox"
+                checked={logos.length > 0 && selected.size === logos.length}
+                onChange={(e) => setSelected(e.target.checked ? new Set(logos.map((l) => l.url)) : new Set())}
+              />
+              Seleccionar todos
+            </label>
+            <span style={{ fontSize: 12.5, color: "#5b5f6b" }}>{selected.size} seleccionados</span>
+            <button type="button" onClick={() => moveSelected("top")} disabled={selected.size === 0} style={toolbarButtonStyle}>
+              ↑ Mover arriba
+            </button>
+            <button type="button" onClick={() => moveSelected("bottom")} disabled={selected.size === 0} style={toolbarButtonStyle}>
+              ↓ Mover abajo
+            </button>
+          </div>
+
           <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 480, overflowY: "auto", paddingRight: 4 }}>
             {logos.map((logo, i) => (
               <div
@@ -167,12 +225,18 @@ export default function HomepageBrandLogosEditor({
                   alignItems: "center",
                   gap: 10,
                   border: overIndex === i && dragIndex !== null && dragIndex !== i ? "1px solid #12966b" : "1px solid #e3e1dc",
-                  background: overIndex === i && dragIndex !== null && dragIndex !== i ? "#f0faf6" : "#fff",
+                  background: selected.has(logo.url) ? "#eef6ff" : overIndex === i && dragIndex !== null && dragIndex !== i ? "#f0faf6" : "#fff",
                   borderRadius: 8,
                   padding: 8,
                   opacity: dragIndex === i ? 0.4 : 1,
                 }}
               >
+                <input
+                  type="checkbox"
+                  checked={selected.has(logo.url)}
+                  onChange={() => toggleSelected(logo.url)}
+                  style={{ flexShrink: 0 }}
+                />
                 <span
                   draggable
                   onDragStart={() => setDragIndex(i)}
@@ -226,4 +290,15 @@ const iconButtonStyle: React.CSSProperties = {
   cursor: "pointer",
   fontSize: 14,
   lineHeight: 1,
+};
+
+const toolbarButtonStyle: React.CSSProperties = {
+  padding: "6px 12px",
+  border: "1px solid #e3e1dc",
+  borderRadius: 6,
+  background: "#fff",
+  cursor: "pointer",
+  fontSize: 12.5,
+  fontWeight: 600,
+  color: "#17181c",
 };
