@@ -896,6 +896,12 @@ button.primary:disabled {
 .homepage-gallery-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
+  /* Grid items stretch to the row's tallest item by default — with no
+     fixed tile height any more (see .homepage-gallery-tile's own
+     comment), that would leave blank space under any photo shorter
+     than its row-mate instead of the tile just ending where its own
+     image does. */
+  align-items: start;
   gap: 10px;
   max-width: 1280px;
   margin: 0 auto;
@@ -909,14 +915,23 @@ button.primary:disabled {
   }
 }
 .homepage-gallery-tile {
-  aspect-ratio: 1;
-  overflow: hidden;
   border-radius: 10px;
+  /* No aspect-ratio here on purpose — forcing every tile to a perfect
+     square and cropping with object-fit:cover was slicing off whatever
+     didn't fit, which is exactly what was cutting the caption text at
+     the bottom of each photo (reported as text cut off, independent of
+     how big the row was — a crop chops the same PERCENTAGE of the
+     image no matter the tile's pixel size, so shrinking the row alone
+     never fixed it). The image's own natural ratio drives the tile's
+     height instead — nothing is ever cropped, so whatever the photo
+     itself shows (including any text baked into it) always shows
+     whole. Tiles land uneven only if the uploaded photos themselves
+     have different proportions from each other. */
+  overflow: hidden;
 }
 .homepage-gallery-tile img {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
+  height: auto;
   display: block;
 }
 
