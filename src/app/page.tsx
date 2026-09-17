@@ -24,6 +24,7 @@ export default async function HomePage() {
   const hasMedia = Boolean(orgSettings.homepageVideoUrl || orgSettings.homepageImageUrl);
 
   return (
+    <>
     <main
       style={{
         position: "relative",
@@ -178,5 +179,34 @@ export default async function HomePage() {
         )}
       </div>
     </main>
+
+    {/* Photo gallery — square tiles, already fully designed by whoever
+        made them (photo + caption baked in); this just lays them out.
+        Empty array = section doesn't render, same as the hero above. */}
+    {orgSettings.homepageGalleryImageUrls.length > 0 && (
+      <section className="homepage-gallery-grid">
+        {orgSettings.homepageGalleryImageUrls.map((url, i) => (
+          <div className="homepage-gallery-tile" key={url + i}>
+            {/* eslint-disable-next-line @next/next/no-img-element -- admin-uploaded gallery photo, arbitrary Blob URL */}
+            <img src={url} alt="" />
+          </div>
+        ))}
+      </section>
+    )}
+
+    {/* Brand/sponsor logo wall — plain white tiles, logo centered via
+        object-fit: contain (unlike the gallery above, these vary in
+        aspect ratio and must never crop). */}
+    {orgSettings.homepageBrandLogos.length > 0 && (
+      <section className="homepage-brand-logo-grid">
+        {orgSettings.homepageBrandLogos.map((logo, i) => (
+          <div className="homepage-brand-logo-tile" key={logo.url + i}>
+            {/* eslint-disable-next-line @next/next/no-img-element -- admin-uploaded brand logo, arbitrary Blob URL */}
+            <img src={logo.url} alt={logo.name} />
+          </div>
+        ))}
+      </section>
+    )}
+    </>
   );
 }

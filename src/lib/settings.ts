@@ -2,6 +2,19 @@ import { db } from "@/lib/db";
 
 export const ORG_SETTINGS_ID = "singleton";
 
+// OrgSettings.homepageBrandLogos is stored as Json (Prisma.JsonValue) —
+// this is the one place that trusts it back into the real shape, rather
+// than every reader re-guessing it. Malformed/legacy data reads as
+// empty, never throws — same "never let a bad DB value break a page
+// render" posture as everything else reading OrgSettings.
+function parseBrandLogos(value: unknown): { url: string; name: string }[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(
+    (v): v is { url: string; name: string } =>
+      typeof v === "object" && v !== null && typeof (v as Record<string, unknown>).url === "string" && typeof (v as Record<string, unknown>).name === "string"
+  );
+}
+
 export interface OrgSettingsValue {
   name: string;
   timezone: string;
@@ -22,6 +35,8 @@ export interface OrgSettingsValue {
   homepageVideoUrl: string | null;
   homepageTagline: string | null;
   homepageCtaLabel: string;
+  homepageGalleryImageUrls: string[];
+  homepageBrandLogos: { url: string; name: string }[];
   linksPageImageUrl: string | null;
   linksPageVideoUrl: string | null;
 }
@@ -44,6 +59,8 @@ const DEFAULTS: OrgSettingsValue = {
   homepageVideoUrl: null,
   homepageTagline: null,
   homepageCtaLabel: "Conseguir entrada gratis",
+  homepageGalleryImageUrls: [],
+  homepageBrandLogos: [],
   linksPageImageUrl: null,
   linksPageVideoUrl: null,
 };
@@ -72,6 +89,8 @@ export async function getOrgSettings(): Promise<OrgSettingsValue> {
     homepageVideoUrl: row.homepageVideoUrl,
     homepageTagline: row.homepageTagline,
     homepageCtaLabel: row.homepageCtaLabel,
+    homepageGalleryImageUrls: row.homepageGalleryImageUrls,
+    homepageBrandLogos: parseBrandLogos(row.homepageBrandLogos),
     linksPageImageUrl: row.linksPageImageUrl,
     linksPageVideoUrl: row.linksPageVideoUrl,
   };
@@ -101,6 +120,8 @@ export async function updateOrgSettings(patch: Partial<OrgSettingsValue>): Promi
     homepageVideoUrl: row.homepageVideoUrl,
     homepageTagline: row.homepageTagline,
     homepageCtaLabel: row.homepageCtaLabel,
+    homepageGalleryImageUrls: row.homepageGalleryImageUrls,
+    homepageBrandLogos: parseBrandLogos(row.homepageBrandLogos),
     linksPageImageUrl: row.linksPageImageUrl,
     linksPageVideoUrl: row.linksPageVideoUrl,
   };

@@ -2,6 +2,8 @@ import { getOrgSettings } from "@/lib/settings";
 import { getNextEvent } from "@/lib/nextEvent";
 import { requirePageUser } from "@/lib/auth/guard";
 import HomepageEditorForm from "./HomepageEditorForm";
+import HomepageGalleryEditor from "./HomepageGalleryEditor";
+import HomepageBrandLogosEditor from "./HomepageBrandLogosEditor";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +29,8 @@ export default async function AdminHomepagePage() {
         initialCtaLabel={orgSettings.homepageCtaLabel}
         nextEventLabel={nextEvent ? `${nextEvent.name} — ${nextEvent.city}` : null}
       />
+      <HomepageGalleryEditor initialUrls={orgSettings.homepageGalleryImageUrls} />
+      <HomepageBrandLogosEditor initialLogos={orgSettings.homepageBrandLogos} />
     </div>
   );
 }

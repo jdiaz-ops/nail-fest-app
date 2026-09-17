@@ -1284,6 +1284,28 @@ model OrgSettings {
   homepageVideoUrl String?
   homepageTagline  String?
   homepageCtaLabel String  @default("Conseguir entrada gratis")
+  // A second, optional section below the hero — a grid of square photos
+  // (4-across on desktop, 2x2 on mobile; see src/app/page.tsx). Ordered
+  // (upload order = display order), admin-managed from the same
+  // /admin/homepage screen. Unlike homepageImageUrl these already come
+  // fully designed (photo + caption baked in by whoever made them) — this
+  // app doesn't overlay any text of its own, it just lays the images out
+  // in a grid. Empty array = section doesn't render at all, same
+  // "nothing uploaded yet = nothing shown" reasoning as the hero media.
+  homepageGalleryImageUrls String[] @default([])
+
+  // A third, optional section — a logo wall of sponsor/partner brands.
+  // Json (not String[] like the gallery above) because each entry needs
+  // TWO fields, not just a URL: `name` is never shown on the page (the
+  // logo image speaks for itself there) but is what makes the admin
+  // editor's list usable — without it, "which of these 40 near-identical
+  // white squares is Dyson" is unanswerable once you've scrolled past the
+  // upload. Shape: {url: string; name: string}[], same upload-order-is-
+  // display-order and empty-means-hidden rules as the gallery above.
+  // Uploaded and managed one logo at a time (see HomepageBrandLogosEditor.
+  // tsx) — a brand wall grows a handful of logos at a time in practice,
+  // never a bulk import.
+  homepageBrandLogos Json @default("[]")
 
   // nailfest.co/links (src/app/links/page.tsx) — editable from the same
   // /admin/links screen as the LinkPageLink list itself. Same shape and

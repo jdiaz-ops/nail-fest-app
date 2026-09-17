@@ -39,6 +39,12 @@ const patchSchema = z
     homepageVideoUrl: z.string(),
     homepageTagline: z.string(),
     homepageCtaLabel: z.string().min(1),
+    // Photo-gallery grid and brand-logo wall, both below the hero — see
+    // OrgSettings.homepageGalleryImageUrls/homepageBrandLogos's own
+    // schema comments. Arrays are a full replace, not a clear-with-"",
+    // since the editor forms always send the complete current list.
+    homepageGalleryImageUrls: z.array(z.string()),
+    homepageBrandLogos: z.array(z.object({ url: z.string(), name: z.string() })),
     // nailfest.co/links (/admin/links) — see OrgSettings.linksPageImageUrl's
     // own schema comment. Same "" = clear, mutually-exclusive-by-form
     // reasoning as the homepage fields above.
