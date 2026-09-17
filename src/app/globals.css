@@ -979,3 +979,21 @@ button.primary:disabled {
   max-height: 100%;
   object-fit: contain;
 }
+
+.homepage-closing-text {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 8px 24px 56px;
+  text-align: center;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ink);
+  /* Respects the line breaks the admin typed, no rich-text editor needed. */
+  white-space: pre-line;
+}
+@media (min-width: 720px) {
+  .homepage-closing-text {
+    padding: 8px 32px 72px;
+    font-size: 16px;
+  }
+}

@@ -4,6 +4,7 @@ import { requirePageUser } from "@/lib/auth/guard";
 import HomepageEditorForm from "./HomepageEditorForm";
 import HomepageGalleryEditor from "./HomepageGalleryEditor";
 import HomepageBrandLogosEditor from "./HomepageBrandLogosEditor";
+import HomepageClosingTextEditor from "./HomepageClosingTextEditor";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,7 @@ export default async function AdminHomepagePage() {
       />
       <HomepageGalleryEditor initialUrls={orgSettings.homepageGalleryImageUrls} />
       <HomepageBrandLogosEditor initialLogos={orgSettings.homepageBrandLogos} initialTitle={orgSettings.homepageBrandLogosTitle} />
+      <HomepageClosingTextEditor initialText={orgSettings.homepageClosingText} />
     </div>
   );
 }

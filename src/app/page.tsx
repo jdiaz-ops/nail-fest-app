@@ -212,6 +212,14 @@ export default async function HomePage() {
         </section>
       </>
     )}
+
+    {/* Closing text — the very last thing on the page, below the brand
+        logo wall. Plain text, no rich formatting; line breaks are
+        preserved via CSS (white-space: pre-line) instead of a markdown
+        renderer. */}
+    {orgSettings.homepageClosingText && (
+      <p className="homepage-closing-text">{orgSettings.homepageClosingText}</p>
+    )}
     </>
   );
 }

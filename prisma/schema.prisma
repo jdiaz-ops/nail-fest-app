@@ -1311,6 +1311,12 @@ model OrgSettings {
   // same as every other optional homepage text field here.
   homepageBrandLogosTitle String?
 
+  // A closing text block at the very bottom of the page, below the brand
+  // logo wall (currently the last section) — free-form paragraph(s), no
+  // rich text, rendered with line breaks preserved. Null/empty = nothing
+  // rendered, same convention as every other optional homepage field here.
+  homepageClosingText String?
+
   // nailfest.co/links (src/app/links/page.tsx) — editable from the same
   // /admin/links screen as the LinkPageLink list itself. Same shape and
   // same mutual-exclusivity reasoning as homepageImageUrl/homepageVideoUrl

@@ -47,6 +47,9 @@ const patchSchema = z
     homepageBrandLogos: z.array(z.object({ url: z.string(), name: z.string() })),
     // "" = clear, same convention as homepageTagline above.
     homepageBrandLogosTitle: z.string(),
+    // Closing text block at the very end of the page — "" = clear, same
+    // convention as every other optional homepage text field above.
+    homepageClosingText: z.string(),
     // nailfest.co/links (/admin/links) — see OrgSettings.linksPageImageUrl's
     // own schema comment. Same "" = clear, mutually-exclusive-by-form
     // reasoning as the homepage fields above.
@@ -80,6 +83,7 @@ export async function POST(req: NextRequest) {
     homepageVideoUrl,
     homepageTagline,
     homepageBrandLogosTitle,
+    homepageClosingText,
     linksPageImageUrl,
     linksPageVideoUrl,
     clarityProjectId,
@@ -97,6 +101,7 @@ export async function POST(req: NextRequest) {
     ...(homepageVideoUrl !== undefined ? { homepageVideoUrl: homepageVideoUrl || null } : {}),
     ...(homepageTagline !== undefined ? { homepageTagline: homepageTagline || null } : {}),
     ...(homepageBrandLogosTitle !== undefined ? { homepageBrandLogosTitle: homepageBrandLogosTitle || null } : {}),
+    ...(homepageClosingText !== undefined ? { homepageClosingText: homepageClosingText || null } : {}),
     ...(linksPageImageUrl !== undefined ? { linksPageImageUrl: linksPageImageUrl || null } : {}),
     ...(linksPageVideoUrl !== undefined ? { linksPageVideoUrl: linksPageVideoUrl || null } : {}),
   });

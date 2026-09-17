@@ -38,6 +38,7 @@ export interface OrgSettingsValue {
   homepageGalleryImageUrls: string[];
   homepageBrandLogos: { url: string; name: string }[];
   homepageBrandLogosTitle: string | null;
+  homepageClosingText: string | null;
   linksPageImageUrl: string | null;
   linksPageVideoUrl: string | null;
 }
@@ -63,6 +64,7 @@ const DEFAULTS: OrgSettingsValue = {
   homepageGalleryImageUrls: [],
   homepageBrandLogos: [],
   homepageBrandLogosTitle: null,
+  homepageClosingText: null,
   linksPageImageUrl: null,
   linksPageVideoUrl: null,
 };
@@ -94,6 +96,7 @@ export async function getOrgSettings(): Promise<OrgSettingsValue> {
     homepageGalleryImageUrls: row.homepageGalleryImageUrls,
     homepageBrandLogos: parseBrandLogos(row.homepageBrandLogos),
     homepageBrandLogosTitle: row.homepageBrandLogosTitle,
+    homepageClosingText: row.homepageClosingText,
     linksPageImageUrl: row.linksPageImageUrl,
     linksPageVideoUrl: row.linksPageVideoUrl,
   };
@@ -126,6 +129,7 @@ export async function updateOrgSettings(patch: Partial<OrgSettingsValue>): Promi
     homepageGalleryImageUrls: row.homepageGalleryImageUrls,
     homepageBrandLogos: parseBrandLogos(row.homepageBrandLogos),
     homepageBrandLogosTitle: row.homepageBrandLogosTitle,
+    homepageClosingText: row.homepageClosingText,
     linksPageImageUrl: row.linksPageImageUrl,
     linksPageVideoUrl: row.linksPageVideoUrl,
   };
