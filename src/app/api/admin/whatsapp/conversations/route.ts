@@ -22,14 +22,25 @@ export async function GET(req: NextRequest) {
       ? { assignedToId: auth.user.id }
       : undefined;
 
+  // select, not include — this list only ever renders a handful of
+  // fields per row, but this endpoint is polled every 30s the whole time
+  // the Bandeja is open (see WhatsAppInboxList.tsx). `include: { person:
+  // true }` was pulling every column on `person` (all the phone/consent
+  // fields from the CRM cleanup) on every single poll — real, continuous
+  // Postgres egress for data this list never displays.
   const conversations = await db.whatsAppConversation.findMany({
     where,
     orderBy: [{ lastInboundAt: "desc" }, { updatedAt: "desc" }],
     take: 100,
-    include: {
-      person: true,
-      assignedTo: true,
-      messages: { orderBy: { createdAt: "desc" }, take: 1 },
+    select: {
+      id: true,
+      phone: true,
+      unreadCount: true,
+      lastInboundAt: true,
+      updatedAt: true,
+      person: { select: { firstName: true, lastName: true, email: true } },
+      assignedTo: { select: { name: true, username: true } },
+      messages: { orderBy: { createdAt: "desc" }, take: 1, select: { body: true, direction: true, createdAt: true } },
     },
   });
 

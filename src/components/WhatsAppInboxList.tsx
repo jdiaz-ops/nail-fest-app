@@ -85,7 +85,12 @@ export default function WhatsAppInboxList({ basePath = "/admin/crm/whatsapp/band
 
   useEffect(() => {
     load(filter);
-    const poll = setInterval(() => load(filter), 12000);
+    // 30s, not the original 12s — this poll runs the whole time the
+    // Bandeja is open (often all day, every workday), and each request
+    // hits Postgres; 12s was burning through Neon's monthly network-
+    // transfer allowance for no real UX benefit (see the conversations
+    // route's own comment on the matching payload trim).
+    const poll = setInterval(() => load(filter), 30000);
     const onRefresh = () => load(filter);
     window.addEventListener("whatsapp-inbox-refresh", onRefresh);
     return () => {
