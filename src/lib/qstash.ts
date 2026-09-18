@@ -199,6 +199,41 @@ export async function scheduleZoomAccessReminder(registrationId: string, at: Dat
   }
 }
 
+// --- Comprobantes retry (see lib/comprobantes/send.ts) -----------------
+//
+// One publish per failed attempt, `retries` set generously above
+// MAX_INTENTOS so QStash's own retry budget is never what stops this —
+// the callback route's own intentos-based decision is (returns 500 to
+// ask for another QStash redelivery, 200 once it's given up or
+// succeeded). Same best-effort contract as every schedule* function
+// above: null means QStash isn't configured, and the caller
+// (lib/comprobantes/send.ts's call sites) just leaves the row ENVIANDO —
+// a person can still retry it by hand from "Enviados recientemente".
+
+export function comprobanteRetryCallbackUrl(): string {
+  return `${process.env.APP_BASE_URL || ""}/api/comprobantes/reintentar`;
+}
+
+/** Schedules the next send attempt for a comprobante ASAP (no notBefore —
+ * QStash's own backoff between its retries is enough spacing; this is
+ * only called once per failure, from lib/comprobantes/send.ts's own
+ * call sites, not looped by hand). */
+export async function scheduleComprobanteRetry(comprobanteId: string): Promise<string | null> {
+  const client = getClient();
+  if (!client) return null;
+  try {
+    const result = await client.publishJSON({
+      url: comprobanteRetryCallbackUrl(),
+      body: { comprobanteId },
+      retries: 8,
+    });
+    return result.messageId;
+  } catch (err) {
+    console.error("qstash: failed to schedule comprobante retry", comprobanteId, err);
+    return null;
+  }
+}
+
 /** Verifies an inbound QStash callback's signature against this app's own
  * signing keys — shared by every route QStash calls back into (the
  * scheduled-send route and both chunk-continuation routes) so there's one

@@ -1458,6 +1458,84 @@ model AdminUser {
   sessions     AdminSession[]
   assignedConversations WhatsAppConversation[]
   whatsappNotes         WhatsAppNote[]
+  comprobantes          Comprobante[]
+}
+
+// ---------------------------------------------------------------------------
+// Comprobantes — "toma la foto del soporte, la app solo captura y envía"
+// (see docs/COMPROBANTES.md). This app never reads the image or touches
+// accounting itself; a separate Google Apps Script backend ("backend
+// contable") does the OCR, the bank-statement cross-reference, and the
+// Drive filing — lib/comprobantes/contabilidadClient.ts is the only thing
+// that talks to it. One row per submission attempt from this app; the
+// photos/PDF themselves live in Vercel Blob (the safe copy this row
+// points at) AND get embedded as base64 in the outbound call to the
+// backend, since Apps Script Web Apps can't fetch an arbitrary URL back.
+// Deliberately has NO eventId — an explicit ask: a comprobante can happen
+// at an event, on the street, or at a restaurant with a client, and
+// tying it to "whichever event's scanner you happened to be inside" would
+// misrepresent what it actually is. It's reachable from inside the
+// per-event scanner app purely for convenience (staff already have their
+// phone out there), not because it belongs to that event.
+model Comprobante {
+  id           String            @id @default(cuid())
+  user         AdminUser         @relation(fields: [userId], references: [id])
+  userId       String
+  // The Pagos-sin-soporte row this came from (Sección A) — null when it
+  // came from "+ Nuevo comprobante" (Sección B: Bold, efectivo, un
+  // reembolso, o una alerta del banco que aún no ha llegado). This is the
+  // backend's own pendiente id (e.g. "BC-20260912-85000-7f3a"), not a
+  // foreign key into anything in THIS database — the backend contable is
+  // the source of truth for pendientes, this app never stores them.
+  pendienteId  String?
+  medio        ComprobanteMedio
+  // Free text, defaults to the submitting user's own name client-side —
+  // kept as a plain string (not a relation) since a real reembolso is
+  // sometimes paid by someone who never logs into this app at all.
+  pagadoPor    String
+  nota         String?
+  // Vercel Blob URLs, in the order captured/picked — up to 5 images, or
+  // one PDF (see the client-side cap; not re-enforced here, this row just
+  // stores whatever was actually uploaded).
+  archivos     String[]
+  estado       ComprobanteEstado @default(ENVIANDO)
+  // The backend's own Drive file ids for this comprobante, once it
+  // confirms receipt — null until then.
+  driveFileIds String[]
+  // How many send attempts this row has gone through (the first inline
+  // attempt plus every QStash retry) — surfaced in "Enviados
+  // recientemente" mostly for debugging a stuck ERROR row, not shown to
+  // the end user as a number.
+  intentos     Int               @default(0)
+  ultimoError  String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@index([userId, createdAt])
+}
+
+enum ComprobanteMedio {
+  TARJETA_2832
+  BOLD
+  EFECTIVO
+  REEMBOLSO
+  OTRO
+}
+
+// ENVIANDO: created here, not yet confirmed by the backend (first attempt
+// in flight or a QStash retry pending). RECIBIDO: the backend stored it
+// but hasn't matched it to a bank movement yet. ENLAZADO: matched — the
+// end state for a comprobante that came from Sección A. EN_REVISION: the
+// backend couldn't find a matching payment. ERROR: every retry (up to
+// ~5, see lib/qstash.ts's own comprobante-retry comment) failed, or the
+// backend said the token was invalid (never retried in that case) — the
+// one state with a manual "reintentar" button in the UI.
+enum ComprobanteEstado {
+  ENVIANDO
+  RECIBIDO
+  ENLAZADO
+  EN_REVISION
+  ERROR
 }
 
 // ---------------------------------------------------------------------------

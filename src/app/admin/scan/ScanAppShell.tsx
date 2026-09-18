@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { formatDateInTz } from "@/lib/dateFormat";
 import { ScanAppProvider, useScanApp, type EventInfo } from "./ScanAppContext";
-import { DashboardIcon, ScannerIcon, ListIcon, HomeIcon, ChatIcon } from "./icons";
+import { DashboardIcon, ScannerIcon, ListIcon, HomeIcon, ChatIcon, ReceiptIcon } from "./icons";
 
 export default function ScanAppShell({
   event,
@@ -176,6 +176,28 @@ function BottomTabs() {
         >
           <ChatIcon />
           <span style={{ fontSize: 11, fontWeight: pathname.startsWith(`${base}/bandeja`) ? 700 : 400 }}>Bandeja</span>
+        </Link>
+      )}
+      {role === "ADMIN" && (
+        // Lives under this event's own URL purely because that's where
+        // people already have their phone out — Comprobante itself has
+        // NO eventId (see its own schema comment): a receipt from the
+        // street or a restaurant is exactly as valid as one from here.
+        <Link
+          href={`${base}/comprobantes`}
+          style={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 2,
+            padding: "10px 0 8px",
+            textDecoration: "none",
+            color: pathname.startsWith(`${base}/comprobantes`) ? "var(--accent-ink)" : "#8a8478",
+          }}
+        >
+          <ReceiptIcon />
+          <span style={{ fontSize: 11, fontWeight: pathname.startsWith(`${base}/comprobantes`) ? 700 : 400 }}>Comprobantes</span>
         </Link>
       )}
     </nav>
