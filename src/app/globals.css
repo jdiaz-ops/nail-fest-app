@@ -354,6 +354,18 @@ button.primary:disabled {
   }
 }
 
+/* Bigger tap target for the two CTAs a phone visitor actually sees (the
+   sidebar's own CTA is desktop-only already, ≥900px, so it's untouched)
+   — scoped to these two wrappers rather than button.primary itself, which
+   is shared with every other form/modal button in the app. */
+@media (max-width: 899px) {
+  .event-inline-cta button.primary,
+  .event-floating-cta button.primary {
+    padding: 16px 22px;
+    font-size: 17px;
+  }
+}
+
 /* Event.landingBlocks (LandingBlocksContent.tsx) — the image/gallery
    block types. Stay within the same column the text/FAQ blocks and the
    classic `description` already render in, no full-bleed breakout. */
