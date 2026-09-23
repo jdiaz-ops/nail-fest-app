@@ -16,7 +16,7 @@ import { Section, EmptyNote, ScrollBox, BarList, StatCard } from "../StatsUI";
 // own comment for what's still door-side-only (the live per-scan log,
 // the emergency CSV export).
 export default async function EventDecisionStats({ eventId }: { eventId: string }) {
-  const [event, orgSettings, ticketAgg, abandonedCount, confirmedRegs, checkedInAgg, scanCounts, byTicketType, checkInScans, reachedEmailStep, pickedTicketType, landingViewsByCountry] = await Promise.all([
+  const [event, orgSettings, ticketAgg, abandonedCount, confirmedRegs, checkedInAgg, scanCounts, byTicketType, checkInScans, reachedEmailStep, pickedTicketType, landingViewsByCountry, landingSinceAgg] = await Promise.all([
     db.event.findUnique({ where: { id: eventId } }),
     getOrgSettings(),
     db.registration.aggregate({ where: { eventId, status: "CONFIRMED" }, _sum: { ticketCount: true } }),
@@ -67,6 +67,13 @@ export default async function EventDecisionStats({ eventId }: { eventId: string 
     // aterrizajes-vs-inscripciones ratio per country without needing an
     // Ads Manager export.
     db.landingView.groupBy({ by: ["country"], where: { eventId }, _count: { _all: true } }),
+    // LandingView tracking only started existing at a point in this
+    // event's life — comparing it against EVERY registration ever (days/
+    // weeks of campaign) produced nonsense like "1617% conversion" the
+    // first time this shipped. Only registrations from the same window
+    // LandingView has actually been counting are a fair comparison; see
+    // countryFunnelRows below.
+    db.landingView.aggregate({ where: { eventId }, _min: { createdAt: true } }),
   ]);
 
   // Proyección de asistencia real — respuestas al poll de WhatsApp
@@ -158,13 +165,24 @@ export default async function EventDecisionStats({ eventId }: { eventId: string 
   // realmente ABREN la página (LandingView, ver [eventSlug]/page.tsx) vs
   // cuántos de esos terminan inscribiéndose. Joined by ISO2 (both sides
   // store the raw code), name resolved only for display.
+  //
+  // Only counts registrations from the SAME window LandingView has been
+  // tracking (landingSince onward) — comparing a few hours of landings
+  // against weeks of total registrations is exactly what produced
+  // "1617% conversion" the first time this shipped. Before landingSince
+  // exists (no landing views yet), this is empty rather than misleading.
+  const landingSince = landingSinceAgg._min.createdAt;
   const landingCountByIso = new Map<string, number>();
   for (const row of landingViewsByCountry) {
     if (row.country) landingCountByIso.set(row.country, row._count._all);
   }
   const regCountByIso = new Map<string, number>();
-  for (const r of confirmedRegs) {
-    if (r.person.country) regCountByIso.set(r.person.country, (regCountByIso.get(r.person.country) ?? 0) + 1);
+  if (landingSince) {
+    for (const r of confirmedRegs) {
+      if (r.person.country && r.createdAt >= landingSince) {
+        regCountByIso.set(r.person.country, (regCountByIso.get(r.person.country) ?? 0) + 1);
+      }
+    }
   }
   const countryFunnelRows = Array.from(new Set([...landingCountByIso.keys(), ...regCountByIso.keys()]))
     .map((iso) => {
@@ -310,7 +328,11 @@ export default async function EventDecisionStats({ eventId }: { eventId: string 
 
       <Section
         title="Aterrizajes vs inscripciones por país"
-        note="Cuántos abren la página vs cuántos de esos se inscriben, por país — nuestra propia versión del desglose por país de Ads Manager, sin depender de exportarlo. Solo cuenta aterrizajes desde que existe esta métrica, así que un evento viejo puede verse incompleto aquí."
+        note={
+          landingSince
+            ? `Cuántos abren la página vs cuántos de esos se inscriben, por país — nuestra propia versión del desglose por país de Ads Manager, sin depender de exportarlo. Solo compara desde el ${formatDateInTz(landingSince, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }, timezone, language)} (cuando empezó a existir esta métrica) — inscripciones de antes no cuentan aquí, para que la conversión no salga inflada.`
+            : "Cuántos abren la página vs cuántos de esos se inscriben, por país — nuestra propia versión del desglose por país de Ads Manager, sin depender de exportarlo. Aún no hay suficiente historial."
+        }
       >
         {countryFunnelRows.length === 0 ? (
           <EmptyNote text="Aún no hay aterrizajes registrados para este evento." />
