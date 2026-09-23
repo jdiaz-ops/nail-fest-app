@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { getOrgSettings } from "@/lib/settings";
 import { formatDateInTz } from "@/lib/dateFormat";
 import { bucketDates, fillDayRange, bucketHours, channelKey, capitalize, topN } from "@/lib/eventStatsHelpers";
+import { findCountry } from "@/lib/worldCountries";
 import { Section, EmptyNote, ScrollBox, BarList, StatCard } from "../StatsUI";
 
 // Planning numbers for THIS event — before it happens (¿va bien la venta?
@@ -32,7 +33,7 @@ export default async function EventDecisionStats({ eventId }: { eventId: string 
         fbclid: true,
         ttclid: true,
         gclid: true,
-        person: { select: { city: true, profession: true } },
+        person: { select: { city: true, profession: true, country: true } },
       },
     }),
     // Everything below mirrors EventStatsPanel.tsx's own queries — same
@@ -127,9 +128,17 @@ export default async function EventDecisionStats({ eventId }: { eventId: string 
     100
   ).map((r) => ({ ...r, label: capitalize(r.label) }));
 
-  // Ciudad y profesión de los inscritos — de dónde viene el público real y
-  // a qué se dedica, para decidir próxima sede y armar el pitch a
-  // patrocinadores.
+  // País, ciudad y profesión de los inscritos — de dónde viene el público
+  // real y a qué se dedica, para decidir próxima sede y armar el pitch a
+  // patrocinadores. País antes que ciudad porque es el primer corte que
+  // importa para un evento con pauta fuera de Colombia (¿vale la pena
+  // seguir invirtiendo en ese país, o toda esa audiencia es local?) —
+  // mapeado a nombre legible (Person.country es ISO2), mismo helper que
+  // ya usa el selector de país en /admin/crm/personas.
+  const countryRows = topN(
+    confirmedRegs.map((r) => (r.person.country ? findCountry(r.person.country)?.name ?? r.person.country : null)),
+    8
+  );
   const cityRows = topN(
     confirmedRegs.map((r) => r.person.city),
     8
@@ -254,6 +263,15 @@ export default async function EventDecisionStats({ eventId }: { eventId: string 
       </Section>
 
       <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
+        <div style={{ flex: "1 1 260px", minWidth: 240 }}>
+          <Section title="País" note="Para decidir en qué países seguir invirtiendo en pauta.">
+            {countryRows.length === 0 ? (
+              <EmptyNote text="Sin datos de país todavía." />
+            ) : (
+              <BarList rows={countryRows.map((r) => ({ label: r.label, count: r.count, pct: Math.round((r.count / totalConfirmed) * 100) }))} max={totalConfirmed} showPct />
+            )}
+          </Section>
+        </div>
         <div style={{ flex: "1 1 260px", minWidth: 240 }}>
           <Section title="Ciudad" note="Para decidir la próxima sede o a dónde dirigir la pauta.">
             {cityRows.length === 0 ? (
