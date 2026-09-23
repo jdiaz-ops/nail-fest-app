@@ -287,11 +287,7 @@ export default function EventForm({
           </div>
           <div className="field">
             <label>Bajada (opcional)</label>
-            <input
-              value={values.subtitle}
-              onChange={(e) => set("subtitle", e.target.value)}
-              placeholder="Ej: Donde se reúne el mundo de las uñas"
-            />
+            <RichTextEditor value={values.subtitle} onChange={(html) => set("subtitle", html)} />
             <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>
               Sale en la página pública, justo debajo del nombre y antes de la dirección. Déjalo vacío si no aplica.
             </p>

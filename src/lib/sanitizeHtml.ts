@@ -58,6 +58,12 @@ export function sanitizeEventDescription(html: string): string {
       "*": {
         color: [/^#[0-9a-fA-F]{3,8}$/, /^rgb\(.*\)$/],
         "text-align": [/^left$|^center$|^right$|^justify$/],
+        // RichTextEditor.tsx's FontSize toolbar (Pequeño/Grande/Muy
+        // grande) writes this as inline style on a textStyle span — was
+        // missing here entirely, so every font-size choice silently got
+        // stripped back to normal on save, on every field using this
+        // sanitizer (description included), not just the new subtitle.
+        "font-size": [/^\d+(\.\d+)?px$/],
       },
       img: {
         "max-width": [/^100%$/],

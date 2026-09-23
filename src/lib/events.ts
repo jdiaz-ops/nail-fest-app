@@ -89,7 +89,7 @@ export async function createEvent(input: EventInput): Promise<Event> {
     data: {
       slug,
       name: input.name,
-      subtitle: input.subtitle.trim() || null,
+      subtitle: input.subtitle ? sanitizeEventDescription(input.subtitle) : null,
       city: input.city,
       venueName: input.venueName || null,
       venueAddress: input.venueAddress || null,
@@ -120,7 +120,7 @@ export async function updateEvent(id: string, input: EventInput): Promise<Event>
     data: {
       slug,
       name: input.name,
-      subtitle: input.subtitle.trim() || null,
+      subtitle: input.subtitle ? sanitizeEventDescription(input.subtitle) : null,
       city: input.city,
       venueName: input.venueName || null,
       venueAddress: input.venueAddress || null,

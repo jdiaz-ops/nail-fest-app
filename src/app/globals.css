@@ -282,15 +282,24 @@ button.primary:disabled {
   margin: 4px 0;
 }
 
-/* Event.subtitle — optional one-line tagline between the h1 and the
+/* Event.subtitle — optional rich-text tagline between the h1 and the
    venue/address line (see [eventSlug]/page.tsx). Slightly bolder/darker
    than .event-page-meta below it so it reads as part of the headline,
-   not as another metadata line. */
+   not as another metadata line. RichTextEditor.tsx (TipTap) always wraps
+   content in <p>, even a one-liner — reset to browser-default p margins
+   so an admin who does add a paragraph break (vs. the toolbar's own line
+   break) doesn't get a big gap shoving this away from the h1 above it. */
 .event-page-subtitle {
   font-size: 16px;
   font-weight: 500;
   color: var(--ink);
   margin: 0 0 8px;
+}
+.event-page-subtitle p {
+  margin: 0 0 4px;
+}
+.event-page-subtitle p:last-child {
+  margin-bottom: 0;
 }
 
 /* EventRegistration.tsx's own content+sidebar — a single column (sidebar
