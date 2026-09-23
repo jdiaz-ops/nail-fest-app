@@ -1242,6 +1242,16 @@ model OrgSettings {
   // don't want to fill the whole registration form again.
   selfServeResendEnabled Boolean @default(true)
 
+  // Master on/off for the two abandoned-cart reminder emails (see
+  // lib/abandonedCart.ts). Default true — every event keeps sending them
+  // exactly as before this field existed. Turning it off is a real
+  // pause, not just "stop scheduling new ones": both
+  // /api/register/draft (where they're scheduled) and
+  // /api/abandoned-cart/send (where they actually go out) check this,
+  // so flipping it off also silences reminders already queued in
+  // QStash from before the switch was flipped.
+  abandonedCartEmailsEnabled Boolean @default(true)
+
   // The GLOBAL confirmation email template — rich-text HTML from the same
   // TipTap editor as the event description (RichTextEditor.tsx),
   // sanitized before storage same as that. Null (the default — nobody

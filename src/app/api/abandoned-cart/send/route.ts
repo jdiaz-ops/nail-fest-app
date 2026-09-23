@@ -51,6 +51,13 @@ export async function POST(req: NextRequest) {
   if (orgSettings.bannedEmails.includes(registration.person.email)) {
     return NextResponse.json({ ok: true, skipped: true });
   }
+  // The pause switch (/admin/settings/abandoned-cart) — checked here too,
+  // not just at scheduling time in /api/register/draft, so turning it off
+  // also silences reminders already sitting in QStash's queue from
+  // before the switch was flipped, not just new ones going forward.
+  if (!orgSettings.abandonedCartEmailsEnabled) {
+    return NextResponse.json({ ok: true, skipped: true });
+  }
 
   const { subject, text, html } = abandonedCartEmail({
     step,

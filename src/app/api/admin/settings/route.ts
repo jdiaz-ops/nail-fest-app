@@ -17,6 +17,7 @@ const patchSchema = z
     bannedEmails: z.array(z.string().email()),
     cookieConsentEnabled: z.boolean(),
     selfServeResendEnabled: z.boolean(),
+    abandonedCartEmailsEnabled: z.boolean(),
     // "" means "clear it, revert to the original hand-built design" — see
     // lib/confirmationTemplate.ts's fallback chain.
     confirmationEmailHtml: z.string(),

@@ -25,6 +25,7 @@ export interface OrgSettingsValue {
   bannedEmails: string[];
   cookieConsentEnabled: boolean;
   selfServeResendEnabled: boolean;
+  abandonedCartEmailsEnabled: boolean;
   confirmationEmailHtml: string | null;
   confirmationEmailSubject: string | null;
   attachTicketPdf: boolean;
@@ -53,6 +54,7 @@ const DEFAULTS: OrgSettingsValue = {
   bannedEmails: [],
   cookieConsentEnabled: false,
   selfServeResendEnabled: true,
+  abandonedCartEmailsEnabled: true,
   confirmationEmailHtml: null,
   confirmationEmailSubject: null,
   attachTicketPdf: true,
@@ -85,6 +87,7 @@ export async function getOrgSettings(): Promise<OrgSettingsValue> {
     bannedEmails: row.bannedEmails,
     cookieConsentEnabled: row.cookieConsentEnabled,
     selfServeResendEnabled: row.selfServeResendEnabled,
+    abandonedCartEmailsEnabled: row.abandonedCartEmailsEnabled,
     confirmationEmailHtml: row.confirmationEmailHtml,
     confirmationEmailSubject: row.confirmationEmailSubject,
     attachTicketPdf: row.attachTicketPdf,
@@ -118,6 +121,7 @@ export async function updateOrgSettings(patch: Partial<OrgSettingsValue>): Promi
     bannedEmails: row.bannedEmails,
     cookieConsentEnabled: row.cookieConsentEnabled,
     selfServeResendEnabled: row.selfServeResendEnabled,
+    abandonedCartEmailsEnabled: row.abandonedCartEmailsEnabled,
     confirmationEmailHtml: row.confirmationEmailHtml,
     confirmationEmailSubject: row.confirmationEmailSubject,
     attachTicketPdf: row.attachTicketPdf,

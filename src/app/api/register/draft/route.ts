@@ -150,7 +150,12 @@ export async function POST(req: NextRequest) {
       // flaky resolver never silently drops a real reminder.
       isObviouslyDeadEmail(normalizedEmail)
         .then((isDead) => {
-          if (!isDead) {
+          // OrgSettings.abandonedCartEmailsEnabled — the account-wide
+          // pause switch (/admin/settings/abandoned-cart). Checked here
+          // too, not just in /api/abandoned-cart/send, so a paused
+          // account doesn't even bother scheduling QStash messages it's
+          // just going to no-op later.
+          if (!isDead && orgSettings.abandonedCartEmailsEnabled) {
             return scheduleAbandonedCartReminders(created.id);
           }
         })
