@@ -6,7 +6,7 @@ import { attributionFromSearchParams } from "@/lib/utm";
 import CityAutocomplete from "./CityAutocomplete";
 import { isKnownCityLabel } from "@/lib/cityMatch";
 import { suggestEmailCorrection } from "@/lib/emailTypo";
-import { COUNTRY_CODES, GENERIC_PHONE_PLACEHOLDER, GENERIC_ID_PLACEHOLDER } from "@/lib/countryCodes";
+import { COUNTRY_CODES, GENERIC_PHONE_PLACEHOLDER, GENERIC_ID_PLACEHOLDER, stripTrunkZero } from "@/lib/countryCodes";
 import { WORLD_COUNTRIES, findCountry } from "@/lib/worldCountries";
 
 export interface QuestionView {
@@ -188,7 +188,7 @@ export default function RegistrationForm({
     const body = {
       eventSlug,
       email: emailValue,
-      phone: localPhone ? `${phoneCountry.dialCode}${localPhone}` : undefined,
+      phone: localPhone ? `${phoneCountry.dialCode}${stripTrunkZero(localPhone)}` : undefined,
       fullName: usesFirstLast ? undefined : String(fd.get("field_fullName") ?? "").trim() || undefined,
       firstName: usesFirstLast ? String(fd.get("field_firstName") ?? "").trim() || undefined : undefined,
       lastName: usesFirstLast ? String(fd.get("field_lastName") ?? "").trim() || undefined : undefined,
@@ -248,7 +248,7 @@ export default function RegistrationForm({
     const payload: RegisterPayload = {
       eventSlug,
       email,
-      phone: localPhone ? `${phoneCountry.dialCode}${localPhone}` : "",
+      phone: localPhone ? `${phoneCountry.dialCode}${stripTrunkZero(localPhone)}` : "",
       // Only one of fullName or firstName/lastName is ever actually
       // populated below — sending both keys with one blank is fine,
       // /api/register only looks at firstName first, then falls back.

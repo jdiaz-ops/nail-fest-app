@@ -54,3 +54,21 @@ export const COUNTRY_CODES: CountryCodeOption[] = [
 // country nobody's actually verified, just an honest placeholder.
 export const GENERIC_PHONE_PLACEHOLDER = "Número de celular";
 export const GENERIC_ID_PLACEHOLDER = "Documento de identidad";
+
+/**
+ * A leading "0" in a phone number as someone types it — Venezuela's own
+ * "0412 1234567" (see that entry's own comment above), and common enough
+ * elsewhere (UK "0791…", plenty of others) — is a TRUNK PREFIX: how you
+ * dial domestically, never part of the real subscriber number. Prepending
+ * a dial code to a number that still has it (RegistrationForm.tsx does
+ * `${dialCode}${digits}`) produces a wrong E.164 number — for Venezuela,
+ * "+58" + "04121234567" = "+5804121234567" (14 digits, invalid) instead
+ * of the real "+584121234567" (13 digits) — which then can't receive a
+ * WhatsApp confirmation and won't hash-match anything real in Meta's
+ * Custom Audiences. No real mobile subscriber number starts with 0 once
+ * the trunk prefix is gone, so stripping it is safe for every country,
+ * not just Venezuela — this isn't conditional on which one is selected.
+ */
+export function stripTrunkZero(digits: string): string {
+  return digits.replace(/^0+/, "");
+}
