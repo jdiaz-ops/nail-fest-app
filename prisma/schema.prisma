@@ -247,9 +247,31 @@ model Event {
   ticketTypes   TicketType[]
   broadcasts    EmailBroadcast[]
   whatsappBroadcasts WhatsAppBroadcast[]
+  landingViews  LandingView[]
 
   @@index([city])
   @@index([status])
+}
+
+// One row per public landing page load — our own, Meta-independent
+// version of "who's actually reaching this page", so the
+// aterrizajes-vs-inscripciones-por-país comparison (EventDecisionStats.tsx)
+// lives in our own admin instead of only ever being available by
+// exporting Ads Manager's own breakdown. `country` comes from Vercel's
+// own edge geolocation (the `x-vercel-ip-country` request header, see
+// [eventSlug]/page.tsx) — free, no external geo-IP lookup, null off
+// Vercel (local dev) or if Vercel ever omits it for a given request.
+// Deliberately NOT tied to a Person/Registration — this fires before
+// anyone has identified themselves, same reasoning as Meta's own
+// PageView event.
+model LandingView {
+  id        String   @id @default(cuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  country   String?
+  createdAt DateTime @default(now())
+
+  @@index([eventId, country])
 }
 
 // Our previous ticketing platform's own "ticket type" concept, kept even

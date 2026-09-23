@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { headers } from "next/headers";
 import Image from "next/image";
 import { Suspense } from "react";
 import { db } from "@/lib/db";
@@ -47,6 +48,14 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
     // imageDimensions.ts's own comment for why a hardcoded guess broke
     // mobile. Skipped entirely when there's no image at all.
     event.imageUrl ? probeImageDimensions(event.imageUrl) : Promise.resolve(null),
+    // Our own, Meta-independent landing count — see LandingView's own
+    // schema comment. Country from Vercel's edge geolocation, free, no
+    // external lookup. Never let a hiccup here break the actual page —
+    // this is a nice-to-have stat, not something a visitor should ever
+    // see fail as a 500.
+    db.landingView
+      .create({ data: { eventId: event.id, country: headers().get("x-vercel-ip-country") } })
+      .catch(() => null),
   ]);
   const questions: QuestionView[] = checkoutQuestions.map((q) => ({
     key: q.key,

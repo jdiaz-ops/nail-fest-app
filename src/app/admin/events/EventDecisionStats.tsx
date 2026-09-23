@@ -16,7 +16,7 @@ import { Section, EmptyNote, ScrollBox, BarList, StatCard } from "../StatsUI";
 // own comment for what's still door-side-only (the live per-scan log,
 // the emergency CSV export).
 export default async function EventDecisionStats({ eventId }: { eventId: string }) {
-  const [event, orgSettings, ticketAgg, abandonedCount, confirmedRegs, checkedInAgg, scanCounts, byTicketType, checkInScans, reachedEmailStep, pickedTicketType] = await Promise.all([
+  const [event, orgSettings, ticketAgg, abandonedCount, confirmedRegs, checkedInAgg, scanCounts, byTicketType, checkInScans, reachedEmailStep, pickedTicketType, landingViewsByCountry] = await Promise.all([
     db.event.findUnique({ where: { id: eventId } }),
     getOrgSettings(),
     db.registration.aggregate({ where: { eventId, status: "CONFIRMED" }, _sum: { ticketCount: true } }),
@@ -61,6 +61,12 @@ export default async function EventDecisionStats({ eventId }: { eventId: string 
     // many distinct people got at least as far as typing their email."
     db.registration.count({ where: { eventId, status: { not: "CANCELLED" } } }),
     db.registration.count({ where: { eventId, status: { not: "CANCELLED" }, ticketTypeId: { not: null } } }),
+    // Our own, Meta-independent "who's actually landing here" count, by
+    // country — see LandingView's own schema comment. Compared against
+    // confirmedRegs' own person.country below to get a
+    // aterrizajes-vs-inscripciones ratio per country without needing an
+    // Ads Manager export.
+    db.landingView.groupBy({ by: ["country"], where: { eventId }, _count: { _all: true } }),
   ]);
 
   // Proyección de asistencia real — respuestas al poll de WhatsApp
@@ -146,6 +152,34 @@ export default async function EventDecisionStats({ eventId }: { eventId: string 
     confirmedRegs.map((r) => (r.person.country ? findCountry(r.person.country)?.name ?? r.person.country : null)),
     8
   );
+
+  // Aterrizajes vs inscripciones por país — mismo corte que Ads Manager's
+  // own country breakdown, pero de nuestros propios datos: cuántos
+  // realmente ABREN la página (LandingView, ver [eventSlug]/page.tsx) vs
+  // cuántos de esos terminan inscribiéndose. Joined by ISO2 (both sides
+  // store the raw code), name resolved only for display.
+  const landingCountByIso = new Map<string, number>();
+  for (const row of landingViewsByCountry) {
+    if (row.country) landingCountByIso.set(row.country, row._count._all);
+  }
+  const regCountByIso = new Map<string, number>();
+  for (const r of confirmedRegs) {
+    if (r.person.country) regCountByIso.set(r.person.country, (regCountByIso.get(r.person.country) ?? 0) + 1);
+  }
+  const countryFunnelRows = Array.from(new Set([...landingCountByIso.keys(), ...regCountByIso.keys()]))
+    .map((iso) => {
+      const landings = landingCountByIso.get(iso) ?? 0;
+      const regs = regCountByIso.get(iso) ?? 0;
+      return {
+        iso,
+        label: findCountry(iso)?.name ?? iso,
+        landings,
+        regs,
+        pct: landings > 0 ? Math.round((regs / landings) * 100) : null,
+      };
+    })
+    .sort((a, b) => b.landings - a.landings)
+    .slice(0, 8);
   const cityRows = topN(
     confirmedRegs.map((r) => r.person.city),
     8
@@ -271,6 +305,38 @@ export default async function EventDecisionStats({ eventId }: { eventId: string 
           <EmptyNote text="Aún no hay inscripciones confirmadas." />
         ) : (
           <BarList rows={channelRows.map((r) => ({ label: r.label, count: r.count, pct: Math.round((r.count / totalConfirmed) * 100) }))} max={totalConfirmed} showPct />
+        )}
+      </Section>
+
+      <Section
+        title="Aterrizajes vs inscripciones por país"
+        note="Cuántos abren la página vs cuántos de esos se inscriben, por país — nuestra propia versión del desglose por país de Ads Manager, sin depender de exportarlo. Solo cuenta aterrizajes desde que existe esta métrica, así que un evento viejo puede verse incompleto aquí."
+      >
+        {countryFunnelRows.length === 0 ? (
+          <EmptyNote text="Aún no hay aterrizajes registrados para este evento." />
+        ) : (
+          <div className="admin-table-wrap" style={{ border: "1px solid #e3e1dc", borderRadius: 10 }}>
+            <table style={{ borderCollapse: "collapse", fontSize: 13, width: "100%" }}>
+              <thead>
+                <tr style={{ textAlign: "left", background: "#faf9f7" }}>
+                  <th style={{ padding: "8px 12px" }}>País</th>
+                  <th style={{ padding: "8px 12px" }}>Aterrizajes</th>
+                  <th style={{ padding: "8px 12px" }}>Inscripciones</th>
+                  <th style={{ padding: "8px 12px" }}>Conversión</th>
+                </tr>
+              </thead>
+              <tbody>
+                {countryFunnelRows.map((r) => (
+                  <tr key={r.iso} style={{ borderTop: "1px solid #f0efec" }}>
+                    <td style={{ padding: "8px 12px" }}>{r.label}</td>
+                    <td style={{ padding: "8px 12px" }}>{r.landings}</td>
+                    <td style={{ padding: "8px 12px" }}>{r.regs}</td>
+                    <td style={{ padding: "8px 12px" }}>{r.pct != null ? `${r.pct}%` : "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </Section>
 
