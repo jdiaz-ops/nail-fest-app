@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Fraunces } from "next/font/google";
 import RegistrationForm, { type QuestionView, type RegisterPayload } from "./RegistrationForm";
-import { track, ensureFbcCookie } from "./tracking";
+import { track, waitForFbpCookie, ensureFbcCookie } from "./tracking";
 import { formatPhoneDisplay, INSTAGRAM_HANDLE, INSTAGRAM_URL } from "@/lib/brand";
 
 // Same face the admin already uses for its own brand/celebratory moments
@@ -121,12 +121,23 @@ export default function EventRegistration({
   const [showFloating, setShowFloating] = useState(false);
 
   useEffect(() => {
-    // Reconstruct _fbc from ?fbclid= BEFORE the first track() call, since
-    // there's no Meta Pixel on this site to set it automatically — see
-    // ensureFbcCookie()'s own comment for why this matters.
+    // Reconstruct _fbc from ?fbclid= right away, synchronously — a fast,
+    // reliable fallback for when the real Pixel (MetaPixelScript.tsx,
+    // loaded elsewhere on this page) is slow, or blocked outright by an
+    // ad blocker. See ensureFbcCookie()'s own comment.
     ensureFbcCookie();
-    track("PageView");
-    track("ViewContent");
+    // Both of these used to fire immediately on mount — see
+    // waitForFbpCookie's own comment for why that meant almost every
+    // PageView/ViewContent carried zero identity signal at all for
+    // anyone without a fbclid: _fbp can ONLY come from the real Pixel,
+    // which is still loading at that exact moment. Wait once, then fire
+    // both — ViewContent doesn't need its own separate wait, it picks up
+    // the same now-set _fbp for free.
+    (async () => {
+      await waitForFbpCookie();
+      track("PageView");
+      track("ViewContent");
+    })();
   }, []);
 
   useEffect(() => {
