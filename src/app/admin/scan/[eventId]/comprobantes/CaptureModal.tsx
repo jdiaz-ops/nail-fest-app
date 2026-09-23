@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import type { ComprobanteMedio } from "@prisma/client";
 import type { PendienteView } from "@/lib/comprobantes/types";
 import { MEDIO_LABEL } from "@/lib/comprobantes/types";
-import { compressImage } from "@/lib/comprobantes/imageCompression";
+import { compressImage } from "@/lib/imageCompression";
 import { CameraIcon } from "../../icons";
 
 const MAX_FILES = 5;
