@@ -5,7 +5,6 @@ import { useSearchParams } from "next/navigation";
 import { attributionFromSearchParams } from "@/lib/utm";
 import { getValidFbc } from "./tracking";
 import CityAutocomplete from "./CityAutocomplete";
-import { isKnownCityLabel } from "@/lib/cityMatch";
 import { suggestEmailCorrection } from "@/lib/emailTypo";
 import { COUNTRY_CODES, GENERIC_PHONE_PLACEHOLDER, GENERIC_ID_PLACEHOLDER, stripTrunkZero } from "@/lib/countryCodes";
 import { WORLD_COUNTRIES, findCountry } from "@/lib/worldCountries";
@@ -293,18 +292,19 @@ export default function RegistrationForm({
 
     // City must be a real, selected municipality — CityAutocomplete only
     // ever WANTS one selected, but nothing stops someone from typing
-    // something close-but-not-exact and submitting before picking a
-    // suggestion. Caught here too (not just in the component's own inline
-    // message) so it actually blocks the submit, and again server-side in
-    // /api/register — belt and suspenders, same reasoning as the email-
-    // confirm check above. Keyed off País (residence), not the phone's
-    // dial code — those are separate now; only Colombia has a real
-    // municipality list to validate against; see the city field's own
-    // conditional render above.
-    if (country === "CO" && byKey(questions, "city") && payload.city.trim() && !isKnownCityLabel(payload.city)) {
-      setErrorMessage("Elige tu ciudad de la lista de sugerencias — revisa el campo Ciudad.");
-      return;
-    }
+    // Used to hard-block here (and again server-side in /api/register) if
+    // País=CO and the typed city didn't match COLOMBIA_CITIES — removed:
+    // traced a real conversion drop to it. Someone living in Venezuela who
+    // never touches the "País" selector above (defaults to CO) would type
+    // a real Venezuelan city, get told to "elige de la lista de
+    // sugerencias" for a list that was never going to contain it, and
+    // either give up or type "otros" — see the "Aterrizajes vs
+    // inscripciones por país" report's own Ciudad breakdown, where
+    // Venezuelan border cities (San Cristóbal, Mérida) were showing up
+    // fine when someone DID switch País, but "otros" was absorbing the
+    // rest. CityAutocomplete's own suggestions still guide a real
+    // Colombian typing their city; this just stops a mismatch from
+    // blocking the submit, same as every non-CO country already works.
 
     onSubmitPayload(payload);
   }

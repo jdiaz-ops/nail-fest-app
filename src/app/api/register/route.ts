@@ -10,7 +10,6 @@ import { clientIpFromHeaders, userAgentFromHeaders } from "@/lib/request";
 import { splitName } from "@/lib/name";
 import { getOrgSettings } from "@/lib/settings";
 import { getCheckoutQuestions, LOCKED_KEYS, type LockedKey } from "@/lib/checkoutForm";
-import { isKnownCityLabel } from "@/lib/cityMatch";
 import { isObviouslyDeadEmail } from "@/lib/emailDomainCheck";
 import { WORLD_COUNTRIES } from "@/lib/worldCountries";
 
@@ -179,25 +178,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "email_mismatch" }, { status: 400 });
   }
 
-  // City must be a real municipality from the canonical list (see
-  // CityAutocomplete.tsx and lib/cityMatch.ts) — checked here too, not
-  // just client-side, so a direct API call can't put free text back into
-  // Person.city and undo the whole point of this feature (clean city data
-  // for stats/segments going forward). Empty is fine when the question
-  // isn't required — that's already enforced by the missing-fields check
-  // above; this only rejects a NON-empty value that isn't a real city.
-  //
-  // Only enforced for someone who says they live in Colombia (input.country
-  // === "CO") — that's the only country with a real municipality list to
-  // validate against (see RegistrationForm.tsx's own city-field comment).
-  // Keyed off País (residence), NOT the phone's dial code — those are
-  // separate now (a Colombian resident might register with a foreign
-  // phone number, and that shouldn't switch off city validation). Anyone
-  // living elsewhere gets a free-text city instead, both client- and
-  // server-side.
-  if (input.country === "CO" && input.city.trim() && !isKnownCityLabel(input.city)) {
-    return NextResponse.json({ error: "invalid_city" }, { status: 400 });
-  }
+  // Used to hard-reject here (and client-side in RegistrationForm.tsx) any
+  // input.country === "CO" registration whose city didn't match the
+  // canonical Colombian municipality list — removed: traced a real
+  // conversion drop to it. Someone living in Venezuela who never touched
+  // the "País" selector (defaults to CO) would type a real Venezuelan
+  // city, get rejected against a list that was never going to contain it,
+  // and either abandon or fall back to typing "otros" — see the
+  // "Aterrizajes vs inscripciones por país" report's own Ciudad
+  // breakdown. CityAutocomplete.tsx's suggestions still guide a real
+  // Colombian typing their city; nothing here blocks a mismatch anymore,
+  // same as every non-CO country already worked.
 
   // See /admin/settings/banned-emails — checked before touching the CRM at
   // all, same as our previous ticketing platform's own "Banned email addresses" block.
