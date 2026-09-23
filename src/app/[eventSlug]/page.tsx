@@ -144,6 +144,7 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
       ) : (
         <>
           <h1 style={{ margin: "4px 0 8px" }}>{event.name}</h1>
+          {event.subtitle && <p className="event-page-subtitle">{event.subtitle}</p>}
           {eventVenue && (
             <p className="event-page-meta">
               {event.format === "VIRTUAL" ? "🌐" : "📍"} {eventVenue}

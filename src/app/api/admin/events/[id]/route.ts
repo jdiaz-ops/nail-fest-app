@@ -26,6 +26,7 @@ const landingBlockSchema = z.discriminatedUnion("type", [
 
 const patchSchema = z.object({
   name: z.string().min(1).optional(),
+  subtitle: z.string().optional(),
   city: z.string().min(1).optional(),
   venueName: z.string().optional(),
   venueAddress: z.string().optional(),
@@ -85,6 +86,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
     const event = await updateEvent(params.id, {
       name: data.name ?? existing.name,
+      subtitle: data.subtitle ?? existing.subtitle ?? "",
       city: data.city ?? existing.city,
       venueName: data.venueName ?? existing.venueName ?? "",
       venueAddress: data.venueAddress ?? existing.venueAddress ?? "",

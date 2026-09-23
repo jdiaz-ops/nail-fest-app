@@ -31,6 +31,7 @@ export default async function EditEventPage({ params }: { params: { id: string }
         initial={{
           id: event.id,
           name: event.name,
+          subtitle: event.subtitle ?? "",
           city: event.city,
           format: event.format,
           virtualAccessInstructions: event.virtualAccessInstructions ?? "",

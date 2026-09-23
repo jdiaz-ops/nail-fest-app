@@ -24,6 +24,7 @@ const landingBlockSchema = z.discriminatedUnion("type", [
 
 const bodySchema = z.object({
   name: z.string().min(1),
+  subtitle: z.string().default(""),
   city: z.string().min(1),
   venueName: z.string().default(""),
   venueAddress: z.string().default(""),
@@ -74,6 +75,7 @@ export async function POST(req: NextRequest) {
 
   const event = await createEvent({
     name: data.name,
+    subtitle: data.subtitle,
     city: data.city,
     venueName: data.venueName,
     venueAddress: data.venueAddress,

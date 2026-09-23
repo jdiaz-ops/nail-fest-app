@@ -125,6 +125,11 @@ model Event {
   id           String      @id @default(cuid())
   slug         String      @unique // used in the landing URL, e.g. /bogota-2026
   name         String
+  // Optional one-line tagline shown on the public page between the
+  // event's name (h1) and its venue/address line — see
+  // [eventSlug]/page.tsx. Null means "don't show anything there", same
+  // as every other optional text field on this model.
+  subtitle     String?
   city         String
   format       EventFormat @default(IN_PERSON)
   // Shown on the public page and in the confirmation email INSTEAD OF

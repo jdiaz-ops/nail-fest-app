@@ -282,6 +282,17 @@ button.primary:disabled {
   margin: 4px 0;
 }
 
+/* Event.subtitle — optional one-line tagline between the h1 and the
+   venue/address line (see [eventSlug]/page.tsx). Slightly bolder/darker
+   than .event-page-meta below it so it reads as part of the headline,
+   not as another metadata line. */
+.event-page-subtitle {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--ink);
+  margin: 0 0 8px;
+}
+
 /* EventRegistration.tsx's own content+sidebar — a single column (sidebar
    hidden) below ~900px, a real two-column grid above it. align-items:
    start keeps the sidebar from stretching to the description's height,

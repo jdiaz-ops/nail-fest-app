@@ -17,6 +17,9 @@ type EventFormat = "IN_PERSON" | "VIRTUAL" | "HYBRID";
 export interface EventFormValues {
   id?: string;
   name: string;
+  // Optional one-line tagline shown on the public page between the
+  // event's name (h1) and its venue/address line — see [eventSlug]/page.tsx.
+  subtitle: string;
   city: string;
   // IN_PERSON (default) shows Ubicación below; VIRTUAL replaces it with
   // Acceso virtual; HYBRID shows both (an in-person feria that also
@@ -58,6 +61,7 @@ export interface EventFormValues {
 export interface DuplicateSource {
   id: string;
   name: string;
+  subtitle: string;
   city: string;
   format: EventFormat;
   virtualAccessInstructions: string;
@@ -106,6 +110,7 @@ export default function EventForm({
     setValues((v) => ({
       ...v,
       name: `${source.name} (copia)`,
+      subtitle: source.subtitle,
       city: source.city,
       format: source.format,
       virtualAccessInstructions: source.virtualAccessInstructions,
@@ -203,6 +208,7 @@ export default function EventForm({
 
     const body = {
       name: values.name.trim(),
+      subtitle: values.subtitle.trim(),
       city: values.city.trim(),
       format: values.format,
       virtualAccessInstructions: values.virtualAccessInstructions.trim(),
@@ -278,6 +284,17 @@ export default function EventForm({
           <div className="field">
             <label>Nombre del evento</label>
             <input value={values.name} onChange={(e) => set("name", e.target.value)} placeholder="Nail Fest Cali - 5 & 6 Septiembre" required />
+          </div>
+          <div className="field">
+            <label>Bajada (opcional)</label>
+            <input
+              value={values.subtitle}
+              onChange={(e) => set("subtitle", e.target.value)}
+              placeholder="Ej: Donde se reúne el mundo de las uñas"
+            />
+            <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>
+              Sale en la página pública, justo debajo del nombre y antes de la dirección. Déjalo vacío si no aplica.
+            </p>
           </div>
           <div className="field" style={{ marginBottom: 0 }}>
             <label>Ciudad</label>
