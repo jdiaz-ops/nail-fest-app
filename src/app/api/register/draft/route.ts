@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { splitName } from "@/lib/name";
 import { getOrgSettings } from "@/lib/settings";
 import { scheduleAbandonedCartReminders } from "@/lib/abandonedCart";
+import { isObviouslyDeadEmail } from "@/lib/emailDomainCheck";
 
 // Real abandoned-cart tracking: fired from RegistrationForm.tsx's email
 // field onBlur — the earliest point in the flow where we know who someone
@@ -139,9 +140,21 @@ export async function POST(req: NextRequest) {
       // a later update to one that already exists (see lib/abandonedCart.ts's
       // own comment). Fire-and-forget: scheduling the reminders must never
       // fail or delay this draft save.
-      scheduleAbandonedCartReminders(created.id).catch((err) =>
-        console.error("failed to schedule abandoned cart reminders", created.id, err)
-      );
+      //
+      // isObviouslyDeadEmail is the same DNS-backed check /api/register
+      // uses to hard-reject a CONFIRMED registration — this route stays
+      // deliberately lenient about WRITING the STARTED row (a typo'd
+      // email is still real funnel data, worth keeping), but there is no
+      // reason to schedule a reminder that's confirmed to bounce before
+      // it's even sent. Fails open (returns false) on a DNS hiccup, so a
+      // flaky resolver never silently drops a real reminder.
+      isObviouslyDeadEmail(normalizedEmail)
+        .then((isDead) => {
+          if (!isDead) {
+            return scheduleAbandonedCartReminders(created.id);
+          }
+        })
+        .catch((err) => console.error("failed to schedule abandoned cart reminders", created.id, err));
     }
 
     return NextResponse.json({ ok: true });
