@@ -10,6 +10,7 @@ import Color from "@tiptap/extension-color";
 import Link from "@tiptap/extension-link";
 import Youtube from "@tiptap/extension-youtube";
 import { ImageWithControls } from "./RichTextEditorImage";
+import { compressImage } from "@/lib/imageCompression";
 
 // No official @tiptap/extension-font-size package exists for TipTap 2 —
 // this is the standard small custom extension for it: a `fontSize`
@@ -60,8 +61,17 @@ const FONT_SIZES = [
 ];
 
 async function uploadImage(file: File): Promise<string | null> {
+  // Same route (and same 5MB cap) as EventForm.tsx's hero image, and the
+  // same problem was found here too via PageSpeed Insights: an admin
+  // pasting a photo straight into the description went out uncompressed
+  // — three of them on the Cúcuta page alone added up to over 3MB, far
+  // more than the hero banner itself once THAT got fixed. See
+  // imageCompression.ts's own comment for why the numbers here differ
+  // from EventForm.tsx's: this renders inline in body text, never as
+  // large as a full-width hero.
+  const compressed = await compressImage(file, { maxDimension: 1600, quality: 0.82 });
   const form = new FormData();
-  form.append("file", file);
+  form.append("file", compressed);
   const res = await fetch("/api/admin/uploads/event-image", { method: "POST", body: form });
   const body = await res.json().catch(() => ({}));
   return res.ok ? body.url : null;
