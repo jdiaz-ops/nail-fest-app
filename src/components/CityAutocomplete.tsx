@@ -91,7 +91,6 @@ export default function CityAutocomplete({
         role="combobox"
         aria-expanded={open}
         aria-autocomplete="list"
-        aria-invalid={!isValid}
         required={required}
         value={query}
         onChange={(e) => {
@@ -104,7 +103,6 @@ export default function CityAutocomplete({
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
         placeholder="Empieza a escribir tu ciudad…"
-        style={!isValid ? { borderColor: "var(--danger, #c2185b)" } : undefined}
       />
       {open && suggestions.length > 0 && (
         <ul
@@ -159,9 +157,15 @@ export default function CityAutocomplete({
           ))}
         </ul>
       )}
+      {/* Used to read as a hard requirement ("Elige tu ciudad de la
+          lista"), red border included — but nothing has blocked submit on
+          a mismatch since RegistrationForm.tsx's own comment on why that
+          was removed. Reworded as a plain hint so someone whose real city
+          isn't Colombian (or just isn't in the list) doesn't read this as
+          "you can't continue." */}
       {!isValid && (
-        <p style={{ fontSize: 12, color: "var(--danger, #c2185b)", margin: "4px 0 0" }}>
-          Elige tu ciudad de la lista — empieza a escribir y selecciona una opción.
+        <p style={{ fontSize: 12, color: "var(--ink-muted)", margin: "4px 0 0" }}>
+          ¿No aparece tu ciudad? Puedes escribirla igual, no es obligatorio elegir una sugerencia.
         </p>
       )}
     </div>
