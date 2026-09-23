@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { COLOMBIA_CITIES } from "@/lib/colombiaCities";
-import { normalizeCityString, isKnownCityLabel } from "@/lib/cityMatch";
+import { normalizeCityString } from "@/lib/cityMatch";
 
 const MAX_SUGGESTIONS = 8;
 
@@ -26,7 +26,6 @@ export default function CityAutocomplete({
   const [query, setQuery] = useState(defaultValue);
   const [open, setOpen] = useState(false);
   const [highlight, setHighlight] = useState(0);
-  const [touched, setTouched] = useState(false);
   const blurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const suggestions = useMemo(() => {
@@ -39,12 +38,9 @@ export default function CityAutocomplete({
     return [...startsWith, ...contains].slice(0, MAX_SUGGESTIONS);
   }, [query]);
 
-  const isValid = !touched || query.trim() === "" || isKnownCityLabel(query);
-
   function select(label: string) {
     setQuery(label);
     setOpen(false);
-    setTouched(true);
   }
 
   function handleBlur() {
@@ -52,7 +48,6 @@ export default function CityAutocomplete({
     // still registers via onMouseDown before the list unmounts.
     blurTimer.current = setTimeout(() => {
       setOpen(false);
-      setTouched(true);
     }, 120);
   }
 
@@ -97,7 +92,6 @@ export default function CityAutocomplete({
           setQuery(e.target.value);
           setOpen(true);
           setHighlight(0);
-          setTouched(false);
         }}
         onFocus={handleFocus}
         onBlur={handleBlur}
@@ -157,17 +151,13 @@ export default function CityAutocomplete({
           ))}
         </ul>
       )}
-      {/* Used to read as a hard requirement ("Elige tu ciudad de la
-          lista"), red border included — but nothing has blocked submit on
-          a mismatch since RegistrationForm.tsx's own comment on why that
-          was removed. Reworded as a plain hint so someone whose real city
-          isn't Colombian (or just isn't in the list) doesn't read this as
-          "you can't continue." */}
-      {!isValid && (
-        <p style={{ fontSize: 12, color: "var(--ink-muted)", margin: "4px 0 0" }}>
-          ¿No aparece tu ciudad? Puedes escribirla igual, no es obligatorio elegir una sugerencia.
-        </p>
-      )}
+      {/* Used to show a message here ("Elige tu ciudad de la lista...",
+          red border before that) when the typed value didn't match — but
+          nothing has blocked submit on a mismatch since RegistrationForm.tsx's
+          own comment on why that was removed, and a mismatch was never
+          actually an error (someone outside Colombia typing their real
+          city). Nothing to show here now — the suggestion dropdown above
+          is the only UI this field needs. */}
     </div>
   );
 }
