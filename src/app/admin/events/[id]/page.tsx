@@ -15,11 +15,17 @@ export const dynamic = "force-dynamic";
 // scanner's own Dashboard respectively; a glance page that's also a full
 // report stops being a glance.
 export default async function EventSummaryPage({ params }: { params: { id: string } }) {
-  const [event, ticketAgg, checkedInAgg, abandonedCount] = await Promise.all([
+  const [event, ticketAgg, checkedInAgg, abandonedCount, uniqueRegs, multiTicketRegs] = await Promise.all([
     db.event.findUnique({ where: { id: params.id } }),
     db.registration.aggregate({ where: { eventId: params.id, status: "CONFIRMED" }, _sum: { ticketCount: true } }),
     db.registration.aggregate({ where: { eventId: params.id, status: "CONFIRMED" }, _sum: { checkedInCount: true } }),
     db.registration.count({ where: { eventId: params.id, status: "STARTED" } }),
+    // "Registros únicos" — cuántas inscripciones reales hay detrás de
+    // "Boletas emitidas" (que suma ticketCount, no filas — ver esa
+    // consulta arriba). La diferencia entre las dos son personas que
+    // pidieron 2+ boletas en una sola inscripción, no gente distinta.
+    db.registration.count({ where: { eventId: params.id, status: "CONFIRMED" } }),
+    db.registration.count({ where: { eventId: params.id, status: "CONFIRMED", ticketCount: { gt: 1 } } }),
   ]);
 
   if (!event) return null;
@@ -34,6 +40,11 @@ export default async function EventSummaryPage({ params }: { params: { id: strin
     <div>
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 32 }}>
         <StatCard label="Boletas emitidas" value={String(issued)} sub={event.capacity != null ? `de ${event.capacity} cupos` : undefined} />
+        <StatCard
+          label="Registros únicos"
+          value={String(uniqueRegs)}
+          sub={multiTicketRegs > 0 ? `${multiTicketRegs} con 2+ boletas` : undefined}
+        />
         <StatCard label="Restantes" value={remaining != null ? String(remaining) : "—"} />
         <StatCard label="Días para el evento" value={daysToGo >= 0 ? String(daysToGo) : "Ya pasó"} />
         <StatCard label="Escaneadas (entraron)" value={String(checkedIn)} sub={issued > 0 ? `${checkInRate}% de las emitidas` : undefined} />

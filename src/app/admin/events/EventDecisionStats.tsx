@@ -33,6 +33,7 @@ export default async function EventDecisionStats({ eventId }: { eventId: string 
         fbclid: true,
         ttclid: true,
         gclid: true,
+        ticketCount: true,
         person: { select: { city: true, profession: true, country: true } },
       },
     }),
@@ -80,6 +81,12 @@ export default async function EventDecisionStats({ eventId }: { eventId: string 
 
   const issued = ticketAgg._sum.ticketCount ?? 0;
   const remaining = event.capacity != null ? Math.max(0, event.capacity - issued) : null;
+  // "Registros únicos" — Boletas emitidas suma ticketCount (una
+  // inscripción con 2 boletas cuenta 2 ahí); esto es la cuenta de
+  // inscripciones reales detrás de ese número, para que se vea cuánta
+  // gente pidió más de una.
+  const uniqueRegs = confirmedRegs.length;
+  const multiTicketRegs = confirmedRegs.filter((r) => r.ticketCount > 1).length;
 
   // Check-ins reales del día del evento — mismos cálculos que
   // EventStatsPanel.tsx (ver comentario arriba).
@@ -152,6 +159,11 @@ export default async function EventDecisionStats({ eventId }: { eventId: string 
     <div>
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 24 }}>
         <StatCard label="Boletas emitidas" value={String(issued)} sub={event.capacity != null ? `de ${event.capacity} cupos` : undefined} />
+        <StatCard
+          label="Registros únicos"
+          value={String(uniqueRegs)}
+          sub={multiTicketRegs > 0 ? `${multiTicketRegs} con 2+ boletas` : undefined}
+        />
         <StatCard label="Restantes" value={remaining != null ? String(remaining) : "—"} />
         <StatCard label="Carritos abandonados" value={String(abandonedCount)} />
         <StatCard label="Escaneadas (entraron)" value={String(checkedIn)} sub={`${checkInRate}% de las emitidas`} />
