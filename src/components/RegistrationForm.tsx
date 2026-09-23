@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { attributionFromSearchParams } from "@/lib/utm";
+import { getValidFbc } from "./tracking";
 import CityAutocomplete from "./CityAutocomplete";
 import { isKnownCityLabel } from "@/lib/cityMatch";
 import { suggestEmailCorrection } from "@/lib/emailTypo";
@@ -275,7 +276,7 @@ export default function RegistrationForm({
         whatsapp: true,
       },
       attribution: attributionFromSearchParams(searchParams),
-      fbc: readCookie("_fbc"),
+      fbc: getValidFbc(),
       fbp: readCookie("_fbp"),
       ticketTypeId,
       ticketCount,

@@ -12,24 +12,63 @@ function readCookie(name: string): string | undefined {
 }
 
 /**
- * Meta's own Pixel auto-sets the _fbc cookie when someone lands via an ad
- * click (?fbclid=...) — this site has no Pixel (CAPI-only, see
- * /api/track), so nothing was ever setting it, meaning every event's `fbc`
- * field was silently empty even though the code was already wired to send
- * it. Reconstructs the same cookie by Meta's own documented formula
+ * Fallback for when the real Pixel (MetaPixelScript.tsx) hasn't set its own
+ * _fbc yet — blocked by an ad blocker, or just hasn't finished loading.
+ * Reconstructs the same cookie by Meta's own documented formula
  * (fb.1.<creation_time_ms>.<fbclid>) so readCookie("_fbc") here and in
- * RegistrationForm.tsx starts actually returning something for anyone who
- * arrived from an ad. Call once, early — before the first track() call —
- * so PageView onward all carry it.
+ * RegistrationForm.tsx returns something for anyone who arrived from an ad.
+ * Call this AFTER giving the real Pixel a chance to set _fbc itself (see
+ * EventRegistration.tsx's mount effect) — fbevents.js never overwrites an
+ * existing _fbc, so calling this first would always win and the official,
+ * Pixel-computed value (correct subdomain index, etc.) would never get
+ * used even when the Pixel loaded fine.
  * https://developers.facebook.com/docs/marketing-api/conversions-api/parameters/fbp-and-fbc
  */
 export function ensureFbcCookie() {
-  if (readCookie("_fbc")) return; // already set — this page earlier, or a real Pixel
+  if (readCookie("_fbc")) return; // already set — real Pixel got there first, or a prior page
   const fbclid = new URLSearchParams(window.location.search).get("fbclid");
   if (!fbclid) return;
   const fbc = `fb.1.${Date.now()}.${fbclid}`;
   const maxAgeSeconds = 90 * 24 * 60 * 60; // matches the Pixel's own _fbc retention window
   document.cookie = `_fbc=${encodeURIComponent(fbc)}; path=/; max-age=${maxAgeSeconds}`;
+}
+
+/**
+ * Meta flagged ~10% of PageView events (plus some InitiateCheckout/
+ * Purchase) as sending a "modified" fbc — lowercased and/or truncated.
+ * Traced this: neither our own reconstruction above nor the real Pixel's
+ * own fbc logic ever transforms the value — both read `fbclid` straight
+ * from the URL with no changes. So the corruption has to already be in
+ * `window.location.search` by the time any of our JS runs — most likely a
+ * mobile carrier's data-compression proxy (common on LatAm networks this
+ * event advertises to) or an in-app browser rewriting the URL in transit.
+ * That's outside anything this codebase controls, so there's no way to
+ * recover the original value — the best available mitigation is to
+ * recognize when what we have doesn't look like a real fbclid and not
+ * send it at all: Meta's diagnostics flag a MODIFIED fbc as a data-quality
+ * problem, but a MISSING one (normal for plenty of organic traffic) isn't
+ * penalized the same way.
+ *
+ * Heuristic, not a real signature check (Meta doesn't publish one): a
+ * legitimate fbclid is long and, for the common formats Meta issues
+ * (IwAR…, PA…), mixes upper and lower case. Flag it as suspect if it's
+ * too short to be real, or long enough that a genuine click ID would
+ * essentially always contain at least one uppercase letter yet doesn't.
+ */
+function looksLikeValidFbc(value: string): boolean {
+  const match = value.match(/^fb\.\d+\.\d{10,}\.([A-Za-z0-9_-]+)$/);
+  const fbclid = match?.[1];
+  if (!fbclid) return false;
+  if (fbclid.length < 20) return false; // catches truncation
+  if (!/[A-Z]/.test(fbclid)) return false; // catches lowercasing
+  return true;
+}
+
+/** Use this instead of readCookie("_fbc") anywhere an fbc is about to be
+ * sent to Meta — see looksLikeValidFbc's comment for why. */
+export function getValidFbc(): string | undefined {
+  const fbc = readCookie("_fbc");
+  return fbc && looksLikeValidFbc(fbc) ? fbc : undefined;
 }
 
 /**
@@ -78,7 +117,7 @@ export function track(eventName: "PageView" | "ViewContent" | "InitiateCheckout"
     eventName,
     eventId,
     eventSourceUrl: window.location.href,
-    fbc: readCookie("_fbc"),
+    fbc: getValidFbc(),
     fbp: readCookie("_fbp"),
   };
   // Best-effort, no await needed by the caller — a failure here must never

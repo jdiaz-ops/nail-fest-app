@@ -121,11 +121,6 @@ export default function EventRegistration({
   const [showFloating, setShowFloating] = useState(false);
 
   useEffect(() => {
-    // Reconstruct _fbc from ?fbclid= right away, synchronously — a fast,
-    // reliable fallback for when the real Pixel (MetaPixelScript.tsx,
-    // loaded elsewhere on this page) is slow, or blocked outright by an
-    // ad blocker. See ensureFbcCookie()'s own comment.
-    ensureFbcCookie();
     // Both of these used to fire immediately on mount — see
     // waitForFbpCookie's own comment for why that meant almost every
     // PageView/ViewContent carried zero identity signal at all for
@@ -135,6 +130,14 @@ export default function EventRegistration({
     // the same now-set _fbp for free.
     (async () => {
       await waitForFbpCookie();
+      // Only now, AFTER giving the real Pixel (MetaPixelScript.tsx) its
+      // chance to load and set its own _fbc — fbevents.js sets _fbp and
+      // _fbc together, so if the wait above found _fbp, _fbc is almost
+      // certainly already set too. ensureFbcCookie() is a no-op in that
+      // case; it only reconstructs one itself if the Pixel never got the
+      // chance to (slow load, ad blocker). See its own comment for why
+      // the order matters.
+      ensureFbcCookie();
       track("PageView");
       track("ViewContent");
     })();
