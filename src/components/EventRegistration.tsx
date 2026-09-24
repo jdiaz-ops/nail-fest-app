@@ -6,6 +6,16 @@ import RegistrationForm, { type QuestionView, type RegisterPayload } from "./Reg
 import { track, waitForFbpCookie, ensureFbcCookie } from "./tracking";
 import { formatPhoneDisplay, INSTAGRAM_HANDLE, INSTAGRAM_URL } from "@/lib/brand";
 
+declare global {
+  interface Window {
+    // Microsoft Clarity's own snippet (added directly in layout.tsx,
+    // outside this codebase's own tracking) — optional-chained everywhere
+    // it's called since a blocked/not-yet-loaded script must never break
+    // the registration flow, same posture as window.fbq in tracking.ts.
+    clarity?: (...args: unknown[]) => void;
+  }
+}
+
 // Same face the admin already uses for its own brand/celebratory moments
 // (EventForm.tsx, the CRM/Settings section headers) — one display font for
 // "this is a brand moment" across the whole app, not a second one just for
@@ -108,6 +118,19 @@ export default function EventRegistration({
   const [quantity, setQuantity] = useState<number>(onlyType?.minPerOrder ?? 0);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  // The "Síguenos en Instagram" link (below, resumen step) opening in a
+  // new tab is exactly what Clarity flagged as its single most-clicked
+  // "dead click" on the whole page — Instagram/Facebook's own in-app
+  // browser often can't really open a second tab, so the click looks like
+  // it did nothing. Detected client-side only (not known at SSR time,
+  // see the effect below) — defaults to the safe target="_blank" behavior
+  // for the very first paint so server and client render identically and
+  // React never sees a hydration mismatch; the effect corrects it right
+  // after mount for the in-app-browser case.
+  const [inAppBrowser, setInAppBrowser] = useState(false);
+  useEffect(() => {
+    setInAppBrowser(/Instagram|FBAN|FBAV/i.test(navigator.userAgent || ""));
+  }, []);
   const firedCheckoutStart = useRef(false);
   const inlineButtonRef = useRef<HTMLDivElement>(null);
   // Floating CTA only appears once the inline one (right after the venue,
@@ -151,8 +174,26 @@ export default function EventRegistration({
     return () => observer.disconnect();
   }, []);
 
+  // ClickableHero.tsx (rendered by the SERVER-component parent, a
+  // separate client island with no shared parent state to prop-drill
+  // through) dispatches this on tap — Clarity showed real taps on the
+  // banner expecting the registration modal to open.
+  useEffect(() => {
+    function handleOpenFromHero() {
+      openModal();
+    }
+    window.addEventListener("nailfest:open-registration", handleOpenFromHero);
+    return () => window.removeEventListener("nailfest:open-registration", handleOpenFromHero);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   function openModal() {
     setOpen(true);
+    // Own Clarity funnel event — see the resumen step's own
+    // "registro_exitoso" for the other half. Fires every open, not
+    // gated by firedCheckoutStart below (that guard is about not
+    // double-firing Meta's InitiateCheckout, unrelated to this).
+    window.clarity?.("event", "abrir_registro");
     if (!firedCheckoutStart.current) {
       firedCheckoutStart.current = true;
       track("InitiateCheckout");
@@ -214,31 +255,32 @@ export default function EventRegistration({
       purchaseEventId,
     };
 
-    const res = await fetch("/api/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(bodyToSend),
-    });
+    // Clarity session recordings (in-app browsers on Instagram/Facebook,
+    // mostly) traced real failed registrations to this fetch — or the
+    // fbq() call below — throwing with nothing wrapping it. The
+    // registration itself can already be saved server-side by the time
+    // that happens (a webview bridge error firing on the RESPONSE, not
+    // the request), so the person would see the button just... do
+    // nothing, with no error and no success screen either, even though
+    // they were already registered. Wrapped so a broken network or
+    // in-app-browser bridge always resolves to ONE of: success screen,
+    // or a clear retryable error — never silence.
+    let res: Response;
+    try {
+      res = await fetch("/api/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(bodyToSend),
+      });
+    } catch {
+      setSubmitting(false);
+      setSubmitError("No pudimos completar tu registro, intenta de nuevo.");
+      return;
+    }
 
     setSubmitting(false);
-    if (res.ok) {
-      const body = await res.json().catch(() => ({}));
-      if (body?.requiresPayment && body?.checkoutUrl) {
-        // Paid ticket type — off to Wompi's own hosted checkout. Nothing
-        // else to do here: Wompi redirects back to /[eventSlug]/pago,
-        // which is what actually finishes this (see that page's own
-        // comment) — this tab is about to navigate away regardless.
-        window.location.href = body.checkoutUrl;
-        return;
-      }
-      if (payload.consents.advertising) {
-        window.fbq?.("track", "Purchase", {}, { eventID: purchaseEventId });
-      }
-      setSubmittedEmail(payload.email);
-      setSubmittedPhone(payload.phone);
-      setWhatsappTicketLinkSent(Boolean(body?.whatsappTicketLinkSent));
-      setStep("resumen");
-    } else {
+
+    if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       setSubmitError(
         body?.error === "event_not_found"
@@ -257,6 +299,41 @@ export default function EventRegistration({
                     ? "La cantidad elegida ya no es válida — ajústala arriba."
                     : "Algo salió mal, intenta de nuevo."
       );
+      return;
+    }
+
+    const body = await res.json().catch(() => ({}));
+    if (body?.requiresPayment && body?.checkoutUrl) {
+      // Paid ticket type — off to Wompi's own hosted checkout. Nothing
+      // else to do here: Wompi redirects back to /[eventSlug]/pago,
+      // which is what actually finishes this (see that page's own
+      // comment) — this tab is about to navigate away regardless.
+      window.location.href = body.checkoutUrl;
+      return;
+    }
+
+    // Success screen FIRST — the registration already succeeded
+    // server-side at this point, so nothing below this line may ever be
+    // able to stop it from showing. fbq() specifically has thrown inside
+    // some in-app-browser webviews (see this function's own comment
+    // above) — wrapped so that can never again eat the success screen it
+    // used to run before.
+    setSubmittedEmail(payload.email);
+    setSubmittedPhone(payload.phone);
+    setWhatsappTicketLinkSent(Boolean(body?.whatsappTicketLinkSent));
+    setStep("resumen");
+    window.clarity?.("event", "registro_exitoso");
+
+    if (payload.consents.advertising) {
+      try {
+        window.fbq?.("track", "Purchase", {}, { eventID: purchaseEventId });
+      } catch {
+        // Swallowed on purpose — the person already saw the success
+        // screen above; a broken pixel call here must never look like a
+        // failed registration to them. The server-side CAPI Purchase
+        // (registrationConfirmation.ts) already carries this same
+        // eventID regardless of whether this client-side call worked.
+      }
     }
   }
 
@@ -576,7 +653,15 @@ export default function EventRegistration({
                     )}
                   </div>
 
-                  <div
+                  {/* The whole card is now ONE link — see inAppBrowser's own
+                      comment above for why. Clarity had this as the single
+                      most dead-clicked element on the page: the icon, the
+                      @handle and the "Síguenos..." text all took real taps
+                      that went nowhere, because only the small "Seguir"
+                      pill at the end was ever actually clickable. */}
+                  <a
+                    href={INSTAGRAM_URL}
+                    {...(inAppBrowser ? {} : { target: "_blank", rel: "noreferrer" })}
                     style={{
                       position: "relative",
                       marginTop: 18,
@@ -588,6 +673,8 @@ export default function EventRegistration({
                       alignItems: "center",
                       gap: 11,
                       textAlign: "left",
+                      textDecoration: "none",
+                      color: "inherit",
                     }}
                   >
                     <span
@@ -612,10 +699,7 @@ export default function EventRegistration({
                       <p style={{ fontSize: 12.5, fontWeight: 800, margin: 0 }}>{INSTAGRAM_HANDLE}</p>
                       <p style={{ fontSize: 11, color: "#5b5f6b", margin: "1px 0 0" }}>Síguenos para más noticias del evento</p>
                     </div>
-                    <a
-                      href={INSTAGRAM_URL}
-                      target="_blank"
-                      rel="noreferrer"
+                    <span
                       style={{
                         flex: "0 0 auto",
                         fontSize: 11.5,
@@ -625,12 +709,11 @@ export default function EventRegistration({
                         borderRadius: 999,
                         padding: "7px 13px",
                         whiteSpace: "nowrap",
-                        textDecoration: "none",
                       }}
                     >
                       Seguir
-                    </a>
-                  </div>
+                    </span>
+                  </a>
 
                   <button type="button" className="secondary" onClick={closeModal} style={{ maxWidth: 200, margin: "18px auto 0", position: "relative" }}>
                     Cerrar
