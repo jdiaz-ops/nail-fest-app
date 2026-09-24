@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
-import Image from "next/image";
 import { Suspense } from "react";
 import { db } from "@/lib/db";
 import { probeImageDimensions } from "@/lib/imageDimensions";
@@ -11,6 +10,7 @@ import { getCheckoutQuestions } from "@/lib/checkoutForm";
 import { getPublicTicketTypes } from "@/lib/ticketTypes";
 import { type QuestionView } from "@/components/RegistrationForm";
 import EventRegistration from "@/components/EventRegistration";
+import ClickableHero from "@/components/ClickableHero";
 import MetaPixelScript from "@/components/MetaPixelScript";
 import SalesPageHero from "@/components/salesPage/SalesPageHero";
 import SalesPageContent from "@/components/salesPage/SalesPageContent";
@@ -113,14 +113,14 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
         // every connection. Next resizes/re-encodes per device and serves
         // through Vercel's image CDN instead.
         //
-        // fill + aspect-ratio on the WRAPPING div, not width/height on
+        // fill + aspect-ratio on the WRAPPING element, not width/height on
         // the <img> itself — verified directly (see globals.css's own
         // comment) that an <img> with object-fit and only max-height (no
         // explicit height) always renders at max-height regardless of
         // its real intrinsic ratio, in every browser tested; passing the
         // real width/height as Image props doesn't change that, because
         // the img's OWN computed aspect-ratio gets overridden by that
-        // same quirk. Setting aspect-ratio on this plain div instead
+        // same quirk. Setting aspect-ratio on this plain wrapper instead
         // (not a replaced/object-fit element, not subject to the quirk)
         // is what actually makes a wide banner shrink to its own real
         // shape instead of getting cropped to fill a fixed box — Nail
@@ -128,19 +128,11 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
         // edge-to-edge headline text, nowhere near 16:9, and that
         // cropping (worse the narrower the screen) is what broke mobile.
         // priority since this is almost always the page's LCP element.
-        <div
-          className="event-page-hero"
-          style={{ aspectRatio: `${imageDimensions.width} / ${imageDimensions.height}` }}
-        >
-          <Image
-            src={event.imageUrl}
-            alt={event.name}
-            fill
-            sizes="(min-width: 900px) 1080px, 100vw"
-            priority
-            style={{ objectFit: "cover" }}
-          />
-        </div>
+        //
+        // ClickableHero (not a plain div) — Clarity showed real taps
+        // landing here expecting the registration modal to open, same
+        // instinct as tapping a poster. See that component's own comment.
+        <ClickableHero imageUrl={event.imageUrl} width={imageDimensions.width} height={imageDimensions.height} alt={event.name} />
       )}
 
       {salesPage ? (
