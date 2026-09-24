@@ -93,6 +93,31 @@ function byKey(questions: QuestionView[], key: string): QuestionView | undefined
   return questions.find((q) => q.key === key);
 }
 
+/** A human-readable name for a form field, for the "falta completar X"
+ * message below — every field on this form is either <label for="id">
+ * (text/select/date), a <label> wrapping the input directly (a radio
+ * option, the AGREEMENT checkbox), or a <fieldset><legend> (a radio
+ * group, where the browser's native invalidity attaches to the group's
+ * first radio since that's the only one carrying `required`). Falls back
+ * to a generic phrase rather than showing nothing if none of those match
+ * — should never actually happen given the form's own markup, but a
+ * missing label here is a bad message, not a crash. */
+function labelForField(el: Element): string {
+  const id = el.getAttribute("id");
+  if (id) {
+    const label = document.querySelector(`label[for="${id}"]`);
+    const text = label?.textContent?.trim();
+    if (text) return text;
+  }
+  const wrappingLabel = el.closest("label");
+  const wrappingText = wrappingLabel?.textContent?.trim();
+  if (wrappingText) return wrappingText;
+  const legend = el.closest("fieldset")?.querySelector("legend");
+  const legendText = legend?.textContent?.trim();
+  if (legendText) return legendText;
+  return "un campo obligatorio";
+}
+
 // Red "*" next to a label/legend for a required field — same --danger
 // token as error text and the delete button, not the brand accent (a
 // required-field marker isn't a brand moment, it's a warning-adjacent one).
@@ -216,6 +241,27 @@ export default function RegistrationForm({
     e.preventDefault();
     setErrorMessage(null);
 
+    // Used to rely entirely on the browser's own native validation UI
+    // (required attributes + the form's default, un-suppressed submit
+    // behavior) — traced a real registration failure to it via Clarity
+    // session recordings: someone left a field blank, the browser
+    // silently blocked the submit and focused it with its own tooltip,
+    // and NOTHING about that is visible to a session recorder (it's
+    // browser chrome, not part of the page) — from the recording it
+    // looked like the button just did nothing. `noValidate` on the form
+    // above suppresses that native UI/block; this reuses the browser's
+    // own validity computation (:invalid, still works with noValidate —
+    // only the automatic UI+submit-block is suppressed) so every field
+    // type here keeps being validated the same way, just with a message
+    // and a scroll-into-view we actually control.
+    const firstInvalid = e.currentTarget.querySelector<HTMLElement>(":invalid");
+    if (firstInvalid) {
+      setErrorMessage(`Falta completar: ${labelForField(firstInvalid)}.`);
+      firstInvalid.scrollIntoView({ behavior: "smooth", block: "center" });
+      firstInvalid.focus();
+      return;
+    }
+
     const form = new FormData(e.currentTarget);
     const localPhone = String(form.get("phone") ?? "").replace(/[^0-9]/g, "");
     const fullNameQuestion = questions.find((q) => q.key === "fullName");
@@ -290,8 +336,6 @@ export default function RegistrationForm({
       return;
     }
 
-    // City must be a real, selected municipality — CityAutocomplete only
-    // ever WANTS one selected, but nothing stops someone from typing
     // Used to hard-block here (and again server-side in /api/register) if
     // País=CO and the typed city didn't match COLOMBIA_CITIES — removed:
     // traced a real conversion drop to it. Someone living in Venezuela who
@@ -318,7 +362,7 @@ export default function RegistrationForm({
   const customQuestions = questions.filter((q) => !q.locked);
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit} noValidate>
       {/* Honeypot — invisible to a real person (off-canvas via absolute
           positioning, not display:none/visibility:hidden, since some bots
           specifically skip those two and still fill in a field that just
