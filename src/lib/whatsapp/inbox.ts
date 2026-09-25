@@ -145,6 +145,11 @@ interface WebhookMessage {
   // stored for that send. That's the one reliable way back to which
   // broadcast/template this reply is actually about.
   context?: { id: string };
+  // Present when type === "reaction" — a tap-and-hold emoji react on an
+  // earlier message (ours or theirs), not a real reply. `emoji` is absent
+  // when they REMOVED a reaction they'd previously left (Meta sends that
+  // as its own reaction event too, with no emoji).
+  reaction?: { message_id: string; emoji?: string };
 }
 
 interface WebhookStatus {
@@ -202,7 +207,11 @@ async function handleInboundMessage(msg: WebhookMessage): Promise<void> {
       ? msg.text?.body ?? null
       : msg.type === "button"
         ? msg.button?.text ?? null
-        : `[mensaje tipo ${msg.type}, no soportado aún]`;
+        : msg.type === "reaction"
+          ? msg.reaction?.emoji
+            ? `Reaccionó ${msg.reaction.emoji} a un mensaje`
+            : "Quitó su reacción a un mensaje"
+          : `[mensaje tipo ${msg.type}, no soportado aún]`;
 
   await db.whatsAppMessage.create({
     data: {
@@ -216,7 +225,17 @@ async function handleInboundMessage(msg: WebhookMessage): Promise<void> {
   });
   await db.whatsAppConversation.update({
     where: { id: conversation.id },
-    data: { lastInboundAt: new Date(), unreadCount: { increment: 1 } },
+    // A reaction was cluttering "No leídos" with things that never
+    // actually need a reply — see this function's own body-building
+    // above. Still shows up in the conversation (lastInboundAt), just
+    // doesn't count toward the badge that says "you owe someone a
+    // response". Every other type (including a sticker — that CAN be
+    // someone's whole answer to something, unlike a reaction) still
+    // counts, same as before.
+    data: {
+      lastInboundAt: new Date(),
+      ...(msg.type === "reaction" ? {} : { unreadCount: { increment: 1 } }),
+    },
   });
 
   // A tap on the attendance-poll template's own Sí/No buttons — see
