@@ -218,6 +218,14 @@ export default function EventForm({
     );
   }
 
+  function moveGalleryImage(index: number, dir: -1 | 1) {
+    const target = index + dir;
+    if (target < 0 || target >= values.galleryImageUrls.length) return;
+    const next = [...values.galleryImageUrls];
+    [next[index], next[target]] = [next[target]!, next[index]!];
+    set("galleryImageUrls", next);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
@@ -642,6 +650,47 @@ export default function EventForm({
                     >
                       ×
                     </button>
+                    <span
+                      style={{
+                        position: "absolute",
+                        top: 4,
+                        left: 4,
+                        minWidth: 22,
+                        height: 22,
+                        padding: "0 6px",
+                        borderRadius: 999,
+                        background: "rgba(28,19,16,0.7)",
+                        color: "#fff",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        lineHeight: "22px",
+                        textAlign: "center",
+                      }}
+                    >
+                      {i + 1}
+                    </span>
+                    <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+                      <button
+                        type="button"
+                        onClick={() => moveGalleryImage(i, -1)}
+                        disabled={i === 0}
+                        aria-label="Mover antes"
+                        title="Mover antes"
+                        style={galleryMoveButtonStyle}
+                      >
+                        ←
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveGalleryImage(i, 1)}
+                        disabled={i === values.galleryImageUrls.length - 1}
+                        aria-label="Mover después"
+                        title="Mover después"
+                        style={galleryMoveButtonStyle}
+                      >
+                        →
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -717,3 +766,16 @@ function Row({ children, columns = "1fr 1fr" }: { children: React.ReactNode; col
     </div>
   );
 }
+
+// Thumb-sized on purpose (the gallery gets managed from a phone) — the
+// same ←/→ idea as LandingBlocksEditor's tinyButtonStyle, just not tiny.
+const galleryMoveButtonStyle: React.CSSProperties = {
+  flex: 1,
+  height: 36,
+  border: "1px solid #e3e1dc",
+  borderRadius: 6,
+  background: "#fff",
+  cursor: "pointer",
+  fontSize: 16,
+  lineHeight: 1,
+};
