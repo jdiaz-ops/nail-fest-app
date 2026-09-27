@@ -58,6 +58,9 @@ export interface EventInput {
   imageUrl: string | null;
   // See Event.galleryImageUrls's own schema comment.
   galleryImageUrls: string[];
+  // See Event.galleryTitle / Event.ctaNote's own schema comments.
+  galleryTitle: string;
+  ctaNote: string;
   registerButtonLabel: string;
   startsAt: Date;
   endsAt: Date | null;
@@ -98,6 +101,8 @@ export async function createEvent(input: EventInput): Promise<Event> {
       description: input.description ? sanitizeEventDescription(input.description) : null,
       imageUrl: input.imageUrl,
       galleryImageUrls: input.galleryImageUrls,
+      galleryTitle: input.galleryTitle.trim() || null,
+      ctaNote: input.ctaNote.trim() || null,
       registerButtonLabel: input.registerButtonLabel.trim() || null,
       startsAt: input.startsAt,
       endsAt: input.endsAt,
@@ -130,6 +135,8 @@ export async function updateEvent(id: string, input: EventInput): Promise<Event>
       description: input.description ? sanitizeEventDescription(input.description) : null,
       imageUrl: input.imageUrl,
       galleryImageUrls: input.galleryImageUrls,
+      galleryTitle: input.galleryTitle.trim() || null,
+      ctaNote: input.ctaNote.trim() || null,
       registerButtonLabel: input.registerButtonLabel.trim() || null,
       startsAt: input.startsAt,
       endsAt: input.endsAt,
@@ -183,6 +190,8 @@ export async function duplicateEvent(sourceId: string): Promise<Event> {
       description: source.description,
       imageUrl: source.imageUrl,
       galleryImageUrls: source.galleryImageUrls,
+      galleryTitle: source.galleryTitle,
+      ctaNote: source.ctaNote,
       registerButtonLabel: source.registerButtonLabel,
       startsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       endsAt: null,

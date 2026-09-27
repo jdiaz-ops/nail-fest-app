@@ -74,6 +74,10 @@ interface Props {
   // guards on this, but checking here too avoids mounting the component
   // (and its scroll listener) at all for the common case.
   galleryImageUrls: string[];
+  // See Event.galleryTitle / Event.ctaNote's own schema comments — both
+  // optional, null renders nothing.
+  galleryTitle: string | null;
+  ctaNote: string | null;
 }
 
 // One combined checkout step (Shopify-style, per the admin's own call —
@@ -99,6 +103,8 @@ export default function EventRegistration({
   salesContent,
   landingBlocksContent,
   galleryImageUrls,
+  galleryTitle,
+  ctaNote,
 }: Props) {
   const hasTicketTypes = ticketTypes.length > 0;
   const [open, setOpen] = useState(false);
@@ -361,10 +367,19 @@ export default function EventRegistration({
           <div ref={inlineButtonRef} className="event-inline-cta">
             <button type="button" className="primary" onClick={openModal}>
               {registerButtonLabel}
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </svg>
             </button>
+            {ctaNote && <p className="event-cta-note">{ctaNote}</p>}
           </div>
 
-          {galleryImageUrls.length > 0 && <EventGalleryCarousel imageUrls={galleryImageUrls} />}
+          {galleryImageUrls.length > 0 && (
+            <>
+              {galleryTitle && <h2 className="event-gallery-title">{galleryTitle}</h2>}
+              <EventGalleryCarousel imageUrls={galleryImageUrls} />
+            </>
+          )}
 
           {salesContent ? (
             <div className="event-description">{salesContent}</div>

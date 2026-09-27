@@ -37,6 +37,8 @@ export default async function NewEventPage() {
           useLandingBlocks: false,
           imageUrl: null,
           galleryImageUrls: [],
+          galleryTitle: "",
+          ctaNote: "",
           registerButtonLabel: DEFAULT_REGISTER_BUTTON_LABEL,
           startsAtLocal: "",
           endsAtLocal: "",
@@ -61,6 +63,8 @@ export default async function NewEventPage() {
           useLandingBlocks: ev.useLandingBlocks,
           imageUrl: ev.imageUrl,
           galleryImageUrls: ev.galleryImageUrls,
+          galleryTitle: ev.galleryTitle ?? "",
+          ctaNote: ev.ctaNote ?? "",
           registerButtonLabel: ev.registerButtonLabel ?? DEFAULT_REGISTER_BUTTON_LABEL,
           capacity: ev.capacity != null ? String(ev.capacity) : "",
         }))}

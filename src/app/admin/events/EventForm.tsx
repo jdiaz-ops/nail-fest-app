@@ -39,6 +39,8 @@ export interface EventFormValues {
   imageUrl: string | null;
   // See Event.galleryImageUrls's own schema comment.
   galleryImageUrls: string[];
+  galleryTitle: string;
+  ctaNote: string;
   registerButtonLabel: string;
   startsAtLocal: string; // "YYYY-MM-DDTHH:mm", already in `timezone`
   endsAtLocal: string;
@@ -74,6 +76,8 @@ export interface DuplicateSource {
   useLandingBlocks: boolean;
   imageUrl: string | null;
   galleryImageUrls: string[];
+  galleryTitle: string;
+  ctaNote: string;
   registerButtonLabel: string;
   capacity: string;
 }
@@ -127,6 +131,8 @@ export default function EventForm({
       useLandingBlocks: source.useLandingBlocks,
       imageUrl: source.imageUrl,
       galleryImageUrls: source.galleryImageUrls,
+      galleryTitle: source.galleryTitle,
+      ctaNote: source.ctaNote,
       registerButtonLabel: source.registerButtonLabel,
       capacity: source.capacity,
       // Dates and slug deliberately NOT copied — a new event needs its
@@ -277,6 +283,8 @@ export default function EventForm({
       useLandingBlocks: values.useLandingBlocks,
       imageUrl: values.imageUrl,
       galleryImageUrls: values.galleryImageUrls,
+      galleryTitle: values.galleryTitle.trim(),
+      ctaNote: values.ctaNote.trim(),
       registerButtonLabel: values.registerButtonLabel.trim(),
       startsAt: startsAt.toISOString(),
       endsAt: endsAt ? endsAt.toISOString() : null,
@@ -340,7 +348,10 @@ export default function EventForm({
         <Section title="Datos del evento">
           <div className="field">
             <label>Nombre del evento</label>
-            <input value={values.name} onChange={(e) => set("name", e.target.value)} placeholder="Nail Fest Cali - 5 & 6 Septiembre" required />
+            <input value={values.name} onChange={(e) => set("name", e.target.value)} placeholder="Nail Fest Cali" required />
+            <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>
+              Sin la fecha — la página pública la muestra aparte, en grande, a partir de las fechas de abajo.
+            </p>
           </div>
           <div className="field">
             <label>Bajada (opcional)</label>
@@ -706,7 +717,20 @@ export default function EventForm({
             {galleryUploadError && <p style={{ fontSize: 12, color: "#c2185b", margin: "4px 0 0" }}>{galleryUploadError}</p>}
           </div>
 
-          <div className="field" style={{ marginBottom: 0 }}>
+          <div className="field">
+            <label>Título del carrusel (opcional)</label>
+            <input
+              value={values.galleryTitle}
+              onChange={(e) => set("galleryTitle", e.target.value)}
+              placeholder="Lo que vas a vivir"
+              style={{ maxWidth: 360 }}
+            />
+            <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>
+              Sale justo encima de las fotos del carrusel. Vacío = las fotos salen sin título.
+            </p>
+          </div>
+
+          <div className="field">
             <label>Select tickets button label</label>
             <input
               value={values.registerButtonLabel}
@@ -718,6 +742,18 @@ export default function EventForm({
               El texto del botón de registro en la página pública del evento (no hay paso de
               &quot;elegir boleta&quot; en nuestro flujo, así que este botón manda directo al
               registro).
+            </p>
+          </div>
+
+          <div className="field" style={{ marginBottom: 0 }}>
+            <label>Texto debajo del botón (opcional)</label>
+            <input
+              value={values.ctaNote}
+              onChange={(e) => set("ctaNote", e.target.value)}
+              placeholder="Para manicuristas, estudiantes de manos y pies y aficionadas a las uñas"
+            />
+            <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>
+              Una línea corta bajo el botón de registro — para quién es el evento. Vacío = no aparece.
             </p>
           </div>
         </Section>

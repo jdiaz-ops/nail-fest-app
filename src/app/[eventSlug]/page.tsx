@@ -6,6 +6,7 @@ import { probeImageDimensions } from "@/lib/imageDimensions";
 import { getOrderedProfessionOptions } from "@/lib/professions";
 import { getOrgSettings } from "@/lib/settings";
 import { formatDateInTz } from "@/lib/dateFormat";
+import { formatHeroDate } from "@/lib/eventHeroDate";
 import { getCheckoutQuestions } from "@/lib/checkoutForm";
 import { getPublicTicketTypes } from "@/lib/ticketTypes";
 import { type QuestionView } from "@/components/RegistrationForm";
@@ -88,6 +89,18 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
         ? [physicalVenue, event.virtualAccessInstructions || "también disponible de forma virtual"].filter(Boolean).join(" · ")
         : physicalVenue;
 
+  // The hero's own big date block and venue card (see the markup below)
+  // — derived from the same fields as eventWhen/eventVenue above, which
+  // stay as-is for the sidebar, the floating CTA and the modal.
+  const heroDate = formatHeroDate(event.startsAt, event.endsAt, orgSettings.timezone, orgSettings.language);
+  const venueCardTitle = event.format === "VIRTUAL" ? "Evento virtual" : event.venueName;
+  const venueCardDetail =
+    event.format === "VIRTUAL"
+      ? event.virtualAccessInstructions || "El acceso llega por correo antes del evento"
+      : [event.venueAddress, event.format === "HYBRID" ? event.virtualAccessInstructions || "También disponible de forma virtual" : null]
+          .filter(Boolean)
+          .join(" · ");
+
   const salesPage = parseSalesPageContent(event.salesPageContent);
   // See Event.useLandingBlocks's own schema comment — only parsed/passed
   // down when the admin actually turned this on for THIS event; every
@@ -146,16 +159,39 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
       ) : (
         <>
           <FitTitle text={event.name} />
+          <p className="event-hero-date">
+            <span className="event-hero-date-days">{heroDate.days}</span>
+            <span className="event-hero-date-rest">
+              <span className="event-hero-date-month">{heroDate.month}</span>
+              <span className="event-hero-date-detail">{heroDate.detail}</span>
+            </span>
+          </p>
           {event.subtitle && (
             // Sanitized server-side (lib/sanitizeHtml.ts) before storage,
             // same requirement as `description` right below — this also
             // renders on the public, unauthenticated page.
             <div className="event-page-subtitle" dangerouslySetInnerHTML={{ __html: event.subtitle }} />
           )}
-          {eventVenue && (
-            <p className="event-page-meta">
-              {event.format === "VIRTUAL" ? "🌐" : "📍"} {eventVenue}
-            </p>
+          {(venueCardTitle || venueCardDetail) && (
+            <div className="event-hero-venue">
+              <span className="event-hero-venue-icon" aria-hidden="true">
+                {event.format === "VIRTUAL" ? (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20" />
+                  </svg>
+                ) : (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0Z" />
+                    <circle cx="12" cy="10" r="3" />
+                  </svg>
+                )}
+              </span>
+              <span className="event-hero-venue-text">
+                {venueCardTitle && <strong>{venueCardTitle}</strong>}
+                {venueCardDetail && <span>{venueCardDetail}</span>}
+              </span>
+            </div>
           )}
         </>
       )}
@@ -184,6 +220,8 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
           salesContent={salesPage ? <SalesPageContent content={salesPage} /> : undefined}
           landingBlocksContent={landingBlocks ? <LandingBlocksContent blocks={landingBlocks} /> : undefined}
           galleryImageUrls={event.galleryImageUrls}
+          galleryTitle={event.galleryTitle}
+          ctaNote={event.ctaNote}
         />
       </Suspense>
 
