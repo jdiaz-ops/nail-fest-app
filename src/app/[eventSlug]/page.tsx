@@ -10,6 +10,7 @@ import { getCheckoutQuestions } from "@/lib/checkoutForm";
 import { getPublicTicketTypes } from "@/lib/ticketTypes";
 import { type QuestionView } from "@/components/RegistrationForm";
 import EventRegistration from "@/components/EventRegistration";
+import FitTitle from "@/components/FitTitle";
 import ClickableHero from "@/components/ClickableHero";
 import MetaPixelScript from "@/components/MetaPixelScript";
 import SalesPageHero from "@/components/salesPage/SalesPageHero";
@@ -144,7 +145,7 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
         <SalesPageHero hero={salesPage.hero} />
       ) : (
         <>
-          <h1 style={{ margin: "4px 0 8px" }}>{event.name}</h1>
+          <FitTitle text={event.name} />
           {event.subtitle && (
             // Sanitized server-side (lib/sanitizeHtml.ts) before storage,
             // same requirement as `description` right below — this also
