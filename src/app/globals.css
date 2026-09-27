@@ -308,7 +308,14 @@ button.primary:disabled {
    which is what lets `position: sticky` on it actually do anything. */
 .event-page-body {
   display: grid;
-  grid-template-columns: 1fr;
+  /* minmax(0, …), not a bare 1fr: a bare 1fr is minmax(auto, 1fr), and a
+     grid item's auto minimum is its content's min-content width — which
+     for the gallery carousel (a nowrap flex row of fixed-width cards,
+     see .event-gallery-carousel-track) is the sum of every card. That
+     forced this whole column wider than a phone's screen, pushing the
+     CTA button and everything else off the right edge. Desktop below
+     already had minmax(0, …) for the same reason. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
 }
 @media (min-width: 900px) {
@@ -317,6 +324,9 @@ button.primary:disabled {
     gap: 48px;
     align-items: start;
   }
+}
+.event-page-content {
+  min-width: 0;
 }
 
 .event-inline-cta {
