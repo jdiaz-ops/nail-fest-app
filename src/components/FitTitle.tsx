@@ -4,6 +4,7 @@ import { useLayoutEffect, useRef } from "react";
 
 interface Props {
   text: string;
+  className?: string;
   maxPx?: number;
   minPx?: number;
 }
@@ -14,7 +15,7 @@ interface Props {
 // measures: start at maxPx (the size the h1 always had) and only shrink
 // when the name would wrap. A name too long even at minPx wraps normally
 // instead of getting cut off.
-export default function FitTitle({ text, maxPx = 32, minPx = 18 }: Props) {
+export default function FitTitle({ text, className, maxPx = 32, minPx = 18 }: Props) {
   const ref = useRef<HTMLHeadingElement>(null);
 
   useLayoutEffect(() => {
@@ -40,7 +41,7 @@ export default function FitTitle({ text, maxPx = 32, minPx = 18 }: Props) {
   }, [text, maxPx, minPx]);
 
   return (
-    <h1 ref={ref} style={{ margin: "4px 0 8px", fontSize: maxPx, lineHeight: 1.15, whiteSpace: "nowrap" }}>
+    <h1 ref={ref} className={className} style={{ margin: "4px 0 8px", fontSize: maxPx, lineHeight: 1.15, whiteSpace: "nowrap" }}>
       {text}
     </h1>
   );

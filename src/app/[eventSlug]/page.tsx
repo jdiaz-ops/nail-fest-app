@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
 import { Suspense } from "react";
+import { Fraunces } from "next/font/google";
 import { db } from "@/lib/db";
 import { probeImageDimensions } from "@/lib/imageDimensions";
 import { getOrderedProfessionOptions } from "@/lib/professions";
@@ -21,6 +22,11 @@ import LandingBlocksContent from "@/components/landingBlocks/LandingBlocksConten
 import { parseLandingBlocks } from "@/lib/landingBlocks/types";
 
 export const dynamic = "force-dynamic";
+
+// The brand's own display face for the hero's name and date numbers —
+// same one EventRegistration.tsx already loads on this page for the
+// confirmation screen, so no extra font request.
+const fraunces = Fraunces({ subsets: ["latin"], weight: ["900"] });
 
 export default async function EventLandingPage({ params }: { params: { eventSlug: string } }) {
   const event = await db.event.findUnique({ where: { slug: params.eventSlug } });
@@ -158,9 +164,9 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
         <SalesPageHero hero={salesPage.hero} />
       ) : (
         <>
-          <FitTitle text={event.name} />
+          <FitTitle text={event.name} className={`event-hero-title ${fraunces.className}`} />
           <p className="event-hero-date">
-            <span className="event-hero-date-days">{heroDate.days}</span>
+            <span className={`event-hero-date-days ${fraunces.className}`}>{heroDate.days}</span>
             <span className="event-hero-date-rest">
               <span className="event-hero-date-month">{heroDate.month}</span>
               <span className="event-hero-date-detail">{heroDate.detail}</span>
