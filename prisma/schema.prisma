@@ -166,6 +166,14 @@ model Event {
   // admin uploads one; the public page and EventForm's preview both just
   // skip the hero image when this is null instead of showing a broken img.
   imageUrl     String?
+  // A horizontally-scrollable carousel on the public page, just below the
+  // inline CTA and before the description/landing-blocks content — see
+  // EventGalleryCarousel.tsx. Same shape and same "pre-designed, we don't
+  // overlay anything" convention as OrgSettings.homepageGalleryImageUrls
+  // (captions are baked into the image itself, not a separate field).
+  // Empty means the whole section doesn't render at all, same as the
+  // homepage's own gallery.
+  galleryImageUrls String[] @default([])
   // The public page's registration submit button — our previous ticketing
   // platform's own "Select tickets button label" field, renamed here since we have no
   // ticket-selection step (RegistrationForm.tsx just submits straight to

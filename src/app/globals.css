@@ -323,6 +323,54 @@ button.primary:disabled {
   margin: 16px 0 20px;
 }
 
+/* EventGalleryCarousel.tsx — a horizontally-scrollable row of pre-designed
+   photos (captions baked in, same convention as .homepage-gallery-tile).
+   Scrollbar hidden across browsers since the dots below are the scroll
+   indicator; scroll-snap gives the swipe a "settle on a card" feel
+   instead of stopping wherever a finger lifts. */
+.event-gallery-carousel {
+  margin: 0 0 20px;
+}
+.event-gallery-carousel-track {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+.event-gallery-carousel-track::-webkit-scrollbar {
+  display: none;
+}
+.event-gallery-carousel-item {
+  flex: 0 0 auto;
+  width: 150px;
+  border-radius: 10px;
+  overflow: hidden;
+  scroll-snap-align: start;
+}
+.event-gallery-carousel-item img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.event-gallery-carousel-dots {
+  display: flex;
+  justify-content: center;
+  gap: 7px;
+  margin-top: 12px;
+}
+.event-gallery-carousel-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--border);
+}
+.event-gallery-carousel-dot.is-active {
+  background: var(--accent);
+}
+
 .event-page-sidebar {
   display: none;
 }

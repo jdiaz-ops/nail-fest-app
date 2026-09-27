@@ -56,6 +56,8 @@ export interface EventInput {
   venueAddress: string;
   description: string;
   imageUrl: string | null;
+  // See Event.galleryImageUrls's own schema comment.
+  galleryImageUrls: string[];
   registerButtonLabel: string;
   startsAt: Date;
   endsAt: Date | null;
@@ -95,6 +97,7 @@ export async function createEvent(input: EventInput): Promise<Event> {
       venueAddress: input.venueAddress || null,
       description: input.description ? sanitizeEventDescription(input.description) : null,
       imageUrl: input.imageUrl,
+      galleryImageUrls: input.galleryImageUrls,
       registerButtonLabel: input.registerButtonLabel.trim() || null,
       startsAt: input.startsAt,
       endsAt: input.endsAt,
@@ -126,6 +129,7 @@ export async function updateEvent(id: string, input: EventInput): Promise<Event>
       venueAddress: input.venueAddress || null,
       description: input.description ? sanitizeEventDescription(input.description) : null,
       imageUrl: input.imageUrl,
+      galleryImageUrls: input.galleryImageUrls,
       registerButtonLabel: input.registerButtonLabel.trim() || null,
       startsAt: input.startsAt,
       endsAt: input.endsAt,
@@ -178,6 +182,7 @@ export async function duplicateEvent(sourceId: string): Promise<Event> {
       venueAddress: source.venueAddress,
       description: source.description,
       imageUrl: source.imageUrl,
+      galleryImageUrls: source.galleryImageUrls,
       registerButtonLabel: source.registerButtonLabel,
       startsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       endsAt: null,

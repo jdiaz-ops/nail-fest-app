@@ -37,6 +37,8 @@ export interface EventFormValues {
   landingBlocks: LandingBlock[];
   useLandingBlocks: boolean;
   imageUrl: string | null;
+  // See Event.galleryImageUrls's own schema comment.
+  galleryImageUrls: string[];
   registerButtonLabel: string;
   startsAtLocal: string; // "YYYY-MM-DDTHH:mm", already in `timezone`
   endsAtLocal: string;
@@ -71,6 +73,7 @@ export interface DuplicateSource {
   landingBlocks: LandingBlock[];
   useLandingBlocks: boolean;
   imageUrl: string | null;
+  galleryImageUrls: string[];
   registerButtonLabel: string;
   capacity: string;
 }
@@ -97,6 +100,9 @@ export default function EventForm({
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [galleryUploading, setGalleryUploading] = useState(false);
+  const [galleryUploadError, setGalleryUploadError] = useState<string | null>(null);
+  const galleryFileInputRef = useRef<HTMLInputElement>(null);
   const isEdit = Boolean(initial.id);
   const [urlCopied, setUrlCopied] = useState(false);
 
@@ -120,6 +126,7 @@ export default function EventForm({
       landingBlocks: source.landingBlocks,
       useLandingBlocks: source.useLandingBlocks,
       imageUrl: source.imageUrl,
+      galleryImageUrls: source.galleryImageUrls,
       registerButtonLabel: source.registerButtonLabel,
       capacity: source.capacity,
       // Dates and slug deliberately NOT copied — a new event needs its
@@ -168,6 +175,47 @@ export default function EventForm({
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
+  }
+
+  // The public page's own carousel (see EventGalleryCarousel.tsx) shows
+  // these constrained to a card width, never full-bleed like the hero —
+  // same reasoning as RichTextEditor.tsx's own content-image compression,
+  // smaller target than the hero's.
+  async function handleGalleryImageAdd(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setGalleryUploading(true);
+    setGalleryUploadError(null);
+    try {
+      const compressed = await compressImage(file, { maxDimension: 1600, quality: 0.85 });
+      const form = new FormData();
+      form.append("file", compressed);
+      const res = await fetch("/api/admin/uploads/event-image", { method: "POST", body: form });
+      const body = await res.json().catch(() => ({}));
+      if (res.ok) {
+        set("galleryImageUrls", [...values.galleryImageUrls, body.url]);
+      } else {
+        setGalleryUploadError(
+          body?.error === "blob_not_configured"
+            ? "El almacenamiento de imágenes no está activo todavía."
+            : body?.error === "not_an_image"
+              ? "Ese archivo no es una imagen."
+              : body?.error === "too_large"
+                ? "La imagen pesa más de 5MB."
+                : "No se pudo subir la imagen."
+        );
+      }
+    } finally {
+      setGalleryUploading(false);
+      if (galleryFileInputRef.current) galleryFileInputRef.current.value = "";
+    }
+  }
+
+  function removeGalleryImage(index: number) {
+    set(
+      "galleryImageUrls",
+      values.galleryImageUrls.filter((_, i) => i !== index)
+    );
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -220,6 +268,7 @@ export default function EventForm({
       landingBlocks: values.landingBlocks,
       useLandingBlocks: values.useLandingBlocks,
       imageUrl: values.imageUrl,
+      galleryImageUrls: values.galleryImageUrls,
       registerButtonLabel: values.registerButtonLabel.trim(),
       startsAt: startsAt.toISOString(),
       endsAt: endsAt ? endsAt.toISOString() : null,
@@ -551,6 +600,61 @@ export default function EventForm({
             <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageChange} disabled={uploading} />
             {uploading && <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>Subiendo…</p>}
             {uploadError && <p style={{ fontSize: 12, color: "#c2185b", margin: "4px 0 0" }}>{uploadError}</p>}
+          </div>
+
+          <div className="field">
+            <label>Carrusel de galería (opcional)</label>
+            <p style={{ fontSize: 12, color: "#5b5f6b", margin: "0 0 8px" }}>
+              Sale en la página pública justo debajo del botón de registro, antes de la descripción — la persona lo
+              desliza con el dedo. Sube fotos ya diseñadas (con su propio texto si quieres uno, como en la galería del
+              homepage) — esto no les agrega nada encima, solo las acomoda en el carrusel. Sin fotos, esta sección no
+              aparece en la página.
+            </p>
+            {values.galleryImageUrls.length > 0 && (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 10 }}>
+                {values.galleryImageUrls.map((url, i) => (
+                  <div key={url + i} style={{ position: "relative" }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element -- admin preview of an arbitrary uploaded URL */}
+                    <img
+                      src={url}
+                      alt=""
+                      style={{ width: 110, height: 110, objectFit: "cover", borderRadius: 8, display: "block", border: "1px solid #e3e1dc" }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeGalleryImage(i)}
+                      style={{
+                        position: "absolute",
+                        top: 4,
+                        right: 4,
+                        border: "none",
+                        borderRadius: 999,
+                        width: 22,
+                        height: 22,
+                        background: "rgba(28,19,16,0.7)",
+                        color: "#fff",
+                        cursor: "pointer",
+                        fontSize: 13,
+                        lineHeight: 1,
+                      }}
+                      aria-label="Quitar foto"
+                      title="Quitar foto"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <input
+              ref={galleryFileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleGalleryImageAdd}
+              disabled={galleryUploading}
+            />
+            {galleryUploading && <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>Subiendo…</p>}
+            {galleryUploadError && <p style={{ fontSize: 12, color: "#c2185b", margin: "4px 0 0" }}>{galleryUploadError}</p>}
           </div>
 
           <div className="field" style={{ marginBottom: 0 }}>

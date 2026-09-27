@@ -182,6 +182,7 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
           descriptionHtml={event.description}
           salesContent={salesPage ? <SalesPageContent content={salesPage} /> : undefined}
           landingBlocksContent={landingBlocks ? <LandingBlocksContent blocks={landingBlocks} /> : undefined}
+          galleryImageUrls={event.galleryImageUrls}
         />
       </Suspense>
 

@@ -43,6 +43,7 @@ export default async function EditEventPage({ params }: { params: { id: string }
           landingBlocks: parseLandingBlocks(event.landingBlocks),
           useLandingBlocks: event.useLandingBlocks,
           imageUrl: event.imageUrl,
+          galleryImageUrls: event.galleryImageUrls,
           registerButtonLabel: event.registerButtonLabel ?? DEFAULT_REGISTER_BUTTON_LABEL,
           startsAtLocal: utcToZonedInputValue(event.startsAt, orgSettings.timezone),
           endsAtLocal: event.endsAt ? utcToZonedInputValue(event.endsAt, orgSettings.timezone) : "",

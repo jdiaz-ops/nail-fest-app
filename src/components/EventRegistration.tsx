@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Fraunces } from "next/font/google";
 import RegistrationForm, { type QuestionView, type RegisterPayload } from "./RegistrationForm";
+import EventGalleryCarousel from "./EventGalleryCarousel";
 import { track, waitForFbpCookie, ensureFbcCookie } from "./tracking";
 import { formatPhoneDisplay, INSTAGRAM_HANDLE, INSTAGRAM_URL } from "@/lib/brand";
 
@@ -68,6 +69,11 @@ interface Props {
   // useLandingBlocks on; salesContent still wins if somehow both are set
   // (shouldn't happen — mutually exclusive at the data-entry level).
   landingBlocksContent?: React.ReactNode;
+  // See Event.galleryImageUrls's own schema comment. Empty array (the
+  // default) renders nothing — EventGalleryCarousel.tsx itself also
+  // guards on this, but checking here too avoids mounting the component
+  // (and its scroll listener) at all for the common case.
+  galleryImageUrls: string[];
 }
 
 // One combined checkout step (Shopify-style, per the admin's own call —
@@ -92,6 +98,7 @@ export default function EventRegistration({
   descriptionHtml,
   salesContent,
   landingBlocksContent,
+  galleryImageUrls,
 }: Props) {
   const hasTicketTypes = ticketTypes.length > 0;
   const [open, setOpen] = useState(false);
@@ -356,6 +363,8 @@ export default function EventRegistration({
               {registerButtonLabel}
             </button>
           </div>
+
+          {galleryImageUrls.length > 0 && <EventGalleryCarousel imageUrls={galleryImageUrls} />}
 
           {salesContent ? (
             <div className="event-description">{salesContent}</div>
