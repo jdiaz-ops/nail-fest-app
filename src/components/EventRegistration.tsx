@@ -81,8 +81,6 @@ interface Props {
   // Headline of the closing band at the end of the page — the admin's own
   // Event.closingText, or the page's auto-built sentence when that's empty.
   closingText: string;
-  // "nailfest.lat" — the footer strip's own line.
-  siteHost: string;
 }
 
 // One combined checkout step (Shopify-style, per the admin's own call —
@@ -111,7 +109,6 @@ export default function EventRegistration({
   galleryTitle,
   ctaNote,
   closingText,
-  siteHost,
 }: Props) {
   const hasTicketTypes = ticketTypes.length > 0;
   const [open, setOpen] = useState(false);
@@ -153,6 +150,7 @@ export default function EventRegistration({
   }, []);
   const firedCheckoutStart = useRef(false);
   const inlineButtonRef = useRef<HTMLDivElement>(null);
+  const closingRef = useRef<HTMLElement>(null);
   // Floating CTA only appears once the inline one (right after the venue,
   // in [eventSlug]/page.tsx's own layout) has scrolled out of view — the
   // user's own instruction after seeing it float the whole time regardless
@@ -186,11 +184,19 @@ export default function EventRegistration({
     })();
   }, []);
 
+  // …and hides again once the closing band (which has its own button)
+  // scrolls in, so it never sits on top of that button or the logo below.
   useEffect(() => {
-    const el = inlineButtonRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(([entry]) => entry && setShowFloating(!entry.isIntersecting));
-    observer.observe(el);
+    const inline = inlineButtonRef.current;
+    if (!inline) return;
+    const closing = closingRef.current;
+    const visible = new Map<Element, boolean>();
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) visible.set(entry.target, entry.isIntersecting);
+      setShowFloating(!visible.get(inline) && !(closing && visible.get(closing)));
+    });
+    observer.observe(inline);
+    if (closing) observer.observe(closing);
     return () => observer.disconnect();
   }, []);
 
@@ -426,17 +432,20 @@ export default function EventRegistration({
       {/* Closing band — one last CTA at the very end, after everything
           the person scrolled through. Full-bleed via CSS (see
           .event-closing). */}
-      <section className="event-closing">
+      <section className="event-closing" ref={closingRef}>
         <div className="event-closing-inner">
           <h2 className={`event-closing-title ${fraunces.className}`}>{closingText}</h2>
           <button type="button" className="event-closing-button" onClick={openModal}>
             {registerButtonLabel}
           </button>
         </div>
-        <p className="event-closing-footer">
-          {brandName} · {siteHost}
-        </p>
+        <div className="event-closing-footer" aria-hidden="true" />
       </section>
+      <footer className="event-page-footer">
+        {/* eslint-disable-next-line @next/next/no-img-element -- fixed logo mark, same as the homepage's */}
+        <img src="/logo.png" alt={brandName} className="event-page-footer-logo" />
+        <p className="event-page-footer-tagline">Donde se reúne el mundo de las uñas</p>
+      </footer>
 
       {/* Floating CTA — mobile only (hidden ≥900px, see globals.css's
           .event-floating-cta — the sidebar card above is always visible

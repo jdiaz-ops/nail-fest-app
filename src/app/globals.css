@@ -570,13 +570,30 @@ button.primary:disabled {
 }
 .event-closing-footer {
   /* Cancels .event-closing's own side padding so the strip runs edge to
-     edge like the band it sits in. */
+     edge like the band it sits in. A plain dark line, no text — the
+     brand sits on the page background below it (.event-page-footer). */
   margin: 0 -24px;
-  padding: 16px 24px;
+  height: 10px;
   background: #17181c;
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 13px;
+}
+.event-page-footer {
+  margin: 0 calc(50% - 50vw);
+  padding: 36px 24px 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
   text-align: center;
+}
+.event-page-footer-logo {
+  display: block;
+  height: 64px;
+  width: auto;
+}
+.event-page-footer-tagline {
+  margin: 0;
+  font-size: 14px;
+  color: var(--ink-muted);
 }
 
 .event-page-sidebar {

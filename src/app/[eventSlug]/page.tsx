@@ -111,14 +111,6 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
           .filter(Boolean)
           .join(" · ");
 
-  const siteHost = (() => {
-    try {
-      return new URL(process.env.APP_BASE_URL ?? "").host;
-    } catch {
-      return "";
-    }
-  })();
-
   const salesPage = parseSalesPageContent(event.salesPageContent);
   // See Event.useLandingBlocks's own schema comment — only parsed/passed
   // down when the admin actually turned this on for THIS event; every
@@ -252,7 +244,6 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
           galleryTitle={event.galleryTitle}
           ctaNote={event.ctaNote}
           closingText={event.closingText || `Nos vemos el ${heroDate.days} ${heroDate.month} en ${event.city}.`}
-          siteHost={siteHost}
         />
       </Suspense>
     </main>
