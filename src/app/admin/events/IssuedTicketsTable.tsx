@@ -50,6 +50,14 @@ export interface TicketRow {
 // to SENT/DELIVERED/OPENED/CLICKED, which all mean it likely did).
 const PROBLEM_EMAIL_STATUSES = new Set(["BOUNCED", "COMPLAINED", "FAILED"]);
 
+// Each ticket's own code, titular first — the same codes the ticket email
+// and PDF print (lib/ticket.ts's confirmationCodeFor, repeated here since
+// that module signs tokens with Node's crypto and can't load in a browser).
+function ticketCodes(r: Pick<TicketRow, "id" | "ticketCount">): string[] {
+  const code = r.id.slice(-8).toUpperCase();
+  return Array.from({ length: Math.max(1, r.ticketCount) }, (_, i) => (i === 0 ? code : `${code}-${i + 1}`));
+}
+
 const SCAN_RESULT_LABEL: Record<string, string> = {
   VALID_FIRST: "Entrada válida",
   VALID_REENTRY: "Reingreso",
@@ -113,7 +121,8 @@ export default function IssuedTicketsTable({
         fullName(r.person).toLowerCase().includes(q) ||
         r.person.email.toLowerCase().includes(q) ||
         r.id.toLowerCase().includes(q) ||
-        (r.qrToken ?? "").toLowerCase().includes(q)
+        (r.qrToken ?? "").toLowerCase().includes(q) ||
+        ticketCodes(r).some((c) => c.toLowerCase().includes(q))
       );
     });
   }, [rows, query, ticketTypeFilter, statusFilter, emailFilter]);
@@ -408,7 +417,8 @@ function TicketModal({
           <div>
             <h2 style={{ margin: 0, fontSize: 18 }}>{fullName(row.person)}</h2>
             <div style={{ fontSize: 12, color: "#5b5f6b" }}>
-              Orden {row.id.slice(-8).toUpperCase()} {row.qrToken ? `· Código ${row.qrToken.slice(0, 8)}` : ""}
+              Orden {ticketCodes(row)[0]}
+              {row.ticketCount > 1 ? ` · Boletas ${ticketCodes(row).join(", ")}` : ""}
             </div>
           </div>
           <button type="button" onClick={onClose} className="secondary" style={{ padding: "4px 10px" }}>

@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { verifyQrToken } from "@/lib/ticket";
+import { ticketHolderName, verifyQrToken } from "@/lib/ticket";
 import type { ScanResult } from "@prisma/client";
 
 // See the comment at its one use below — this is not "how long a re-entry
@@ -61,18 +61,19 @@ export async function recordScan(
       include: { registration: { include: { person: true, event: true } } },
     });
     if (existing) {
+      const titular = existing.registration
+        ? [existing.registration.person.firstName, existing.registration.person.lastName].filter(Boolean).join(" ") ||
+          existing.registration.person.email
+        : undefined;
       return {
         result: existing.result,
-        personName: existing.registration
-          ? [existing.registration.person.firstName, existing.registration.person.lastName].filter(Boolean).join(" ") ||
-            existing.registration.person.email
-          : undefined,
+        personName: titular ? ticketHolderName(titular, verifyQrToken(existing.token).ticketNumber ?? 1) : undefined,
         eventName: existing.registration?.event.name,
       };
     }
   }
 
-  const { valid, registrationId } = verifyQrToken(token);
+  const { valid, registrationId, ticketNumber = 1 } = verifyQrToken(token);
 
   if (!valid || !registrationId) {
     await db.scanLog.create({
@@ -86,14 +87,19 @@ export async function recordScan(
     include: { person: true, event: true },
   });
 
-  if (!registration) {
+  // A ticket number past the order's own count (e.g. the order was later
+  // edited down from 2 tickets to 1) is not a ticket that exists anymore.
+  if (!registration || ticketNumber > registration.ticketCount) {
     await db.scanLog.create({
       data: { token, result: "NOT_FOUND", scannedForEventId, scannerLabel, scannedAt, clientScanId },
     });
     return { result: "NOT_FOUND" };
   }
 
-  const personName = [registration.person.firstName, registration.person.lastName].filter(Boolean).join(" ") || registration.person.email;
+  const personName = ticketHolderName(
+    [registration.person.firstName, registration.person.lastName].filter(Boolean).join(" ") || registration.person.email,
+    ticketNumber
+  );
 
   if (registration.eventId !== scannedForEventId) {
     await db.scanLog.create({
@@ -102,11 +108,13 @@ export async function recordScan(
     return { result: "WRONG_EVENT", personName, actualEventName: registration.event.name };
   }
 
-  // Same registration scanned before → re-entry, not an error. Look up the
-  // most recent prior VALID_FIRST/VALID_REENTRY for this registration so the
-  // UI can show "ya había entrado a las HH:MM" instead of just a checkmark.
+  // Same TICKET scanned before → re-entry, not an error. Per ticket, not
+  // per registration: the acompañante's own QR entering after the titular
+  // is a first entry of its own, and counts toward checkedInCount. Look up
+  // the most recent prior VALID_FIRST/VALID_REENTRY of this exact token so
+  // the UI can show "ya había entrado a las HH:MM" instead of a checkmark.
   const previousScan = await db.scanLog.findFirst({
-    where: { registrationId, result: { in: ["VALID_FIRST", "VALID_REENTRY"] } },
+    where: { registrationId, token, result: { in: ["VALID_FIRST", "VALID_REENTRY"] } },
     orderBy: { scannedAt: "desc" },
   });
 
@@ -140,9 +148,9 @@ export async function recordScan(
     db.scanLog.create({
       data: { registrationId, token, result: "VALID_FIRST", scannedForEventId, scannerLabel, scannedAt, clientScanId },
     }),
-    // Capped at ticketCount by the fact that a second scan of the same
-    // registration always takes the VALID_REENTRY branch above, never this
-    // one — see the ScanLog model comment.
+    // Capped at ticketCount: each ticket's token can only take this branch
+    // once (a second scan of it is VALID_REENTRY above), and tokens past
+    // ticketCount are rejected as NOT_FOUND — see the ScanLog model comment.
     db.registration.update({
       where: { id: registrationId },
       data: { checkedInCount: { increment: 1 } },

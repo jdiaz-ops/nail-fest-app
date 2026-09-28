@@ -5,6 +5,7 @@ import { confirmationEmail } from "@/lib/email/templates";
 import { renderConfirmationFromTemplate, renderSubjectFromTemplate } from "@/lib/confirmationTemplate";
 import { renderTicketPdfBuffer } from "@/lib/ticketPdf";
 import { getOrgSettings } from "@/lib/settings";
+import { confirmationCodeFor, ticketHolderName, ticketsFor } from "@/lib/ticket";
 
 // Shared by /api/register (first send + resend-on-resubmit), /api/resend-
 // ticket (the self-serve "I lost my email" flow), and /api/admin/
@@ -70,7 +71,23 @@ export async function sendTicketEmail(params: {
     // Last 8 chars of the cuid, uppercased — not cryptographically
     // meaningful, just a short human-readable reference (same idea as an
     // "order #") for someone reading it over the phone or WhatsApp.
-    const confirmationCode = (params.registration?.id ?? params.qrToken).slice(-8).toUpperCase();
+    const confirmationCode = params.registration ? confirmationCodeFor(params.registration.id) : params.qrToken.slice(-8).toUpperCase();
+    // A multi-ticket order: one QR + code per ticket, titular first (its
+    // token is the stored one, params.qrToken) — see lib/ticket.ts.
+    const ticketCount = params.registration?.ticketCount ?? 1;
+    const holder = [params.person.firstName, params.person.lastName].filter(Boolean).join(" ").trim() || params.person.email;
+    const tickets =
+      params.registration && ticketCount > 1
+        ? ticketsFor(params.registration.id, ticketCount).map((t) => {
+            const token = t.ticketNumber === 1 ? params.qrToken : t.qrToken;
+            return {
+              qrImageUrl: `${process.env.APP_BASE_URL || ""}/api/ticket-qr/${token}`,
+              confirmationCode: t.confirmationCode,
+              holderName: ticketHolderName(holder, t.ticketNumber),
+              label: `${ticketType?.name ?? "Entrada"} · ${t.ticketNumber} de ${ticketCount}`,
+            };
+          })
+        : undefined;
 
     // Fallback chain: this event's own override -> the account-wide
     // template -> the original hand-built design (confirmationEmail()),
@@ -98,6 +115,7 @@ export async function sendTicketEmail(params: {
           language: orgSettings.language,
           format,
           zoomJoinUrl: params.zoomJoinUrl,
+          tickets,
         })
       : confirmationEmail({
           firstName: params.person.firstName ?? "",
@@ -119,6 +137,7 @@ export async function sendTicketEmail(params: {
           language: orgSettings.language,
           format,
           zoomJoinUrl: params.zoomJoinUrl,
+          tickets,
         });
 
     // Same fallback chain as the body, computed independently of which

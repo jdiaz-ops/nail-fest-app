@@ -2,7 +2,7 @@ import PDFDocument from "pdfkit";
 import { db } from "@/lib/db";
 import { getOrgSettings } from "@/lib/settings";
 import { formatEventScheduleLines } from "@/lib/eventSchedule";
-import { renderQrPngBuffer } from "@/lib/ticket";
+import { confirmationCodeFor, renderQrPngBuffer, ticketHolderName, ticketsFor, verifyQrToken } from "@/lib/ticket";
 
 // One self-contained, printable ticket — same fields and the same teal
 // accent as the inline "Tu entrada" voucher block in the email
@@ -37,8 +37,25 @@ const TEAL_DARK_TEXT = "#0b2e2c";
 const INK = "#1a1a1a";
 const MUTED = "#5b5f6b";
 
+// One page per ticket of the order: `qrToken` is ticket 1 (the one stored
+// on the registration), and for a multi-ticket order the rest are derived
+// from it — every caller gets the full set of QRs without passing them in.
+// A token that doesn't verify (the admin's fixed-sample preview) just
+// renders its one page.
+function pagesFor(data: TicketPdfData): { qrToken: string; confirmationCode: string; ticketNumber: number }[] {
+  const count = data.ticketCount ?? 1;
+  const { valid, registrationId } = verifyQrToken(data.qrToken);
+  if (count <= 1 || !valid || !registrationId) {
+    return [{ qrToken: data.qrToken, confirmationCode: data.confirmationCode, ticketNumber: 1 }];
+  }
+  return ticketsFor(registrationId, count).map((t) =>
+    t.ticketNumber === 1 ? { ...t, qrToken: data.qrToken, confirmationCode: data.confirmationCode } : t
+  );
+}
+
 export async function renderTicketPdfBuffer(data: TicketPdfData): Promise<Buffer> {
-  const qrPng = await renderQrPngBuffer(data.qrToken);
+  const pages = pagesFor(data);
+  const qrPngs = await Promise.all(pages.map((p) => renderQrPngBuffer(p.qrToken)));
   const attendeeName = [data.firstName, data.lastName].filter(Boolean).join(" ").trim() || "—";
   // One line per real day when Event.scheduleDays is set, joined with a
   // real newline — PDFKit's .text() wraps on "\n" natively, and row()
@@ -51,10 +68,11 @@ export async function renderTicketPdfBuffer(data: TicketPdfData): Promise<Buffer
     data.timezone,
     data.language
   ).join("\n");
-  const ticketTypeLine =
-    data.ticketTypeName && (data.ticketCount ?? 1) > 1
-      ? `${data.ticketTypeName} · x${data.ticketCount}`
-      : data.ticketTypeName;
+  // "Entrada general · 2 de 2" on each page of a multi-ticket order — each
+  // page is ONE ticket, so the old "· x2" would read as "this QR is good
+  // for two", which it no longer is.
+  const ticketTypeLine = (ticketNumber: number) =>
+    pages.length > 1 ? `${data.ticketTypeName ?? "Entrada"} · ${ticketNumber} de ${pages.length}` : data.ticketTypeName;
 
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: "A4", margin: 50 });
@@ -63,67 +81,74 @@ export async function renderTicketPdfBuffer(data: TicketPdfData): Promise<Buffer
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
 
-    const pageWidth = doc.page.width;
-    const headerTextWidth = pageWidth - 100;
-    const tagline = "Donde se reúne el mundo de las uñas";
+    function drawTicketPage(ticketNumber: number, confirmationCode: string, qrPng: Buffer) {
+      const pageWidth = doc.page.width;
+      const headerTextWidth = pageWidth - 100;
+      const tagline = "Donde se reúne el mundo de las uñas";
 
-    // Header band — measure text heights first (font/fontSize calls only
-    // set state, nothing renders until .text()) so the teal band itself
-    // can be drawn BEHIND the text at the right height, however many
-    // lines the event name wraps to.
-    const labelY = 24;
-    const titleY = labelY + 18;
-    doc.font("Helvetica-Bold").fontSize(20);
-    const titleHeight = doc.heightOfString(data.eventName, { width: headerTextWidth });
-    const taglineY = titleY + titleHeight + 6;
-    doc.font("Helvetica").fontSize(11);
-    const taglineHeight = doc.heightOfString(tagline, { width: headerTextWidth });
-    const bandHeight = taglineY + taglineHeight + 20;
+      // Header band — measure text heights first (font/fontSize calls only
+      // set state, nothing renders until .text()) so the teal band itself
+      // can be drawn BEHIND the text at the right height, however many
+      // lines the event name wraps to.
+      const labelY = 24;
+      const titleY = labelY + 18;
+      doc.font("Helvetica-Bold").fontSize(20);
+      const titleHeight = doc.heightOfString(data.eventName, { width: headerTextWidth });
+      const taglineY = titleY + titleHeight + 6;
+      doc.font("Helvetica").fontSize(11);
+      const taglineHeight = doc.heightOfString(tagline, { width: headerTextWidth });
+      const bandHeight = taglineY + taglineHeight + 20;
 
-    doc.rect(0, 0, pageWidth, bandHeight).fill(TEAL);
-    doc.fillColor(TEAL_DARK_TEXT).font("Helvetica-Bold").fontSize(10).text("TU ENTRADA", 50, labelY, { characterSpacing: 1 });
-    doc.fontSize(20).text(data.eventName, 50, titleY, { width: headerTextWidth });
-    doc.font("Helvetica").fontSize(11).text(tagline, 50, taglineY, { width: headerTextWidth });
+      doc.rect(0, 0, pageWidth, bandHeight).fill(TEAL);
+      doc.fillColor(TEAL_DARK_TEXT).font("Helvetica-Bold").fontSize(10).text("TU ENTRADA", 50, labelY, { characterSpacing: 1 });
+      doc.fontSize(20).text(data.eventName, 50, titleY, { width: headerTextWidth });
+      doc.font("Helvetica").fontSize(11).text(tagline, 50, taglineY, { width: headerTextWidth });
 
-    // Event details.
-    let y = bandHeight + 33;
-    const labelX = 50;
-    const valueX = 150;
-    const valueWidth = pageWidth - valueX - 50;
+      // Event details.
+      let y = bandHeight + 33;
+      const labelX = 50;
+      const valueX = 150;
+      const valueWidth = pageWidth - valueX - 50;
 
-    function row(label: string, value: string) {
-      doc.fillColor(INK).font("Helvetica-Bold").fontSize(11).text(label, labelX, y, { width: 90 });
-      const height = doc.font("Helvetica").fontSize(11).heightOfString(value, { width: valueWidth });
-      doc.text(value, valueX, y, { width: valueWidth });
-      y += Math.max(20, height + 6);
+      function row(label: string, value: string) {
+        doc.fillColor(INK).font("Helvetica-Bold").fontSize(11).text(label, labelX, y, { width: 90 });
+        const height = doc.font("Helvetica").fontSize(11).heightOfString(value, { width: valueWidth });
+        doc.text(value, valueX, y, { width: valueWidth });
+        y += Math.max(20, height + 6);
+      }
+
+      row("Fecha", rangeWhen);
+      if (data.venueName || data.venueAddress) {
+        row("Lugar", [data.venueName, data.venueAddress].filter(Boolean).join(" — "));
+      }
+      row("Asistente", ticketHolderName(attendeeName, ticketNumber));
+      const typeLine = ticketTypeLine(ticketNumber);
+      if (typeLine) row("Entrada", typeLine);
+
+      // Instruction — bigger, above the QR (was a small line below it).
+      const instruction = "Presenta este código QR (impreso o digital) en la entrada del evento.";
+      doc.fillColor(INK).font("Helvetica-Bold").fontSize(13);
+      const instructionHeight = doc.heightOfString(instruction, { align: "center", width: pageWidth - 150 });
+      const instructionY = y + 20;
+      doc.text(instruction, 75, instructionY, { align: "center", width: pageWidth - 150 });
+
+      // QR block, centered.
+      const qrSize = 220;
+      const qrX = (pageWidth - qrSize) / 2;
+      const qrY = instructionY + instructionHeight + 20;
+      doc.image(qrPng, qrX, qrY, { width: qrSize, height: qrSize });
+
+      doc
+        .fillColor(MUTED)
+        .font("Helvetica-Bold")
+        .fontSize(10)
+        .text(`CÓDIGO ${confirmationCode}`, 0, qrY + qrSize + 14, { align: "center", width: pageWidth });
     }
 
-    row("Fecha", rangeWhen);
-    if (data.venueName || data.venueAddress) {
-      row("Lugar", [data.venueName, data.venueAddress].filter(Boolean).join(" — "));
-    }
-    row("Asistente", attendeeName);
-    if (ticketTypeLine) row("Entrada", ticketTypeLine);
-
-    // Instruction — bigger, above the QR (was a small line below it).
-    const instruction = "Presenta este código QR (impreso o digital) en la entrada del evento.";
-    doc.fillColor(INK).font("Helvetica-Bold").fontSize(13);
-    const instructionHeight = doc.heightOfString(instruction, { align: "center", width: pageWidth - 150 });
-    const instructionY = y + 20;
-    doc.text(instruction, 75, instructionY, { align: "center", width: pageWidth - 150 });
-
-    // QR block, centered.
-    const qrSize = 220;
-    const qrX = (pageWidth - qrSize) / 2;
-    const qrY = instructionY + instructionHeight + 20;
-    doc.image(qrPng, qrX, qrY, { width: qrSize, height: qrSize });
-
-    doc
-      .fillColor(MUTED)
-      .font("Helvetica-Bold")
-      .fontSize(10)
-      .text(`CÓDIGO ${data.confirmationCode}`, 0, qrY + qrSize + 14, { align: "center", width: pageWidth });
-
+    pages.forEach((page, index) => {
+      if (index > 0) doc.addPage();
+      drawTicketPage(page.ticketNumber, page.confirmationCode, qrPngs[index]!);
+    });
     doc.end();
   });
 }
@@ -158,7 +183,7 @@ export async function buildTicketPdfDataForRegistration(registrationId: string):
     scheduleDays: registration.event.scheduleDays,
     ticketTypeName: registration.ticketType?.name,
     ticketCount: registration.ticketCount ?? undefined,
-    confirmationCode: registration.id.slice(-8).toUpperCase(),
+    confirmationCode: confirmationCodeFor(registration.id),
     qrToken: registration.qrToken,
     timezone: orgSettings.timezone,
     language: orgSettings.language,

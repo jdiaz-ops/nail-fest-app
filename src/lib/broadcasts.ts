@@ -6,6 +6,7 @@ import { emailProvider } from "@/lib/email";
 import { broadcastEmail, broadcastEmailHtml } from "@/lib/email/templates";
 import { buildUnsubscribeUrl } from "@/lib/unsubscribe";
 import { renderTicketPdfBuffer } from "@/lib/ticketPdf";
+import { confirmationCodeFor } from "@/lib/ticket";
 import { getOrgSettings } from "@/lib/settings";
 import { publishChunkContinuation } from "@/lib/qstash";
 import { tagOwnLinksInHtml, tagOwnLinksInText, slugifyForCampaign } from "@/lib/outboundLinkTagging";
@@ -155,7 +156,7 @@ export async function sendEventBroadcast(
                   endsAt: broadcast.event!.endsAt ?? undefined,
                   ticketTypeName: registration.ticketTypeId ? ticketTypeNames.get(registration.ticketTypeId) : undefined,
                   ticketCount: registration.ticketCount,
-                  confirmationCode: registration.id.slice(-8).toUpperCase(),
+                  confirmationCode: confirmationCodeFor(registration.id),
                   qrToken: registration.qrToken,
                   timezone: orgSettings.timezone,
                   language: orgSettings.language,

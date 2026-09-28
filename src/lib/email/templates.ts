@@ -13,6 +13,16 @@ const ACCENT = "#00beb5";
 const ACCENT_INK = "#0b2e2c";
 const PAPER = "#f6f5f2";
 
+/** One ticket of an order, as the confirmation email shows it. */
+export interface EmailTicket {
+  qrImageUrl: string;
+  confirmationCode: string;
+  // "María Pérez" or "Acompañante de María Pérez"
+  holderName: string;
+  // "Entrada general · 2 de 2"
+  label: string;
+}
+
 export function confirmationEmail(params: {
   firstName: string;
   lastName?: string;
@@ -72,6 +82,11 @@ export function confirmationEmail(params: {
    * code even with nothing to physically scan it against) rather than
    * replacing anything, so a HYBRID event's email makes sense either way. */
   zoomJoinUrl?: string;
+  /** Every ticket of a multi-ticket order (titular + acompañante), each
+   * with its own QR and code — see lib/ticket.ts. Omitted or a single
+   * entry = the original one-QR layout, driven by qrImageUrl/
+   * confirmationCode above. */
+  tickets?: EmailTicket[];
 }): { subject: string; text: string; html: string } {
   const orgName = params.orgName || "Nail Fest";
   const tz = params.timezone || "America/Bogota";
@@ -94,6 +109,10 @@ export function confirmationEmail(params: {
   const venueLine = [params.venueName, params.venueAddress].filter(Boolean).join(" — ") || undefined;
   const format = params.format ?? "IN_PERSON";
   const isVirtualOnly = format === "VIRTUAL";
+  const multiTickets = params.tickets && params.tickets.length > 1 ? params.tickets : null;
+  const multiTicketNote = multiTickets
+    ? `Cada boleta tiene su propio código QR: presenta cada uno en la entrada, uno por persona.`
+    : null;
 
   // The entry instruction is the one line that's flatly wrong for the
   // wrong format — "preséntala en la entrada" promises a door that a
@@ -119,7 +138,10 @@ export function confirmationEmail(params: {
     ...(venueLine ? [`Lugar: ${venueLine}`] : []),
     ...(attendeeName ? [`A nombre de: ${attendeeName}`] : []),
     ...(ticketTypeLine ? [`Entrada: ${ticketTypeLine}`] : []),
-    `Código de confirmación: ${params.confirmationCode}`,
+    ...(multiTickets
+      ? multiTickets.map((t) => `Código de confirmación (${t.holderName}): ${t.confirmationCode}`)
+      : [`Código de confirmación: ${params.confirmationCode}`]),
+    ...(multiTicketNote ? [multiTicketNote] : []),
     ``,
     ...(params.zoomJoinUrl
       ? [`Únete a la sesión por Zoom con tu link personal (no lo compartas, es solo tuyo):`, params.zoomJoinUrl, ``]
@@ -211,7 +233,26 @@ export function confirmationEmail(params: {
                             <div style="border-top:2px dashed ${BORDER};"></div>
                           </td>
                         </tr>
-                        <tr>
+                        ${
+                          multiTickets
+                            ? `<tr>
+                                <td style="padding:16px 24px 0;text-align:center;">
+                                  <p style="margin:0;font-size:13px;color:${INK_MUTED};">${escapeHtml(multiTicketNote!)}</p>
+                                </td>
+                              </tr>
+                              ${multiTickets
+                                .map(
+                                  (t, i) => `<tr>
+                                <td style="padding:20px 24px ${i === multiTickets.length - 1 ? 24 : 4}px;text-align:center;${i > 0 ? `border-top:1px solid ${BORDER};` : ""}">
+                                  <img src="${escapeHtml(t.qrImageUrl)}" alt="Código QR de la boleta ${i + 1}" width="180" height="180" style="display:block;margin:0 auto 16px;" />
+                                  <p style="margin:0;font-size:16px;font-weight:700;color:${INK};">${escapeHtml(t.holderName)}</p>
+                                  <p style="margin:8px 0 0;"><span style="display:inline-block;background:${PAPER};border:1px solid ${BORDER};border-radius:999px;padding:4px 12px;font-size:12px;color:${INK_MUTED};">${escapeHtml(t.label)}</span></p>
+                                  <p style="margin:12px 0 0;font-size:11px;letter-spacing:.05em;color:#8a8478;">CÓDIGO ${escapeHtml(t.confirmationCode)}</p>
+                                </td>
+                              </tr>`
+                                )
+                                .join("")}`
+                            : `<tr>
                           <td style="padding:20px 24px 24px;text-align:center;">
                             <img src="${escapeHtml(params.qrImageUrl)}" alt="Código QR de tu entrada" width="180" height="180" style="display:block;margin:0 auto 16px;" />
                             ${attendeeName ? `<p style="margin:0;font-size:16px;font-weight:700;color:${INK};">${escapeHtml(attendeeName)}</p>` : ""}
@@ -223,6 +264,7 @@ export function confirmationEmail(params: {
                             <p style="margin:12px 0 0;font-size:11px;letter-spacing:.05em;color:#8a8478;">CÓDIGO ${escapeHtml(params.confirmationCode)}</p>
                           </td>
                         </tr>`
+                        }`
                   }
                 </table>
               </td>

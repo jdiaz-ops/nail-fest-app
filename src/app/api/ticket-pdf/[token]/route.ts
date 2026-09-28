@@ -25,7 +25,10 @@ export async function GET(_req: NextRequest, { params }: { params: { token: stri
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": "inline; filename=entrada-nailfest.pdf",
-      "Cache-Control": "public, max-age=31536000, immutable",
+      // Not cacheable: the same link has to reflect the order as it is now
+      // (e.g. an order edited to 2 tickets gets the companion's page), and
+      // it's a per-person document, not a shared asset. Rendering is cheap.
+      "Cache-Control": "private, no-store",
     },
   });
 }

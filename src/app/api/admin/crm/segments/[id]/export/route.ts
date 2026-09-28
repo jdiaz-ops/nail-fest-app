@@ -7,6 +7,7 @@ import { bulkActiveConsent } from "@/lib/consent";
 import { getCheckoutQuestions } from "@/lib/checkoutForm";
 import { getOrgSettings } from "@/lib/settings";
 import { formatDateInTz } from "@/lib/dateFormat";
+import { ticketHolderName, ticketsCheckedIn, ticketsFor } from "@/lib/ticket";
 
 // Same audience a broadcast to this segment would actually reach —
 // resolveSegment is the one place that logic lives (builder.ts), so this
@@ -90,6 +91,15 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   }
   const labelsByPerson = new Map(labelRows.map((p) => [p.id, p.labels.map((l) => l.name).join("; ")]));
 
+  // Per-ticket check-in state for each person's most recent registration
+  // (the one whose details each row shows) — which of its tickets'
+  // tokens have a first-entry scan. See ticketsCheckedIn in lib/ticket.ts.
+  const latestIds = [...registrationsByPerson.values()].map((list) => list[0]!.id);
+  const firstScans = await inChunks(latestIds, (slice) =>
+    db.scanLog.findMany({ where: { registrationId: { in: slice }, result: "VALID_FIRST" }, select: { token: true } })
+  );
+  const scannedTokens = new Set(firstScans.map((s) => s.token));
+
   const date = (d: Date | null | undefined) => (d ? formatDateInTz(d, { dateStyle: "short", timeStyle: "short" }, orgSettings.timezone, orgSettings.language) : "");
   const yesNo = (v: boolean) => (v ? "Sí" : "No");
   const fields = (r: (typeof registrations)[number] | undefined): Record<string, unknown> =>
@@ -124,8 +134,8 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     "Código de confirmación",
     "Estado",
     "Tipo de entrada",
-    "Entradas",
-    "Escaneadas",
+    "Boleta",
+    "Escaneada",
     "Inscripción",
     "Confirmado",
     "Fuente (utm_source)",
@@ -134,11 +144,36 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     ...customQuestions.map((q) => q.label),
   ];
 
-  const rows = people.map((p) => {
+  // One row per TICKET: the person's own row (their ticket 1), then — when
+  // their most recent registration is a confirmed multi-ticket order — one
+  // row per acompañante ticket right under it, with its own code and
+  // check-in state. The companion's own data is never collected, so those
+  // rows carry only the order's details, not personal fields.
+  const rows = people.flatMap((p) => {
     const list = registrationsByPerson.get(p.id) ?? [];
     const latest = list[0];
     const confirmed = list.filter((r) => r.status === "CONFIRMED");
-    return [
+    const isConfirmed = latest?.status === "CONFIRMED";
+    const ticketCount = isConfirmed ? latest.ticketCount : 1;
+    const tickets = latest && isConfirmed ? ticketsFor(latest.id, ticketCount) : [];
+    const checked = latest && isConfirmed ? ticketsCheckedIn(tickets.map((t) => t.qrToken), scannedTokens, latest.checkedInCount) : [];
+    // The same short code(s) the confirmation email shows (see
+    // lib/ticket.ts) — never the QR token itself, which works as the entry
+    // pass and would turn this file into a stack of tickets.
+    const orderColumns = (ticketIndex: number) => [
+      latest?.event.name ?? "",
+      tickets[ticketIndex]?.confirmationCode ?? "",
+      latest ? (STATUS_LABELS[latest.status] ?? latest.status) : "",
+      latest?.ticketType?.name ?? "",
+      tickets.length > 0 ? `${ticketIndex + 1} de ${ticketCount}` : "",
+      tickets.length > 0 ? yesNo(checked[ticketIndex] ?? false) : "",
+      date(latest?.createdAt),
+      date(latest?.confirmedAt),
+      latest?.utmSource ?? "",
+      latest?.utmMedium ?? "",
+      latest?.utmCampaign ?? "",
+    ];
+    const titular = [
       p.firstName,
       p.lastName,
       p.email,
@@ -154,24 +189,17 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       p.createdAt.toISOString().slice(0, 10),
       [...new Set(confirmed.map((r) => r.event.name))].join("; "),
       [...new Set(list.filter((r) => r.checkedInCount > 0).map((r) => r.event.name))].join("; "),
-      latest?.event.name ?? "",
-      // The same 8-character code the confirmation email shows (see
-      // sendTicketEmail.ts) — never the QR token itself, which works as
-      // the entry pass and would turn this file into a stack of tickets.
-      latest?.status === "CONFIRMED" ? latest.id.slice(-8).toUpperCase() : "",
-      latest ? (STATUS_LABELS[latest.status] ?? latest.status) : "",
-      latest?.ticketType?.name ?? "",
-      latest ? latest.ticketCount : "",
-      latest ? latest.checkedInCount : "",
-      date(latest?.createdAt),
-      date(latest?.confirmedAt),
-      latest?.utmSource ?? "",
-      latest?.utmMedium ?? "",
-      latest?.utmCampaign ?? "",
+      ...orderColumns(0),
       ...customQuestions.map((q) => answer(list, q.key)),
-    ]
-      .map(csvCell)
-      .join(",");
+    ];
+    const holder = [p.firstName, p.lastName].filter(Boolean).join(" ") || p.email;
+    const companions = tickets.slice(1).map((t, i) => [
+      ticketHolderName(holder, t.ticketNumber),
+      ...Array<string>(14).fill(""),
+      ...orderColumns(i + 1),
+      ...customQuestions.map(() => ""),
+    ]);
+    return [titular, ...companions].map((row) => row.map(csvCell).join(","));
   });
   // Leading BOM so Excel (the realistic destination for a "descargar CSV"
   // click) reads UTF-8 accents (Bogotá, Rodríguez) correctly instead of

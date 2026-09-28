@@ -63,6 +63,12 @@ export interface ConfirmationTemplateData {
    * with Zoom configured AND the best-effort registration call having
    * actually succeeded. */
   zoomJoinUrl?: string;
+  /** Every ticket of a multi-ticket order, each with its own QR and code
+   * — see lib/ticket.ts. Omitted or a single entry = the original one
+   * voucher, from qrImageUrl/confirmationCode above. Same shape as
+   * lib/email/templates.ts's EmailTicket (kept structural so this module,
+   * which a client component imports, never pulls in lib/ticket.ts). */
+  tickets?: { qrImageUrl: string; confirmationCode: string; holderName: string; label: string }[];
 }
 
 function escapeHtml(input: string): string {
@@ -82,9 +88,23 @@ function escapeHtml(input: string): string {
 // comment, same logic applies here: there is no door to scan a QR at.
 function renderVoucherHtml(data: ConfirmationTemplateData): string {
   if (data.format === "VIRTUAL") return "";
+  // A multi-ticket order gets one voucher per ticket — each its own QR,
+  // holder and code — so every person at the door has their own to show.
+  if (data.tickets && data.tickets.length > 1) {
+    return data.tickets
+      .map((t) =>
+        renderSingleVoucher({ qrImageUrl: t.qrImageUrl, holderName: t.holderName, label: t.label, confirmationCode: t.confirmationCode })
+      )
+      .join("");
+  }
   const attendeeName = [data.firstName, data.lastName].filter(Boolean).join(" ").trim();
   const ticketTypeLine =
     data.ticketTypeName && (data.ticketCount ?? 1) > 1 ? `${data.ticketTypeName} · x${data.ticketCount}` : data.ticketTypeName;
+  return renderSingleVoucher({ qrImageUrl: data.qrImageUrl, holderName: attendeeName, label: ticketTypeLine, confirmationCode: data.confirmationCode });
+}
+
+function renderSingleVoucher(v: { qrImageUrl: string; holderName: string; label?: string; confirmationCode: string }): string {
+  const { holderName: attendeeName, label: ticketTypeLine } = v;
   return `
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;border:1px solid #e3e1dc;border-radius:14px;overflow:hidden;margin:16px 0;">
       <tr>
@@ -94,14 +114,14 @@ function renderVoucherHtml(data: ConfirmationTemplateData): string {
       </tr>
       <tr>
         <td style="padding:20px;text-align:center;">
-          <img src="${escapeHtml(data.qrImageUrl)}" alt="Código QR de tu entrada" width="160" height="160" style="display:block;margin:0 auto 12px;" />
+          <img src="${escapeHtml(v.qrImageUrl)}" alt="Código QR de tu entrada" width="160" height="160" style="display:block;margin:0 auto 12px;" />
           ${attendeeName ? `<p style="margin:0;font-size:15px;font-weight:700;color:#17181c;">${escapeHtml(attendeeName)}</p>` : ""}
           ${
             ticketTypeLine
               ? `<p style="margin:6px 0 0;"><span style="display:inline-block;background:#f6f5f2;border:1px solid #e3e1dc;border-radius:999px;padding:3px 10px;font-size:11px;color:#5b5f6b;">${escapeHtml(ticketTypeLine)}</span></p>`
               : ""
           }
-          <p style="margin:10px 0 0;font-size:11px;letter-spacing:.05em;color:#8a8478;">CÓDIGO ${escapeHtml(data.confirmationCode)}</p>
+          <p style="margin:10px 0 0;font-size:11px;letter-spacing:.05em;color:#8a8478;">CÓDIGO ${escapeHtml(v.confirmationCode)}</p>
         </td>
       </tr>
     </table>
