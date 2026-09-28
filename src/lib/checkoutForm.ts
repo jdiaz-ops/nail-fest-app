@@ -45,9 +45,11 @@ const LOCKED_DEFAULTS: Omit<CheckoutQuestion, "id" | "createdAt" | "updatedAt">[
   },
   {
     key: "cedula",
-    label: "Número de cédula - o - NIT",
+    label: "Documento de identidad (cédula, PPT o pasaporte)",
     type: "TEXT",
-    required: true,
+    // Optional: Venezuelan attendees (PPT, V- prefix, no Colombian ID) were
+    // dropping out here. See migration 20260929100000_cedula_optional.
+    required: false,
     options: [],
     order: 3,
     locked: true,

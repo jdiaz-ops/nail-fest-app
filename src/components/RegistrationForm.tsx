@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { attributionFromSearchParams } from "@/lib/utm";
 import { getValidFbc } from "./tracking";
-import CityAutocomplete from "./CityAutocomplete";
 import { suggestEmailCorrection } from "@/lib/emailTypo";
-import { COUNTRY_CODES, GENERIC_PHONE_PLACEHOLDER, GENERIC_ID_PLACEHOLDER, stripTrunkZero } from "@/lib/countryCodes";
+import { COUNTRY_CODES, GENERIC_PHONE_PLACEHOLDER, stripTrunkZero } from "@/lib/countryCodes";
 import { WORLD_COUNTRIES, findCountry } from "@/lib/worldCountries";
 
 export interface QuestionView {
@@ -143,37 +142,40 @@ export default function RegistrationForm({
 }: Props) {
   const searchParams = useSearchParams();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  // "no tiene sentido ahí tener el +57, es lo del celular. Ahí es
-  // seleccionar el país, lo del celular es aparte" — País (dónde vive, un
-  // campo real y obligatorio — ver Person.country) y el país del propio
-  // celular (qué prefijo usa el NÚMERO, independiente de dónde viva la
-  // persona) son dos cosas separadas ahora. Colombia preseleccionada en
-  // ambos por default.
-  const [country, setCountry] = useState("CO");
+  // País de residencia (Person.country) ya no se pregunta — era un campo
+  // más donde se caían los inscritos de Venezuela (venía en Colombia por
+  // defecto y arrastraba el formato colombiano al resto del formulario).
+  // Se toma del país del celular: +58 = Venezuela. Colombia por defecto.
   const [phoneCountryIso2, setPhoneCountryIso2] = useState("CO");
+  const country = phoneCountryIso2;
 
-  // "cuando seleccioné el país... el celular me obliga a que sea de
-  // Venezuela. No me puede obligar, me preselecciona Venezuela... puedo
-  // seleccionar otro celular" — cambiar País PRE-LLENA el celular como
-  // conveniencia (alguien vive en Venezuela pero puede tener un celular
-  // de Estados Unidos), pero el celular queda con su propio selector,
-  // libre de cambiarse después sin que este efecto lo revierta — solo
-  // reacciona a un cambio de País, no se re-ejecuta por su cuenta.
-  useEffect(() => {
-    setPhoneCountryIso2(country);
-  }, [country]);
+  // Someone who pastes or types their number with its own prefix
+  // ("+58 412 1234567") gets the picker switched to that country and the
+  // prefix taken out of the box, instead of "+57+58412…".
+  function handlePhoneInput(e: React.FormEvent<HTMLInputElement>) {
+    const input = e.currentTarget;
+    const match = /^\s*(?:\+|00)(\d[\d\s-]*)$/.exec(input.value);
+    if (!match) return;
+    const digits = match[1]!.replace(/\D/g, "");
+    const byCode = [...WORLD_COUNTRIES].sort((x, y) => y.dialCode.length - x.dialCode.length);
+    const hit = byCode.find((c) => digits.startsWith(c.dialCode.slice(1)) && digits.length > c.dialCode.length + 3);
+    if (!hit) return;
+    // A shared code (+1) keeps whichever of its countries is already
+    // picked, else the first one listed for it (Estados Unidos for +1).
+    const current = findCountry(phoneCountryIso2);
+    const first = WORLD_COUNTRIES.find((c) => c.dialCode === hit.dialCode) ?? hit;
+    setPhoneCountryIso2(current?.dialCode === hit.dialCode ? current.iso2 : first.iso2);
+    input.value = digits.slice(hit.dialCode.length - 1);
+  }
 
   const phoneCountry = findCountry(phoneCountryIso2) ?? WORLD_COUNTRIES[0]!;
-  // El ejemplo de celular depende del PAÍS DEL CELULAR (qué prefijo usa
-  // el número); el ejemplo de cédula/NIT/RIF/DNI depende del PAÍS DONDE
-  // VIVE (qué le dice su propio país, sin importar de dónde sea su
-  // celular). countryCodes.ts solo tiene datos verificados para un
-  // puñado de países — el resto usa un texto genérico honesto, nunca un
-  // formato inventado.
+  // Ejemplos que siguen al país del celular. countryCodes.ts solo tiene
+  // datos verificados para un puñado de países — el resto usa un texto
+  // genérico honesto, nunca un formato inventado. El documento es
+  // opcional y acepta cualquier formato (cédula, PPT, pasaporte).
   const phoneHint = COUNTRY_CODES.find((c) => c.iso2 === phoneCountryIso2);
   const phonePlaceholder = phoneHint?.phonePlaceholder ?? GENERIC_PHONE_PLACEHOLDER;
-  const idHint = COUNTRY_CODES.find((c) => c.iso2 === country);
-  const idPlaceholder = idHint?.idPlaceholder ?? GENERIC_ID_PLACEHOLDER;
+  const idPlaceholder = country === "VE" ? "Ej: V-12345678 o tu PPT" : country === "CO" ? "Ej: 1020304050" : "Cédula, PPT o pasaporte";
   // "¿hay posibilidad de tener un detector de correos mal redactados?" —
   // a live suggestion while typing (gmial.com -> ¿quisiste decir
   // gmail.com?), never a hard block — see emailTypo.ts's own comment.
@@ -463,35 +465,6 @@ export default function RegistrationForm({
         </div>
       )}
 
-      {/* "no tiene sentido ahí tener el +57, es lo del celular. Ahí es
-          [s]eleccionar el país, lo del celular es aparte" — Este es el
-          país DONDE VIVE (Person.country — un campo real, obligatorio,
-          filtrable en Personas y Segmentos, ver ese modelo), NO el
-          código de marcado del celular (eso vive en su propio selector,
-          justo abajo). "Tienes que tener todos los países del mundo" —
-          la lista completa (lib/worldCountries.ts), no un puñado.
-          Colombia preseleccionado — es efectivamente toda la audiencia
-          hoy, pero Cúcuta ya trae tráfico real de Venezuela también. */}
-      <div className="field">
-        <label htmlFor="field_country">
-          País<Req required />
-        </label>
-        <select id="field_country" required value={country} onChange={(e) => setCountry(e.target.value)}>
-          {WORLD_COUNTRIES.map((c) => (
-            <option key={c.iso2} value={c.iso2}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* El celular tiene su PROPIO selector de país — independiente del
-          "País" de arriba ("puedo estar viviendo en Venezuela, pero
-          tener mi celular de Estados Unidos... solo que facilitamos el
-          hecho que ya está preseleccionado Venezuela"). El useEffect más
-          arriba lo pre-llena cuando cambia País, pero queda libre de
-          cambiarse aparte — no es una insignia fija, es un <select> real
-          con la misma lista completa de países. */}
       {phone && (
         <div className="field">
           <label htmlFor="phone">
@@ -522,9 +495,15 @@ export default function RegistrationForm({
               autoComplete="tel"
               placeholder={phonePlaceholder}
               required={phone.required}
+              onInput={handlePhoneInput}
               style={{ flex: 1, minWidth: 0 }}
             />
           </div>
+          {/* Cúcuta's Venezuelan audience signs up far less than it lands
+              — this says, right where it matters, that they're expected. */}
+          <p style={{ fontSize: 12, color: "#5b5f6b", margin: "6px 0 0" }}>
+            ¿Vienes desde Venezuela? ¡Bienvenida! Elige Venezuela (+58) y escribe tu número.
+          </p>
         </div>
       )}
 
@@ -555,15 +534,10 @@ export default function RegistrationForm({
                 {city.label}
                 <Req required={city.required} />
               </label>
-              {country === "CO" ? (
-                <CityAutocomplete id="field_city" name="field_city" required={city.required} />
-              ) : (
-                // Outside Colombia there's no reliable municipality list to
-                // validate against — free text instead of forcing a match
-                // against a list that was never built for this country.
-                // Keyed off País (residence), not the phone's dial code.
-                <input id="field_city" name="field_city" required={city.required} placeholder="Tu ciudad" />
-              )}
+              {/* Free text for everyone — no Colombian city suggestions (they
+                  read as "this is only for Colombians"). Spelling variants
+                  get merged afterwards in /admin/crm/ciudades. */}
+              <input id="field_city" name="field_city" required={city.required} autoComplete="address-level2" placeholder="Ej: Cúcuta, San Cristóbal…" />
             </div>
           )}
         </Row>

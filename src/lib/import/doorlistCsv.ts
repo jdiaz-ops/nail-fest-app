@@ -99,6 +99,7 @@ const COLUMN_MAP: Record<string, keyof DoorlistRow> = {
   "Email address": "email",
   "Número de celular con WhatsApp - (asegúrate que sea correcto para recibir info del evento)": "phone",
   "Número de cédula - o - NIT": "cedula",
+  "Documento de identidad (cédula, PPT o pasaporte)": "cedula",
   "¿En que ciudad vives?": "city",
   "¿Cuál de estas opciones te describe mejor? (Selecciona una sola)": "profession",
   "Déjanos tu @ Instagram/Tiktok  (Opcional)": "instagram",

@@ -186,9 +186,9 @@ export async function POST(req: NextRequest) {
   // city, get rejected against a list that was never going to contain it,
   // and either abandon or fall back to typing "otros" — see the
   // "Aterrizajes vs inscripciones por país" report's own Ciudad
-  // breakdown. CityAutocomplete.tsx's suggestions still guide a real
-  // Colombian typing their city; nothing here blocks a mismatch anymore,
-  // same as every non-CO country already worked.
+  // breakdown. The city is plain free text for everyone now (no
+  // Colombian suggestions); spelling variants are merged afterwards in
+  // /admin/crm/ciudades.
 
   // See /admin/settings/banned-emails — checked before touching the CRM at
   // all, same as our previous ticketing platform's own "Banned email addresses" block.
