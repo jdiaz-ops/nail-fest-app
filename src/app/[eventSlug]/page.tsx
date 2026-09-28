@@ -230,12 +230,6 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
           ctaNote={event.ctaNote}
         />
       </Suspense>
-
-      {orgSettings.selfServeResendEnabled && (
-        <p style={{ fontSize: 12, color: "#5b5f6b", marginTop: 24, textAlign: "center" }}>
-          ¿Ya te registraste y perdiste el correo? <a href="/reenviar">Reenviar mi entrada</a>
-        </p>
-      )}
     </main>
   );
 }
