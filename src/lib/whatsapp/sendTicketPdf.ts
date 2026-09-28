@@ -56,13 +56,43 @@ export async function sendTicketPdfViaWhatsApp(
   }
 }
 
-/** Up to 5 most recent confirmed, QR-issued registrations for a person —
- * what the Bandeja sidebar lists to pick which ticket to resend. Same
- * cap/ordering as /api/resend-ticket's own query. */
-export async function listResendableRegistrations(personId: string) {
+// Last 10 digits — the same matching rule inbox.ts's findPersonByPhone
+// uses to tie a chat to a contact in the first place.
+function phoneTail(phone: string | null | undefined): string | null {
+  const tail = (phone ?? "").replace(/[^\d]/g, "").slice(-10);
+  return tail.length >= 7 ? tail : null;
+}
+
+interface ChatRef {
+  personId: string | null;
+  phone: string;
+}
+
+/** Whether a registration's ticket may be sent into this chat: it belongs
+ * to the chat's linked contact, or to any contact registered with this
+ * same phone number. The second case is real — one phone can sit on more
+ * than one contact (someone re-registering with another email creates a
+ * second Person), while the chat stays linked to whichever it matched
+ * first. Either way the ticket only ever goes to the phone its own
+ * registration was made with, never to a stranger's. */
+export function registrationBelongsToChat(registration: { personId: string; person: { phone: string | null } }, chat: ChatRef): boolean {
+  if (chat.personId && registration.personId === chat.personId) return true;
+  const tail = phoneTail(chat.phone);
+  return tail !== null && phoneTail(registration.person.phone) === tail;
+}
+
+/** Up to 5 most recent confirmed, QR-issued registrations this chat can
+ * resend — its linked contact's, plus any other contact's registered with
+ * the same phone (see registrationBelongsToChat). What the Bandeja sidebar
+ * lists to pick which ticket to resend. Same cap/ordering as
+ * /api/resend-ticket's own query. */
+export async function listResendableRegistrations(chat: ChatRef) {
+  const tail = phoneTail(chat.phone);
+  const owners = [...(chat.personId ? [{ personId: chat.personId }] : []), ...(tail ? [{ person: { phone: { endsWith: tail } } }] : [])];
+  if (owners.length === 0) return [];
   return db.registration.findMany({
-    where: { personId, status: "CONFIRMED", qrToken: { not: null } },
-    include: { event: true },
+    where: { status: "CONFIRMED", qrToken: { not: null }, OR: owners },
+    include: { event: true, person: true },
     orderBy: { createdAt: "desc" },
     take: 5,
   });

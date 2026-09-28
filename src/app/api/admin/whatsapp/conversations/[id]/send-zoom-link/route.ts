@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth/guard";
 import { sendZoomLinkViaWhatsApp } from "@/lib/whatsapp/sendZoomLink";
+import { registrationBelongsToChat } from "@/lib/whatsapp/sendTicketPdf";
 
 const bodySchema = z.object({ registrationId: z.string().min(1) });
 
@@ -34,14 +35,17 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   // Never let one open conversation resend a stranger's link just
   // because its registrationId was guessable/passed in — same check as
   // send-ticket's own route.
-  const registration = await db.registration.findUnique({ where: { id: parsed.data.registrationId } });
-  if (!registration || !conversation.personId || registration.personId !== conversation.personId) {
-    return NextResponse.json({ error: "registration_mismatch" }, { status: 403 });
+  const registration = await db.registration.findUnique({ where: { id: parsed.data.registrationId }, include: { person: true } });
+  if (!registration || !registrationBelongsToChat(registration, conversation)) {
+    return NextResponse.json(
+      { error: "registration_mismatch", message: "Esa entrada no es de este contacto ni de este número." },
+      { status: 403 }
+    );
   }
 
   const result = await sendZoomLinkViaWhatsApp(parsed.data.registrationId, conversation.phone);
   if (!result.ok) {
-    return NextResponse.json({ error: result.error }, { status: 502 });
+    return NextResponse.json({ error: result.error, message: `WhatsApp rechazó el envío: ${result.error}` }, { status: 502 });
   }
   return NextResponse.json({ ok: true });
 }

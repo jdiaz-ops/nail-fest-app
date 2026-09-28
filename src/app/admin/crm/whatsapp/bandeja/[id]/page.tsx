@@ -62,7 +62,7 @@ export default async function WhatsAppThreadPage({ params }: { params: { id: str
     conversation.personId
       ? db.registration.findFirst({ where: { personId: conversation.personId }, orderBy: { createdAt: "desc" } })
       : null,
-    conversation.personId ? listResendableRegistrations(conversation.personId) : Promise.resolve([]),
+    listResendableRegistrations(conversation),
   ]);
 
   const withinWindow = Boolean(conversation.lastInboundAt && Date.now() - conversation.lastInboundAt.getTime() < WINDOW_MS);
@@ -214,7 +214,7 @@ export default async function WhatsAppThreadPage({ params }: { params: { id: str
           )}
         </SidebarSection>
 
-        {conversation.personId && resendableRegistrations.length > 0 && (
+        {resendableRegistrations.length > 0 && (
           <SidebarSection title="Entradas">
             {!withinWindow && (
               <p style={{ fontSize: 12, color: "#8a5a1f", margin: "0 0 8px" }}>
@@ -225,7 +225,16 @@ export default async function WhatsAppThreadPage({ params }: { params: { id: str
               {resendableRegistrations.map((r) => (
                 <div key={r.id} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                   <span style={{ fontSize: 12.5, fontWeight: 500 }}>{r.event.name}</span>
-                  <span style={{ fontSize: 11, color: "#8a8478" }}>{r.id.slice(-8).toUpperCase()}</span>
+                  <span style={{ fontSize: 11, color: "#8a8478" }}>
+                    {r.id.slice(-8).toUpperCase()}
+                    {r.ticketCount > 1 ? ` · ${r.ticketCount} boletas` : ""}
+                  </span>
+                  {/* Same phone, but a different CRM contact than this chat's
+                      (e.g. registered again with another email) — say whose
+                      it is so nobody resends the wrong one by mistake. */}
+                  {r.personId !== conversation.personId && (
+                    <span style={{ fontSize: 11, color: "#8a5a1f" }}>A nombre de {r.person.email}</span>
+                  )}
                   {withinWindow && (
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                       <WhatsAppSendTicketButton conversationId={conversation.id} registrationId={r.id} />

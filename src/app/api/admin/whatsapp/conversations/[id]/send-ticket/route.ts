@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth/guard";
-import { sendTicketPdfViaWhatsApp } from "@/lib/whatsapp/sendTicketPdf";
+import { registrationBelongsToChat, sendTicketPdfViaWhatsApp } from "@/lib/whatsapp/sendTicketPdf";
 
 const bodySchema = z.object({ registrationId: z.string().min(1) });
 
@@ -33,15 +33,19 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   // The registration has to actually belong to whoever this thread is
   // with — never let one open conversation resend a stranger's ticket
-  // just because its id was guessable/passed in.
-  const registration = await db.registration.findUnique({ where: { id: parsed.data.registrationId } });
-  if (!registration || !conversation.personId || registration.personId !== conversation.personId) {
-    return NextResponse.json({ error: "registration_mismatch" }, { status: 403 });
+  // just because its id was guessable/passed in. See
+  // registrationBelongsToChat for why "same phone" also counts.
+  const registration = await db.registration.findUnique({ where: { id: parsed.data.registrationId }, include: { person: true } });
+  if (!registration || !registrationBelongsToChat(registration, conversation)) {
+    return NextResponse.json(
+      { error: "registration_mismatch", message: "Esa entrada no es de este contacto ni de este número." },
+      { status: 403 }
+    );
   }
 
   const result = await sendTicketPdfViaWhatsApp(parsed.data.registrationId, conversation.phone);
   if (!result.ok) {
-    return NextResponse.json({ error: result.error }, { status: 502 });
+    return NextResponse.json({ error: result.error, message: `WhatsApp rechazó el envío: ${result.error}` }, { status: 502 });
   }
   return NextResponse.json({ ok: true });
 }

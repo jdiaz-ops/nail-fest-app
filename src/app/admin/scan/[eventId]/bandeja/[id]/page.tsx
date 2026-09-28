@@ -49,7 +49,7 @@ export default async function ScanWhatsAppThreadPage({ params }: { params: { eve
   });
   if (!conversation) notFound();
 
-  const resendableRegistrations = conversation.personId ? await listResendableRegistrations(conversation.personId) : [];
+  const resendableRegistrations = await listResendableRegistrations(conversation);
 
   const withinWindow = Boolean(conversation.lastInboundAt && Date.now() - conversation.lastInboundAt.getTime() < WINDOW_MS);
   const name = conversation.person
@@ -104,7 +104,7 @@ export default async function ScanWhatsAppThreadPage({ params }: { params: { eve
               </div>
               <WhatsAppWindowCountdown lastInboundAt={conversation.lastInboundAt?.toISOString() ?? null} />
             </div>
-            {conversation.personId && resendableRegistrations.length > 0 && (
+            {resendableRegistrations.length > 0 && (
               <div>
                 <div style={{ fontSize: 11, fontWeight: 600, color: "#8a8478", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>
                   Entradas
@@ -118,7 +118,13 @@ export default async function ScanWhatsAppThreadPage({ params }: { params: { eve
                   {resendableRegistrations.map((r) => (
                     <div key={r.id} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                       <span style={{ fontSize: 12.5, fontWeight: 500 }}>{r.event.name}</span>
-                      <span style={{ fontSize: 11, color: "#8a8478" }}>{r.id.slice(-8).toUpperCase()}</span>
+                      <span style={{ fontSize: 11, color: "#8a8478" }}>
+                        {r.id.slice(-8).toUpperCase()}
+                        {r.ticketCount > 1 ? ` · ${r.ticketCount} boletas` : ""}
+                      </span>
+                      {r.personId !== conversation.personId && (
+                        <span style={{ fontSize: 11, color: "#8a5a1f" }}>A nombre de {r.person.email}</span>
+                      )}
                       {withinWindow && <WhatsAppSendTicketButton conversationId={conversation.id} registrationId={r.id} />}
                     </div>
                   ))}

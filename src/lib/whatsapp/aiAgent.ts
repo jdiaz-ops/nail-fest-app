@@ -167,12 +167,11 @@ export async function respondWithAi(conversationId: string): Promise<void> {
         .describe("El id del evento cuya entrada reenviar — solo hace falta si la persona tiene más de una inscripción y ya sabes cuál quiere."),
     }),
     run: async (input) => {
-      if (!conversation.personId) {
-        return "Esta conversación no está vinculada a ningún contacto del CRM — no hay ninguna entrada que reenviar. Dile que verifique el número con el que se inscribió.";
-      }
-      const registrations = await listResendableRegistrations(conversation.personId);
+      const registrations = await listResendableRegistrations(conversation);
       if (registrations.length === 0) {
-        return "Esta persona no tiene ninguna inscripción confirmada — no hay ninguna entrada que reenviar.";
+        return conversation.personId
+          ? "Esta persona no tiene ninguna inscripción confirmada — no hay ninguna entrada que reenviar."
+          : "Esta conversación no está vinculada a ningún contacto del CRM — no hay ninguna entrada que reenviar. Dile que verifique el número con el que se inscribió.";
       }
       const target = input.eventId ? registrations.find((r) => r.eventId === input.eventId) : registrations[0];
       if (!target) {
