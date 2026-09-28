@@ -25,6 +25,8 @@ export interface HeroDate {
   month: string;
   // "Sábado y domingo · 2026"
   detail: string;
+  // "7 y 8 de nov" — for tight spots like the mobile sticky bar.
+  short: string;
 }
 
 // The big date block on the public event page (see [eventSlug]/page.tsx)
@@ -47,14 +49,16 @@ export function formatHeroDate(startsAt: Date, endsAt: Date | null, timezone: st
     const numeric = new Intl.DateTimeFormat("en-US", { timeZone: timezone, year: "numeric", month: "numeric", day: "numeric" }).formatToParts(d);
     const n = (type: string) => Number(numeric.find((p) => p.type === type)?.value ?? 0);
     const dayIndex = Date.UTC(n("year"), n("month") - 1, n("day")) / 86_400_000;
-    return { day: get("day"), month: get("month"), weekday: get("weekday"), year: get("year"), dayIndex };
+    // es-CO abbreviates with a trailing period ("nov.") — dropped.
+    const monthShort = new Intl.DateTimeFormat(locale, { timeZone: timezone, month: "short" }).format(d).replace(/\.$/, "");
+    return { day: get("day"), month: get("month"), monthShort, weekday: get("weekday"), year: get("year"), dayIndex };
   };
   const cap = (w: string) => w.charAt(0).toUpperCase() + w.slice(1);
 
   const s = partsOf(startsAt);
   const e = endsAt ? partsOf(endsAt) : null;
   if (!e || e.dayIndex <= s.dayIndex) {
-    return { days: s.day, month: `de ${s.month}`, detail: `${cap(s.weekday)} · ${s.year}` };
+    return { days: s.day, month: `de ${s.month}`, detail: `${cap(s.weekday)} · ${s.year}`, short: `${s.day} de ${s.monthShort}` };
   }
 
   const end = e;
@@ -64,5 +68,6 @@ export function formatHeroDate(startsAt: Date, endsAt: Date | null, timezone: st
   const month = sameMonth ? `de ${s.month}` : `de ${s.month} a ${end.month}`;
   const weekdays = consecutive ? `${cap(s.weekday)} y ${end.weekday}` : `${cap(s.weekday)} a ${end.weekday}`;
   const year = end.year === s.year ? s.year : `${s.year}–${end.year}`;
-  return { days, month, detail: `${weekdays} · ${year}` };
+  const short = sameMonth ? `${days} de ${s.monthShort}` : `${s.day} ${s.monthShort} – ${end.day} ${end.monthShort}`;
+  return { days, month, detail: `${weekdays} · ${year}`, short };
 }

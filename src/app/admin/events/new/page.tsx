@@ -39,6 +39,7 @@ export default async function NewEventPage() {
           galleryImageUrls: [],
           galleryTitle: "",
           ctaNote: "",
+          closingText: "",
           registerButtonLabel: DEFAULT_REGISTER_BUTTON_LABEL,
           startsAtLocal: "",
           endsAtLocal: "",
@@ -65,6 +66,7 @@ export default async function NewEventPage() {
           galleryImageUrls: ev.galleryImageUrls,
           galleryTitle: ev.galleryTitle ?? "",
           ctaNote: ev.ctaNote ?? "",
+          closingText: ev.closingText ?? "",
           registerButtonLabel: ev.registerButtonLabel ?? DEFAULT_REGISTER_BUTTON_LABEL,
           capacity: ev.capacity != null ? String(ev.capacity) : "",
         }))}

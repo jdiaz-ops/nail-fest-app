@@ -75,6 +75,14 @@ export interface VenueLandingBlock {
   mapsUrl: string;
 }
 
+// A swipeable row of people cards ("Embajadoras de Cúcuta"): name,
+// Instagram handle, a short tag ("Panel · Sáb 3:15"), optional photo —
+// without one the card shows the person's initials in the chosen tone.
+export interface PeopleLandingBlock {
+  type: "people";
+  items: { name: string; handle: string; tag: string; photoUrl: string; tone: LandingTone }[];
+}
+
 export type LandingBlock =
   | TextLandingBlock
   | ImageLandingBlock
@@ -83,7 +91,8 @@ export type LandingBlock =
   | HeadingLandingBlock
   | CardLandingBlock
   | AgendaLandingBlock
-  | VenueLandingBlock;
+  | VenueLandingBlock
+  | PeopleLandingBlock;
 
 function isFaqItem(v: unknown): v is { question: string; answer: string } {
   return typeof v === "object" && v !== null && typeof (v as Record<string, unknown>).question === "string" && typeof (v as Record<string, unknown>).answer === "string";
@@ -131,6 +140,11 @@ export function parseLandingBlocks(value: unknown): LandingBlock[] {
       result.push({ type: "agenda", rows });
     } else if (rec.type === "venue") {
       result.push({ type: "venue", imageUrl: str(rec.imageUrl), mapsUrl: str(rec.mapsUrl) });
+    } else if (rec.type === "people" && Array.isArray(rec.items)) {
+      const items = rec.items
+        .filter((p): p is Record<string, unknown> => typeof p === "object" && p !== null)
+        .map((p) => ({ name: str(p.name), handle: str(p.handle), tag: str(p.tag), photoUrl: str(p.photoUrl), tone: tone(p.tone) }));
+      result.push({ type: "people", items });
     }
   }
   return result;

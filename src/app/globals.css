@@ -421,10 +421,10 @@ button.primary:disabled {
    Scrollbar hidden across browsers since the dots below are the scroll
    indicator; scroll-snap gives the swipe a "settle on a card" feel
    instead of stopping wherever a finger lifts. */
-.event-gallery-carousel {
+.scroll-carousel {
   margin: 0 0 20px;
 }
-.event-gallery-carousel-track {
+.scroll-carousel-track {
   display: flex;
   gap: 10px;
   overflow-x: auto;
@@ -433,7 +433,7 @@ button.primary:disabled {
   scrollbar-width: none;
   padding-bottom: 2px;
 }
-.event-gallery-carousel-track::-webkit-scrollbar {
+.scroll-carousel-track::-webkit-scrollbar {
   display: none;
 }
 .event-gallery-carousel-item {
@@ -448,20 +448,184 @@ button.primary:disabled {
   height: auto;
   display: block;
 }
-.event-gallery-carousel-dots {
+.scroll-carousel-dots {
   display: flex;
   justify-content: center;
   gap: 7px;
   margin-top: 12px;
 }
-.event-gallery-carousel-dot {
+.scroll-carousel-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
   background: var(--border);
 }
-.event-gallery-carousel-dot.is-active {
+.scroll-carousel-dot.is-active {
   background: var(--accent);
+}
+
+/* The "people" landing block's cards (LandingBlocksContent.tsx) — one
+   ScrollCarousel of these. */
+.landing-people .scroll-carousel {
+  margin: 0;
+}
+.landing-person {
+  flex: 0 0 auto;
+  width: 160px;
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 18px 12px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  text-align: center;
+}
+.landing-person-photo,
+.landing-person-initials {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  margin-bottom: 4px;
+}
+.landing-person-photo {
+  object-fit: cover;
+  display: block;
+}
+.landing-person-initials {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 900;
+}
+.landing-person-initials--teal {
+  background: #c9f2ee;
+  color: var(--accent-ink);
+}
+.landing-person-initials--pink {
+  background: #f9cddb;
+  color: #8a1b4a;
+}
+.landing-person-initials--peach {
+  background: #ffdcc7;
+  color: #7a3412;
+}
+.landing-person-name {
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+.landing-person-handle {
+  font-size: 13px;
+  color: var(--ink-muted);
+  overflow-wrap: anywhere;
+}
+.landing-person .landing-chip {
+  margin-top: 4px;
+  font-size: 12px;
+  padding: 5px 9px;
+  white-space: normal;
+}
+
+/* The mobile sticky bar (EventRegistration.tsx) — replaces the old
+   full-width floating button once the inline CTA scrolls away. */
+.event-sticky-bar {
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 8px 8px 18px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.3);
+}
+.event-sticky-bar-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+.event-sticky-bar-text strong {
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.event-sticky-bar-text span {
+  font-size: 13px;
+  font-weight: 700;
+  color: #b0225c;
+}
+.event-floating-cta .event-sticky-bar button.primary {
+  width: auto;
+  flex-shrink: 0;
+  padding: 13px 20px;
+  font-size: 15px;
+  border-radius: 999px;
+}
+
+/* The closing band at the very end of the event page
+   (EventRegistration.tsx) — full-bleed out of .event-page's column, one
+   last CTA on a solid brand ground, then a one-line footer strip. */
+.event-closing {
+  margin: 48px calc(50% - 50vw) 0;
+  padding: 40px 24px 0;
+  background: #0f7d76;
+  color: #ffffff;
+  text-align: center;
+}
+.event-closing-inner {
+  max-width: 440px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding-bottom: 32px;
+}
+.event-closing-title {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+.event-closing-button {
+  width: 100%;
+  padding: 16px 22px;
+  border: none;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #0b2e2c;
+  font: inherit;
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.event-closing-resend {
+  margin: 0;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.85);
+}
+.event-closing-resend a {
+  color: #ffffff;
+  font-weight: 700;
+}
+.event-closing-footer {
+  /* Cancels .event-closing's own side padding so the strip runs edge to
+     edge like the band it sits in. */
+  margin: 0 -24px;
+  padding: 16px 24px;
+  background: #17181c;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 13px;
+  text-align: center;
 }
 
 .event-page-sidebar {

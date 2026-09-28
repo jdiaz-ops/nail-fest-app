@@ -36,6 +36,12 @@ const landingBlockSchema = z.discriminatedUnion("type", [
     rows: z.array(z.object({ chip: z.string(), text: z.string(), tone: z.enum(["teal", "pink", "peach"]) })),
   }),
   z.object({ type: z.literal("venue"), imageUrl: z.string(), mapsUrl: z.string() }),
+  z.object({
+    type: z.literal("people"),
+    items: z.array(
+      z.object({ name: z.string(), handle: z.string(), tag: z.string(), photoUrl: z.string(), tone: z.enum(["teal", "pink", "peach"]) })
+    ),
+  }),
 ]);
 
 const patchSchema = z.object({
@@ -49,6 +55,7 @@ const patchSchema = z.object({
   galleryImageUrls: z.array(z.string()).optional(),
   galleryTitle: z.string().optional(),
   ctaNote: z.string().optional(),
+  closingText: z.string().optional(),
   registerButtonLabel: z.string().optional(),
   startsAt: z.string().optional(),
   endsAt: z.string().nullable().optional(),
@@ -112,6 +119,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       galleryImageUrls: data.galleryImageUrls ?? existing.galleryImageUrls,
       galleryTitle: data.galleryTitle ?? existing.galleryTitle ?? "",
       ctaNote: data.ctaNote ?? existing.ctaNote ?? "",
+      closingText: data.closingText ?? existing.closingText ?? "",
       registerButtonLabel: data.registerButtonLabel ?? existing.registerButtonLabel ?? "",
       startsAt,
       endsAt,

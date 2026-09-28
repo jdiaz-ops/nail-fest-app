@@ -46,6 +46,7 @@ export default async function EditEventPage({ params }: { params: { id: string }
           galleryImageUrls: event.galleryImageUrls,
           galleryTitle: event.galleryTitle ?? "",
           ctaNote: event.ctaNote ?? "",
+          closingText: event.closingText ?? "",
           registerButtonLabel: event.registerButtonLabel ?? DEFAULT_REGISTER_BUTTON_LABEL,
           startsAtLocal: utcToZonedInputValue(event.startsAt, orgSettings.timezone),
           endsAtLocal: event.endsAt ? utcToZonedInputValue(event.endsAt, orgSettings.timezone) : "",

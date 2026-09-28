@@ -78,6 +78,16 @@ interface Props {
   // optional, null renders nothing.
   galleryTitle: string | null;
   ctaNote: string | null;
+  // "7 y 8 de nov · Cúcuta" — the mobile sticky bar's one line of context.
+  stickyLabel: string;
+  // Headline of the closing band at the end of the page — the admin's own
+  // Event.closingText, or the page's auto-built sentence when that's empty.
+  closingText: string;
+  // OrgSettings.selfServeResendEnabled — the band's "Reenviar mi entrada"
+  // link only renders when the /reenviar page actually works.
+  resendEnabled: boolean;
+  // "nailfest.lat" — the footer strip's own line.
+  siteHost: string;
 }
 
 // One combined checkout step (Shopify-style, per the admin's own call —
@@ -105,6 +115,10 @@ export default function EventRegistration({
   galleryImageUrls,
   galleryTitle,
   ctaNote,
+  stickyLabel,
+  closingText,
+  resendEnabled,
+  siteHost,
 }: Props) {
   const hasTicketTypes = ticketTypes.length > 0;
   const [open, setOpen] = useState(false);
@@ -416,22 +430,41 @@ export default function EventRegistration({
         </aside>
       </div>
 
-      {/* Floating CTA — mobile only (hidden ≥900px, see globals.css's
+      {/* Closing band — one last CTA at the very end, after everything
+          the person scrolled through. Full-bleed via CSS (see
+          .event-closing). */}
+      <section className="event-closing">
+        <div className="event-closing-inner">
+          <h2 className={`event-closing-title ${fraunces.className}`}>{closingText}</h2>
+          <button type="button" className="event-closing-button" onClick={openModal}>
+            {registerButtonLabel}
+          </button>
+          {resendEnabled && (
+            <p className="event-closing-resend">
+              ¿Ya te registraste y perdiste el correo? <a href="/reenviar">Reenviar mi entrada</a>
+            </p>
+          )}
+        </div>
+        <p className="event-closing-footer">
+          {brandName} · {siteHost}
+        </p>
+      </section>
+
+      {/* Sticky bar — mobile only (hidden ≥900px, see globals.css's
           .event-floating-cta — the sidebar card above is always visible
           on desktop, so a floating bar on top of it is redundant there).
-          Only once the inline one above has scrolled out of view,
+          Only once the inline CTA above has scrolled out of view,
           centered within the page's own column instead of pinned to the
           raw viewport edge so it doesn't drift off on a wide screen. */}
       {!open && showFloating && (
         <div className="event-floating-cta">
-          <div style={{ width: "100%", maxWidth: 440 }}>
-            <button
-              type="button"
-              className="primary"
-              onClick={openModal}
-              style={{ boxShadow: "0 8px 24px -6px rgba(0,0,0,0.35)" }}
-            >
-              {registerButtonLabel}
+          <div className="event-sticky-bar">
+            <div className="event-sticky-bar-text">
+              <strong>{stickyLabel}</strong>
+              <span>{hasTicketTypes ? "Boletas disponibles" : "Entrada gratis"}</span>
+            </div>
+            <button type="button" className="primary" onClick={openModal}>
+              Mi entrada
             </button>
           </div>
         </div>

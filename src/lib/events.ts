@@ -61,6 +61,7 @@ export interface EventInput {
   // See Event.galleryTitle / Event.ctaNote's own schema comments.
   galleryTitle: string;
   ctaNote: string;
+  closingText: string;
   registerButtonLabel: string;
   startsAt: Date;
   endsAt: Date | null;
@@ -103,6 +104,7 @@ export async function createEvent(input: EventInput): Promise<Event> {
       galleryImageUrls: input.galleryImageUrls,
       galleryTitle: input.galleryTitle.trim() || null,
       ctaNote: input.ctaNote.trim() || null,
+      closingText: input.closingText.trim() || null,
       registerButtonLabel: input.registerButtonLabel.trim() || null,
       startsAt: input.startsAt,
       endsAt: input.endsAt,
@@ -137,6 +139,7 @@ export async function updateEvent(id: string, input: EventInput): Promise<Event>
       galleryImageUrls: input.galleryImageUrls,
       galleryTitle: input.galleryTitle.trim() || null,
       ctaNote: input.ctaNote.trim() || null,
+      closingText: input.closingText.trim() || null,
       registerButtonLabel: input.registerButtonLabel.trim() || null,
       startsAt: input.startsAt,
       endsAt: input.endsAt,
@@ -192,6 +195,7 @@ export async function duplicateEvent(sourceId: string): Promise<Event> {
       galleryImageUrls: source.galleryImageUrls,
       galleryTitle: source.galleryTitle,
       ctaNote: source.ctaNote,
+      closingText: source.closingText,
       registerButtonLabel: source.registerButtonLabel,
       startsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       endsAt: null,

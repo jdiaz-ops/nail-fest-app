@@ -1,5 +1,16 @@
 import { Fraunces } from "next/font/google";
+import ScrollCarousel from "@/components/ScrollCarousel";
 import type { LandingBlock, LandingCardIcon } from "@/lib/landingBlocks/types";
+
+// "Michell Rodríguez" -> "MR"; a single name gives one letter.
+function initials(name: string): string {
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w.charAt(0).toUpperCase())
+    .join("");
+}
 
 // Section headings in the brand's display face, same as the event hero.
 const fraunces = Fraunces({ subsets: ["latin"], weight: ["900"] });
@@ -127,6 +138,31 @@ export default function LandingBlocksContent({ blocks, venue }: { blocks: Landin
                     </a>
                   )}
                 </div>
+              </div>
+            ) : null;
+
+          case "people":
+            return block.items.length > 0 ? (
+              <div key={i} className="landing-people">
+                <ScrollCarousel>
+                  {block.items.map((person, j) => (
+                    <div key={j} className="landing-person">
+                      {person.photoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- admin-uploaded photo, arbitrary Blob URL
+                        <img src={person.photoUrl} alt="" className="landing-person-photo" />
+                      ) : (
+                        <span className={`landing-person-initials landing-person-initials--${person.tone}`} aria-hidden="true">
+                          {initials(person.name)}
+                        </span>
+                      )}
+                      <strong className="landing-person-name">{person.name}</strong>
+                      {person.handle && (
+                        <span className="landing-person-handle">{person.handle.startsWith("@") ? person.handle : `@${person.handle}`}</span>
+                      )}
+                      {person.tag && <span className={`landing-chip landing-chip--${person.tone}`}>{person.tag}</span>}
+                    </div>
+                  ))}
+                </ScrollCarousel>
               </div>
             ) : null;
 

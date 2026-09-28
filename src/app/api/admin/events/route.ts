@@ -34,6 +34,12 @@ const landingBlockSchema = z.discriminatedUnion("type", [
     rows: z.array(z.object({ chip: z.string(), text: z.string(), tone: z.enum(["teal", "pink", "peach"]) })),
   }),
   z.object({ type: z.literal("venue"), imageUrl: z.string(), mapsUrl: z.string() }),
+  z.object({
+    type: z.literal("people"),
+    items: z.array(
+      z.object({ name: z.string(), handle: z.string(), tag: z.string(), photoUrl: z.string(), tone: z.enum(["teal", "pink", "peach"]) })
+    ),
+  }),
 ]);
 
 const bodySchema = z.object({
@@ -47,6 +53,7 @@ const bodySchema = z.object({
   galleryImageUrls: z.array(z.string()).default([]),
   galleryTitle: z.string().default(""),
   ctaNote: z.string().default(""),
+  closingText: z.string().default(""),
   registerButtonLabel: z.string().optional(),
   startsAt: z.string().datetime().or(z.string().min(1)),
   endsAt: z.string().nullable().optional(),
@@ -101,6 +108,7 @@ export async function POST(req: NextRequest) {
     galleryImageUrls: data.galleryImageUrls,
     galleryTitle: data.galleryTitle,
     ctaNote: data.ctaNote,
+    closingText: data.closingText,
     registerButtonLabel: data.registerButtonLabel?.trim() || DEFAULT_REGISTER_BUTTON_LABEL,
     startsAt,
     endsAt,

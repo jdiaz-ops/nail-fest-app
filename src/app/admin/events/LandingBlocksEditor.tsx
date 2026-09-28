@@ -38,7 +38,9 @@ export default function LandingBlocksEditor({
                   ? { type: "card", eyebrow: "", title: "", html: "", icon: "none", tone: "pink" }
                   : type === "agenda"
                     ? { type: "agenda", rows: [{ chip: "", text: "", tone: "teal" }] }
-                    : { type: "venue", imageUrl: "", mapsUrl: "" };
+                    : type === "venue"
+                      ? { type: "venue", imageUrl: "", mapsUrl: "" }
+                      : { type: "people", items: [{ name: "", handle: "", tag: "", photoUrl: "", tone: "pink" }] };
     onChange([...blocks, block]);
   }
 
@@ -133,6 +135,7 @@ export default function LandingBlocksEditor({
               {block.type === "card" && <CardBlockEditor block={block} onChange={(b) => updateAt(i, b)} />}
               {block.type === "agenda" && <AgendaBlockEditor block={block} onChange={(b) => updateAt(i, b)} />}
               {block.type === "venue" && <VenueBlockEditor block={block} onChange={(b) => updateAt(i, b)} />}
+              {block.type === "people" && <PeopleBlockEditor block={block} onChange={(b) => updateAt(i, b)} />}
             </div>
           ))}
         </div>
@@ -157,6 +160,7 @@ const BLOCK_LABELS: Record<LandingBlock["type"], string> = {
   gallery: "Galería",
   card: "Tarjeta destacada",
   agenda: "Agenda",
+  people: "Personas",
   venue: "Dónde es",
   faq: "Preguntas frecuentes",
 };
@@ -543,6 +547,138 @@ function VenueBlockEditor({
         placeholder="Enlace de Google Maps (opcional)"
         inputMode="url"
       />
+    </div>
+  );
+}
+
+function PeopleBlockEditor({
+  block,
+  onChange,
+}: {
+  block: Extract<LandingBlock, { type: "people" }>;
+  onChange: (block: LandingBlock) => void;
+}) {
+  type Person = (typeof block.items)[number];
+  function updateItem(i: number, item: Person) {
+    onChange({ ...block, items: block.items.map((p, j) => (j === i ? item : p)) });
+  }
+  function removeItem(i: number) {
+    onChange({ ...block, items: block.items.filter((_, j) => j !== i) });
+  }
+  function moveItem(i: number, dir: -1 | 1) {
+    const target = i + dir;
+    if (target < 0 || target >= block.items.length) return;
+    const next = [...block.items];
+    [next[i], next[target]] = [next[target]!, next[i]!];
+    onChange({ ...block, items: next });
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <p style={{ fontSize: 12, color: "#5b5f6b", margin: 0 }}>
+        Salen como tarjetas deslizables. La foto es opcional — sin foto, la tarjeta muestra las iniciales del nombre en
+        el color elegido.
+      </p>
+      {block.items.map((person, i) => (
+        <PersonEditor
+          key={i}
+          person={person}
+          first={i === 0}
+          last={i === block.items.length - 1}
+          onChange={(p) => updateItem(i, p)}
+          onMove={(dir) => moveItem(i, dir)}
+          onRemove={() => removeItem(i)}
+        />
+      ))}
+      <button
+        type="button"
+        onClick={() => onChange({ ...block, items: [...block.items, { name: "", handle: "", tag: "", photoUrl: "", tone: "pink" }] })}
+        className="secondary"
+        style={{ width: "auto", padding: "6px 12px", alignSelf: "flex-start" }}
+      >
+        + Agregar persona
+      </button>
+    </div>
+  );
+}
+
+function PersonEditor({
+  person,
+  first,
+  last,
+  onChange,
+  onMove,
+  onRemove,
+}: {
+  person: Extract<LandingBlock, { type: "people" }>["items"][number];
+  first: boolean;
+  last: boolean;
+  onChange: (person: Extract<LandingBlock, { type: "people" }>["items"][number]) => void;
+  onMove: (dir: -1 | 1) => void;
+  onRemove: () => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setError(null);
+    try {
+      const result = await uploadImage(file);
+      if ("url" in result) onChange({ ...person, photoUrl: result.url });
+      else setError(result.error);
+    } finally {
+      setUploading(false);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6, border: "1px solid #f0efec", borderRadius: 6, padding: 10 }}>
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        <input value={person.name} onChange={(e) => onChange({ ...person, name: e.target.value })} placeholder="Nombre" style={{ flex: 1 }} />
+        <button type="button" onClick={() => onMove(-1)} disabled={first} title="Subir" aria-label="Subir" style={iconButtonStyle}>
+          ↑
+        </button>
+        <button type="button" onClick={() => onMove(1)} disabled={last} title="Bajar" aria-label="Bajar" style={iconButtonStyle}>
+          ↓
+        </button>
+        <button type="button" onClick={onRemove} title="Quitar" aria-label="Quitar" style={iconButtonStyle}>
+          ×
+        </button>
+      </div>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <input
+          value={person.handle}
+          onChange={(e) => onChange({ ...person, handle: e.target.value })}
+          placeholder="@instagram (opcional)"
+          style={{ flex: "1 1 140px" }}
+        />
+        <input
+          value={person.tag}
+          onChange={(e) => onChange({ ...person, tag: e.target.value })}
+          placeholder="Etiqueta (ej. Panel · Sáb 3:15)"
+          style={{ flex: "1 1 160px" }}
+        />
+        <ToneSelect value={person.tone} onChange={(tone) => onChange({ ...person, tone })} />
+      </div>
+      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+        {person.photoUrl && (
+          <div style={{ position: "relative" }}>
+            {/* eslint-disable-next-line @next/next/no-img-element -- admin preview of an arbitrary uploaded URL */}
+            <img src={person.photoUrl} alt="" style={{ width: 56, height: 56, objectFit: "cover", borderRadius: "50%", display: "block", border: "1px solid #e3e1dc" }} />
+            <button type="button" onClick={() => onChange({ ...person, photoUrl: "" })} style={removeImageButtonStyle} aria-label="Quitar foto">
+              ×
+            </button>
+          </div>
+        )}
+        <input ref={inputRef} type="file" accept="image/*" onChange={handleFile} disabled={uploading} style={{ flex: 1 }} />
+      </div>
+      {uploading && <p style={{ fontSize: 12, color: "#5b5f6b", margin: 0 }}>Subiendo…</p>}
+      {error && <p style={{ fontSize: 12, color: "#c2185b", margin: 0 }}>{error}</p>}
     </div>
   );
 }

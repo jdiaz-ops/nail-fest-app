@@ -41,6 +41,7 @@ export interface EventFormValues {
   galleryImageUrls: string[];
   galleryTitle: string;
   ctaNote: string;
+  closingText: string;
   registerButtonLabel: string;
   startsAtLocal: string; // "YYYY-MM-DDTHH:mm", already in `timezone`
   endsAtLocal: string;
@@ -78,6 +79,7 @@ export interface DuplicateSource {
   galleryImageUrls: string[];
   galleryTitle: string;
   ctaNote: string;
+  closingText: string;
   registerButtonLabel: string;
   capacity: string;
 }
@@ -133,6 +135,7 @@ export default function EventForm({
       galleryImageUrls: source.galleryImageUrls,
       galleryTitle: source.galleryTitle,
       ctaNote: source.ctaNote,
+      closingText: source.closingText,
       registerButtonLabel: source.registerButtonLabel,
       capacity: source.capacity,
       // Dates and slug deliberately NOT copied — a new event needs its
@@ -285,6 +288,7 @@ export default function EventForm({
       galleryImageUrls: values.galleryImageUrls,
       galleryTitle: values.galleryTitle.trim(),
       ctaNote: values.ctaNote.trim(),
+      closingText: values.closingText.trim(),
       registerButtonLabel: values.registerButtonLabel.trim(),
       startsAt: startsAt.toISOString(),
       endsAt: endsAt ? endsAt.toISOString() : null,
@@ -753,7 +757,7 @@ export default function EventForm({
             </p>
           </div>
 
-          <div className="field" style={{ marginBottom: 0 }}>
+          <div className="field">
             <label>Texto debajo del botón (opcional)</label>
             <input
               value={values.ctaNote}
@@ -762,6 +766,15 @@ export default function EventForm({
             />
             <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>
               Una línea corta bajo el botón de registro — para quién es el evento. Vacío = no aparece.
+            </p>
+          </div>
+
+          <div className="field" style={{ marginBottom: 0 }}>
+            <label>Frase de cierre (opcional)</label>
+            <input value={values.closingText} onChange={(e) => set("closingText", e.target.value)} placeholder="Nos vemos el 7 y 8 de noviembre en Cúcuta." />
+            <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>
+              El título de la banda verde al final de la página, con el último botón de registro. Vacío = se arma solo
+              con la fecha y la ciudad del evento.
             </p>
           </div>
         </Section>

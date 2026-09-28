@@ -183,6 +183,10 @@ model Event {
   // is for, as a nudge right at the point of decision. Null/empty means
   // nothing renders there.
   ctaNote          String?
+  // The headline of the closing band at the very end of the public page
+  // ("Nos vemos el 7 y 8 de noviembre en Cúcuta."). Null/empty means the
+  // page builds that sentence itself from the dates and city.
+  closingText      String?
   // The public page's registration submit button — our previous ticketing
   // platform's own "Select tickets button label" field, renamed here since we have no
   // ticket-selection step (RegistrationForm.tsx just submits straight to

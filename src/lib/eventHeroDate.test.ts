@@ -31,6 +31,7 @@ describe("formatHeroDate", () => {
       days: "7 y 8",
       month: "de noviembre",
       detail: "Sábado y domingo · 2026",
+      short: "7 y 8 de nov",
     });
   });
 
@@ -39,6 +40,7 @@ describe("formatHeroDate", () => {
       days: "7",
       month: "de noviembre",
       detail: "Sábado · 2026",
+      short: "7 de nov",
     });
   });
 
@@ -51,6 +53,7 @@ describe("formatHeroDate", () => {
       days: "6 al 8",
       month: "de noviembre",
       detail: "Viernes a domingo · 2026",
+      short: "6 al 8 de nov",
     });
   });
 
@@ -59,6 +62,7 @@ describe("formatHeroDate", () => {
       days: "31 – 1",
       month: "de octubre a noviembre",
       detail: "Sábado y domingo · 2026",
+      short: "31 oct – 1 nov",
     });
   });
 
