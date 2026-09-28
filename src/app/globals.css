@@ -409,11 +409,15 @@ button.primary:disabled {
   font-size: 16px;
   color: var(--ink);
 }
+/* Same look as the landing blocks' section titles (.landing-section-title)
+   so the carousel's heading doesn't stand out as the one sans-serif title. */
 .event-gallery-title {
-  margin: 4px 0 12px;
-  font-size: 22px;
-  font-weight: 800;
-  line-height: 1.2;
+  margin: 4px 0 14px;
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
 }
 
 /* EventGalleryCarousel.tsx — a horizontally-scrollable row of pre-designed
@@ -669,6 +673,10 @@ button.primary:disabled {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  /* A section heading belongs to the block under it: pull that block up
+     from the blocks list's 28px gap to 14px, the same spacing the gallery
+     carousel's title has. */
+  margin-bottom: -14px;
 }
 .landing-section-title {
   font-size: 26px;

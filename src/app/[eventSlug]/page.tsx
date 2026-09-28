@@ -100,9 +100,11 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
   // — derived from the same fields as eventWhen/eventVenue above, which
   // stay as-is for the sidebar, the floating CTA and the modal.
   const heroDate = formatHeroDate(event.startsAt, event.endsAt, orgSettings.timezone, orgSettings.language);
-  // Real per-day hours when configured ("Sáb 10 a. m. – 6 p. m. · Dom …")
-  // take the detail line's spot; otherwise the weekday/year line stays.
-  const heroDetail = formatHeroHours(event.scheduleDays, orgSettings.timezone, orgSettings.language) ?? heroDate.detail;
+  // Real per-day hours when configured ("Sáb 10 a. m. – 6 p. m.", one line
+  // per day) take the detail line's spot; otherwise the weekday/year line
+  // stays. The "Dónde es" block shows the same short lines.
+  const heroHours = formatHeroHours(event.scheduleDays, orgSettings.timezone, orgSettings.language);
+  const heroDetail = heroHours ?? [heroDate.detail];
   const venueCardTitle = event.format === "VIRTUAL" ? "Evento virtual" : event.venueName;
   const venueCardDetail =
     event.format === "VIRTUAL"
@@ -173,7 +175,11 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
             <span className={`event-hero-date-days ${fraunces.className}`}>{heroDate.days}</span>
             <span className="event-hero-date-rest">
               <span className="event-hero-date-month">{heroDate.month}</span>
-              <span className="event-hero-date-detail">{heroDetail}</span>
+              {heroDetail.map((line) => (
+                <span key={line} className="event-hero-date-detail">
+                  {line}
+                </span>
+              ))}
             </span>
           </p>
           {event.subtitle && (
@@ -235,7 +241,7 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
                 venue={{
                   name: event.venueName ?? "",
                   address: event.venueAddress ?? "",
-                  hours: formatEventScheduleLines(event, orgSettings.timezone, orgSettings.language),
+                  hours: heroHours ?? formatEventScheduleLines(event, orgSettings.timezone, orgSettings.language),
                 }}
               />
             ) : undefined

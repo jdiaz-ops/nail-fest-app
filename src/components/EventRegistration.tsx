@@ -389,7 +389,7 @@ export default function EventRegistration({
 
           {galleryImageUrls.length > 0 && (
             <>
-              {galleryTitle && <h2 className="event-gallery-title">{galleryTitle}</h2>}
+              {galleryTitle && <h2 className={`event-gallery-title ${fraunces.className}`}>{galleryTitle}</h2>}
               <EventGalleryCarousel imageUrls={galleryImageUrls} />
             </>
           )}

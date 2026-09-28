@@ -149,7 +149,9 @@ export default function LandingBlocksContent({ blocks, venue }: { blocks: Landin
                 <div className="landing-venue-card">
                   {venue.name && <strong className="landing-venue-name">{venue.name}</strong>}
                   {venue.address && <span>{venue.address}</span>}
-                  {venue.hours.length > 0 && <span>{venue.hours.join(" · ")}</span>}
+                  {venue.hours.map((line) => (
+                    <span key={line}>{line}</span>
+                  ))}
                   {block.mapsUrl && (
                     <a href={block.mapsUrl} target="_blank" rel="noopener noreferrer" className="landing-venue-link">
                       Ver en Google Maps
