@@ -5,7 +5,7 @@ const recordOutboundMessage = vi.hoisted(() => vi.fn());
 const state = vi.hoisted(() => ({
   broadcast: null as Record<string, unknown> | null,
   people: [] as { id: string; phone: string | null; firstName: string }[],
-  registrations: [] as { personId: string; eventId: string; qrToken: string }[],
+  registrations: [] as { personId: string; eventId: string; qrToken: string; customFields?: Record<string, unknown> }[],
 }));
 
 vi.mock("./index", () => ({ whatsappProvider: { sendTemplate } }));
@@ -35,7 +35,7 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
-import { previewSegmentRecipients, sendWhatsAppBroadcast } from "./broadcasts";
+import { duplicatePhoneRecipients, previewSegmentRecipients, sendWhatsAppBroadcast } from "./broadcasts";
 
 const TICKET_URL = "https://nailfest.lat/api/ticket-pdf/{{1}}";
 
@@ -105,5 +105,73 @@ describe("difusión without that button", () => {
     for (const [call] of sendTemplate.mock.calls) {
       expect(call.buttonUrlParam).toBeUndefined();
     }
+  });
+});
+
+describe("one message per WhatsApp number", () => {
+  const everyone = () => true;
+
+  it("treats every way of writing the same number as one", () => {
+    const people = [
+      { id: "a", phone: "+57 313 405 8607" },
+      { id: "b", phone: "573134058607" },
+      { id: "c", phone: "3134058607" },
+      { id: "d", phone: "+573001112222" },
+    ];
+    expect([...duplicatePhoneRecipients(people, everyone)]).toEqual(["b", "c"]);
+  });
+
+  it("never lets a contact that wouldn't receive it use up the number", () => {
+    const people = [
+      { id: "noConsent", phone: "+573134058607" },
+      { id: "ok", phone: "+573134058607" },
+    ];
+    expect(duplicatePhoneRecipients(people, (id) => id === "ok").size).toBe(0);
+  });
+
+  it("with an entrada button, sends to each different cédula sharing a phone", () => {
+    const people = [
+      { id: "mayra1", phone: "+584127136846" },
+      { id: "mayra2", phone: "+584127136846" },
+      { id: "liliana", phone: "+584247056102" },
+      { id: "wilmer", phone: "+584247056102" },
+    ];
+    const holders = new Map([
+      ["mayra1", "60412382"],
+      ["mayra2", "60412382"],
+      ["liliana", "20424688"],
+      ["wilmer", "21342022"],
+    ]);
+    expect([...duplicatePhoneRecipients(people, everyone, holders)]).toEqual(["mayra2"]);
+  });
+
+  it("sends once per number and says how many were left out", async () => {
+    state.people = [
+      { id: "p1", phone: "+573001112222", firstName: "Mayra" },
+      { id: "p2", phone: "+57 300 111 2222", firstName: "Mayra" },
+      { id: "p3", phone: "+573003334444", firstName: "Karen" },
+    ];
+    state.broadcast = makeBroadcast([], null);
+    expect(await previewSegmentRecipients("seg")).toMatchObject({ total: 3, eligible: 2, duplicatePhone: 1 });
+    const result = await sendWhatsAppBroadcast("b1");
+    expect(result).toMatchObject({ sent: 2, skippedDuplicatePhone: 1 });
+    expect(sendTemplate.mock.calls.map(([c]) => c.to)).toEqual(["+573001112222", "+573003334444"]);
+  });
+
+  it("with the entrada button, same cédula on one number gets a single entrada", async () => {
+    state.people = [
+      { id: "p1", phone: "+573001112222", firstName: "Mayra" },
+      { id: "p2", phone: "+573001112222", firstName: "Mayra" },
+      { id: "p3", phone: "+573001112222", firstName: "Hija" },
+    ];
+    state.registrations = [
+      { personId: "p1", eventId: "cucuta", qrToken: "reg1.sig", customFields: { cedula: "60.412.382" } },
+      { personId: "p2", eventId: "cucuta", qrToken: "reg2.sig", customFields: { cedula: "60412382" } },
+      { personId: "p3", eventId: "cucuta", qrToken: "reg3.sig", customFields: { cedula: "1090450263" } },
+    ];
+    state.broadcast = makeBroadcast([{ type: "URL", text: "Ver mi entrada", url: TICKET_URL }], "cucuta");
+    const result = await sendWhatsAppBroadcast("b1");
+    expect(result).toMatchObject({ sent: 2, skippedDuplicatePhone: 1 });
+    expect(sendTemplate.mock.calls.map(([c]) => c.buttonUrlParam)).toEqual(["reg1.sig", "reg3.sig"]);
   });
 });

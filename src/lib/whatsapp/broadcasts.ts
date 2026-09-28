@@ -61,6 +61,65 @@ async function ticketTokensFor(eventId: string, personIds: string[]): Promise<Ma
   return new Map(rows.map((r) => [r.personId, r.qrToken as string]));
 }
 
+/** personId -> who that confirmed ticket belongs to, as a key: the cédula
+ * answered at checkout (digits only), or null when there is none. Only
+ * used to tell "the same woman registered twice with two emails" from
+ * "two people who share one WhatsApp number" — see onePerPhone. */
+async function ticketHoldersFor(eventId: string, personIds: string[]): Promise<Map<string, string | null>> {
+  if (personIds.length === 0) return new Map();
+  const rows = await db.registration.findMany({
+    where: { eventId, personId: { in: personIds }, status: "CONFIRMED", qrToken: { not: null } },
+    select: { personId: true, customFields: true },
+  });
+  return new Map(
+    rows.map((r) => {
+      const fields = r.customFields && typeof r.customFields === "object" && !Array.isArray(r.customFields) ? (r.customFields as Record<string, unknown>) : {};
+      const cedula = typeof fields.cedula === "string" ? fields.cedula.replace(/\D/g, "").replace(/^0+/, "") : "";
+      return [r.personId, cedula || null];
+    })
+  );
+}
+
+/** "+57 313 405 8607", "573134058607" and "3134058607" are one WhatsApp. */
+function phoneKey(phone: string | null | undefined): string | null {
+  const digits = (phone ?? "").replace(/\D/g, "").slice(-10);
+  return digits.length >= 7 ? digits : null;
+}
+
+/** The recipients to leave out so each WhatsApp number gets ONE message:
+ * the same person often exists twice in the CRM (registered again with a
+ * second email when the first ticket email never arrived), both with the
+ * same phone. Only people who would actually receive the message compete
+ * for their number — a contact without consent never "uses up" it.
+ *
+ * With `holders` (a "Ver mi entrada" send), two contacts on one number
+ * both get their message when their cédulas differ — a mother and
+ * daughter sharing a phone each need their own entrada; the same cédula,
+ * or one missing, is treated as the same person. The first one in list
+ * order keeps the number. */
+export function duplicatePhoneRecipients(
+  people: { id: string; phone: string | null }[],
+  willReceive: (personId: string) => boolean,
+  holders?: Map<string, string | null>
+): Set<string> {
+  const seenByPhone = new Map<string, (string | null)[]>();
+  const duplicates = new Set<string>();
+  for (const person of people) {
+    const phone = phoneKey(person.phone);
+    if (!phone || !willReceive(person.id)) continue;
+    const holder = holders ? (holders.get(person.id) ?? null) : null;
+    const seen = seenByPhone.get(phone);
+    if (!seen) {
+      seenByPhone.set(phone, [holder]);
+    } else if (holders && holder && seen.every((h) => h && h !== holder)) {
+      seen.push(holder); // a different person on the same number
+    } else {
+      duplicates.add(person.id);
+    }
+  }
+  return duplicates;
+}
+
 /** One recipient's send attempt — shared by the main broadcast loop and
  * retryFailedMessages(), so a retry renders variables and logs exactly
  * the same way the original send did, not a second copy that could
@@ -132,18 +191,22 @@ async function sendOneTemplateMessage(
 export async function previewSegmentRecipients(
   segmentId: string,
   ticketEventId?: string | null
-): Promise<{ total: number; eligible: number; noConsent: number; noPhone: number; noTicket: number }> {
+): Promise<{ total: number; eligible: number; noConsent: number; noPhone: number; noTicket: number; duplicatePhone: number }> {
   const segment = await db.segmentDefinition.findUniqueOrThrow({ where: { id: segmentId } });
   const people = await resolveSegment(segment.filter as unknown as SegmentFilter);
   const consented = await bulkActiveConsent(people.map((p) => p.id), "WHATSAPP");
   const reachable = people.filter((p) => p.phone && consented.has(p.id));
-  const tickets = ticketEventId ? await ticketTokensFor(ticketEventId, reachable.map((p) => p.id)) : null;
+  const [tickets, holders] = ticketEventId
+    ? await Promise.all([ticketTokensFor(ticketEventId, reachable.map((p) => p.id)), ticketHoldersFor(ticketEventId, reachable.map((p) => p.id))])
+    : [null, undefined];
+  const duplicates = duplicatePhoneRecipients(people, (id) => consented.has(id) && (!tickets || tickets.has(id)), holders);
 
   let eligible = 0;
   let noConsent = 0;
   let noPhone = 0;
   let noTicket = 0;
   for (const person of people) {
+    if (duplicates.has(person.id)) continue;
     if (!person.phone) {
       noPhone++;
     } else if (!consented.has(person.id)) {
@@ -154,7 +217,7 @@ export async function previewSegmentRecipients(
       eligible++;
     }
   }
-  return { total: people.length, eligible, noConsent, noPhone, noTicket };
+  return { total: people.length, eligible, noConsent, noPhone, noTicket, duplicatePhone: duplicates.size };
 }
 
 /** Sends the next chunk of a broadcast, picking up wherever its persisted
@@ -186,6 +249,10 @@ export async function sendWhatsAppBroadcast(
   skippedNoConsent: number;
   skippedNoPhone: number;
   skippedNoTicket: number;
+  /** Left out because another contact with the same WhatsApp number already
+   * gets this message — see duplicatePhoneRecipients. Counted on the call
+   * that freezes the list (the one the composer waits for); 0 afterwards. */
+  skippedDuplicatePhone: number;
   failed: number;
   remaining: number;
   backgrounded: boolean;
@@ -213,13 +280,24 @@ export async function sendWhatsAppBroadcast(
   // and freeze it. A later (continuation) call reuses the frozen list —
   // never re-resolves the segment/event membership.
   let recipientIds: string[];
+  let skippedDuplicatePhone = 0;
   if (broadcast.recipientPersonIds) {
     recipientIds = broadcast.recipientPersonIds as unknown as string[];
   } else {
     const recipients: Recipient[] = broadcast.eventId
       ? (await resolveEventBroadcastRecipients(broadcast.eventId, broadcast.ticketTypeId)).map((r) => ({ person: r.person, event }))
       : (await resolveSegment(broadcast.segment!.filter as unknown as SegmentFilter)).map((person) => ({ person, event: null }));
-    recipientIds = recipients.map((r) => r.person.id);
+    // One message per WhatsApp number, decided once here and frozen with
+    // the list — the per-chunk loop below never sees the left-out ones.
+    const people = recipients.map((r) => r.person);
+    const allIds = people.map((p) => p.id);
+    const consentedAll = await bulkActiveConsent(allIds, "WHATSAPP");
+    const [ticketsAll, holders] = ticketButton?.eventId
+      ? await Promise.all([ticketTokensFor(ticketButton.eventId, allIds), ticketHoldersFor(ticketButton.eventId, allIds)])
+      : [null, undefined];
+    const duplicates = duplicatePhoneRecipients(people, (id) => consentedAll.has(id) && (!ticketsAll || ticketsAll.has(id)), holders);
+    skippedDuplicatePhone = duplicates.size;
+    recipientIds = allIds.filter((id) => !duplicates.has(id));
     await db.whatsAppBroadcast.update({
       where: { id: broadcast.id },
       data: { status: "SENDING", recipientPersonIds: recipientIds },
@@ -329,7 +407,7 @@ export async function sendWhatsAppBroadcast(
   if (remaining === 0) {
     await db.whatsAppBroadcast.update({ where: { id: broadcast.id }, data: { status: "SENT", sentAt: new Date() } });
   }
-  return { sent, skippedNoConsent, skippedNoPhone, skippedNoTicket, failed, remaining, backgrounded };
+  return { sent, skippedNoConsent, skippedNoPhone, skippedNoTicket, skippedDuplicatePhone, failed, remaining, backgrounded };
 }
 
 /** Re-attempts every FAILED message logged for this broadcast — for a

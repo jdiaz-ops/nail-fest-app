@@ -11,6 +11,7 @@ interface EligibilityPreview {
   noConsent: number;
   noPhone: number;
   noTicket: number;
+  duplicatePhone: number;
 }
 
 interface TicketEventOption {
@@ -208,8 +209,13 @@ export default function WhatsAppBroadcastComposer({ segments, templates, ticketE
         // body.backgrounded (QStash not configured), the send just kept
         // going synchronously and body.sent already reflects everyone.
         const sentLine = body.failed > 0 ? `Enviado — ${body.sent} entregados, ${body.failed} fallidos.` : `Enviado a los ${body.sent} contactos elegibles.`;
-        const base =
-          body.skippedNoTicket > 0 ? `${sentLine} ${body.skippedNoTicket} no lo recibieron por no tener entrada confirmada para ese evento.` : sentLine;
+        const noTicketLine =
+          body.skippedNoTicket > 0 ? ` ${body.skippedNoTicket} no lo recibieron por no tener entrada confirmada para ese evento.` : "";
+        const duplicateLine =
+          body.skippedDuplicatePhone > 0
+            ? ` ${body.skippedDuplicatePhone} ${body.skippedDuplicatePhone === 1 ? "contacto repetía" : "contactos repetían"} un número que ya lo recibió — no les llegó dos veces.`
+            : "";
+        const base = `${sentLine}${noTicketLine}${duplicateLine}`;
         setResult(body.remaining > 0 ? `${base} Quedan ${body.remaining} más en camino — siguen enviándose solos.` : base);
       } else if (body.scheduleWarning) {
         setResult(body.scheduleWarning);
@@ -402,6 +408,13 @@ export default function WhatsAppBroadcastComposer({ segments, templates, ticketE
                     </span>
                   ))}
                 {" — no recibirán nada)"}
+              </>
+            )}
+            {eligibility.duplicatePhone > 0 && (
+              <>
+                {". "}
+                {eligibility.duplicatePhone} {eligibility.duplicatePhone === 1 ? "contacto repite" : "contactos repiten"} el celular de
+                otro — a cada número le llega un solo mensaje
               </>
             )}
             .
