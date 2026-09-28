@@ -7,6 +7,7 @@ import { getValidFbc } from "./tracking";
 import { suggestEmailCorrection } from "@/lib/emailTypo";
 import { COUNTRY_CODES, GENERIC_PHONE_PLACEHOLDER, stripTrunkZero } from "@/lib/countryCodes";
 import { WORLD_COUNTRIES, findCountry } from "@/lib/worldCountries";
+import PhoneCountryPicker from "./PhoneCountryPicker";
 
 export interface QuestionView {
   key: string;
@@ -62,25 +63,6 @@ export interface RegisterPayload {
   // named `website` (a field bots commonly auto-fill, unlike something
   // that reads as obviously fake).
   website?: string;
-}
-
-const PHONE_SHORTCUTS = ["CO", "VE"].map((iso2) => findCountry(iso2)!).filter(Boolean);
-const PHONE_COUNTRIES_AZ = [...WORLD_COUNTRIES].sort((a, b) => a.name.localeCompare(b.name, "es"));
-
-function phoneChipStyle(active: boolean): React.CSSProperties {
-  return {
-    flex: "1 1 0",
-    minWidth: 0,
-    padding: "10px 6px",
-    borderRadius: 8,
-    border: active ? "2px solid var(--link)" : "1px solid var(--border)",
-    background: active ? "#e6f9f7" : "var(--surface)",
-    color: "var(--ink)",
-    fontSize: 14,
-    fontWeight: active ? 700 : 500,
-    lineHeight: 1.2,
-    cursor: "pointer",
-  };
 }
 
 interface Props {
@@ -166,8 +148,6 @@ export default function RegistrationForm({
   // defecto y arrastraba el formato colombiano al resto del formulario).
   // Se toma del país del celular: +58 = Venezuela. Colombia por defecto.
   const [phoneCountryIso2, setPhoneCountryIso2] = useState("CO");
-  // "Otro país" picked: the full A–Z list shows instead of the prefix box.
-  const [otherPhoneCountry, setOtherPhoneCountry] = useState(false);
   const country = phoneCountryIso2;
 
   // Someone who pastes or types their number with its own prefix
@@ -185,9 +165,7 @@ export default function RegistrationForm({
     // picked, else the first one listed for it (Estados Unidos for +1).
     const current = findCountry(phoneCountryIso2);
     const first = WORLD_COUNTRIES.find((c) => c.dialCode === hit.dialCode) ?? hit;
-    const iso2 = current?.dialCode === hit.dialCode ? current.iso2 : first.iso2;
-    setPhoneCountryIso2(iso2);
-    setOtherPhoneCountry(!PHONE_SHORTCUTS.some((c) => c.iso2 === iso2));
+    setPhoneCountryIso2(current?.dialCode === hit.dialCode ? current.iso2 : first.iso2);
     input.value = digits.slice(hit.dialCode.length - 1);
   }
 
@@ -494,70 +472,8 @@ export default function RegistrationForm({
             {phone.label}
             <Req required={phone.required} />
           </label>
-          {/* Colombia and Venezuela as one-tap buttons (Cúcuta's two real
-              audiences) — a native <select> can't be styled, and on Android
-              it opens scrolled to the selected row, hiding any "más usados"
-              header. Every other country is one more tap away, A–Z. */}
-          <div role="radiogroup" aria-label="País del celular" style={{ display: "flex", gap: 8 }}>
-            {PHONE_SHORTCUTS.map((c) => {
-              const active = !otherPhoneCountry && phoneCountryIso2 === c.iso2;
-              return (
-                <button
-                  key={c.iso2}
-                  type="button"
-                  role="radio"
-                  aria-checked={active}
-                  onClick={() => {
-                    setOtherPhoneCountry(false);
-                    setPhoneCountryIso2(c.iso2);
-                  }}
-                  style={phoneChipStyle(active)}
-                >
-                  {c.name} {c.dialCode}
-                </button>
-              );
-            })}
-            <button
-              type="button"
-              role="radio"
-              aria-checked={otherPhoneCountry}
-              onClick={() => setOtherPhoneCountry(true)}
-              style={phoneChipStyle(otherPhoneCountry)}
-            >
-              Otro país
-            </button>
-          </div>
           <div style={{ display: "flex", gap: 8 }}>
-            {otherPhoneCountry ? (
-              <select
-                aria-label="País del celular"
-                value={phoneCountryIso2}
-                onChange={(e) => setPhoneCountryIso2(e.target.value)}
-                style={{ flex: "0 0 auto", width: 168 }}
-              >
-                {PHONE_COUNTRIES_AZ.map((c) => (
-                  <option key={c.iso2} value={c.iso2}>
-                    {c.name} ({c.dialCode})
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <span
-                aria-hidden="true"
-                style={{
-                  flex: "0 0 auto",
-                  display: "flex",
-                  alignItems: "center",
-                  padding: "0 12px",
-                  border: "1px solid var(--border)",
-                  borderRadius: 8,
-                  background: "#f6f5f2",
-                  fontWeight: 600,
-                }}
-              >
-                {phoneCountry.dialCode}
-              </span>
-            )}
+            <PhoneCountryPicker value={phoneCountryIso2} onChange={setPhoneCountryIso2} />
             <input
               id="phone"
               name="phone"
