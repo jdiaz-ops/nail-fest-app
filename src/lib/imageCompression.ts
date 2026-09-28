@@ -18,7 +18,11 @@ const DEFAULT_JPEG_QUALITY = 0.8;
  * re-encode below. */
 export async function compressImage(
   file: File,
-  opts: { maxDimension?: number; quality?: number } = {}
+  // A PNG/WebP with a transparent background (a brand logo, a product
+  // cut-out) would come out of the JPEG re-encode with a black box behind
+  // it — with this set, those are re-encoded as WebP instead (PNG on
+  // browsers that can't encode WebP), keeping the transparency.
+  opts: { maxDimension?: number; quality?: number; keepTransparency?: boolean } = {}
 ): Promise<File> {
   const maxDimension = opts.maxDimension ?? DEFAULT_MAX_DIMENSION;
   const quality = opts.quality ?? DEFAULT_JPEG_QUALITY;
@@ -38,9 +42,13 @@ export async function compressImage(
   ctx.drawImage(bitmap, 0, 0, width, height);
   bitmap.close();
 
-  const blob: Blob | null = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
+  const mayBeTransparent = opts.keepTransparency && (file.type === "image/png" || file.type === "image/webp");
+  const blob: Blob | null = await new Promise((resolve) => canvas.toBlob(resolve, mayBeTransparent ? "image/webp" : "image/jpeg", quality));
   if (!blob) return file;
 
-  const name = file.name.replace(/\.\w+$/, "") + ".jpg";
-  return new File([blob], name, { type: "image/jpeg" });
+  // toBlob silently falls back to PNG where WebP encoding isn't supported —
+  // name the file after what actually came out.
+  const ext = blob.type === "image/webp" ? "webp" : blob.type === "image/png" ? "png" : "jpg";
+  const name = file.name.replace(/\.\w+$/, "") + "." + ext;
+  return new File([blob], name, { type: blob.type || "image/jpeg" });
 }

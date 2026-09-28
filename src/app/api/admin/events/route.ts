@@ -28,12 +28,32 @@ const landingBlockSchema = z.discriminatedUnion("type", [
     html: z.string(),
     icon: z.enum(["none", "gift", "ticket", "star", "clock"]),
     tone: z.enum(["teal", "pink", "peach"]),
+    imageUrl: z.string().default(""),
   }),
   z.object({
     type: z.literal("agenda"),
-    rows: z.array(z.object({ chip: z.string(), text: z.string(), tone: z.enum(["teal", "pink", "peach"]) })),
+    rows: z.array(
+      z.object({
+        kind: z.enum(["session", "day"]).default("session"),
+        chip: z.string(),
+        topic: z.string().default(""),
+        instructor: z.string().default(""),
+        photoUrl: z.string().default(""),
+        brand: z.string().default(""),
+        brandLogoUrl: z.string().default(""),
+        handles: z.string().default(""),
+        sponsored: z.boolean().default(false),
+        text: z.string().default(""),
+        tone: z.enum(["teal", "pink", "peach"]),
+      })
+    ),
   }),
   z.object({ type: z.literal("venue"), imageUrl: z.string(), mapsUrl: z.string() }),
+  z.object({
+    type: z.literal("points"),
+    items: z.array(z.object({ title: z.string(), text: z.string() })),
+    tone: z.enum(["teal", "pink", "peach"]),
+  }),
   z.object({
     type: z.literal("people"),
     items: z.array(

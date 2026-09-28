@@ -3,7 +3,14 @@
 import { useRef, useState } from "react";
 import RichTextEditor from "@/components/RichTextEditor";
 import { compressImage } from "@/lib/imageCompression";
-import { LANDING_CARD_ICONS, LANDING_TONES, type LandingBlock, type LandingTone } from "@/lib/landingBlocks/types";
+import {
+  LANDING_CARD_ICONS,
+  LANDING_TONES,
+  emptyAgendaRow,
+  type AgendaRow,
+  type LandingBlock,
+  type LandingTone,
+} from "@/lib/landingBlocks/types";
 
 // Self-service alternative to the plain Description field below — see
 // Event.landingBlocks's own schema comment. Controlled component, same
@@ -35,10 +42,12 @@ export default function LandingBlocksEditor({
               : type === "heading"
                 ? { type: "heading", title: "", intro: "" }
                 : type === "card"
-                  ? { type: "card", eyebrow: "", title: "", html: "", icon: "none", tone: "pink" }
+                  ? { type: "card", eyebrow: "", title: "", html: "", icon: "none", tone: "pink", imageUrl: "" }
                   : type === "agenda"
-                    ? { type: "agenda", rows: [{ chip: "", text: "", tone: "teal" }] }
-                    : type === "venue"
+                    ? { type: "agenda", rows: [emptyAgendaRow()] }
+                    : type === "points"
+                      ? { type: "points", items: [{ title: "", text: "" }], tone: "pink" }
+                      : type === "venue"
                       ? { type: "venue", imageUrl: "", mapsUrl: "" }
                       : { type: "people", items: [{ name: "", handle: "", tag: "", photoUrl: "", tone: "pink" }] };
     onChange([...blocks, block]);
@@ -136,6 +145,7 @@ export default function LandingBlocksEditor({
               {block.type === "agenda" && <AgendaBlockEditor block={block} onChange={(b) => updateAt(i, b)} />}
               {block.type === "venue" && <VenueBlockEditor block={block} onChange={(b) => updateAt(i, b)} />}
               {block.type === "people" && <PeopleBlockEditor block={block} onChange={(b) => updateAt(i, b)} />}
+              {block.type === "points" && <PointsBlockEditor block={block} onChange={(b) => updateAt(i, b)} />}
             </div>
           ))}
         </div>
@@ -159,6 +169,7 @@ const BLOCK_LABELS: Record<LandingBlock["type"], string> = {
   image: "Imagen / GIF",
   gallery: "Galería",
   card: "Tarjeta destacada",
+  points: "Lista de puntos",
   agenda: "Agenda",
   people: "Personas",
   venue: "Dónde es",
@@ -175,9 +186,11 @@ const ICON_LABELS: Record<(typeof LANDING_CARD_ICONS)[number], string> = {
 };
 
 // Every image block goes through the same compression as the hero and
-// the gallery carousel — see lib/imageCompression.ts.
+// the gallery carousel — see lib/imageCompression.ts — except a GIF,
+// which a canvas re-encode would freeze on its first frame. Transparent
+// PNGs (logos, product cut-outs) keep their transparency.
 async function uploadImage(file: File): Promise<{ url: string } | { error: string }> {
-  const compressed = await compressImage(file, { maxDimension: 1600, quality: 0.85 });
+  const compressed = file.type === "image/gif" ? file : await compressImage(file, { maxDimension: 1600, quality: 0.85, keepTransparency: true });
   const form = new FormData();
   form.append("file", compressed);
   const res = await fetch("/api/admin/uploads/event-image", { method: "POST", body: form });
@@ -410,6 +423,11 @@ function CardBlockEditor({
       />
       <input value={block.title} onChange={(e) => onChange({ ...block, title: e.target.value })} placeholder="Título de la tarjeta (ej. Bolsa edición especial)" />
       <RichTextEditor value={block.html} onChange={(html) => onChange({ ...block, html })} />
+      <ImageField
+        label="Foto de la tarjeta (opcional) — ej. la bolsa, el premio del sorteo"
+        url={block.imageUrl}
+        onChange={(imageUrl) => onChange({ ...block, imageUrl })}
+      />
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
         <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 400 }}>
           Color
@@ -434,6 +452,71 @@ function CardBlockEditor({
   );
 }
 
+function PointsBlockEditor({
+  block,
+  onChange,
+}: {
+  block: Extract<LandingBlock, { type: "points" }>;
+  onChange: (block: LandingBlock) => void;
+}) {
+  type Item = (typeof block.items)[number];
+  function updateItem(i: number, item: Item) {
+    onChange({ ...block, items: block.items.map((it, j) => (j === i ? item : it)) });
+  }
+  function moveItem(i: number, dir: -1 | 1) {
+    const target = i + dir;
+    if (target < 0 || target >= block.items.length) return;
+    const next = [...block.items];
+    [next[i], next[target]] = [next[target]!, next[i]!];
+    onChange({ ...block, items: next });
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 400 }}>
+        Color de los títulos
+        <ToneSelect value={block.tone} onChange={(tone) => onChange({ ...block, tone })} />
+      </label>
+      {block.items.map((item, i) => (
+        <div key={i} style={{ display: "flex", flexDirection: "column", gap: 6, border: "1px solid #f0efec", borderRadius: 6, padding: 10 }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <input value={item.title} onChange={(e) => updateItem(i, { ...item, title: e.target.value })} placeholder="Título (ej. Descubrir)" style={{ flex: 1 }} />
+            <button type="button" onClick={() => moveItem(i, -1)} disabled={i === 0} title="Subir" aria-label="Subir" style={iconButtonStyle}>
+              ↑
+            </button>
+            <button type="button" onClick={() => moveItem(i, 1)} disabled={i === block.items.length - 1} title="Bajar" aria-label="Bajar" style={iconButtonStyle}>
+              ↓
+            </button>
+            <button
+              type="button"
+              onClick={() => onChange({ ...block, items: block.items.filter((_, j) => j !== i) })}
+              title="Quitar"
+              aria-label="Quitar"
+              style={iconButtonStyle}
+            >
+              ×
+            </button>
+          </div>
+          <textarea
+            value={item.text}
+            onChange={(e) => updateItem(i, { ...item, text: e.target.value })}
+            placeholder="Texto (ej. Lo nuevo de 26 marcas, todas con descuento. Tócalo, pruébalo, llévatelo.)"
+            rows={2}
+          />
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={() => onChange({ ...block, items: [...block.items, { title: "", text: "" }] })}
+        className="secondary"
+        style={{ width: "auto", padding: "6px 12px", alignSelf: "flex-start" }}
+      >
+        + Agregar punto
+      </button>
+    </div>
+  );
+}
+
 function AgendaBlockEditor({
   block,
   onChange,
@@ -441,8 +524,7 @@ function AgendaBlockEditor({
   block: Extract<LandingBlock, { type: "agenda" }>;
   onChange: (block: LandingBlock) => void;
 }) {
-  type Row = (typeof block.rows)[number];
-  function updateRow(i: number, row: Row) {
+  function updateRow(i: number, row: AgendaRow) {
     onChange({ ...block, rows: block.rows.map((r, j) => (j === i ? row : r)) });
   }
   function removeRow(i: number) {
@@ -458,15 +540,9 @@ function AgendaBlockEditor({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-      {block.rows.map((row, i) => (
-        <div key={i} style={{ display: "flex", flexDirection: "column", gap: 6, border: "1px solid #f0efec", borderRadius: 6, padding: 10 }}>
-          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-            <input
-              value={row.chip}
-              onChange={(e) => updateRow(i, { ...row, chip: e.target.value })}
-              placeholder="Chip (ej. SÁB 7 · 2:00 p. m.)"
-              style={{ flex: "1 1 160px" }}
-            />
+      {block.rows.map((row, i) => {
+        const controls = (
+          <>
             <ToneSelect value={row.tone} onChange={(tone) => updateRow(i, { ...row, tone })} />
             <button type="button" onClick={() => moveRow(i, -1)} disabled={i === 0} title="Subir" aria-label="Subir" style={iconButtonStyle}>
               ↑
@@ -477,25 +553,161 @@ function AgendaBlockEditor({
             <button type="button" onClick={() => removeRow(i)} title="Quitar" aria-label="Quitar" style={iconButtonStyle}>
               ×
             </button>
+          </>
+        );
+
+        if (row.kind === "day") {
+          return (
+            <div key={i} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", background: "#faf9f7", border: "1px solid #f0efec", borderRadius: 6, padding: 10 }}>
+              <span style={agendaTagStyle}>Día</span>
+              <input
+                value={row.chip}
+                onChange={(e) => updateRow(i, { ...row, chip: e.target.value })}
+                placeholder="Ej. Sábado 7 de noviembre"
+                style={{ flex: "1 1 180px" }}
+              />
+              {controls}
+            </div>
+          );
+        }
+
+        return (
+          <div
+            key={i}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 8,
+              border: row.sponsored ? "2px solid #f0a8c0" : "1px solid #f0efec",
+              borderRadius: 6,
+              padding: 10,
+            }}
+          >
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+              <input
+                value={row.chip}
+                onChange={(e) => updateRow(i, { ...row, chip: e.target.value })}
+                placeholder="Hora (ej. 10:15 a. m.)"
+                style={{ flex: "1 1 120px" }}
+              />
+              {controls}
+            </div>
+            <input value={row.topic} onChange={(e) => updateRow(i, { ...row, topic: e.target.value })} placeholder="Tema (ej. Manicura Macro)" />
+            <input
+              value={row.instructor}
+              onChange={(e) => updateRow(i, { ...row, instructor: e.target.value })}
+              placeholder="Instructor/a (ej. Dayhana Rodríguez)"
+            />
+            <ImageField label="Foto del instructor/a (opcional)" url={row.photoUrl} round onChange={(photoUrl) => updateRow(i, { ...row, photoUrl })} />
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <input
+                value={row.brand}
+                onChange={(e) => updateRow(i, { ...row, brand: e.target.value })}
+                placeholder="Marca (ej. AM Glow)"
+                style={{ flex: "1 1 140px" }}
+              />
+              <input
+                value={row.handles}
+                onChange={(e) => updateRow(i, { ...row, handles: e.target.value })}
+                placeholder="Instagram (ej. @amglowspa @dayhana)"
+                style={{ flex: "1 1 200px" }}
+              />
+            </div>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 400 }}>
+              <input type="checkbox" checked={row.sponsored} onChange={(e) => updateRow(i, { ...row, sponsored: e.target.checked })} style={{ width: "auto" }} />
+              Marca patrocinadora: destacar esta demostración con &quot;Presentado por&quot; y su logo
+            </label>
+            {row.sponsored && (
+              <ImageField label="Logo de la marca (PNG sin fondo se ve mejor)" url={row.brandLogoUrl} onChange={(brandLogoUrl) => updateRow(i, { ...row, brandLogoUrl })} />
+            )}
+            <input
+              value={row.text}
+              onChange={(e) => updateRow(i, { ...row, text: e.target.value })}
+              placeholder="Nota extra (opcional, ej. Cupos limitados en primera fila)"
+            />
           </div>
-          <input
-            value={row.text}
-            onChange={(e) => updateRow(i, { ...row, text: e.target.value })}
-            placeholder="Qué pasa (ej. Conferencia: Marketing y educación financiera)"
-          />
-        </div>
-      ))}
-      <button
-        type="button"
-        onClick={() => onChange({ ...block, rows: [...block.rows, { chip: "", text: "", tone: "teal" }] })}
-        className="secondary"
-        style={{ width: "auto", padding: "6px 12px", alignSelf: "flex-start" }}
-      >
-        + Agregar fila
-      </button>
+        );
+      })}
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <button
+          type="button"
+          onClick={() => onChange({ ...block, rows: [...block.rows, emptyAgendaRow("session")] })}
+          className="secondary"
+          style={{ width: "auto", padding: "6px 12px" }}
+        >
+          + Demostración / charla
+        </button>
+        <button
+          type="button"
+          onClick={() => onChange({ ...block, rows: [...block.rows, emptyAgendaRow("day")] })}
+          className="secondary"
+          style={{ width: "auto", padding: "6px 12px" }}
+        >
+          + Día
+        </button>
+      </div>
     </div>
   );
 }
+
+// One uploadable picture with its preview and a remove button — the card
+// photo, an instructor's headshot, a sponsor's logo.
+function ImageField({ label, url, round, onChange }: { label: string; url: string; round?: boolean; onChange: (url: string) => void }) {
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setError(null);
+    try {
+      const result = await uploadImage(file);
+      if ("url" in result) onChange(result.url);
+      else setError(result.error);
+    } finally {
+      setUploading(false);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <span style={{ fontSize: 12, color: "#5b5f6b" }}>{label}</span>
+      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+        {url && (
+          <div style={{ position: "relative" }}>
+            {/* eslint-disable-next-line @next/next/no-img-element -- admin preview of an arbitrary uploaded URL */}
+            <img
+              src={url}
+              alt=""
+              style={
+                round
+                  ? { width: 56, height: 56, objectFit: "cover", borderRadius: "50%", display: "block", border: "1px solid #e3e1dc" }
+                  : { maxWidth: 160, maxHeight: 90, borderRadius: 6, display: "block", border: "1px solid #e3e1dc", background: "#f6f5f2" }
+              }
+            />
+            <button type="button" onClick={() => onChange("")} style={removeImageButtonStyle} aria-label="Quitar imagen">
+              ×
+            </button>
+          </div>
+        )}
+        <input ref={inputRef} type="file" accept="image/*" onChange={handleFile} disabled={uploading} style={{ flex: 1 }} />
+      </div>
+      {uploading && <p style={{ fontSize: 12, color: "#5b5f6b", margin: 0 }}>Subiendo…</p>}
+      {error && <p style={{ fontSize: 12, color: "#c2185b", margin: 0 }}>{error}</p>}
+    </div>
+  );
+}
+
+const agendaTagStyle: React.CSSProperties = {
+  fontSize: 11,
+  fontWeight: 700,
+  textTransform: "uppercase",
+  letterSpacing: "0.06em",
+  color: "#8a8478",
+};
 
 function VenueBlockEditor({
   block,

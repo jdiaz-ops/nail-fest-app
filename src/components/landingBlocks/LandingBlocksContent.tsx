@@ -1,6 +1,6 @@
 import { Fraunces } from "next/font/google";
 import ScrollCarousel from "@/components/ScrollCarousel";
-import type { LandingBlock, LandingCardIcon } from "@/lib/landingBlocks/types";
+import { instagramHandles, type AgendaRow, type LandingBlock, type LandingCardIcon } from "@/lib/landingBlocks/types";
 
 // "Michell Rodríguez" -> "MR"; a single name gives one letter.
 function initials(name: string): string {
@@ -92,28 +92,45 @@ export default function LandingBlocksContent({ blocks, venue }: { blocks: Landin
           case "card":
             return block.title || block.html ? (
               <div key={i} className={`landing-card landing-card--${block.tone}`}>
-                {block.icon !== "none" && (
-                  <span className="landing-card-icon" aria-hidden="true">
-                    <CardIcon icon={block.icon} />
-                  </span>
+                {block.imageUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element -- admin-uploaded photo, arbitrary Blob URL
+                  <img src={block.imageUrl} alt={block.title} className="landing-card-image" />
                 )}
-                <div className="landing-card-text">
-                  {block.eyebrow && <span className="landing-card-eyebrow">{block.eyebrow}</span>}
-                  {block.title && <h3 className="landing-card-title">{block.title}</h3>}
-                  {/* Sanitized server-side, same as text blocks — see lib/events.ts */}
-                  {block.html && <div className="landing-card-body" dangerouslySetInnerHTML={{ __html: block.html }} />}
+                <div className="landing-card-main">
+                  {block.icon !== "none" && (
+                    <span className="landing-card-icon" aria-hidden="true">
+                      <CardIcon icon={block.icon} />
+                    </span>
+                  )}
+                  <div className="landing-card-text">
+                    {block.eyebrow && <span className="landing-card-eyebrow">{block.eyebrow}</span>}
+                    {block.title && <h3 className="landing-card-title">{block.title}</h3>}
+                    {/* Sanitized server-side, same as text blocks — see lib/events.ts */}
+                    {block.html && <div className="landing-card-body" dangerouslySetInnerHTML={{ __html: block.html }} />}
+                  </div>
                 </div>
               </div>
             ) : null;
+
+          case "points": {
+            const items = block.items.filter((item) => item.title || item.text);
+            return items.length > 0 ? (
+              <div key={i} className={`landing-points landing-points--${block.tone}`}>
+                {items.map((item, j) => (
+                  <div key={j} className="landing-point">
+                    {item.title && <h3 className="landing-point-title">{item.title}</h3>}
+                    {item.text && <p className="landing-point-text">{item.text}</p>}
+                  </div>
+                ))}
+              </div>
+            ) : null;
+          }
 
           case "agenda":
             return block.rows.length > 0 ? (
               <div key={i} className="landing-agenda">
                 {block.rows.map((row, j) => (
-                  <div key={j} className="landing-agenda-row">
-                    {row.chip && <span className={`landing-chip landing-chip--${row.tone}`}>{row.chip}</span>}
-                    <span className="landing-agenda-text">{row.text}</span>
-                  </div>
+                  <AgendaRowView key={j} row={row} />
                 ))}
               </div>
             ) : null;
@@ -170,6 +187,75 @@ export default function LandingBlocksContent({ blocks, venue }: { blocks: Landin
             return null;
         }
       })}
+    </div>
+  );
+}
+
+// "10:15 a. m." -> big "10:15" with a small "a. m." under it, like the
+// Instagram cronograma; anything else ("SÁB 7 · 2:00") is shown as typed.
+function AgendaTime({ chip }: { chip: string }) {
+  const match = /^(\d{1,2}[:.]\d{2})\s*(.*)$/.exec(chip.trim());
+  return (
+    <span className="landing-agenda-time">
+      {match ? (
+        <>
+          <span className={`landing-agenda-time-digits ${fraunces.className}`}>{match[1]}</span>
+          {match[2] && <span className="landing-agenda-time-suffix">{match[2]}</span>}
+        </>
+      ) : (
+        <span className="landing-agenda-time-text">{chip}</span>
+      )}
+    </span>
+  );
+}
+
+function AgendaRowView({ row }: { row: AgendaRow }) {
+  if (row.kind === "day") {
+    return row.chip ? <h3 className={`landing-agenda-day landing-agenda-day--${row.tone} ${fraunces.className}`}>{row.chip}</h3> : null;
+  }
+
+  // Rows saved before topic/instructor existed keep everything in `text`.
+  const title = row.topic || row.text;
+  const note = row.topic ? row.text : "";
+  const showSponsor = row.sponsored && (row.brand || row.brandLogoUrl);
+  const who = [row.instructor, showSponsor ? "" : row.brand].filter(Boolean).join(" · ");
+  const handles = instagramHandles(row.handles);
+  if (!title && !who && !row.chip) return null;
+
+  return (
+    <div className={`landing-agenda-row landing-agenda-row--${row.tone}${showSponsor ? " is-sponsored" : ""}`}>
+      {showSponsor && (
+        <div className="landing-agenda-sponsor">
+          <span>Presentado por</span>
+          {row.brandLogoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- admin-uploaded logo, arbitrary Blob URL
+            <img src={row.brandLogoUrl} alt={row.brand} className="landing-agenda-sponsor-logo" />
+          ) : (
+            <strong>{row.brand}</strong>
+          )}
+        </div>
+      )}
+      <div className="landing-agenda-main">
+        {row.chip && <AgendaTime chip={row.chip} />}
+        <div className="landing-agenda-info">
+          {title && <strong className="landing-agenda-topic">{title}</strong>}
+          {who && <span className="landing-agenda-who">{who}</span>}
+          {handles.length > 0 && (
+            <span className="landing-agenda-handles">
+              {handles.map((h) => (
+                <a key={h} href={`https://instagram.com/${encodeURIComponent(h)}`} target="_blank" rel="noopener noreferrer">
+                  @{h}
+                </a>
+              ))}
+            </span>
+          )}
+          {note && <span className="landing-agenda-note">{note}</span>}
+        </div>
+        {row.photoUrl && (
+          // eslint-disable-next-line @next/next/no-img-element -- admin-uploaded photo, arbitrary Blob URL
+          <img src={row.photoUrl} alt={row.instructor} className="landing-agenda-photo" />
+        )}
+      </div>
     </div>
   );
 }

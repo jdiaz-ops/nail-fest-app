@@ -57,13 +57,49 @@ export interface CardLandingBlock {
   html: string;
   icon: LandingCardIcon;
   tone: LandingTone;
+  // Optional photo shown at the top of the card (the gift bag itself,
+  // the raffle prize). Blank = no photo.
+  imageUrl: string;
 }
 
-// Rows of "chip + text": a day/time chip ("SÁB 7 · 2:00 p. m.") next to
-// what happens then.
+// One line of the program. A "day" row is a divider ("Domingo 2 de
+// agosto") — only `chip` and `tone` matter. A "session" row is one
+// demo/talk, laid out like the Instagram cronograma: the time, the topic
+// ("Tema"), who teaches it, and the brand behind it. `sponsored` marks a
+// brand that bought the slot — that row gets its own tinted box and a
+// "Presentado por" line with the brand's logo. `text` is a free extra
+// note, and also where rows saved before these fields existed keep
+// their whole description.
+export interface AgendaRow {
+  kind: "session" | "day";
+  chip: string;
+  topic: string;
+  instructor: string;
+  photoUrl: string;
+  brand: string;
+  brandLogoUrl: string;
+  // Instagram accounts, as typed: "@amglowspa @cannicolombia".
+  handles: string;
+  sponsored: boolean;
+  text: string;
+  tone: LandingTone;
+}
+
 export interface AgendaLandingBlock {
   type: "agenda";
-  rows: { chip: string; text: string; tone: LandingTone }[];
+  rows: AgendaRow[];
+}
+
+export function emptyAgendaRow(kind: AgendaRow["kind"] = "session"): AgendaRow {
+  return { kind, chip: "", topic: "", instructor: "", photoUrl: "", brand: "", brandLogoUrl: "", handles: "", sponsored: false, text: "", tone: kind === "day" ? "pink" : "teal" };
+}
+
+/** "@amglowspa, cannicolombia" -> ["amglowspa", "cannicolombia"]. */
+export function instagramHandles(handles: string): string[] {
+  return handles
+    .split(/[\s,]+/)
+    .map((h) => h.replace(/^@+/, "").replace(/[^A-Za-z0-9._]/g, ""))
+    .filter(Boolean);
 }
 
 // "Dónde es": the venue as a card (name, address, hours all come from the
@@ -83,6 +119,15 @@ export interface PeopleLandingBlock {
   items: { name: string; handle: string; tag: string; photoUrl: string; tone: LandingTone }[];
 }
 
+// "En Nail Fest vas a:" — a short stack of titled points (DESCUBRIR,
+// APRENDER, …), each a word or two in the accent color over a line or
+// two of text. Lighter than one "card" per point.
+export interface PointsLandingBlock {
+  type: "points";
+  items: { title: string; text: string }[];
+  tone: LandingTone;
+}
+
 export type LandingBlock =
   | TextLandingBlock
   | ImageLandingBlock
@@ -92,7 +137,8 @@ export type LandingBlock =
   | CardLandingBlock
   | AgendaLandingBlock
   | VenueLandingBlock
-  | PeopleLandingBlock;
+  | PeopleLandingBlock
+  | PointsLandingBlock;
 
 function isFaqItem(v: unknown): v is { question: string; answer: string } {
   return typeof v === "object" && v !== null && typeof (v as Record<string, unknown>).question === "string" && typeof (v as Record<string, unknown>).answer === "string";
@@ -132,14 +178,41 @@ export function parseLandingBlocks(value: unknown): LandingBlock[] {
     } else if (rec.type === "heading") {
       result.push({ type: "heading", title: str(rec.title), intro: str(rec.intro) });
     } else if (rec.type === "card") {
-      result.push({ type: "card", eyebrow: str(rec.eyebrow), title: str(rec.title), html: str(rec.html), icon: cardIcon(rec.icon), tone: tone(rec.tone) });
+      result.push({
+        type: "card",
+        eyebrow: str(rec.eyebrow),
+        title: str(rec.title),
+        html: str(rec.html),
+        icon: cardIcon(rec.icon),
+        tone: tone(rec.tone),
+        imageUrl: str(rec.imageUrl),
+      });
     } else if (rec.type === "agenda" && Array.isArray(rec.rows)) {
       const rows = rec.rows
         .filter((r): r is Record<string, unknown> => typeof r === "object" && r !== null)
-        .map((r) => ({ chip: str(r.chip), text: str(r.text), tone: tone(r.tone) }));
+        .map(
+          (r): AgendaRow => ({
+            kind: r.kind === "day" ? "day" : "session",
+            chip: str(r.chip),
+            topic: str(r.topic),
+            instructor: str(r.instructor),
+            photoUrl: str(r.photoUrl),
+            brand: str(r.brand),
+            brandLogoUrl: str(r.brandLogoUrl),
+            handles: str(r.handles),
+            sponsored: r.sponsored === true,
+            text: str(r.text),
+            tone: tone(r.tone),
+          })
+        );
       result.push({ type: "agenda", rows });
     } else if (rec.type === "venue") {
       result.push({ type: "venue", imageUrl: str(rec.imageUrl), mapsUrl: str(rec.mapsUrl) });
+    } else if (rec.type === "points" && Array.isArray(rec.items)) {
+      const items = rec.items
+        .filter((p): p is Record<string, unknown> => typeof p === "object" && p !== null)
+        .map((p) => ({ title: str(p.title), text: str(p.text) }));
+      result.push({ type: "points", items, tone: tone(rec.tone) });
     } else if (rec.type === "people" && Array.isArray(rec.items)) {
       const items = rec.items
         .filter((p): p is Record<string, unknown> => typeof p === "object" && p !== null)
