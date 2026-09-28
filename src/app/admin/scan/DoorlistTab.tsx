@@ -12,6 +12,26 @@ import { playSoundForResult } from "@/lib/scanSounds";
 // Scanner tab uses — a manual check-in from here is just as safe under a
 // dropped connection as a camera scan is, no separate code path to keep
 // in sync.
+// Lowercase, accents and styled letters folded away ("𝚁𝚘𝚜𝚎𝚕𝚒𝚗" → "roselin",
+// "Pérez" → "perez") — at the door nobody types the accent the person
+// registered with, or the one they didn't.
+function fold(s: string): string {
+  return s.normalize("NFKD").replace(/\p{M}/gu, "").toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+// The confirmation code printed under this ticket's QR, read straight off
+// the token (same rule as lib/ticket.ts's confirmationCodeFor, which is
+// server-only): "<id>.<sig>" → last 8 of id; "<id>_2.<sig>" → "…-2".
+function codeOfToken(token: string): string {
+  const [id = "", n] = (token.split(".")[0] ?? "").split("_");
+  const code = id.slice(-8).toUpperCase();
+  return n ? `${code}-${n}` : code;
+}
+
+// Rendering all ~3.000 rows of a big event on every keystroke is what makes
+// a mid-range phone stutter at the door; nobody scrolls that far anyway.
+const MAX_ROWS = 60;
+
 export default function DoorlistTab() {
   const { rosterEntries, rosterVersion, submitToken, roster } = useScanApp();
   const [query, setQuery] = useState("");
@@ -23,12 +43,22 @@ export default function DoorlistTab() {
   // time, since that's also where submitToken's offline path writes.
   const entries = useMemo(() => {
     void rosterVersion;
-    return rosterEntries().sort((a, b) => (a.personName ?? "").localeCompare(b.personName ?? "", "es"));
+    return rosterEntries()
+      .map((e) => ({ ...e, code: codeOfToken(e.token), searchText: fold(e.personName ?? "") }))
+      .sort((a, b) => (a.personName ?? "").localeCompare(b.personName ?? "", "es"));
   }, [rosterEntries, rosterVersion]);
 
-  const filtered = query.trim()
-    ? entries.filter((e) => (e.personName ?? "").toLowerCase().includes(query.trim().toLowerCase()))
+  // Name in any order of words ("perez yakelin" finds "perez guía
+  // yakelin"), or the confirmation code with or without its "-2".
+  const q = fold(query);
+  const words = q.split(" ").filter(Boolean);
+  const codeQuery = q.replace(/[^a-z0-9-]/g, "").toUpperCase();
+  const matches = q
+    ? entries.filter(
+        (e) => words.every((w) => e.searchText.includes(w)) || (codeQuery.length >= 4 && e.code.startsWith(codeQuery))
+      )
     : entries;
+  const filtered = matches.slice(0, MAX_ROWS);
 
   async function handleTap(entry: (typeof entries)[number]) {
     const verb = entry.checkedIn ? "registrar un reingreso para" : "marcar la entrada de";
@@ -73,7 +103,7 @@ export default function DoorlistTab() {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar por nombre…"
+          placeholder="Buscar por nombre o código…"
           style={{ width: "100%", padding: "10px 12px 10px 36px" }}
         />
       </div>
@@ -109,12 +139,20 @@ export default function DoorlistTab() {
                 <div style={{ fontSize: 14, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                   {entry.personName || "(sin nombre)"}
                 </div>
-                {entry.ticketTypeName && <div style={{ fontSize: 12, color: "#5b5f6b" }}>{entry.ticketTypeName}</div>}
+                <div style={{ fontSize: 12, color: "#5b5f6b" }}>
+                  {entry.code}
+                  {entry.ticketTypeName ? ` · ${entry.ticketTypeName}` : ""}
+                </div>
               </div>
               {busyToken === entry.token && <span style={{ fontSize: 12, color: "#5b5f6b" }}>…</span>}
             </button>
           ))}
         </div>
+      )}
+      {roster && matches.length > filtered.length && (
+        <p style={{ marginTop: 10, fontSize: 12, color: "#5b5f6b" }}>
+          Mostrando {filtered.length} de {matches.length} — escribe más del nombre o el código para encontrar a alguien.
+        </p>
       )}
 
       <p style={{ marginTop: 20, fontSize: 12, color: "#5b5f6b" }}>
