@@ -530,6 +530,188 @@ button.primary:disabled {
 /* Event.landingBlocks (LandingBlocksContent.tsx) — the image/gallery
    block types. Stay within the same column the text/FAQ blocks and the
    classic `description` already render in, no full-bleed breakout. */
+/* The section/card/agenda/venue block types (LandingBlocksContent.tsx).
+   Tones are a fixed trio (teal/pink/peach) picked in the editor, never a
+   free color — see LandingTone in lib/landingBlocks/types.ts. */
+.landing-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.landing-section-title {
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  margin: 0;
+  text-wrap: balance;
+}
+.landing-section-intro {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.45;
+  color: var(--ink-muted);
+}
+.landing-card {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.landing-card--pink {
+  background: #fde8ef;
+  border-color: #f9cddb;
+}
+.landing-card--teal {
+  background: #e6f9f7;
+  border-color: #c4efeb;
+}
+.landing-card--peach {
+  background: #fff3ea;
+  border-color: #ffdcc7;
+}
+.landing-card-icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.75);
+  color: var(--accent-ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.landing-card-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.landing-card-eyebrow {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--link);
+}
+.landing-card--pink .landing-card-eyebrow {
+  color: #b0225c;
+}
+.landing-card--peach .landing-card-eyebrow {
+  color: #a5471a;
+}
+.landing-card-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+.landing-card-body {
+  font-size: 15px;
+  line-height: 1.5;
+}
+.landing-card-body p {
+  margin: 0 0 6px;
+}
+.landing-card-body p:last-child {
+  margin-bottom: 0;
+}
+.landing-card-body h1,
+.landing-card-body h2,
+.landing-card-body h3 {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--link);
+  margin: 10px 0 4px;
+}
+.landing-card-body h1:first-child,
+.landing-card-body h2:first-child,
+.landing-card-body h3:first-child {
+  margin-top: 0;
+}
+.landing-agenda {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.landing-agenda-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.landing-agenda-text {
+  font-size: 15px;
+  line-height: 1.4;
+  min-width: 0;
+}
+.landing-chip {
+  flex-shrink: 0;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.landing-chip--teal {
+  background: #e6f9f7;
+  color: var(--accent-ink);
+}
+.landing-chip--pink {
+  background: #fde8ef;
+  color: #b0225c;
+}
+.landing-chip--peach {
+  background: #fff3ea;
+  color: #a5471a;
+}
+.landing-venue {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.landing-venue-image {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 12px;
+}
+.landing-venue-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 15px;
+  color: var(--ink-muted);
+}
+.landing-venue-name {
+  font-size: 17px;
+  color: var(--ink);
+}
+.landing-venue-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-weight: 700;
+  color: var(--link);
+  text-decoration: none;
+}
+.landing-venue-link:hover {
+  text-decoration: underline;
+}
+
 .landing-block-image {
   margin: 0;
 }

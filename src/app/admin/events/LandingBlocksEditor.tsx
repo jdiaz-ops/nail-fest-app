@@ -2,7 +2,8 @@
 
 import { useRef, useState } from "react";
 import RichTextEditor from "@/components/RichTextEditor";
-import type { LandingBlock } from "@/lib/landingBlocks/types";
+import { compressImage } from "@/lib/imageCompression";
+import { LANDING_CARD_ICONS, LANDING_TONES, type LandingBlock, type LandingTone } from "@/lib/landingBlocks/types";
 
 // Self-service alternative to the plain Description field below — see
 // Event.landingBlocks's own schema comment. Controlled component, same
@@ -29,7 +30,15 @@ export default function LandingBlocksEditor({
           ? { type: "image", url: "", caption: "" }
           : type === "gallery"
             ? { type: "gallery", images: [] }
-            : { type: "faq", title: "", items: [] };
+            : type === "faq"
+              ? { type: "faq", title: "", items: [] }
+              : type === "heading"
+                ? { type: "heading", title: "", intro: "" }
+                : type === "card"
+                  ? { type: "card", eyebrow: "", title: "", html: "", icon: "none", tone: "pink" }
+                  : type === "agenda"
+                    ? { type: "agenda", rows: [{ chip: "", text: "", tone: "teal" }] }
+                    : { type: "venue", imageUrl: "", mapsUrl: "" };
     onChange([...blocks, block]);
   }
 
@@ -39,6 +48,14 @@ export default function LandingBlocksEditor({
 
   function removeAt(index: number) {
     onChange(blocks.filter((_, i) => i !== index));
+  }
+
+  function moveBlock(index: number, dir: -1 | 1) {
+    const target = index + dir;
+    if (target < 0 || target >= blocks.length) return;
+    const next = [...blocks];
+    [next[index], next[target]] = [next[target]!, next[index]!];
+    onChange(next);
   }
 
   function handleDrop(targetIndex: number) {
@@ -78,7 +95,7 @@ export default function LandingBlocksEditor({
                 opacity: dragIndex === i ? 0.4 : 1,
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
                 <span
                   draggable
                   onDragStart={() => setDragIndex(i)}
@@ -92,9 +109,16 @@ export default function LandingBlocksEditor({
                   ⠿
                 </span>
                 <span style={{ fontSize: 12, fontWeight: 700, color: "#5b5f6b", textTransform: "uppercase", letterSpacing: "0.04em", flex: 1 }}>
-                  {BLOCK_LABELS[block.type]}
+                  {i + 1}. {BLOCK_LABELS[block.type]}
                 </span>
-                <button type="button" onClick={() => removeAt(i)} title="Quitar bloque" style={iconButtonStyle}>
+                {/* Drag-and-drop above doesn't work on a phone — these do. */}
+                <button type="button" onClick={() => moveBlock(i, -1)} disabled={i === 0} title="Subir" aria-label="Subir" style={iconButtonStyle}>
+                  ↑
+                </button>
+                <button type="button" onClick={() => moveBlock(i, 1)} disabled={i === blocks.length - 1} title="Bajar" aria-label="Bajar" style={iconButtonStyle}>
+                  ↓
+                </button>
+                <button type="button" onClick={() => removeAt(i)} title="Quitar bloque" aria-label="Quitar bloque" style={iconButtonStyle}>
                   ×
                 </button>
               </div>
@@ -105,35 +129,60 @@ export default function LandingBlocksEditor({
               {block.type === "image" && <ImageBlockEditor block={block} onChange={(b) => updateAt(i, b)} />}
               {block.type === "gallery" && <GalleryBlockEditor block={block} onChange={(b) => updateAt(i, b)} />}
               {block.type === "faq" && <FaqBlockEditor block={block} onChange={(b) => updateAt(i, b)} />}
+              {block.type === "heading" && <HeadingBlockEditor block={block} onChange={(b) => updateAt(i, b)} />}
+              {block.type === "card" && <CardBlockEditor block={block} onChange={(b) => updateAt(i, b)} />}
+              {block.type === "agenda" && <AgendaBlockEditor block={block} onChange={(b) => updateAt(i, b)} />}
+              {block.type === "venue" && <VenueBlockEditor block={block} onChange={(b) => updateAt(i, b)} />}
             </div>
           ))}
         </div>
       )}
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <button type="button" onClick={() => addBlock("text")} className="secondary" style={addButtonStyle}>
-          + Texto
-        </button>
-        <button type="button" onClick={() => addBlock("image")} className="secondary" style={addButtonStyle}>
-          + Imagen/GIF
-        </button>
-        <button type="button" onClick={() => addBlock("gallery")} className="secondary" style={addButtonStyle}>
-          + Galería
-        </button>
-        <button type="button" onClick={() => addBlock("faq")} className="secondary" style={addButtonStyle}>
-          + Preguntas frecuentes
-        </button>
+        {(Object.keys(BLOCK_LABELS) as LandingBlock["type"][]).map((type) => (
+          <button key={type} type="button" onClick={() => addBlock(type)} className="secondary" style={addButtonStyle}>
+            + {BLOCK_LABELS[type]}
+          </button>
+        ))}
       </div>
     </div>
   );
 }
 
+// Also the order of the "+ …" buttons below the list.
 const BLOCK_LABELS: Record<LandingBlock["type"], string> = {
+  heading: "Título de sección",
   text: "Texto",
   image: "Imagen / GIF",
   gallery: "Galería",
+  card: "Tarjeta destacada",
+  agenda: "Agenda",
+  venue: "Dónde es",
   faq: "Preguntas frecuentes",
 };
+
+const TONE_LABELS: Record<LandingTone, string> = { teal: "Turquesa", pink: "Rosa", peach: "Durazno" };
+const ICON_LABELS: Record<(typeof LANDING_CARD_ICONS)[number], string> = {
+  none: "Sin ícono",
+  gift: "Regalo",
+  ticket: "Boleta",
+  star: "Estrella",
+  clock: "Reloj",
+};
+
+// Every image block goes through the same compression as the hero and
+// the gallery carousel — see lib/imageCompression.ts.
+async function uploadImage(file: File): Promise<{ url: string } | { error: string }> {
+  const compressed = await compressImage(file, { maxDimension: 1600, quality: 0.85 });
+  const form = new FormData();
+  form.append("file", compressed);
+  const res = await fetch("/api/admin/uploads/event-image", { method: "POST", body: form });
+  const body = await res.json().catch(() => ({}));
+  if (res.ok) return { url: body.url as string };
+  return {
+    error: body?.error === "too_large" ? "La imagen pesa más de 5MB." : body?.error === "not_an_image" ? "Ese archivo no es una imagen." : "No se pudo subir la imagen.",
+  };
+}
 
 function ImageBlockEditor({
   block,
@@ -152,15 +201,9 @@ function ImageBlockEditor({
     setUploading(true);
     setError(null);
     try {
-      const form = new FormData();
-      form.append("file", file);
-      const res = await fetch("/api/admin/uploads/event-image", { method: "POST", body: form });
-      const body = await res.json().catch(() => ({}));
-      if (res.ok) {
-        onChange({ ...block, url: body.url });
-      } else {
-        setError(body?.error === "too_large" ? "La imagen pesa más de 5MB." : body?.error === "not_an_image" ? "Ese archivo no es una imagen." : "No se pudo subir la imagen.");
-      }
+      const result = await uploadImage(file);
+      if ("url" in result) onChange({ ...block, url: result.url });
+      else setError(result.error);
     } finally {
       setUploading(false);
       if (inputRef.current) inputRef.current.value = "";
@@ -208,15 +251,9 @@ function GalleryBlockEditor({
     setUploading(true);
     setError(null);
     try {
-      const form = new FormData();
-      form.append("file", file);
-      const res = await fetch("/api/admin/uploads/event-image", { method: "POST", body: form });
-      const body = await res.json().catch(() => ({}));
-      if (res.ok) {
-        onChange({ ...block, images: [...block.images, body.url] });
-      } else {
-        setError(body?.error === "too_large" ? "La imagen pesa más de 5MB." : body?.error === "not_an_image" ? "Ese archivo no es una imagen." : "No se pudo subir la imagen.");
-      }
+      const result = await uploadImage(file);
+      if ("url" in result) onChange({ ...block, images: [...block.images, result.url] });
+      else setError(result.error);
     } finally {
       setUploading(false);
       if (inputRef.current) inputRef.current.value = "";
@@ -246,11 +283,11 @@ function GalleryBlockEditor({
               <button type="button" onClick={() => removeImage(i)} style={removeImageButtonStyle} aria-label="Quitar foto">
                 ×
               </button>
-              <div style={{ display: "flex", justifyContent: "center", gap: 2, marginTop: 2 }}>
-                <button type="button" onClick={() => move(i, -1)} disabled={i === 0} title="Mover antes" style={tinyButtonStyle}>
+              <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
+                <button type="button" onClick={() => move(i, -1)} disabled={i === 0} title="Mover antes" aria-label="Mover antes" style={moveButtonStyle}>
                   ←
                 </button>
-                <button type="button" onClick={() => move(i, 1)} disabled={i === block.images.length - 1} title="Mover después" style={tinyButtonStyle}>
+                <button type="button" onClick={() => move(i, 1)} disabled={i === block.images.length - 1} title="Mover después" aria-label="Mover después" style={moveButtonStyle}>
                   →
                 </button>
               </div>
@@ -295,7 +332,7 @@ function FaqBlockEditor({
               placeholder="Pregunta"
               style={{ flex: 1 }}
             />
-            <button type="button" onClick={() => removeItem(i)} title="Quitar" style={iconButtonStyle}>
+            <button type="button" onClick={() => removeItem(i)} title="Quitar" aria-label="Quitar" style={iconButtonStyle}>
               ×
             </button>
           </div>
@@ -320,14 +357,204 @@ function FaqBlockEditor({
   );
 }
 
+function HeadingBlockEditor({
+  block,
+  onChange,
+}: {
+  block: Extract<LandingBlock, { type: "heading" }>;
+  onChange: (block: LandingBlock) => void;
+}) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <input value={block.title} onChange={(e) => onChange({ ...block, title: e.target.value })} placeholder="Título (ej. Invitado especial)" />
+      <textarea
+        value={block.intro}
+        onChange={(e) => onChange({ ...block, intro: e.target.value })}
+        placeholder="Texto de introducción debajo del título (opcional)"
+        rows={2}
+        style={{ width: "100%" }}
+      />
+    </div>
+  );
+}
+
+function ToneSelect({ value, onChange }: { value: LandingTone; onChange: (tone: LandingTone) => void }) {
+  return (
+    <select value={value} onChange={(e) => onChange(e.target.value as LandingTone)} style={{ width: "auto" }}>
+      {LANDING_TONES.map((t) => (
+        <option key={t} value={t}>
+          {TONE_LABELS[t]}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+function CardBlockEditor({
+  block,
+  onChange,
+}: {
+  block: Extract<LandingBlock, { type: "card" }>;
+  onChange: (block: LandingBlock) => void;
+}) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <input
+        value={block.eyebrow}
+        onChange={(e) => onChange({ ...block, eyebrow: e.target.value })}
+        placeholder="Etiqueta pequeña arriba (ej. LLEGA TEMPRANO) — opcional"
+      />
+      <input value={block.title} onChange={(e) => onChange({ ...block, title: e.target.value })} placeholder="Título de la tarjeta (ej. Bolsa edición especial)" />
+      <RichTextEditor value={block.html} onChange={(html) => onChange({ ...block, html })} />
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+        <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 400 }}>
+          Color
+          <ToneSelect value={block.tone} onChange={(tone) => onChange({ ...block, tone })} />
+        </label>
+        <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 400 }}>
+          Ícono
+          <select
+            value={block.icon}
+            onChange={(e) => onChange({ ...block, icon: e.target.value as (typeof LANDING_CARD_ICONS)[number] })}
+            style={{ width: "auto" }}
+          >
+            {LANDING_CARD_ICONS.map((icon) => (
+              <option key={icon} value={icon}>
+                {ICON_LABELS[icon]}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+    </div>
+  );
+}
+
+function AgendaBlockEditor({
+  block,
+  onChange,
+}: {
+  block: Extract<LandingBlock, { type: "agenda" }>;
+  onChange: (block: LandingBlock) => void;
+}) {
+  type Row = (typeof block.rows)[number];
+  function updateRow(i: number, row: Row) {
+    onChange({ ...block, rows: block.rows.map((r, j) => (j === i ? row : r)) });
+  }
+  function removeRow(i: number) {
+    onChange({ ...block, rows: block.rows.filter((_, j) => j !== i) });
+  }
+  function moveRow(i: number, dir: -1 | 1) {
+    const target = i + dir;
+    if (target < 0 || target >= block.rows.length) return;
+    const next = [...block.rows];
+    [next[i], next[target]] = [next[target]!, next[i]!];
+    onChange({ ...block, rows: next });
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      {block.rows.map((row, i) => (
+        <div key={i} style={{ display: "flex", flexDirection: "column", gap: 6, border: "1px solid #f0efec", borderRadius: 6, padding: 10 }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <input
+              value={row.chip}
+              onChange={(e) => updateRow(i, { ...row, chip: e.target.value })}
+              placeholder="Chip (ej. SÁB 7 · 2:00 p. m.)"
+              style={{ flex: "1 1 160px" }}
+            />
+            <ToneSelect value={row.tone} onChange={(tone) => updateRow(i, { ...row, tone })} />
+            <button type="button" onClick={() => moveRow(i, -1)} disabled={i === 0} title="Subir" aria-label="Subir" style={iconButtonStyle}>
+              ↑
+            </button>
+            <button type="button" onClick={() => moveRow(i, 1)} disabled={i === block.rows.length - 1} title="Bajar" aria-label="Bajar" style={iconButtonStyle}>
+              ↓
+            </button>
+            <button type="button" onClick={() => removeRow(i)} title="Quitar" aria-label="Quitar" style={iconButtonStyle}>
+              ×
+            </button>
+          </div>
+          <input
+            value={row.text}
+            onChange={(e) => updateRow(i, { ...row, text: e.target.value })}
+            placeholder="Qué pasa (ej. Conferencia: Marketing y educación financiera)"
+          />
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={() => onChange({ ...block, rows: [...block.rows, { chip: "", text: "", tone: "teal" }] })}
+        className="secondary"
+        style={{ width: "auto", padding: "6px 12px", alignSelf: "flex-start" }}
+      >
+        + Agregar fila
+      </button>
+    </div>
+  );
+}
+
+function VenueBlockEditor({
+  block,
+  onChange,
+}: {
+  block: Extract<LandingBlock, { type: "venue" }>;
+  onChange: (block: LandingBlock) => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setError(null);
+    try {
+      const result = await uploadImage(file);
+      if ("url" in result) onChange({ ...block, imageUrl: result.url });
+      else setError(result.error);
+    } finally {
+      setUploading(false);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <p style={{ fontSize: 12, color: "#5b5f6b", margin: 0 }}>
+        El nombre del lugar, la dirección y los horarios salen solos de los datos del evento (arriba en este mismo
+        formulario). Aquí solo agregas una foto del lugar y el enlace de Google Maps, ambos opcionales.
+      </p>
+      {block.imageUrl && (
+        <div style={{ position: "relative", display: "inline-block" }}>
+          {/* eslint-disable-next-line @next/next/no-img-element -- admin preview of an arbitrary uploaded URL */}
+          <img src={block.imageUrl} alt="" style={{ maxWidth: 280, maxHeight: 160, borderRadius: 8, display: "block", border: "1px solid #e3e1dc" }} />
+          <button type="button" onClick={() => onChange({ ...block, imageUrl: "" })} style={removeImageButtonStyle} aria-label="Quitar foto">
+            ×
+          </button>
+        </div>
+      )}
+      <input ref={inputRef} type="file" accept="image/*" onChange={handleFile} disabled={uploading} />
+      {uploading && <p style={{ fontSize: 12, color: "#5b5f6b", margin: 0 }}>Subiendo…</p>}
+      {error && <p style={{ fontSize: 12, color: "#c2185b", margin: 0 }}>{error}</p>}
+      <input
+        value={block.mapsUrl}
+        onChange={(e) => onChange({ ...block, mapsUrl: e.target.value })}
+        placeholder="Enlace de Google Maps (opcional)"
+        inputMode="url"
+      />
+    </div>
+  );
+}
+
 const addButtonStyle: React.CSSProperties = {
   width: "auto",
   padding: "8px 14px",
 };
 
 const iconButtonStyle: React.CSSProperties = {
-  width: 26,
-  height: 26,
+  width: 32,
+  height: 32,
   border: "1px solid #e3e1dc",
   borderRadius: 6,
   background: "#fff",
@@ -335,6 +562,17 @@ const iconButtonStyle: React.CSSProperties = {
   fontSize: 14,
   lineHeight: 1,
   flexShrink: 0,
+};
+
+const moveButtonStyle: React.CSSProperties = {
+  flex: 1,
+  height: 30,
+  border: "1px solid #e3e1dc",
+  borderRadius: 4,
+  background: "#fff",
+  cursor: "pointer",
+  fontSize: 14,
+  lineHeight: 1,
 };
 
 const removeImageButtonStyle: React.CSSProperties = {
@@ -350,14 +588,4 @@ const removeImageButtonStyle: React.CSSProperties = {
   cursor: "pointer",
   fontSize: 12,
   lineHeight: 1,
-};
-
-const tinyButtonStyle: React.CSSProperties = {
-  border: "1px solid #e3e1dc",
-  borderRadius: 4,
-  background: "#fff",
-  cursor: "pointer",
-  fontSize: 10,
-  lineHeight: 1,
-  padding: "2px 5px",
 };

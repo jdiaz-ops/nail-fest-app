@@ -1,4 +1,22 @@
-import { localeFor } from "@/lib/dateFormat";
+import { formatDateInTz, localeFor } from "@/lib/dateFormat";
+import { parseScheduleDays } from "@/lib/eventSchedule";
+
+// "Sáb 10 a. m. – 6 p. m. · Dom 10 a. m. – 5 p. m." for the hero's detail
+// line when the event has real per-day hours (Event.scheduleDays); null
+// when it doesn't, so the caller keeps the plain weekday/year line.
+export function formatHeroHours(scheduleDays: unknown, timezone: string, language: string): string | null {
+  const days = parseScheduleDays(scheduleDays);
+  if (days.length === 0) return null;
+  const time = (d: Date) => formatDateInTz(d, { timeStyle: "short" }, timezone, language).replace(/:00(?=\s|$)/, "");
+  return [...days]
+    .sort((a, b) => new Date(a.opensAt).getTime() - new Date(b.opensAt).getTime())
+    .map((d) => {
+      const opens = new Date(d.opensAt);
+      const weekday = formatDateInTz(opens, { weekday: "short" }, timezone, language).replace(/\.$/, "");
+      return `${weekday.charAt(0).toUpperCase() + weekday.slice(1)} ${time(opens)} – ${time(new Date(d.closesAt))}`;
+    })
+    .join(" · ");
+}
 
 export interface HeroDate {
   // "7 y 8", "7 al 9", "7", "30 – 1"

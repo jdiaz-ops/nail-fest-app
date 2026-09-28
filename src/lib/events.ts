@@ -11,7 +11,7 @@ import type { LandingBlock } from "@/lib/landingBlocks/types";
 // renders on the same unauthenticated public page via dangerouslySetInnerHTML
 // (see LandingBlocksContent.tsx).
 function sanitizeLandingBlocks(blocks: LandingBlock[]): LandingBlock[] {
-  return blocks.map((b) => (b.type === "text" ? { ...b, html: sanitizeEventDescription(b.html) } : b));
+  return blocks.map((b) => (b.type === "text" || b.type === "card" ? { ...b, html: sanitizeEventDescription(b.html) } : b));
 }
 
 // The public event page's own default when an event doesn't set its own

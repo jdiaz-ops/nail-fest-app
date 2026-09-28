@@ -1,5 +1,25 @@
 import { describe, expect, it } from "vitest";
-import { formatHeroDate } from "./eventHeroDate";
+import { formatHeroDate, formatHeroHours } from "./eventHeroDate";
+
+describe("formatHeroHours", () => {
+  it("one short entry per configured day, in order", () => {
+    const days = [
+      { opensAt: "2026-11-08T15:00:00Z", closesAt: "2026-11-08T22:00:00Z" },
+      { opensAt: "2026-11-07T15:00:00Z", closesAt: "2026-11-07T23:00:00Z" },
+    ];
+    expect(formatHeroHours(days, "America/Bogota", "es")).toBe("Sáb 10 a. m. – 6 p. m. · Dom 10 a. m. – 5 p. m.");
+  });
+
+  it("keeps non-zero minutes", () => {
+    const days = [{ opensAt: "2026-11-07T14:30:00Z", closesAt: "2026-11-07T23:00:00Z" }];
+    expect(formatHeroHours(days, "America/Bogota", "es")).toBe("Sáb 9:30 a. m. – 6 p. m.");
+  });
+
+  it("is null without configured days", () => {
+    expect(formatHeroHours(null, "America/Bogota", "es")).toBeNull();
+    expect(formatHeroHours([], "America/Bogota", "es")).toBeNull();
+  });
+});
 
 const tz = "America/Bogota";
 // 10:00 Bogotá = 15:00Z

@@ -22,6 +22,20 @@ const landingBlockSchema = z.discriminatedUnion("type", [
     title: z.string(),
     items: z.array(z.object({ question: z.string(), answer: z.string() })),
   }),
+  z.object({ type: z.literal("heading"), title: z.string(), intro: z.string() }),
+  z.object({
+    type: z.literal("card"),
+    eyebrow: z.string(),
+    title: z.string(),
+    html: z.string(),
+    icon: z.enum(["none", "gift", "ticket", "star", "clock"]),
+    tone: z.enum(["teal", "pink", "peach"]),
+  }),
+  z.object({
+    type: z.literal("agenda"),
+    rows: z.array(z.object({ chip: z.string(), text: z.string(), tone: z.enum(["teal", "pink", "peach"]) })),
+  }),
+  z.object({ type: z.literal("venue"), imageUrl: z.string(), mapsUrl: z.string() }),
 ]);
 
 const patchSchema = z.object({

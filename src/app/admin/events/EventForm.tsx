@@ -562,25 +562,33 @@ export default function EventForm({
                 checked={values.useLandingBlocks}
                 onChange={(e) => set("useLandingBlocks", e.target.checked)}
               />
-              Usar el editor por bloques (texto, imágenes, galería, FAQ) en vez de Description
+              Mostrar al público la versión por bloques (en vez de la Description)
             </label>
             <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>
-              Puedes activarlo y desactivarlo cuando quieras — el contenido de cada uno se conserva aparte, nunca se
-              borra al apagarlo.
+              Los dos editores están siempre aquí abajo — puedes armar la versión por bloques con calma mientras la
+              página sigue mostrando la Description, y activar esto cuando esté lista. Nada se borra al cambiar.
             </p>
           </div>
 
-          {values.useLandingBlocks ? (
-            <div className="field">
-              <label>Contenido de la página (por bloques)</label>
-              <LandingBlocksEditor blocks={values.landingBlocks} onChange={(blocks) => set("landingBlocks", blocks)} />
-            </div>
-          ) : (
-            <div className="field">
-              <label>Description</label>
-              <RichTextEditor value={values.description} onChange={(html) => set("description", html)} />
-            </div>
-          )}
+          <div className="field">
+            <label>
+              Contenido por bloques{" "}
+              <span style={{ fontSize: 12, fontWeight: 400, color: values.useLandingBlocks ? "#12966b" : "#5b5f6b" }}>
+                {values.useLandingBlocks ? "· esto es lo que ve el público" : "· oculto al público por ahora"}
+              </span>
+            </label>
+            <LandingBlocksEditor blocks={values.landingBlocks} onChange={(blocks) => set("landingBlocks", blocks)} />
+          </div>
+
+          <div className="field">
+            <label>
+              Description{" "}
+              <span style={{ fontSize: 12, fontWeight: 400, color: values.useLandingBlocks ? "#5b5f6b" : "#12966b" }}>
+                {values.useLandingBlocks ? "· oculta al público por ahora" : "· esto es lo que ve el público"}
+              </span>
+            </label>
+            <RichTextEditor value={values.description} onChange={(html) => set("description", html)} />
+          </div>
 
           <div className="field">
             <label>Imagen de portada (opcional)</label>
