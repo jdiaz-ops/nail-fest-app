@@ -568,15 +568,6 @@ button.primary:disabled {
   font-weight: 700;
   cursor: pointer;
 }
-.event-closing-resend {
-  margin: 0;
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.85);
-}
-.event-closing-resend a {
-  color: #ffffff;
-  font-weight: 700;
-}
 .event-closing-footer {
   /* Cancels .event-closing's own side padding so the strip runs edge to
      edge like the band it sits in. */

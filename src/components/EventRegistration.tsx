@@ -81,9 +81,6 @@ interface Props {
   // Headline of the closing band at the end of the page — the admin's own
   // Event.closingText, or the page's auto-built sentence when that's empty.
   closingText: string;
-  // OrgSettings.selfServeResendEnabled — the band's "Reenviar mi entrada"
-  // link only renders when the /reenviar page actually works.
-  resendEnabled: boolean;
   // "nailfest.lat" — the footer strip's own line.
   siteHost: string;
 }
@@ -114,7 +111,6 @@ export default function EventRegistration({
   galleryTitle,
   ctaNote,
   closingText,
-  resendEnabled,
   siteHost,
 }: Props) {
   const hasTicketTypes = ticketTypes.length > 0;
@@ -436,11 +432,6 @@ export default function EventRegistration({
           <button type="button" className="event-closing-button" onClick={openModal}>
             {registerButtonLabel}
           </button>
-          {resendEnabled && (
-            <p className="event-closing-resend">
-              ¿Ya te registraste y perdiste el correo? <a href="/reenviar">Reenviar mi entrada</a>
-            </p>
-          )}
         </div>
         <p className="event-closing-footer">
           {brandName} · {siteHost}
