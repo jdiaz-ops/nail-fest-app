@@ -829,7 +829,7 @@ button.primary:disabled {
   --agenda-ink: var(--accent-ink);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   padding: 14px;
   border-radius: 14px;
   border: 1px solid var(--border);
@@ -855,19 +855,19 @@ button.primary:disabled {
 }
 .landing-agenda-sponsor {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
   gap: 12px;
-  padding-bottom: 10px;
-  border-bottom: 1px dashed rgba(28, 19, 16, 0.15);
-  font-size: 11px;
+  padding-bottom: 7px;
+  border-bottom: 1px dashed rgba(28, 19, 16, 0.12);
+  font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--agenda-ink);
 }
 .landing-agenda-sponsor-name {
-  font-size: 19px;
+  font-size: 15px;
   line-height: 1.1;
   letter-spacing: 0;
   text-transform: none;
@@ -917,9 +917,10 @@ button.primary:disabled {
   min-width: 0;
 }
 .landing-agenda-topic {
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 800;
   line-height: 1.25;
+  text-wrap: balance;
 }
 .landing-agenda-who {
   font-size: 14px;
@@ -1551,6 +1552,9 @@ button.primary:disabled {
   color: var(--ink-muted);
   line-height: 1.55;
   margin: 10px 0 0;
+  /* Keep the line breaks typed in the editor — a long T&C is several
+     paragraphs, not one wall of text. */
+  white-space: pre-line;
 }
 @media (prefers-reduced-motion: reduce) {
   .sales-faq-icon {

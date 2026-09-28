@@ -63,14 +63,17 @@ export default function LandingBlocksContent({ blocks, venue }: { blocks: Landin
               </div>
             ) : null;
 
-          case "faq":
-            return block.items.length > 0 ? (
+          case "faq": {
+            const items = block.items.filter((item) => item.question.trim() || item.answer.trim());
+            return items.length > 0 ? (
               <div key={i}>
                 {block.title && <h2 className={`landing-section-title ${fraunces.className}`}>{block.title}</h2>}
-                {block.items.map((item, j) => (
+                {items.map((item, j) => (
                   <details className="sales-faq-item" key={j}>
                     <summary>
-                      {item.question}
+                      {/* An answer with no question (the whole T&C pasted as
+                          one item) still needs something to tap on. */}
+                      {item.question.trim() || "Leer más"}
                       <span className="sales-faq-icon" aria-hidden="true">
                         +
                       </span>
@@ -80,6 +83,7 @@ export default function LandingBlocksContent({ blocks, venue }: { blocks: Landin
                 ))}
               </div>
             ) : null;
+          }
 
           case "heading":
             return block.title || block.intro ? (
