@@ -64,6 +64,9 @@ export interface RegisterPayload {
   website?: string;
 }
 
+const PHONE_SHORTCUTS = ["CO", "VE"].map((iso2) => findCountry(iso2)!).filter(Boolean);
+const PHONE_COUNTRIES_AZ = [...WORLD_COUNTRIES].sort((a, b) => a.name.localeCompare(b.name, "es"));
+
 interface Props {
   eventSlug: string;
   professionOptions: string[];
@@ -482,11 +485,23 @@ export default function RegistrationForm({
               // shows in the open dropdown itself.
               style={{ flex: "0 0 auto", width: 168 }}
             >
-              {WORLD_COUNTRIES.map((c) => (
-                <option key={c.iso2} value={c.iso2}>
-                  {c.name} ({c.dialCode})
-                </option>
-              ))}
+              {/* Colombia and Venezuela as shortcuts on top (Cúcuta's two real
+                  audiences), then every country A–Z, those two included —
+                  whoever scrolls the full list still finds them in place. */}
+              <optgroup label="Más usados">
+                {PHONE_SHORTCUTS.map((c) => (
+                  <option key={`top-${c.iso2}`} value={c.iso2}>
+                    {c.name} ({c.dialCode})
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="Todos los países">
+                {PHONE_COUNTRIES_AZ.map((c) => (
+                  <option key={c.iso2} value={c.iso2}>
+                    {c.name} ({c.dialCode})
+                  </option>
+                ))}
+              </optgroup>
             </select>
             <input
               id="phone"
