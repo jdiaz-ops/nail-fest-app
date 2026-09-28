@@ -67,7 +67,9 @@ export interface CardLandingBlock {
 // demo/talk, laid out like the Instagram cronograma: the time, the topic
 // ("Tema"), who teaches it, and the brand behind it. `sponsored` marks a
 // brand that bought the slot — that row gets its own tinted box and a
-// "Presentado por" line with the brand's logo. `text` is a free extra
+// "Presentado por" line with the brand's name. (`brandLogoUrl` is only a
+// fallback for a sponsored row with no brand name — uploaded logos never
+// looked consistent next to each other.) `text` is a free extra
 // note, and also where rows saved before these fields existed keep
 // their whole description.
 export interface AgendaRow {

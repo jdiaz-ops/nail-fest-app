@@ -866,10 +866,13 @@ button.primary:disabled {
   text-transform: uppercase;
   color: var(--agenda-ink);
 }
-.landing-agenda-sponsor strong {
-  font-size: 15px;
+.landing-agenda-sponsor-name {
+  font-size: 19px;
+  line-height: 1.1;
   letter-spacing: 0;
   text-transform: none;
+  text-align: right;
+  overflow-wrap: anywhere;
 }
 .landing-agenda-sponsor-logo {
   display: block;

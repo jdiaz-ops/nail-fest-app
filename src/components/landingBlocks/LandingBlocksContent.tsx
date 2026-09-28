@@ -227,11 +227,15 @@ function AgendaRowView({ row }: { row: AgendaRow }) {
       {showSponsor && (
         <div className="landing-agenda-sponsor">
           <span>Presentado por</span>
-          {row.brandLogoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element -- admin-uploaded logo, arbitrary Blob URL
-            <img src={row.brandLogoUrl} alt={row.brand} className="landing-agenda-sponsor-logo" />
+          {/* The brand's name, not its logo: uploaded logos come in every
+              size and background (a white box on the tinted row) and
+              never line up with each other. A logo is only the fallback
+              for a row that has no brand name typed. */}
+          {row.brand ? (
+            <strong className={`landing-agenda-sponsor-name ${fraunces.className}`}>{row.brand}</strong>
           ) : (
-            <strong>{row.brand}</strong>
+            // eslint-disable-next-line @next/next/no-img-element -- admin-uploaded logo, arbitrary Blob URL
+            <img src={row.brandLogoUrl} alt="" className="landing-agenda-sponsor-logo" />
           )}
         </div>
       )}

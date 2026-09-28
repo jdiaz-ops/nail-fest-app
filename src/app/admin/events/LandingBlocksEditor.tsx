@@ -643,10 +643,10 @@ function AgendaBlockEditor({
             </div>
             <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 400 }}>
               <input type="checkbox" checked={row.sponsored} onChange={(e) => updateRow(i, { ...row, sponsored: e.target.checked })} style={{ width: "auto" }} />
-              Marca patrocinadora: destacar esta demostración con &quot;Presentado por&quot; y su logo
+              Marca patrocinadora: destacar esta demostración con &quot;Presentado por&quot; y el nombre de la marca
             </label>
-            {row.sponsored && (
-              <ImageField label="Logo de la marca (PNG sin fondo se ve mejor)" url={row.brandLogoUrl} onChange={(brandLogoUrl) => updateRow(i, { ...row, brandLogoUrl })} />
+            {row.sponsored && !row.brand && (
+              <p style={{ fontSize: 12, color: "#8a5a1f", margin: 0 }}>Escribe el nombre de la marca arriba: es lo que sale junto a &quot;Presentado por&quot;.</p>
             )}
             <input
               value={row.text}
