@@ -530,46 +530,6 @@ button.primary:disabled {
   white-space: normal;
 }
 
-/* The mobile sticky bar (EventRegistration.tsx) — replaces the old
-   full-width floating button once the inline CTA scrolls away. */
-.event-sticky-bar {
-  width: 100%;
-  max-width: 440px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 8px 8px 18px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  box-shadow: 0 8px 24px -6px rgba(0, 0, 0, 0.3);
-}
-.event-sticky-bar-text {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  line-height: 1.25;
-}
-.event-sticky-bar-text strong {
-  font-size: 14px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.event-sticky-bar-text span {
-  font-size: 13px;
-  font-weight: 700;
-  color: #b0225c;
-}
-.event-floating-cta .event-sticky-bar button.primary {
-  width: auto;
-  flex-shrink: 0;
-  padding: 13px 20px;
-  font-size: 15px;
-  border-radius: 999px;
-}
-
 /* The closing band at the very end of the event page
    (EventRegistration.tsx) — full-bleed out of .event-page's column, one
    last CTA on a solid brand ground, then a one-line footer strip. */

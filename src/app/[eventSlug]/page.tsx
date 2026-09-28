@@ -251,7 +251,6 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
           galleryImageUrls={event.galleryImageUrls}
           galleryTitle={event.galleryTitle}
           ctaNote={event.ctaNote}
-          stickyLabel={`${heroDate.short} · ${event.city}`}
           closingText={event.closingText || `Nos vemos el ${heroDate.days} ${heroDate.month} en ${event.city}.`}
           resendEnabled={orgSettings.selfServeResendEnabled}
           siteHost={siteHost}

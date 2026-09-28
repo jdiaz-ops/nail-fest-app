@@ -78,8 +78,6 @@ interface Props {
   // optional, null renders nothing.
   galleryTitle: string | null;
   ctaNote: string | null;
-  // "7 y 8 de nov · Cúcuta" — the mobile sticky bar's one line of context.
-  stickyLabel: string;
   // Headline of the closing band at the end of the page — the admin's own
   // Event.closingText, or the page's auto-built sentence when that's empty.
   closingText: string;
@@ -115,7 +113,6 @@ export default function EventRegistration({
   galleryImageUrls,
   galleryTitle,
   ctaNote,
-  stickyLabel,
   closingText,
   resendEnabled,
   siteHost,
@@ -450,21 +447,22 @@ export default function EventRegistration({
         </p>
       </section>
 
-      {/* Sticky bar — mobile only (hidden ≥900px, see globals.css's
+      {/* Floating CTA — mobile only (hidden ≥900px, see globals.css's
           .event-floating-cta — the sidebar card above is always visible
           on desktop, so a floating bar on top of it is redundant there).
-          Only once the inline CTA above has scrolled out of view,
+          Only once the inline one above has scrolled out of view,
           centered within the page's own column instead of pinned to the
           raw viewport edge so it doesn't drift off on a wide screen. */}
       {!open && showFloating && (
         <div className="event-floating-cta">
-          <div className="event-sticky-bar">
-            <div className="event-sticky-bar-text">
-              <strong>{stickyLabel}</strong>
-              <span>{hasTicketTypes ? "Boletas disponibles" : "Entrada gratis"}</span>
-            </div>
-            <button type="button" className="primary" onClick={openModal}>
-              Mi entrada
+          <div style={{ width: "100%", maxWidth: 440 }}>
+            <button
+              type="button"
+              className="primary"
+              onClick={openModal}
+              style={{ boxShadow: "0 8px 24px -6px rgba(0,0,0,0.35)" }}
+            >
+              {registerButtonLabel}
             </button>
           </div>
         </div>
