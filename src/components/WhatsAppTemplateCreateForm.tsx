@@ -27,7 +27,8 @@ interface WhatsAppTemplateButtonInput {
   phoneNumber?: string;
 }
 
-export default function WhatsAppTemplateCreateForm() {
+export default function WhatsAppTemplateCreateForm({ appBaseUrl }: { appBaseUrl: string }) {
+  const ticketUrl = `${appBaseUrl}/api/ticket-pdf/{{1}}`;
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -263,7 +264,7 @@ export default function WhatsAppTemplateCreateForm() {
                     <input
                       value={ctaUrlValue}
                       onChange={(e) => setCtaUrlValue(e.target.value)}
-                      placeholder={ctaUrlDynamic ? "https://nailfest.co/api/ticket-pdf/{{1}}" : "https://nailfest.co/..."}
+                      placeholder={ctaUrlDynamic ? ticketUrl : `${appBaseUrl}/...`}
                       style={{ flex: 2 }}
                     />
                   </div>
@@ -271,6 +272,20 @@ export default function WhatsAppTemplateCreateForm() {
                     <input type="checkbox" checked={ctaUrlDynamic} onChange={(e) => setCtaUrlDynamic(e.target.checked)} />
                     El enlace es distinto para cada persona (termina en {"{{1}}"}, ej. su propia entrada)
                   </label>
+                  {ctaUrlDynamic && (
+                    <p style={{ fontSize: 12, color: "#5b5f6b", margin: "6px 0 0" }}>
+                      Para que abra la entrada de cada persona, el enlace es exactamente{" "}
+                      <button
+                        type="button"
+                        onClick={() => setCtaUrlValue(ticketUrl)}
+                        title="Usar este enlace"
+                        style={{ font: "inherit", fontFamily: "monospace", background: "#f0efec", border: "none", borderRadius: 4, padding: "1px 6px", cursor: "pointer" }}
+                      >
+                        {ticketUrl}
+                      </button>{" "}
+                      (tócalo para usarlo).
+                    </p>
+                  )}
                   {ctaUrlDynamic && (
                     <div className="field" style={{ marginTop: 6 }}>
                       <label htmlFor="ctaUrlExample" style={{ fontSize: 12 }}>
@@ -280,7 +295,7 @@ export default function WhatsAppTemplateCreateForm() {
                         id="ctaUrlExample"
                         value={ctaUrlExample}
                         onChange={(e) => setCtaUrlExample(e.target.value)}
-                        placeholder="https://nailfest.co/api/ticket-pdf/abc123"
+                        placeholder={`${appBaseUrl}/api/ticket-pdf/abc123`}
                         required
                       />
                     </div>

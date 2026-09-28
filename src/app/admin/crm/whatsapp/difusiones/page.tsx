@@ -2,6 +2,8 @@ import { db } from "@/lib/db";
 import { countSegment, type SegmentFilter } from "@/lib/segments/builder";
 import { WHATSAPP_MERGE_TAGS } from "@/lib/whatsapp/mergeTags";
 import { getBroadcastStats } from "@/lib/whatsapp/broadcasts";
+import { dynamicUrlButtonIndex } from "@/lib/whatsapp/automations";
+import type { WhatsAppTemplateButton } from "@/lib/whatsapp/provider";
 import { whatsappProvider } from "@/lib/whatsapp";
 import { getOrgSettings } from "@/lib/settings";
 import { formatDateInTz } from "@/lib/dateFormat";
@@ -38,7 +40,7 @@ function Bar({ label, count, total, color }: { label: string; count: number; tot
 // ADMIN-only — see WhatsAppConexionPage's own comment.
 export default async function WhatsAppDifusionesPage() {
   await requirePageUser(["ADMIN"]);
-  const [segmentRows, templates, broadcasts, connection, orgSettings] = await Promise.all([
+  const [segmentRows, templateRows, broadcasts, connection, orgSettings, eventRows] = await Promise.all([
     db.segmentDefinition.findMany({ orderBy: { createdAt: "desc" } }),
     db.whatsAppTemplate.findMany({ orderBy: { name: "asc" } }),
     db.whatsAppBroadcast.findMany({
@@ -48,7 +50,26 @@ export default async function WhatsAppDifusionesPage() {
     }),
     db.whatsAppConnection.findFirst({ orderBy: { createdAt: "desc" } }),
     getOrgSettings(),
+    db.event.findMany({ where: { status: "PUBLISHED" }, orderBy: { startsAt: "desc" }, take: 30, select: { id: true, name: true, startsAt: true, endsAt: true } }),
   ]);
+
+  // A template's "Ver mi entrada" button (a URL ending in {{1}}) — the
+  // composer asks which event's entrada it opens, see WhatsAppBroadcast.ticketEventId.
+  const templates = templateRows.map((t) => {
+    const index = dynamicUrlButtonIndex(t.buttons);
+    const button = index >= 0 ? ((t.buttons as unknown as WhatsAppTemplateButton[])[index] as Extract<WhatsAppTemplateButton, { type: "URL" }>) : null;
+    return { id: t.id, name: t.name, language: t.language, status: t.status, bodyText: t.bodyText, variableCount: t.variableCount, ticketButtonUrl: button?.url ?? null };
+  });
+  // Soonest event that hasn't ended yet first — the one a "your entrada"
+  // message is realistically about — then the rest, most recent first.
+  const now = Date.now();
+  const upcoming = eventRows.filter((e) => (e.endsAt ?? e.startsAt).getTime() >= now).reverse();
+  const past = eventRows.filter((e) => (e.endsAt ?? e.startsAt).getTime() < now);
+  const ticketEvents = [...upcoming, ...past].map((e) => ({
+    id: e.id,
+    name: e.name,
+    when: formatDateInTz(e.startsAt, { dateStyle: "medium" }, orgSettings.timezone, orgSettings.language),
+  }));
 
   // countSegment, not resolveSegment(...).length — this used to fetch
   // every FULL Person row for every saved segment, in parallel, on every
@@ -73,6 +94,7 @@ export default async function WhatsAppDifusionesPage() {
       <WhatsAppBroadcastComposer
         segments={segments}
         templates={templates}
+        ticketEvents={ticketEvents}
         mergeTags={WHATSAPP_MERGE_TAGS}
         messagingLimitTier={messagingLimitTier}
         orgTimezone={orgSettings.timezone}

@@ -26,6 +26,9 @@ function buttonLabel(b: WhatsAppTemplateButton): string {
 export default async function WhatsAppTemplatesPage() {
   await requirePageUser(["ADMIN"]);
   const templates = await db.whatsAppTemplate.findMany({ orderBy: { name: "asc" } });
+  // The domain the app actually serves /api/ticket-pdf from — what a "Ver
+  // mi entrada" button's URL must start with.
+  const appBaseUrl = (process.env.APP_BASE_URL ?? "").replace(/\/$/, "") || "https://nailfest.lat";
 
   return (
     <div>
@@ -35,7 +38,7 @@ export default async function WhatsAppTemplatesPage() {
       />
 
       <div style={{ display: "flex", gap: 12, alignItems: "flex-start", flexWrap: "wrap" }}>
-        <WhatsAppTemplateCreateForm />
+        <WhatsAppTemplateCreateForm appBaseUrl={appBaseUrl} />
         <WhatsAppTemplateSyncButton />
       </div>
 

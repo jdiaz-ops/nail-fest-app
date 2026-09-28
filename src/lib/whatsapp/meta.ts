@@ -56,12 +56,12 @@ async function sendTemplate(input: WhatsAppTemplateMessage): Promise<{ providerM
     components.push({ type: "body", parameters: input.variables.map((text) => ({ type: "text", text })) });
   }
   if (input.buttonUrlParam) {
-    // sub_type "url" + index "0" — assumes the dynamic button is the
-    // template's first (and only) one, see buttonUrlParam's own comment.
+    // index = the dynamic button's position among the template's buttons
+    // (see buttonIndex's own comment) — 0 when it's the first one.
     components.push({
       type: "button",
       sub_type: "url",
-      index: "0",
+      index: String(input.buttonIndex ?? 0),
       parameters: [{ type: "text", text: input.buttonUrlParam }],
     });
   }

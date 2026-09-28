@@ -7,6 +7,8 @@ import { publishChunkContinuation } from "@/lib/qstash";
 import { whatsappProvider } from "./index";
 import { recordOutboundMessage } from "./inbox";
 import { resolveMergeTag } from "./mergeTags";
+import { dynamicUrlButtonIndex } from "./automations";
+import type { WhatsAppTemplateButton } from "./provider";
 import type { Person, Event, WhatsAppBroadcast, WhatsAppTemplate } from "@prisma/client";
 
 const CONCURRENCY = 10;
@@ -34,23 +36,58 @@ function renderBody(template: string | null, variables: string[]): string | null
   return out;
 }
 
+/** The template's per-person link button ("Ver mi entrada", a URL ending
+ * in {{1}}), if it has one: where it sits among the template's buttons
+ * and which event's entrada fills it — the difusión's chosen ticket
+ * event, or an event-scoped broadcast's own event. Null when the template
+ * has no such button. */
+function ticketButtonFor(broadcast: BroadcastWithTemplate): { index: number; url: string; eventId: string | null } | null {
+  const index = dynamicUrlButtonIndex(broadcast.template.buttons);
+  if (index < 0) return null;
+  const button = (broadcast.template.buttons as unknown as WhatsAppTemplateButton[])[index] as Extract<WhatsAppTemplateButton, { type: "URL" }>;
+  return { index, url: button.url, eventId: broadcast.ticketEventId ?? broadcast.eventId };
+}
+
+/** personId -> that person's own ticket token for the event (their
+ * confirmed registration's qrToken — ticket 1 of the order; the PDF it
+ * opens carries every ticket of the order, see lib/ticketPdf.ts). Someone
+ * with no confirmed registration there is simply absent from the map. */
+async function ticketTokensFor(eventId: string, personIds: string[]): Promise<Map<string, string>> {
+  if (personIds.length === 0) return new Map();
+  const rows = await db.registration.findMany({
+    where: { eventId, personId: { in: personIds }, status: "CONFIRMED", qrToken: { not: null } },
+    select: { personId: true, qrToken: true },
+  });
+  return new Map(rows.map((r) => [r.personId, r.qrToken as string]));
+}
+
 /** One recipient's send attempt — shared by the main broadcast loop and
  * retryFailedMessages(), so a retry renders variables and logs exactly
  * the same way the original send did, not a second copy that could
  * drift. Returns "sent" | "failed" (never throws — same "log every
- * attempt" posture as the rest of this module). */
+ * attempt" posture as the rest of this module). `ticketToken` fills the
+ * template's per-person link button — see ticketButtonFor; callers never
+ * reach here for a button template without one. */
 async function sendOneTemplateMessage(
   broadcast: BroadcastWithTemplate,
   person: Person,
   event: Pick<Event, "name" | "startsAt" | "endsAt" | "venueName" | "venueAddress" | "format" | "scheduleDays"> | null,
-  orgSettings: OrgSettingsValue
+  orgSettings: OrgSettingsValue,
+  ticketToken?: string
 ): Promise<"sent" | "failed"> {
   const mapping = (broadcast.variableMapping ?? {}) as Record<string, string>;
   const variableKeys = Array.from({ length: broadcast.template.variableCount }, (_, i) => String(i + 1));
   const variables = variableKeys.map((key) =>
     resolveMergeTag(mapping[key] ?? "", { person, event, timezone: orgSettings.timezone, language: orgSettings.language })
   );
-  const renderedBody = renderBody(broadcast.template.bodyText, variables);
+  const button = ticketButtonFor(broadcast);
+  const withButton = button && ticketToken ? { buttonUrlParam: ticketToken, buttonIndex: button.index } : {};
+  // The bandeja shows exactly what went out — including the link this
+  // person's button actually opens, same as the registration
+  // confirmation's own log line.
+  const body = renderBody(broadcast.template.bodyText, variables);
+  const renderedBody =
+    button && ticketToken ? `${body ?? ""}\n[enlace del botón] ${button.url.replace(/\{\{\s*1\s*\}\}/, ticketToken)}`.trim() : body;
 
   try {
     const result = await whatsappProvider.sendTemplate({
@@ -58,6 +95,7 @@ async function sendOneTemplateMessage(
       templateName: broadcast.template.name,
       languageCode: broadcast.template.language,
       variables,
+      ...withButton,
     });
     await recordOutboundMessage({
       phone: person.phone!,
@@ -84,32 +122,39 @@ async function sendOneTemplateMessage(
   }
 }
 
-/** Same eligibility rules sendWhatsAppBroadcast enforces (consent, then
- * phone), computed ahead of time so the composer can show the real
- * breakdown BEFORE the send happens instead of only after — a segment
- * can look like "12 personas" and still only reach 3 of them; finding
- * that out after clicking Enviar is a bad surprise. Never sends
- * anything itself. */
+/** Same eligibility rules sendWhatsAppBroadcast enforces (phone, then
+ * consent, then — for a template with a "Ver mi entrada" button — a
+ * confirmed ticket for the chosen event), computed ahead of time so the
+ * composer can show the real breakdown BEFORE the send happens instead of
+ * only after — a segment can look like "12 personas" and still only reach
+ * 3 of them; finding that out after clicking Enviar is a bad surprise.
+ * Never sends anything itself. */
 export async function previewSegmentRecipients(
-  segmentId: string
-): Promise<{ total: number; eligible: number; noConsent: number; noPhone: number }> {
+  segmentId: string,
+  ticketEventId?: string | null
+): Promise<{ total: number; eligible: number; noConsent: number; noPhone: number; noTicket: number }> {
   const segment = await db.segmentDefinition.findUniqueOrThrow({ where: { id: segmentId } });
   const people = await resolveSegment(segment.filter as unknown as SegmentFilter);
   const consented = await bulkActiveConsent(people.map((p) => p.id), "WHATSAPP");
+  const reachable = people.filter((p) => p.phone && consented.has(p.id));
+  const tickets = ticketEventId ? await ticketTokensFor(ticketEventId, reachable.map((p) => p.id)) : null;
 
   let eligible = 0;
   let noConsent = 0;
   let noPhone = 0;
+  let noTicket = 0;
   for (const person of people) {
     if (!person.phone) {
       noPhone++;
     } else if (!consented.has(person.id)) {
       noConsent++;
+    } else if (tickets && !tickets.has(person.id)) {
+      noTicket++;
     } else {
       eligible++;
     }
   }
-  return { total: people.length, eligible, noConsent, noPhone };
+  return { total: people.length, eligible, noConsent, noPhone, noTicket };
 }
 
 /** Sends the next chunk of a broadcast, picking up wherever its persisted
@@ -136,7 +181,15 @@ export async function previewSegmentRecipients(
  * gone without QStash — surfaced to the caller as a warning, not hidden. */
 export async function sendWhatsAppBroadcast(
   broadcastId: string
-): Promise<{ sent: number; skippedNoConsent: number; skippedNoPhone: number; failed: number; remaining: number; backgrounded: boolean }> {
+): Promise<{
+  sent: number;
+  skippedNoConsent: number;
+  skippedNoPhone: number;
+  skippedNoTicket: number;
+  failed: number;
+  remaining: number;
+  backgrounded: boolean;
+}> {
   const broadcast = await db.whatsAppBroadcast.findUniqueOrThrow({
     where: { id: broadcastId },
     include: { template: true, event: true, segment: true },
@@ -144,6 +197,14 @@ export async function sendWhatsAppBroadcast(
   if (!broadcast.segmentId && !broadcast.eventId) throw new Error("WhatsAppBroadcast has neither segmentId nor eventId");
   if (broadcast.template.status !== "APPROVED") {
     throw new Error(`Template "${broadcast.template.name}" is not APPROVED (status: ${broadcast.template.status}) — re-sync or pick another.`);
+  }
+  // A "Ver mi entrada" button with no event to pull entradas from would be
+  // rejected by Meta for every single recipient — refuse up front instead.
+  const ticketButton = ticketButtonFor(broadcast);
+  if (ticketButton && !ticketButton.eventId) {
+    throw new Error(
+      `La plantilla "${broadcast.template.name}" tiene un botón con enlace personal, pero esta difusión no tiene evento elegido para la entrada.`
+    );
   }
 
   const event: Recipient["event"] = broadcast.eventId ? broadcast.event : null;
@@ -170,6 +231,7 @@ export async function sendWhatsAppBroadcast(
   let sent = 0;
   let skippedNoConsent = 0;
   let skippedNoPhone = 0;
+  let skippedNoTicket = 0;
   let failed = 0;
   let cursor = broadcast.cursor;
   let backgrounded = false;
@@ -183,6 +245,7 @@ export async function sendWhatsAppBroadcast(
     // comment; matters a lot once a segment runs into the thousands (a
     // real Nail Fest segment easily does).
     const consented = await bulkActiveConsent(chunkIds, "WHATSAPP");
+    const tickets = ticketButton?.eventId ? await ticketTokensFor(ticketButton.eventId, chunkIds) : null;
     // Belt-and-suspenders against a duplicate send if this exact chunk
     // gets retried after a crash partway through (cursor only advances
     // once the whole chunk finishes) — skip anyone who somehow already
@@ -220,7 +283,15 @@ export async function sendWhatsAppBroadcast(
             skippedNoConsent++;
             return;
           }
-          const outcome = await sendOneTemplateMessage(broadcast, person, event, orgSettings);
+          // Button template, but no confirmed entrada for that event — a
+          // send would carry a broken "Ver mi entrada" (or be rejected
+          // outright), so this person gets nothing and is counted apart.
+          const ticketToken = tickets?.get(person.id);
+          if (tickets && !ticketToken) {
+            skippedNoTicket++;
+            return;
+          }
+          const outcome = await sendOneTemplateMessage(broadcast, person, event, orgSettings, ticketToken);
           if (outcome === "sent") {
             sent++;
             sentPersonIds.push(person.id);
@@ -258,7 +329,7 @@ export async function sendWhatsAppBroadcast(
   if (remaining === 0) {
     await db.whatsAppBroadcast.update({ where: { id: broadcast.id }, data: { status: "SENT", sentAt: new Date() } });
   }
-  return { sent, skippedNoConsent, skippedNoPhone, failed, remaining, backgrounded };
+  return { sent, skippedNoConsent, skippedNoPhone, skippedNoTicket, failed, remaining, backgrounded };
 }
 
 /** Re-attempts every FAILED message logged for this broadcast — for a
@@ -283,6 +354,13 @@ export async function retryFailedMessages(broadcastId: string): Promise<{ retrie
   let failed = 0;
   let skipped = 0;
   const orgSettings = await getOrgSettings();
+  const ticketButton = ticketButtonFor(broadcast);
+  const tickets = ticketButton?.eventId
+    ? await ticketTokensFor(
+        ticketButton.eventId,
+        failedMessages.flatMap((m) => (m.conversation.person ? [m.conversation.person.id] : []))
+      )
+    : null;
 
   for (const msg of failedMessages) {
     const person = msg.conversation.person;
@@ -294,7 +372,14 @@ export async function retryFailedMessages(broadcastId: string): Promise<{ retrie
       skipped++;
       continue;
     }
-    const outcome = await sendOneTemplateMessage(broadcast, person, broadcast.event, orgSettings);
+    // Same rule as the original send: a button template needs this
+    // person's own entrada (it may have been cancelled since).
+    const ticketToken = tickets?.get(person.id);
+    if (ticketButton && !ticketToken) {
+      skipped++;
+      continue;
+    }
+    const outcome = await sendOneTemplateMessage(broadcast, person, broadcast.event, orgSettings, ticketToken);
     if (outcome === "sent") sent++;
     else failed++;
   }

@@ -17,12 +17,14 @@ export interface WhatsAppTemplateMessage {
   /** Positional {{1}}, {{2}}, ... body variables, in order. */
   variables: string[];
   /** The per-recipient value for a dynamic URL button's own {{1}} suffix
-   * (e.g. a qrToken) — only meaningful when the template's one button is
-   * a URL button whose `url` ends in "{{1}}" (see WhatsAppTemplateButton
-   * below). Assumes that button is the template's first (and only) one —
-   * true for every template this app creates today. Omit for a template
-   * with no dynamic button. */
+   * (e.g. a qrToken) — only meaningful when the template has a URL button
+   * whose `url` ends in "{{1}}" (see WhatsAppTemplateButton below). Omit
+   * for a template with no dynamic button. */
   buttonUrlParam?: string;
+  /** That button's position among all the template's buttons (see
+   * automations.ts's dynamicUrlButtonIndex). Defaults to 0 — the first
+   * button — when omitted. */
+  buttonIndex?: number;
 }
 
 export interface WhatsAppFreeformMessage {

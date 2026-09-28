@@ -43,6 +43,14 @@ export function isDynamicUrlButton(b: WhatsAppTemplateButton): boolean {
   return b.type === "URL" && b.url.includes("{{");
 }
 
+/** Position of the template's dynamic URL button among ALL its buttons
+ * (what Meta's send API calls the button's `index`), or -1 if it has
+ * none. A template can put quick replies or a static link before it, so
+ * this is not always 0. */
+export function dynamicUrlButtonIndex(buttons: unknown): number {
+  return ((buttons as WhatsAppTemplateButton[] | null) ?? []).findIndex(isDynamicUrlButton);
+}
+
 /** APPROVED templates an automation can use — either kind of
  * personalization qualifies: a dynamic URL button (the original design —
  * "open your own ticket") OR at least one body variable (filled via

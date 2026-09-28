@@ -1,9 +1,8 @@
 import type { Event, Person } from "@prisma/client";
 import { hasActiveConsent } from "@/lib/consent";
 import { getOrgSettings } from "@/lib/settings";
-import { getEnabledAutomation, isDynamicUrlButton } from "./automations";
+import { dynamicUrlButtonIndex, getEnabledAutomation } from "./automations";
 import { resolveMergeTag } from "./mergeTags";
-import type { WhatsAppTemplateButton } from "./provider";
 import { whatsappProvider } from "./index";
 import { recordOutboundMessage } from "./inbox";
 
@@ -59,7 +58,8 @@ export async function sendZoomAccessReminder(params: {
   const orgSettings = await getOrgSettings();
   const ctx = { person, event, timezone: orgSettings.timezone, language: orgSettings.language, zoomJoinUrl };
   const variables = Array.from({ length: template.variableCount }, (_, i) => resolveMergeTag(mapping[String(i + 1)] ?? "", ctx));
-  const hasButton = qrToken != null && ((template.buttons as unknown as WhatsAppTemplateButton[] | null) ?? []).some(isDynamicUrlButton);
+  const buttonIndex = dynamicUrlButtonIndex(template.buttons);
+  const hasButton = qrToken != null && buttonIndex >= 0;
 
   try {
     const result = await whatsappProvider.sendTemplate({
@@ -67,7 +67,7 @@ export async function sendZoomAccessReminder(params: {
       templateName: template.name,
       languageCode: template.language,
       variables,
-      ...(hasButton ? { buttonUrlParam: qrToken! } : {}),
+      ...(hasButton ? { buttonUrlParam: qrToken!, buttonIndex } : {}),
     });
     await recordOutboundMessage({
       phone: person.phone,

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth/guard";
 import { sendWhatsAppBroadcast } from "@/lib/whatsapp/broadcasts";
+import { dynamicUrlButtonIndex } from "@/lib/whatsapp/automations";
 import { getOrCreateLabel } from "@/lib/labels";
 import { scheduleWhatsAppBroadcastSend } from "@/lib/qstash";
 
@@ -28,6 +29,9 @@ const bodySchema = z
     // event-scoped broadcast, which this composer doesn't create.
     scheduleKind: z.enum(["IMMEDIATE", "AT_DATETIME"]).default("IMMEDIATE"),
     scheduledAt: z.string().datetime().optional(),
+    // Required when the template has a "Ver mi entrada" (dynamic URL)
+    // button — see WhatsAppBroadcast.ticketEventId. Ignored otherwise.
+    ticketEventId: z.string().optional(),
   })
   .superRefine((data, ctx) => {
     if (data.scheduleKind === "AT_DATETIME" && !data.scheduledAt) {
@@ -47,14 +51,22 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: "invalid_body", issues: parsed.error.issues }, { status: 400 });
   }
-  const { segmentId, templateId, variableMapping, assignLabelName, scheduleKind, scheduledAt } = parsed.data;
+  const { segmentId, templateId, variableMapping, assignLabelName, scheduleKind, scheduledAt, ticketEventId } = parsed.data;
 
-  const [segment, template] = await Promise.all([
+  const [segment, template, ticketEvent] = await Promise.all([
     db.segmentDefinition.findUnique({ where: { id: segmentId } }),
     db.whatsAppTemplate.findUnique({ where: { id: templateId } }),
+    ticketEventId ? db.event.findUnique({ where: { id: ticketEventId }, select: { id: true } }) : Promise.resolve(null),
   ]);
   if (!segment) return NextResponse.json({ error: "segment_not_found" }, { status: 404 });
   if (!template) return NextResponse.json({ error: "template_not_found" }, { status: 404 });
+  const hasTicketButton = dynamicUrlButtonIndex(template.buttons) >= 0;
+  if (hasTicketButton && !ticketEvent) {
+    return NextResponse.json(
+      { error: "Esta plantilla tiene un botón con enlace personal — elige de qué evento es la entrada que abre." },
+      { status: 400 }
+    );
+  }
 
   const assignLabel = assignLabelName ? await getOrCreateLabel(assignLabelName) : null;
 
@@ -64,6 +76,7 @@ export async function POST(req: NextRequest) {
       templateId: template.id,
       variableMapping,
       assignLabelId: assignLabel?.id ?? null,
+      ticketEventId: hasTicketButton ? ticketEvent!.id : null,
       scheduleKind,
       scheduledAt: scheduledAt ? new Date(scheduledAt) : null,
       // A scheduled one waits for QStash's exact-time callback (see

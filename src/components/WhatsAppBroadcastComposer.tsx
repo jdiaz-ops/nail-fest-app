@@ -10,6 +10,13 @@ interface EligibilityPreview {
   eligible: number;
   noConsent: number;
   noPhone: number;
+  noTicket: number;
+}
+
+interface TicketEventOption {
+  id: string;
+  name: string;
+  when: string;
 }
 
 type ScheduleKind = "IMMEDIATE" | "AT_DATETIME";
@@ -27,6 +34,10 @@ interface TemplateOption {
   status: string;
   bodyText: string | null;
   variableCount: number;
+  /** The template's per-person link button URL (ends in {{1}}), or null —
+   * when set, each recipient's button opens their own entrada for the
+   * event picked below. */
+  ticketButtonUrl: string | null;
 }
 
 interface MergeTagOption {
@@ -37,6 +48,8 @@ interface MergeTagOption {
 interface Props {
   segments: SegmentOption[];
   templates: TemplateOption[];
+  /** Events a "Ver mi entrada" button can link to — soonest upcoming first. */
+  ticketEvents: TicketEventOption[];
   mergeTags: MergeTagOption[];
   /** From Conexión's live phone-number status — shown as a reference note
    * only (WhatChimp's own "Daily WABA conversation limit"); the app
@@ -57,7 +70,7 @@ interface Props {
 // The one real difference from email: no free-text body — a WhatsApp
 // broadcast MUST use a pre-approved template, so this maps merge tags
 // onto the template's {{1}}, {{2}}, ... variables instead of writing copy.
-export default function WhatsAppBroadcastComposer({ segments, templates, mergeTags, messagingLimitTier, orgTimezone }: Props) {
+export default function WhatsAppBroadcastComposer({ segments, templates, ticketEvents, mergeTags, messagingLimitTier, orgTimezone }: Props) {
   const router = useRouter();
   const approvedTemplates = templates.filter((t) => t.status === "APPROVED");
   const [segmentId, setSegmentId] = useState(segments[0]?.id ?? "");
@@ -82,9 +95,14 @@ export default function WhatsAppBroadcastComposer({ segments, templates, mergeTa
   // confirmación aparte.
   const [confirming, setConfirming] = useState(false);
   const [confirmChecked, setConfirmChecked] = useState(false);
+  const [ticketEventId, setTicketEventId] = useState(ticketEvents[0]?.id ?? "");
 
   const selectedSegment = segments.find((s) => s.id === segmentId);
   const selectedTemplate = templates.find((t) => t.id === templateId);
+  const hasTicketButton = Boolean(selectedTemplate?.ticketButtonUrl);
+  const selectedTicketEvent = ticketEvents.find((e) => e.id === ticketEventId);
+  // Only sent/used when the chosen template actually has the button.
+  const effectiveTicketEventId = hasTicketButton ? ticketEventId : "";
   const variableSlots = useMemo(
     () => (selectedTemplate ? Array.from({ length: selectedTemplate.variableCount }, (_, i) => String(i + 1)) : []),
     [selectedTemplate]
@@ -111,7 +129,9 @@ export default function WhatsAppBroadcastComposer({ segments, templates, mergeTa
     }
     let cancelled = false;
     setEligibilityLoading(true);
-    fetch(`/api/admin/whatsapp/broadcasts/preview?segmentId=${segmentId}`)
+    const params = new URLSearchParams({ segmentId });
+    if (effectiveTicketEventId) params.set("ticketEventId", effectiveTicketEventId);
+    fetch(`/api/admin/whatsapp/broadcasts/preview?${params}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (!cancelled) setEligibility(data);
@@ -125,7 +145,7 @@ export default function WhatsAppBroadcastComposer({ segments, templates, mergeTa
     return () => {
       cancelled = true;
     };
-  }, [segmentId]);
+  }, [segmentId, effectiveTicketEventId]);
 
   // The form's own submit — no longer sends anything. Just validates the
   // schedule field and opens the confirmation step below.
@@ -135,6 +155,10 @@ export default function WhatsAppBroadcastComposer({ segments, templates, mergeTa
 
     if (scheduleKind === "AT_DATETIME" && !scheduledAtLocal) {
       setResult("Elige una fecha y hora para programar el envío.");
+      return;
+    }
+    if (hasTicketButton && !ticketEventId) {
+      setResult("Esta plantilla tiene un botón con enlace personal — elige de qué evento es la entrada que abre.");
       return;
     }
 
@@ -171,6 +195,7 @@ export default function WhatsAppBroadcastComposer({ segments, templates, mergeTa
         assignLabelName: assignLabelName || undefined,
         scheduleKind,
         scheduledAt: scheduledAtUtc ? scheduledAtUtc.toISOString() : undefined,
+        ticketEventId: effectiveTicketEventId || undefined,
       }),
     });
     const body = await res.json();
@@ -182,7 +207,9 @@ export default function WhatsAppBroadcastComposer({ segments, templates, mergeTa
         // of implying it's all done. Never left stuck: without
         // body.backgrounded (QStash not configured), the send just kept
         // going synchronously and body.sent already reflects everyone.
-        const base = body.failed > 0 ? `Enviado — ${body.sent} entregados, ${body.failed} fallidos.` : `Enviado a los ${body.sent} contactos elegibles.`;
+        const sentLine = body.failed > 0 ? `Enviado — ${body.sent} entregados, ${body.failed} fallidos.` : `Enviado a los ${body.sent} contactos elegibles.`;
+        const base =
+          body.skippedNoTicket > 0 ? `${sentLine} ${body.skippedNoTicket} no lo recibieron por no tener entrada confirmada para ese evento.` : sentLine;
         setResult(body.remaining > 0 ? `${base} Quedan ${body.remaining} más en camino — siguen enviándose solos.` : base);
       } else if (body.scheduleWarning) {
         setResult(body.scheduleWarning);
@@ -254,6 +281,29 @@ export default function WhatsAppBroadcastComposer({ segments, templates, mergeTa
           ))}
         </select>
       </div>
+
+      {hasTicketButton && (
+        <div className="field">
+          <label htmlFor="ticketEventId">Botón de la plantilla: abre la entrada del evento…</label>
+          {ticketEvents.length === 0 ? (
+            <p style={{ fontSize: 13, color: "var(--danger)", margin: 0 }}>
+              No hay eventos publicados — esta plantilla necesita uno para saber qué entrada abrir.
+            </p>
+          ) : (
+            <select id="ticketEventId" value={ticketEventId} onChange={(e) => setTicketEventId(e.target.value)} disabled={confirming} required>
+              {ticketEvents.map((ev) => (
+                <option key={ev.id} value={ev.id}>
+                  {ev.name} — {ev.when}
+                </option>
+              ))}
+            </select>
+          )}
+          <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>
+            Cada persona recibe el botón con el enlace a <strong>su propia</strong> entrada de ese evento (todas sus boletas,
+            una página por boleta). Quien no tenga entrada confirmada para ese evento no recibe esta difusión.
+          </p>
+        </div>
+      )}
 
       {variableSlots.length > 0 && (
         <div style={{ border: "1px solid #e3e1dc", borderRadius: 8, padding: 16, marginBottom: 16 }}>
@@ -335,15 +385,22 @@ export default function WhatsAppBroadcastComposer({ segments, templates, mergeTa
           <>
             Le llegará a <strong>{eligibility.eligible}</strong> de {eligibility.total}{" "}
             {eligibility.total === 1 ? "persona" : "personas"} del segmento
-            {(eligibility.noConsent > 0 || eligibility.noPhone > 0) && (
+            {(eligibility.noConsent > 0 || eligibility.noPhone > 0 || eligibility.noTicket > 0) && (
               <>
                 {" "}
                 (
-                {eligibility.noConsent > 0 && (
-                  <span style={{ color: "#b8791a", fontWeight: 600 }}>{eligibility.noConsent} sin consentimiento de WhatsApp</span>
-                )}
-                {eligibility.noConsent > 0 && eligibility.noPhone > 0 && ", "}
-                {eligibility.noPhone > 0 && <span style={{ color: "#b8791a", fontWeight: 600 }}>{eligibility.noPhone} sin celular</span>}
+                {[
+                  eligibility.noConsent > 0 && `${eligibility.noConsent} sin consentimiento de WhatsApp`,
+                  eligibility.noPhone > 0 && `${eligibility.noPhone} sin celular`,
+                  eligibility.noTicket > 0 && `${eligibility.noTicket} sin entrada confirmada para ese evento`,
+                ]
+                  .filter(Boolean)
+                  .map((text, i) => (
+                    <span key={i}>
+                      {i > 0 && ", "}
+                      <span style={{ color: "#b8791a", fontWeight: 600 }}>{text}</span>
+                    </span>
+                  ))}
                 {" — no recibirán nada)"}
               </>
             )}
@@ -381,6 +438,11 @@ export default function WhatsAppBroadcastComposer({ segments, templates, mergeTa
             <li>
               Plantilla: <strong>{selectedTemplate?.name}</strong> ({selectedTemplate?.language})
             </li>
+            {hasTicketButton && (
+              <li>
+                Botón: abre la entrada de cada persona para <strong>{selectedTicketEvent?.name}</strong>
+              </li>
+            )}
             <li>
               Envío:{" "}
               <strong>

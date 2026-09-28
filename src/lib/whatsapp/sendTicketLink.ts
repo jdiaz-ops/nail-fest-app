@@ -1,9 +1,8 @@
 import type { Event, Person } from "@prisma/client";
 import { hasActiveConsent } from "@/lib/consent";
 import { getOrgSettings } from "@/lib/settings";
-import { getEnabledAutomation, isDynamicUrlButton } from "./automations";
+import { dynamicUrlButtonIndex, getEnabledAutomation } from "./automations";
 import { resolveMergeTag } from "./mergeTags";
-import type { WhatsAppTemplateButton } from "./provider";
 import { whatsappProvider } from "./index";
 import { recordOutboundMessage } from "./inbox";
 
@@ -73,7 +72,8 @@ export async function sendTicketLinkViaWhatsApp(params: {
   // a template can legitimately have no button at all now that
   // variableMapping lets an admin personalize the body instead (see this
   // module's own doc comment on why the eligibility filter changed).
-  const hasButton = ((template.buttons as unknown as WhatsAppTemplateButton[] | null) ?? []).some(isDynamicUrlButton);
+  const buttonIndex = dynamicUrlButtonIndex(template.buttons);
+  const hasButton = buttonIndex >= 0;
 
   try {
     const result = await whatsappProvider.sendTemplate({
@@ -81,7 +81,7 @@ export async function sendTicketLinkViaWhatsApp(params: {
       templateName: template.name,
       languageCode: template.language,
       variables,
-      ...(hasButton ? { buttonUrlParam: qrToken } : {}),
+      ...(hasButton ? { buttonUrlParam: qrToken, buttonIndex } : {}),
     });
     await recordOutboundMessage({
       phone: person.phone,

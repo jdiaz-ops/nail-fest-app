@@ -1082,6 +1082,15 @@ model WhatsAppBroadcast {
   // lib/whatsapp/mergeTags.ts for the fixed set of tags this can reference
   // (mirrors lib/confirmationTemplate.ts's merge-tag approach for email).
   variableMapping Json               @default("{}")
+  // Which event's entrada a dynamic URL button ("Ver mi entrada",
+  // https://…/api/ticket-pdf/{{1}}) opens — filled per recipient at send
+  // time with THEIR confirmed registration's own qrToken for this event
+  // (see lib/whatsapp/broadcasts.ts). A segment difusión has no event of
+  // its own, so it's chosen in the composer. Plain id, not a relation:
+  // Event already relates to this model via eventId, and this is only
+  // ever read to look up registrations. Null = the template has no such
+  // button (or, for an event-scoped broadcast, eventId is used instead).
+  ticketEventId   String?
   // Tagged onto every Person who was actually SENT to (not skipped for
   // consent/phone, not FAILED) once the send completes — WhatChimp's own
   // "Assign label after broadcast", useful for excluding this batch from
