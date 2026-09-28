@@ -22,3 +22,20 @@ describe("hidden landing blocks", () => {
     expect(schema.parse({ type: "heading", title: "A", intro: "", hidden: true })).toEqual({ type: "heading", title: "A", intro: "", hidden: true });
   });
 });
+
+describe("youtubeVideo", () => {
+  it("reads the id from every common YouTube link", async () => {
+    const { youtubeVideo } = await import("./types");
+    expect(youtubeVideo("https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=10")).toEqual({ id: "dQw4w9WgXcQ", vertical: false });
+    expect(youtubeVideo("https://youtu.be/dQw4w9WgXcQ?si=abc")).toEqual({ id: "dQw4w9WgXcQ", vertical: false });
+    expect(youtubeVideo("https://m.youtube.com/shorts/abcDEF12345")).toEqual({ id: "abcDEF12345", vertical: true });
+    expect(youtubeVideo("https://www.youtube.com/embed/dQw4w9WgXcQ")).toEqual({ id: "dQw4w9WgXcQ", vertical: false });
+  });
+
+  it("rejects anything that isn't a YouTube video", async () => {
+    const { youtubeVideo } = await import("./types");
+    expect(youtubeVideo("https://abc.public.blob.vercel-storage.com/event-videos/x.mp4")).toBeNull();
+    expect(youtubeVideo("https://www.instagram.com/reel/xyz/")).toBeNull();
+    expect(youtubeVideo("no es un enlace")).toBeNull();
+  });
+});

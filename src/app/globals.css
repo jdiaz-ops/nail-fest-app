@@ -787,6 +787,44 @@ button.primary:disabled {
 .landing-card-body h3:first-child {
   margin-top: 0;
 }
+.landing-block-video {
+  margin: 0;
+}
+.landing-block-video video {
+  display: block;
+  width: 100%;
+  max-height: 80vh;
+  border-radius: 12px;
+  background: #000;
+}
+.landing-video-embed {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #000;
+}
+.landing-video-embed.is-vertical {
+  aspect-ratio: 9 / 16;
+  /* A Short fills the column on a phone, but never taller than 80% of the
+     screen — the width follows so the frame keeps its 9:16 shape. */
+  width: min(100%, calc(80vh * 9 / 16));
+  margin: 0 auto;
+}
+.landing-video-embed iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+.landing-block-video figcaption {
+  margin-top: 8px;
+  font-size: 14px;
+  color: var(--ink-muted);
+  text-align: center;
+}
 .landing-points {
   --points-ink: var(--accent-ink);
   display: grid;

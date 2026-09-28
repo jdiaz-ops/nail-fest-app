@@ -16,6 +16,7 @@ const scheduleDaySchema = z.object({
 const landingBlockSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("text"), html: z.string() }),
   z.object({ type: z.literal("image"), url: z.string(), caption: z.string() }),
+  z.object({ type: z.literal("video"), url: z.string(), caption: z.string(), autoplay: z.boolean() }),
   z.object({ type: z.literal("gallery"), images: z.array(z.string()) }),
   z.object({
     type: z.literal("faq"),

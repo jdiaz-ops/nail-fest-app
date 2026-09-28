@@ -16,6 +16,42 @@ export interface ImageLandingBlock {
   caption: string;
 }
 
+// A video: either a file uploaded to Blob storage (mp4/webm) or a YouTube
+// link, embedded. `autoplay` (uploaded files only) plays it muted and on a
+// loop as soon as it's on screen, like a GIF; otherwise it waits for play.
+export interface VideoLandingBlock {
+  type: "video";
+  url: string;
+  caption: string;
+  autoplay: boolean;
+}
+
+/** The YouTube video a pasted link points to — watch?v=, youtu.be/,
+ * /shorts/ and /embed/ links — or null for anything else. Shorts are
+ * vertical, so the embed keeps a 9:16 frame for them. */
+export function youtubeVideo(url: string): { id: string; vertical: boolean } | null {
+  let parsed: URL;
+  try {
+    parsed = new URL(url.trim());
+  } catch {
+    return null;
+  }
+  const host = parsed.hostname.replace(/^(www\.|m\.)/, "");
+  let id: string | null = null;
+  let vertical = false;
+  if (host === "youtu.be") {
+    id = parsed.pathname.slice(1).split("/")[0] ?? null;
+  } else if (host === "youtube.com" || host === "youtube-nocookie.com") {
+    const [, kind, rest] = parsed.pathname.split("/");
+    if (parsed.pathname === "/watch") id = parsed.searchParams.get("v");
+    else if (kind === "shorts" || kind === "embed" || kind === "live") {
+      id = rest ?? null;
+      vertical = kind === "shorts";
+    }
+  }
+  return id && /^[A-Za-z0-9_-]{6,20}$/.test(id) ? { id, vertical } : null;
+}
+
 export interface GalleryLandingBlock {
   type: "gallery";
   images: string[];
@@ -133,6 +169,7 @@ export interface PointsLandingBlock {
 export type LandingBlock = (
   | TextLandingBlock
   | ImageLandingBlock
+  | VideoLandingBlock
   | GalleryLandingBlock
   | FaqLandingBlock
   | HeadingLandingBlock
@@ -186,6 +223,8 @@ function parseOne(rec: Record<string, unknown>, result: LandingBlock[]): void {
     result.push({ type: "text", html: rec.html });
   } else if (rec.type === "image" && typeof rec.url === "string") {
     result.push({ type: "image", url: rec.url, caption: str(rec.caption) });
+  } else if (rec.type === "video" && typeof rec.url === "string") {
+    result.push({ type: "video", url: rec.url, caption: str(rec.caption), autoplay: rec.autoplay === true });
   } else if (rec.type === "gallery" && Array.isArray(rec.images) && rec.images.every((u) => typeof u === "string")) {
     result.push({ type: "gallery", images: rec.images as string[] });
   } else if (rec.type === "faq" && Array.isArray(rec.items)) {

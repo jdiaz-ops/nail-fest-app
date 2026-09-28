@@ -1,6 +1,6 @@
 import { Fraunces } from "next/font/google";
 import ScrollCarousel from "@/components/ScrollCarousel";
-import { instagramHandles, type AgendaRow, type LandingBlock, type LandingCardIcon } from "@/lib/landingBlocks/types";
+import { instagramHandles, youtubeVideo, type AgendaRow, type LandingBlock, type LandingCardIcon } from "@/lib/landingBlocks/types";
 
 // "Michell Rodríguez" -> "MR"; a single name gives one letter.
 function initials(name: string): string {
@@ -52,6 +52,33 @@ export default function LandingBlocksContent({ blocks, venue }: { blocks: Landin
                 {block.caption && <figcaption>{block.caption}</figcaption>}
               </figure>
             ) : null;
+
+          case "video": {
+            if (!block.url) return null;
+            const yt = youtubeVideo(block.url);
+            return (
+              <figure key={i} className="landing-block-video">
+                {yt ? (
+                  <div className={`landing-video-embed${yt.vertical ? " is-vertical" : ""}`}>
+                    <iframe
+                      src={`https://www.youtube-nocookie.com/embed/${yt.id}?rel=0&playsinline=1`}
+                      title={block.caption || "Video"}
+                      loading="lazy"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowFullScreen
+                    />
+                  </div>
+                ) : block.autoplay ? (
+                  <video src={block.url} autoPlay muted loop playsInline controls preload="auto" />
+                ) : (
+                  // "#t=0.1": without it, iPhones show a black box until play
+                  // instead of the video's first frame.
+                  <video src={`${block.url}#t=0.1`} controls playsInline preload="metadata" />
+                )}
+                {block.caption && <figcaption>{block.caption}</figcaption>}
+              </figure>
+            );
+          }
 
           case "gallery":
             return block.images.length > 0 ? (

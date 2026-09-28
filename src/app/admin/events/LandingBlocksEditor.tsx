@@ -1,12 +1,14 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { upload } from "@vercel/blob/client";
 import RichTextEditor from "@/components/RichTextEditor";
 import { compressImage } from "@/lib/imageCompression";
 import {
   LANDING_CARD_ICONS,
   LANDING_TONES,
   emptyAgendaRow,
+  youtubeVideo,
   type AgendaRow,
   type LandingBlock,
   type LandingTone,
@@ -35,6 +37,8 @@ export default function LandingBlocksEditor({
         ? { type: "text", html: "" }
         : type === "image"
           ? { type: "image", url: "", caption: "" }
+          : type === "video"
+            ? { type: "video", url: "", caption: "", autoplay: false }
           : type === "gallery"
             ? { type: "gallery", images: [] }
             : type === "faq"
@@ -167,6 +171,7 @@ export default function LandingBlocksEditor({
               )}
               {block.type === "image" && <ImageBlockEditor block={block} onChange={(b) => updateAt(i, b)} />}
               {block.type === "gallery" && <GalleryBlockEditor block={block} onChange={(b) => updateAt(i, b)} />}
+              {block.type === "video" && <VideoBlockEditor block={block} onChange={(b) => updateAt(i, b)} />}
               {block.type === "faq" && <FaqBlockEditor block={block} onChange={(b) => updateAt(i, b)} />}
               {block.type === "heading" && <HeadingBlockEditor block={block} onChange={(b) => updateAt(i, b)} />}
               {block.type === "card" && <CardBlockEditor block={block} onChange={(b) => updateAt(i, b)} />}
@@ -195,6 +200,7 @@ const BLOCK_LABELS: Record<LandingBlock["type"], string> = {
   heading: "Título de sección",
   text: "Texto",
   image: "Imagen / GIF",
+  video: "Video",
   gallery: "Galería",
   card: "Tarjeta destacada",
   points: "Lista de puntos",
@@ -273,6 +279,121 @@ function ImageBlockEditor({
         value={block.caption}
         onChange={(e) => onChange({ ...block, caption: e.target.value })}
         placeholder="Pie de foto (opcional)"
+        style={{ maxWidth: 400 }}
+      />
+    </div>
+  );
+}
+
+const MAX_VIDEO_BYTES = 80 * 1024 * 1024; // matches /api/admin/uploads/event-video
+
+// Uploads go straight from the browser to Blob storage — see
+// /api/admin/uploads/event-video's comment on why a video can't go through
+// the image route. A YouTube link is the alternative for anything longer.
+function VideoBlockEditor({
+  block,
+  onChange,
+}: {
+  block: Extract<LandingBlock, { type: "video" }>;
+  onChange: (block: LandingBlock) => void;
+}) {
+  const [progress, setProgress] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [link, setLink] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+  const isYoutube = Boolean(youtubeVideo(block.url));
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setError(null);
+    if (!["video/mp4", "video/webm"].includes(file.type)) {
+      setError("Ese archivo no es MP4 ni WebM. Si es un video del iPhone (.mov), expórtalo como MP4 o súbelo a YouTube y pega el enlace.");
+    } else if (file.size > MAX_VIDEO_BYTES) {
+      setError("El video pesa más de 80MB. Comprímelo, o súbelo a YouTube y pega el enlace abajo.");
+    } else {
+      setProgress(0);
+      try {
+        const ext = file.type === "video/webm" ? "webm" : "mp4";
+        const blob = await upload(`event-videos/${crypto.randomUUID()}.${ext}`, file, {
+          access: "public",
+          handleUploadUrl: "/api/admin/uploads/event-video",
+          multipart: file.size > 20 * 1024 * 1024,
+          onUploadProgress: ({ percentage }) => setProgress(Math.round(percentage)),
+        });
+        onChange({ ...block, url: blob.url });
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "No se pudo subir el video.");
+      } finally {
+        setProgress(null);
+      }
+    }
+    if (inputRef.current) inputRef.current.value = "";
+  }
+
+  function applyLink() {
+    if (!youtubeVideo(link)) {
+      setError("Ese enlace no es de YouTube. Pega el enlace de un video, un Short o un live de YouTube.");
+      return;
+    }
+    setError(null);
+    onChange({ ...block, url: link.trim(), autoplay: false });
+    setLink("");
+  }
+
+  const yt = youtubeVideo(block.url);
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {block.url && (
+        <div style={{ position: "relative", display: "inline-block", alignSelf: "flex-start" }}>
+          {yt ? (
+            // eslint-disable-next-line @next/next/no-img-element -- YouTube's own thumbnail, admin preview only
+            <img src={`https://i.ytimg.com/vi/${yt.id}/hqdefault.jpg`} alt="" style={{ maxWidth: 280, maxHeight: 160, borderRadius: 8, display: "block" }} />
+          ) : (
+            <video src={`${block.url}#t=0.1`} muted playsInline preload="metadata" style={{ maxWidth: 280, maxHeight: 160, borderRadius: 8, display: "block", background: "#000" }} />
+          )}
+          <button type="button" onClick={() => onChange({ ...block, url: "" })} style={removeImageButtonStyle} aria-label="Quitar video">
+            ×
+          </button>
+        </div>
+      )}
+      <span style={{ fontSize: 12, color: "#5b5f6b" }}>Sube un MP4 (hasta 80MB)…</span>
+      <input ref={inputRef} type="file" accept="video/mp4,video/webm" onChange={handleFile} disabled={progress !== null} />
+      {progress !== null && <p style={{ fontSize: 12, color: "#5b5f6b", margin: 0 }}>Subiendo… {progress}%</p>}
+      <span style={{ fontSize: 12, color: "#5b5f6b" }}>…o pega un enlace de YouTube</span>
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        <input
+          value={link}
+          onChange={(e) => setLink(e.target.value)}
+          placeholder="https://youtube.com/shorts/…"
+          style={{ flex: "1 1 220px" }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              applyLink();
+            }
+          }}
+        />
+        <button type="button" onClick={applyLink} className="secondary" style={{ width: "auto", padding: "6px 12px" }}>
+          Usar enlace
+        </button>
+      </div>
+      {error && <p style={{ fontSize: 12, color: "#c2185b", margin: 0 }}>{error}</p>}
+      {block.url && !isYoutube && (
+        <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 400 }}>
+          <input
+            type="checkbox"
+            checked={block.autoplay}
+            onChange={(e) => onChange({ ...block, autoplay: e.target.checked })}
+            style={{ width: "auto" }}
+          />
+          Reproducir solo, en silencio y en bucle (como un GIF)
+        </label>
+      )}
+      <input
+        value={block.caption}
+        onChange={(e) => onChange({ ...block, caption: e.target.value })}
+        placeholder="Texto debajo del video (opcional)"
         style={{ maxWidth: 400 }}
       />
     </div>
