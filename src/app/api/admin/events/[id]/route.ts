@@ -62,7 +62,9 @@ const landingBlockSchema = z.discriminatedUnion("type", [
       z.object({ name: z.string(), handle: z.string(), tag: z.string(), photoUrl: z.string(), tone: z.enum(["teal", "pink", "peach"]) })
     ),
   }),
-]);
+])
+  // "Oculto" in the editor — see LandingBlock's own hidden flag.
+  .and(z.object({ hidden: z.boolean().optional() }));
 
 const patchSchema = z.object({
   name: z.string().min(1).optional(),

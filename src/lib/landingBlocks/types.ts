@@ -128,7 +128,7 @@ export interface PointsLandingBlock {
   tone: LandingTone;
 }
 
-export type LandingBlock =
+export type LandingBlock = (
   | TextLandingBlock
   | ImageLandingBlock
   | GalleryLandingBlock
@@ -138,7 +138,12 @@ export type LandingBlock =
   | AgendaLandingBlock
   | VenueLandingBlock
   | PeopleLandingBlock
-  | PointsLandingBlock;
+  | PointsLandingBlock) & {
+  // Kept in the editor but left off the public page — for a section that's
+  // still being filled in. Absent = visible, so every block saved before
+  // this existed stays exactly as it was.
+  hidden?: boolean;
+};
 
 function isFaqItem(v: unknown): v is { question: string; answer: string } {
   return typeof v === "object" && v !== null && typeof (v as Record<string, unknown>).question === "string" && typeof (v as Record<string, unknown>).answer === "string";
@@ -167,58 +172,64 @@ export function parseLandingBlocks(value: unknown): LandingBlock[] {
   for (const v of value) {
     if (typeof v !== "object" || v === null) continue;
     const rec = v as Record<string, unknown>;
-    if (rec.type === "text" && typeof rec.html === "string") {
-      result.push({ type: "text", html: rec.html });
-    } else if (rec.type === "image" && typeof rec.url === "string") {
-      result.push({ type: "image", url: rec.url, caption: str(rec.caption) });
-    } else if (rec.type === "gallery" && Array.isArray(rec.images) && rec.images.every((u) => typeof u === "string")) {
-      result.push({ type: "gallery", images: rec.images as string[] });
-    } else if (rec.type === "faq" && Array.isArray(rec.items)) {
-      result.push({ type: "faq", title: str(rec.title), items: rec.items.filter(isFaqItem) });
-    } else if (rec.type === "heading") {
-      result.push({ type: "heading", title: str(rec.title), intro: str(rec.intro) });
-    } else if (rec.type === "card") {
-      result.push({
-        type: "card",
-        eyebrow: str(rec.eyebrow),
-        title: str(rec.title),
-        html: str(rec.html),
-        icon: cardIcon(rec.icon),
-        tone: tone(rec.tone),
-        imageUrl: str(rec.imageUrl),
-      });
-    } else if (rec.type === "agenda" && Array.isArray(rec.rows)) {
-      const rows = rec.rows
-        .filter((r): r is Record<string, unknown> => typeof r === "object" && r !== null)
-        .map(
-          (r): AgendaRow => ({
-            kind: r.kind === "day" ? "day" : "session",
-            chip: str(r.chip),
-            topic: str(r.topic),
-            instructor: str(r.instructor),
-            photoUrl: str(r.photoUrl),
-            brand: str(r.brand),
-            brandLogoUrl: str(r.brandLogoUrl),
-            handles: str(r.handles),
-            sponsored: r.sponsored === true,
-            text: str(r.text),
-            tone: tone(r.tone),
-          })
-        );
-      result.push({ type: "agenda", rows });
-    } else if (rec.type === "venue") {
-      result.push({ type: "venue", imageUrl: str(rec.imageUrl), mapsUrl: str(rec.mapsUrl) });
-    } else if (rec.type === "points" && Array.isArray(rec.items)) {
-      const items = rec.items
-        .filter((p): p is Record<string, unknown> => typeof p === "object" && p !== null)
-        .map((p) => ({ title: str(p.title), text: str(p.text) }));
-      result.push({ type: "points", items, tone: tone(rec.tone) });
-    } else if (rec.type === "people" && Array.isArray(rec.items)) {
-      const items = rec.items
-        .filter((p): p is Record<string, unknown> => typeof p === "object" && p !== null)
-        .map((p) => ({ name: str(p.name), handle: str(p.handle), tag: str(p.tag), photoUrl: str(p.photoUrl), tone: tone(p.tone) }));
-      result.push({ type: "people", items });
-    }
+    const before = result.length;
+    parseOne(rec, result);
+    if (rec.hidden === true && result.length > before) result[before] = { ...result[before]!, hidden: true };
   }
   return result;
+}
+
+function parseOne(rec: Record<string, unknown>, result: LandingBlock[]): void {
+  if (rec.type === "text" && typeof rec.html === "string") {
+    result.push({ type: "text", html: rec.html });
+  } else if (rec.type === "image" && typeof rec.url === "string") {
+    result.push({ type: "image", url: rec.url, caption: str(rec.caption) });
+  } else if (rec.type === "gallery" && Array.isArray(rec.images) && rec.images.every((u) => typeof u === "string")) {
+    result.push({ type: "gallery", images: rec.images as string[] });
+  } else if (rec.type === "faq" && Array.isArray(rec.items)) {
+    result.push({ type: "faq", title: str(rec.title), items: rec.items.filter(isFaqItem) });
+  } else if (rec.type === "heading") {
+    result.push({ type: "heading", title: str(rec.title), intro: str(rec.intro) });
+  } else if (rec.type === "card") {
+    result.push({
+      type: "card",
+      eyebrow: str(rec.eyebrow),
+      title: str(rec.title),
+      html: str(rec.html),
+      icon: cardIcon(rec.icon),
+      tone: tone(rec.tone),
+      imageUrl: str(rec.imageUrl),
+    });
+  } else if (rec.type === "agenda" && Array.isArray(rec.rows)) {
+    const rows = rec.rows
+      .filter((r): r is Record<string, unknown> => typeof r === "object" && r !== null)
+      .map(
+        (r): AgendaRow => ({
+          kind: r.kind === "day" ? "day" : "session",
+          chip: str(r.chip),
+          topic: str(r.topic),
+          instructor: str(r.instructor),
+          photoUrl: str(r.photoUrl),
+          brand: str(r.brand),
+          brandLogoUrl: str(r.brandLogoUrl),
+          handles: str(r.handles),
+          sponsored: r.sponsored === true,
+          text: str(r.text),
+          tone: tone(r.tone),
+        })
+      );
+    result.push({ type: "agenda", rows });
+  } else if (rec.type === "venue") {
+    result.push({ type: "venue", imageUrl: str(rec.imageUrl), mapsUrl: str(rec.mapsUrl) });
+  } else if (rec.type === "points" && Array.isArray(rec.items)) {
+    const items = rec.items
+      .filter((p): p is Record<string, unknown> => typeof p === "object" && p !== null)
+      .map((p) => ({ title: str(p.title), text: str(p.text) }));
+    result.push({ type: "points", items, tone: tone(rec.tone) });
+  } else if (rec.type === "people" && Array.isArray(rec.items)) {
+    const items = rec.items
+      .filter((p): p is Record<string, unknown> => typeof p === "object" && p !== null)
+      .map((p) => ({ name: str(p.name), handle: str(p.handle), tag: str(p.tag), photoUrl: str(p.photoUrl), tone: tone(p.tone) }));
+    result.push({ type: "people", items });
+  }
 }

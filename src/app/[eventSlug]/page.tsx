@@ -125,7 +125,7 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
   // other event's landingBlocksContent stays undefined and
   // EventRegistration.tsx falls through to descriptionHtml exactly as
   // before.
-  const landingBlocks = event.useLandingBlocks ? parseLandingBlocks(event.landingBlocks) : null;
+  const landingBlocks = event.useLandingBlocks ? parseLandingBlocks(event.landingBlocks).filter((b) => !b.hidden) : null;
 
   return (
     // .event-page: 480px column on mobile (unchanged — already optimized,

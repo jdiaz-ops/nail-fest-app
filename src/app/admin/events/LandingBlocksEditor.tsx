@@ -106,6 +106,11 @@ export default function LandingBlocksEditor({
                 opacity: dragIndex === i ? 0.4 : 1,
               }}
             >
+              {block.hidden && (
+                <div style={{ fontSize: 12, color: "#8a5a1f", background: "#fdf6e3", borderRadius: 6, padding: "6px 10px", marginBottom: 10 }}>
+                  Oculto — no se ve en la página hasta que lo vuelvas a mostrar.
+                </div>
+              )}
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
                 <span
                   draggable
@@ -119,9 +124,32 @@ export default function LandingBlocksEditor({
                 >
                   ⠿
                 </span>
-                <span style={{ fontSize: 12, fontWeight: 700, color: "#5b5f6b", textTransform: "uppercase", letterSpacing: "0.04em", flex: 1 }}>
+                <span
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: block.hidden ? "#b3ada3" : "#5b5f6b",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.04em",
+                    flex: 1,
+                    textDecoration: block.hidden ? "line-through" : "none",
+                  }}
+                >
                   {i + 1}. {BLOCK_LABELS[block.type]}
                 </span>
+                <label
+                  title={block.hidden ? "Oculto en la página" : "Visible en la página"}
+                  style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, color: block.hidden ? "#8a8478" : "#12966b", cursor: "pointer", flexShrink: 0 }}
+                >
+                  <input
+                    type="checkbox"
+                    role="switch"
+                    checked={!block.hidden}
+                    onChange={(e) => updateAt(i, { ...block, hidden: !e.target.checked })}
+                    style={{ width: "auto", margin: 0 }}
+                  />
+                  {block.hidden ? "Oculto" : "Visible"}
+                </label>
                 {/* Drag-and-drop above doesn't work on a phone — these do. */}
                 <button type="button" onClick={() => moveBlock(i, -1)} disabled={i === 0} title="Subir" aria-label="Subir" style={iconButtonStyle}>
                   ↑
