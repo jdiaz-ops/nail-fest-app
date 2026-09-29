@@ -19,6 +19,7 @@ export const infoPageSchema = z.object({
   blocks: z.array(landingBlockSchema).default([]),
   published: z.boolean().default(false),
   showRegisterButton: z.boolean().default(true),
+  showTopRegisterButton: z.boolean().default(false),
 });
 
 export interface InfoPageInput {
@@ -29,6 +30,7 @@ export interface InfoPageInput {
   blocks: LandingBlock[];
   published: boolean;
   showRegisterButton: boolean;
+  showTopRegisterButton: boolean;
 }
 
 /** The slug the page will get: what the admin typed (or the title), made
@@ -57,6 +59,7 @@ export async function createInfoPage(input: InfoPageInput) {
       blocks: sanitizeLandingBlocks(input.blocks) as unknown as Prisma.InputJsonValue,
       published: input.published,
       showRegisterButton: input.showRegisterButton,
+      showTopRegisterButton: input.showTopRegisterButton,
     },
   });
 }
@@ -73,6 +76,7 @@ export async function updateInfoPage(id: string, input: InfoPageInput) {
       blocks: sanitizeLandingBlocks(input.blocks) as unknown as Prisma.InputJsonValue,
       published: input.published,
       showRegisterButton: input.showRegisterButton,
+      showTopRegisterButton: input.showTopRegisterButton,
     },
   });
 }

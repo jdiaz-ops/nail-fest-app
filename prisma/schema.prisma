@@ -1704,8 +1704,12 @@ model InfoPage {
   // Unpublished pages 404 for visitors; a logged-in admin still sees them,
   // with a "Borrador" banner, to check before publishing.
   published          Boolean  @default(false)
-  // The registration button(s) back to the event page.
+  // The green closing band at the bottom, with its "Quiero mi entrada"
+  // button back to the event's registration form.
   showRegisterButton Boolean  @default(true)
+  // A second "Quiero mi entrada" button right under the title — off by
+  // default (the admin prefers only the one at the bottom).
+  showTopRegisterButton Boolean @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

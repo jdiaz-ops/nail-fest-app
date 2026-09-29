@@ -14,6 +14,7 @@ export interface InfoPageFormValues {
   blocks: LandingBlock[];
   published: boolean;
   showRegisterButton: boolean;
+  showTopRegisterButton: boolean;
 }
 
 // One topic page of an event (cronograma, expositores, el lugar…) — see
@@ -60,6 +61,7 @@ export default function InfoPageForm({
         blocks: values.blocks,
         published: values.published,
         showRegisterButton: values.showRegisterButton,
+        showTopRegisterButton: values.showTopRegisterButton,
       }),
     }).catch(() => null);
     setSaving(false);
@@ -128,9 +130,14 @@ export default function InfoPageForm({
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <span style={{ fontSize: 13, color: "#5b5f6b" }}>Botón &quot;Quiero mi entrada&quot; (lleva al formulario de inscripción del evento):</span>
+        <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14 }}>
+          <input type="checkbox" checked={values.showTopRegisterButton} onChange={(e) => set("showTopRegisterButton", e.target.checked)} style={{ width: "auto" }} />
+          Arriba, debajo del título
+        </label>
         <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14 }}>
           <input type="checkbox" checked={values.showRegisterButton} onChange={(e) => set("showRegisterButton", e.target.checked)} style={{ width: "auto" }} />
-          Mostrar el botón &quot;Quiero mi entrada&quot; (lleva al formulario de inscripción del evento)
+          Abajo, en la banda verde del final
         </label>
         <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14 }}>
           <input type="checkbox" checked={values.published} onChange={(e) => set("published", e.target.checked)} style={{ width: "auto" }} />

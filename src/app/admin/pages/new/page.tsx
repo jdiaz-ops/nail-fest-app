@@ -29,6 +29,7 @@ export default async function NewInfoPagePage({ searchParams }: { searchParams: 
             blocks: [],
             published: false,
             showRegisterButton: true,
+            showTopRegisterButton: false,
           }}
         />
       )}

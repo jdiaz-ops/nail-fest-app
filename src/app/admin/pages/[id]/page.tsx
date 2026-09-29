@@ -33,6 +33,7 @@ export default async function EditInfoPagePage({ params }: { params: { id: strin
           blocks: parseLandingBlocks(page.blocks),
           published: page.published,
           showRegisterButton: page.showRegisterButton,
+          showTopRegisterButton: page.showTopRegisterButton,
         }}
       />
     </div>
