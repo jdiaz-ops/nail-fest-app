@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Fraunces } from "next/font/google";
 import { db } from "@/lib/db";
@@ -85,9 +84,13 @@ export default async function InfoPagePublic({
         <p className="info-page-draft">Borrador — solo tú (admin) ves esta página. Publícala desde Admin → Páginas.</p>
       )}
 
-      <Link href={`/${event.slug}`} className="info-page-back">
-        ← {event.name}
-      </Link>
+      {/* The brand on top, right before the page's own title — the admin's
+          choice over a "← event name" back link and a footer logo. */}
+      <header className="info-page-brand">
+        {/* eslint-disable-next-line @next/next/no-img-element -- fixed logo mark, same as the event page's */}
+        <img src="/logo.png" alt={orgSettings.name} className="info-page-brand-logo" />
+        <p className="info-page-brand-tagline">Donde se reúne el mundo de las uñas</p>
+      </header>
       <h1 className={`info-page-title ${fraunces.className}`}>{page.title}</h1>
       {page.intro && <p className="info-page-intro">{page.intro}</p>}
 
@@ -119,11 +122,6 @@ export default async function InfoPagePublic({
           <div className="event-closing-footer" aria-hidden="true" />
         </section>
       )}
-      <footer className="event-page-footer">
-        {/* eslint-disable-next-line @next/next/no-img-element -- fixed logo mark, same as the event page's */}
-        <img src="/logo.png" alt={orgSettings.name} className="event-page-footer-logo" />
-        <p className="event-page-footer-tagline">Donde se reúne el mundo de las uñas</p>
-      </footer>
     </main>
   );
 }
