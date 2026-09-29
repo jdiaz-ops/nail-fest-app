@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { upload } from "@vercel/blob/client";
+import { uploadMany } from "@/lib/uploadMany";
 import RichTextEditor from "@/components/RichTextEditor";
 import { compressImage } from "@/lib/imageCompression";
 import {
@@ -414,33 +415,25 @@ function GalleryBlockEditor({
   const inputRef = useRef<HTMLInputElement>(null);
   type Item = (typeof block.items)[number];
 
-  // Several at once (all 30 ambassadors in one pick), three uploads in
-  // flight at a time, added in the order they were picked once all finish.
+  // Several at once (all 30 ambassadors in one pick), added in the order
+  // they were picked once all finish — see lib/uploadMany.ts.
   async function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
     if (inputRef.current) inputRef.current.value = "";
     if (files.length === 0) return;
     setErrors([]);
     setProgress({ done: 0, total: files.length });
-    const results: (Item | null)[] = new Array(files.length).fill(null);
-    const failed: string[] = [];
-    let next = 0;
-    let done = 0;
-    async function worker() {
-      while (next < files.length) {
-        const index = next++;
-        const file = files[index]!;
-        const result = await uploadImage(file).catch(() => ({ error: "No se pudo subir la imagen." }));
-        if ("url" in result) results[index] = { url: result.url, handle: "" };
-        else failed.push(`${file.name}: ${result.error}`);
-        done += 1;
-        setProgress({ done, total: files.length });
-      }
-    }
-    await Promise.all([worker(), worker(), worker()]);
+    const { values, failed } = await uploadMany(
+      files,
+      async (file) => {
+        const result = await uploadImage(file);
+        return "url" in result ? { ok: true, value: { url: result.url, handle: "" } } : { ok: false, error: result.error };
+      },
+      (done, total) => setProgress({ done, total })
+    );
     setProgress(null);
     setErrors(failed);
-    onChange({ ...block, items: [...block.items, ...results.filter((r): r is Item => r !== null)] });
+    onChange({ ...block, items: [...block.items, ...values] });
   }
 
   function updateItem(idx: number, item: Item) {

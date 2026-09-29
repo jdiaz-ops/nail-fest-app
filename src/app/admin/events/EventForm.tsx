@@ -8,6 +8,7 @@ import RichTextEditor from "@/components/RichTextEditor";
 import LandingBlocksEditor from "./LandingBlocksEditor";
 import type { LandingBlock } from "@/lib/landingBlocks/types";
 import { compressImage } from "@/lib/imageCompression";
+import { uploadMany } from "@/lib/uploadMany";
 
 const fraunces = Fraunces({ subsets: ["latin"], weight: ["600", "900"] });
 
@@ -107,6 +108,7 @@ export default function EventForm({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [galleryUploading, setGalleryUploading] = useState(false);
+  const [galleryProgress, setGalleryProgress] = useState<{ done: number; total: number } | null>(null);
   const [galleryUploadError, setGalleryUploadError] = useState<string | null>(null);
   const galleryFileInputRef = useRef<HTMLInputElement>(null);
   const isEdit = Boolean(initial.id);
@@ -191,33 +193,39 @@ export default function EventForm({
   // same reasoning as RichTextEditor.tsx's own content-image compression,
   // smaller target than the hero's.
   async function handleGalleryImageAdd(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files ?? []);
+    if (galleryFileInputRef.current) galleryFileInputRef.current.value = "";
+    if (files.length === 0) return;
     setGalleryUploading(true);
     setGalleryUploadError(null);
-    try {
-      const compressed = await compressImage(file, { maxDimension: 1600, quality: 0.85 });
-      const form = new FormData();
-      form.append("file", compressed);
-      const res = await fetch("/api/admin/uploads/event-image", { method: "POST", body: form });
-      const body = await res.json().catch(() => ({}));
-      if (res.ok) {
-        set("galleryImageUrls", [...values.galleryImageUrls, body.url]);
-      } else {
-        setGalleryUploadError(
-          body?.error === "blob_not_configured"
-            ? "El almacenamiento de imágenes no está activo todavía."
-            : body?.error === "not_an_image"
-              ? "Ese archivo no es una imagen."
-              : body?.error === "too_large"
-                ? "La imagen pesa más de 5MB."
-                : "No se pudo subir la imagen."
-        );
-      }
-    } finally {
-      setGalleryUploading(false);
-      if (galleryFileInputRef.current) galleryFileInputRef.current.value = "";
-    }
+    setGalleryProgress({ done: 0, total: files.length });
+    const { values: urls, failed } = await uploadMany(
+      files,
+      async (file) => {
+        const compressed = await compressImage(file, { maxDimension: 1600, quality: 0.85 });
+        const form = new FormData();
+        form.append("file", compressed);
+        const res = await fetch("/api/admin/uploads/event-image", { method: "POST", body: form });
+        const body = await res.json().catch(() => ({}));
+        if (res.ok) return { ok: true, value: body.url as string };
+        return {
+          ok: false,
+          error:
+            body?.error === "blob_not_configured"
+              ? "El almacenamiento de imágenes no está activo todavía."
+              : body?.error === "not_an_image"
+                ? "Ese archivo no es una imagen."
+                : body?.error === "too_large"
+                  ? "La imagen pesa más de 5MB."
+                  : "No se pudo subir la imagen.",
+        };
+      },
+      (done, total) => setGalleryProgress({ done, total })
+    );
+    setValues((v) => ({ ...v, galleryImageUrls: [...v.galleryImageUrls, ...urls] }));
+    setGalleryUploading(false);
+    setGalleryProgress(null);
+    if (failed.length > 0) setGalleryUploadError(`No se pudieron subir ${failed.length}: ${failed.join(" · ")}`);
   }
 
   function removeGalleryImage(index: number) {
@@ -722,10 +730,16 @@ export default function EventForm({
               ref={galleryFileInputRef}
               type="file"
               accept="image/*"
+              multiple
               onChange={handleGalleryImageAdd}
               disabled={galleryUploading}
             />
-            {galleryUploading && <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>Subiendo…</p>}
+            <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>Puedes elegir varias fotos a la vez.</p>
+            {galleryProgress && (
+              <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>
+                Subiendo {galleryProgress.done} de {galleryProgress.total}…
+              </p>
+            )}
             {galleryUploadError && <p style={{ fontSize: 12, color: "#c2185b", margin: "4px 0 0" }}>{galleryUploadError}</p>}
           </div>
 

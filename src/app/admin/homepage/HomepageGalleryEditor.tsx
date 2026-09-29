@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { postSettings, cardStyle, saveButtonStyle } from "../settings/shared";
+import { uploadMany } from "@/lib/uploadMany";
 
 // Same upload route as the hero background (/api/admin/uploads/
 // homepage-image) — no need for a second one, it already just returns a
@@ -12,37 +13,44 @@ import { postSettings, cardStyle, saveButtonStyle } from "../settings/shared";
 export default function HomepageGalleryEditor({ initialUrls }: { initialUrls: string[] }) {
   const [urls, setUrls] = useState(initialUrls);
   const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const inputRef = useRef<HTMLInputElement>(null);
 
   async function handleAdd(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files ?? []);
+    if (inputRef.current) inputRef.current.value = "";
+    if (files.length === 0) return;
     setUploading(true);
     setUploadError(null);
-    try {
-      const form = new FormData();
-      form.append("file", file);
-      const res = await fetch("/api/admin/uploads/homepage-image", { method: "POST", body: form });
-      const body = await res.json().catch(() => ({}));
-      if (res.ok) {
-        setUrls((prev) => [...prev, body.url]);
-      } else {
-        setUploadError(
-          body?.error === "blob_not_configured"
-            ? "El almacenamiento de imágenes no está activo todavía."
-            : body?.error === "not_an_image"
-              ? "Ese archivo no es una imagen."
-              : body?.error === "too_large"
-                ? "La imagen pesa más de 5MB."
-                : "No se pudo subir la imagen."
-        );
-      }
-    } finally {
-      setUploading(false);
-      if (inputRef.current) inputRef.current.value = "";
-    }
+    setProgress({ done: 0, total: files.length });
+    const { values, failed } = await uploadMany(
+      files,
+      async (file) => {
+        const form = new FormData();
+        form.append("file", file);
+        const res = await fetch("/api/admin/uploads/homepage-image", { method: "POST", body: form });
+        const body = await res.json().catch(() => ({}));
+        if (res.ok) return { ok: true, value: body.url as string };
+        return {
+          ok: false,
+          error:
+            body?.error === "blob_not_configured"
+              ? "El almacenamiento de imágenes no está activo todavía."
+              : body?.error === "not_an_image"
+                ? "Ese archivo no es una imagen."
+                : body?.error === "too_large"
+                  ? "La imagen pesa más de 5MB."
+                  : "No se pudo subir la imagen.",
+        };
+      },
+      (done, total) => setProgress({ done, total })
+    );
+    setUrls((prev) => [...prev, ...values]);
+    setUploading(false);
+    setProgress(null);
+    if (failed.length > 0) setUploadError(`No se pudieron subir ${failed.length}: ${failed.join(" · ")}`);
   }
 
   function remove(index: number) {
@@ -86,8 +94,13 @@ export default function HomepageGalleryEditor({ initialUrls }: { initialUrls: st
         </div>
       )}
 
-      <input ref={inputRef} type="file" accept="image/*" onChange={handleAdd} disabled={uploading} />
-      {uploading && <p style={{ fontSize: 13, color: "#5b5f6b" }}>Subiendo…</p>}
+      <input ref={inputRef} type="file" accept="image/*" multiple onChange={handleAdd} disabled={uploading} />
+      <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>Puedes elegir varias fotos a la vez.</p>
+      {progress && (
+        <p style={{ fontSize: 13, color: "#5b5f6b" }}>
+          Subiendo {progress.done} de {progress.total}…
+        </p>
+      )}
       {uploadError && <p style={{ fontSize: 13, color: "#c2185b" }}>{uploadError}</p>}
 
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 16 }}>
