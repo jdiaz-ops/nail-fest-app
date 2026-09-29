@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Fraunces } from "next/font/google";
 import { db } from "@/lib/db";
 import { requirePageUser } from "@/lib/auth/guard";
+import DuplicatePageButton from "./DuplicatePageButton";
 
 export const dynamic = "force-dynamic";
 
@@ -70,6 +71,7 @@ export default async function InfoPagesListPage() {
                 <Link href={`/admin/pages/${p.id}`} style={{ fontSize: 13 }}>
                   Editar
                 </Link>
+                <DuplicatePageButton pageId={p.id} title={p.title} style={{ padding: "6px 12px", fontSize: 13 }} />
               </div>
             );
           })}

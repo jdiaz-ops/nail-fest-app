@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import LandingBlocksEditor from "@/app/admin/events/LandingBlocksEditor";
+import DuplicatePageButton from "./DuplicatePageButton";
 import type { LandingBlock } from "@/lib/landingBlocks/types";
 
 export interface InfoPageFormValues {
@@ -156,6 +157,7 @@ export default function InfoPageForm({
         <button type="submit" className="primary" disabled={saving} style={{ width: "auto", padding: "10px 22px" }}>
           {saving ? "Guardando…" : isEdit ? "Guardar cambios" : "Crear página"}
         </button>
+        {isEdit && <DuplicatePageButton pageId={initial.id!} title={values.title} />}
         {isEdit && (
           <button type="button" className="secondary" onClick={handleDelete} style={{ width: "auto", padding: "10px 16px", color: "#c2185b" }}>
             Eliminar página
