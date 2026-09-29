@@ -10,7 +10,13 @@ export const landingBlockSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("text"), html: z.string() }),
   z.object({ type: z.literal("image"), url: z.string(), caption: z.string() }),
   z.object({ type: z.literal("video"), url: z.string(), caption: z.string(), autoplay: z.boolean() }),
-  z.object({ type: z.literal("gallery"), images: z.array(z.string()) }),
+  z.object({
+    type: z.literal("gallery"),
+    items: z.array(z.object({ url: z.string(), handle: z.string().default("") })).default([]),
+    showFirst: z.number().int().min(0).default(0),
+    zoom: z.boolean().default(true),
+    moreLabel: z.string().default(""),
+  }),
   z.object({
     type: z.literal("faq"),
     title: z.string(),

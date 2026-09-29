@@ -1,5 +1,6 @@
 import { Fraunces } from "next/font/google";
 import ScrollCarousel from "@/components/ScrollCarousel";
+import GalleryGrid from "./GalleryGrid";
 import { instagramHandles, youtubeVideo, type AgendaRow, type LandingBlock, type LandingCardIcon } from "@/lib/landingBlocks/types";
 
 // "Michell Rodríguez" -> "MR"; a single name gives one letter.
@@ -81,12 +82,9 @@ export default function LandingBlocksContent({ blocks, venue }: { blocks: Landin
           }
 
           case "gallery":
-            return block.images.length > 0 ? (
-              <div key={i} className="landing-block-gallery">
-                {block.images.map((url, j) => (
-                  // eslint-disable-next-line @next/next/no-img-element -- admin-uploaded gallery photo, arbitrary Blob URL
-                  <img key={j} src={url} alt="" className="landing-block-gallery-img" />
-                ))}
+            return block.items.length > 0 ? (
+              <div key={i}>
+                <GalleryGrid items={block.items} showFirst={block.showFirst} zoom={block.zoom} moreLabel={block.moreLabel} />
               </div>
             ) : null;
 

@@ -1164,11 +1164,124 @@ button.primary:disabled {
     grid-template-columns: repeat(3, 1fr);
   }
 }
+@media (min-width: 900px) {
+  .landing-block-gallery {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
 .landing-block-gallery-img {
   width: 100%;
   height: auto;
   display: block;
   border-radius: 8px;
+}
+.landing-gallery-tile {
+  display: block;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: zoom-in;
+  border-radius: 8px;
+}
+.landing-gallery-tile:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+.landing-gallery-more {
+  display: block;
+  width: 100%;
+  margin-top: 14px;
+  padding: 13px;
+  border-radius: 999px;
+  border: 2px solid var(--link);
+  background: var(--surface);
+  color: var(--link);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.landing-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 56px 12px 24px;
+  background: rgba(10, 10, 12, 0.97);
+  color: #fff;
+  touch-action: pan-y;
+}
+.landing-lightbox-top {
+  position: absolute;
+  top: 12px;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+.landing-lightbox-close,
+.landing-lightbox-arrow {
+  border: none;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border-radius: 999px;
+  cursor: pointer;
+  font: inherit;
+  line-height: 1;
+}
+.landing-lightbox-close {
+  width: 40px;
+  height: 40px;
+  font-size: 20px;
+}
+.landing-lightbox-arrow {
+  position: absolute;
+  top: 50%;
+  width: 44px;
+  height: 44px;
+  margin-top: -22px;
+  font-size: 30px;
+}
+.landing-lightbox-arrow.is-prev {
+  left: 10px;
+}
+.landing-lightbox-arrow.is-next {
+  right: 10px;
+}
+@media (max-width: 639px) {
+  /* On a phone the swipe does it — the arrows would sit on the photo. */
+  .landing-lightbox-arrow {
+    display: none;
+  }
+}
+.landing-lightbox-img {
+  display: block;
+  max-width: min(100%, 720px);
+  max-height: 72vh;
+  object-fit: contain;
+  border-radius: 8px;
+}
+.landing-lightbox-ig {
+  padding: 12px 22px;
+  border-radius: 999px;
+  background: #fff;
+  color: #17181c;
+  font-weight: 700;
+  font-size: 15px;
+  text-decoration: none;
+}
+.landing-lightbox-hint {
+  margin: 0;
+  font-size: 12px;
+  opacity: 0.65;
 }
 
 /* WhatsApp Bandeja (/admin/crm/whatsapp/bandeja[/id]) — three fixed-width

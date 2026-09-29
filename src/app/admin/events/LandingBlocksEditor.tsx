@@ -40,7 +40,7 @@ export default function LandingBlocksEditor({
           : type === "video"
             ? { type: "video", url: "", caption: "", autoplay: false }
           : type === "gallery"
-            ? { type: "gallery", images: [] }
+            ? { type: "gallery", items: [], showFirst: 0, zoom: true, moreLabel: "" }
             : type === "faq"
               ? { type: "faq", title: "", items: [] }
               : type === "heading"
@@ -400,6 +400,8 @@ function VideoBlockEditor({
   );
 }
 
+const SHOW_FIRST_OPTIONS = [0, 4, 6, 8, 12];
+
 function GalleryBlockEditor({
   block,
   onChange,
@@ -407,63 +409,145 @@ function GalleryBlockEditor({
   block: Extract<LandingBlock, { type: "gallery" }>;
   onChange: (block: LandingBlock) => void;
 }) {
-  const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const [errors, setErrors] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+  type Item = (typeof block.items)[number];
 
-  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploading(true);
-    setError(null);
-    try {
-      const result = await uploadImage(file);
-      if ("url" in result) onChange({ ...block, images: [...block.images, result.url] });
-      else setError(result.error);
-    } finally {
-      setUploading(false);
-      if (inputRef.current) inputRef.current.value = "";
+  // Several at once (all 30 ambassadors in one pick), three uploads in
+  // flight at a time, added in the order they were picked once all finish.
+  async function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    if (inputRef.current) inputRef.current.value = "";
+    if (files.length === 0) return;
+    setErrors([]);
+    setProgress({ done: 0, total: files.length });
+    const results: (Item | null)[] = new Array(files.length).fill(null);
+    const failed: string[] = [];
+    let next = 0;
+    let done = 0;
+    async function worker() {
+      while (next < files.length) {
+        const index = next++;
+        const file = files[index]!;
+        const result = await uploadImage(file).catch(() => ({ error: "No se pudo subir la imagen." }));
+        if ("url" in result) results[index] = { url: result.url, handle: "" };
+        else failed.push(`${file.name}: ${result.error}`);
+        done += 1;
+        setProgress({ done, total: files.length });
+      }
     }
+    await Promise.all([worker(), worker(), worker()]);
+    setProgress(null);
+    setErrors(failed);
+    onChange({ ...block, items: [...block.items, ...results.filter((r): r is Item => r !== null)] });
   }
 
-  function removeImage(idx: number) {
-    onChange({ ...block, images: block.images.filter((_, i) => i !== idx) });
+  function updateItem(idx: number, item: Item) {
+    onChange({ ...block, items: block.items.map((it, i) => (i === idx ? item : it)) });
+  }
+
+  function removeItem(idx: number) {
+    onChange({ ...block, items: block.items.filter((_, i) => i !== idx) });
   }
 
   function move(idx: number, dir: -1 | 1) {
     const target = idx + dir;
-    if (target < 0 || target >= block.images.length) return;
-    const next = [...block.images];
+    if (target < 0 || target >= block.items.length) return;
+    const next = [...block.items];
     [next[idx], next[target]] = [next[target]!, next[idx]!];
-    onChange({ ...block, images: next });
+    onChange({ ...block, items: next });
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      {block.images.length > 0 && (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-          {block.images.map((url, i) => (
-            <div key={url + i} style={{ position: "relative" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <label
+        style={{
+          display: "block",
+          padding: 14,
+          border: "2px dashed #c4efeb",
+          background: "#f3fbfa",
+          borderRadius: 10,
+          textAlign: "center",
+          cursor: progress ? "wait" : "pointer",
+          fontSize: 13.5,
+        }}
+      >
+        <strong style={{ display: "block", fontSize: 15 }}>+ Subir fotos</strong>
+        Puedes elegir varias a la vez
+        <input ref={inputRef} type="file" accept="image/*" multiple onChange={handleFiles} disabled={Boolean(progress)} style={{ display: "none" }} />
+      </label>
+      {progress && (
+        <div style={{ fontSize: 12.5, color: "#5b5f6b" }}>
+          Subiendo {progress.done} de {progress.total}…
+          <div style={{ height: 6, background: "#eee", borderRadius: 9, marginTop: 5 }}>
+            <div style={{ height: 6, width: `${(progress.done / progress.total) * 100}%`, background: "#00beb5", borderRadius: 9 }} />
+          </div>
+        </div>
+      )}
+      {errors.length > 0 && (
+        <div style={{ fontSize: 12, color: "#c2185b" }}>
+          No se pudieron subir {errors.length}:
+          {errors.map((err) => (
+            <div key={err}>{err}</div>
+          ))}
+        </div>
+      )}
+
+      <div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center", fontSize: 13 }}>
+        <label style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 400 }}>
+          Mostrar
+          <select
+            value={block.showFirst}
+            onChange={(e) => onChange({ ...block, showFirst: Number(e.target.value) })}
+            style={{ width: "auto" }}
+          >
+            {SHOW_FIRST_OPTIONS.map((n) => (
+              <option key={n} value={n}>
+                {n === 0 ? "Todas" : `Primeras ${n} + botón "Ver todas"`}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 400 }}>
+          <input type="checkbox" checked={block.zoom} onChange={(e) => onChange({ ...block, zoom: e.target.checked })} style={{ width: "auto" }} />
+          Abrir en grande al tocar
+        </label>
+      </div>
+      {block.showFirst > 0 && (
+        <input
+          value={block.moreLabel}
+          onChange={(e) => onChange({ ...block, moreLabel: e.target.value })}
+          placeholder={`Texto del botón (ej. Ver las ${block.items.length || 30} embajadoras)`}
+        />
+      )}
+
+      {block.items.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          {block.items.map((item, i) => (
+            <div key={item.url + i} style={{ display: "flex", gap: 10, alignItems: "center", padding: "8px 0", borderTop: "1px solid #f0efec" }}>
+              <span style={{ fontSize: 12, color: "#8a8478", width: 20, textAlign: "right", flexShrink: 0 }}>{i + 1}</span>
               {/* eslint-disable-next-line @next/next/no-img-element -- admin preview of an arbitrary uploaded URL */}
-              <img src={url} alt="" style={{ width: 90, height: 90, objectFit: "cover", borderRadius: 6, display: "block", border: "1px solid #e3e1dc" }} />
-              <button type="button" onClick={() => removeImage(i)} style={removeImageButtonStyle} aria-label="Quitar foto">
+              <img src={item.url} alt="" style={{ width: 52, height: 52, objectFit: "cover", borderRadius: 6, flexShrink: 0, border: "1px solid #e3e1dc" }} />
+              <input
+                value={item.handle}
+                onChange={(e) => updateItem(i, { ...item, handle: e.target.value })}
+                placeholder="@instagram (opcional)"
+                style={{ flex: 1, minWidth: 0 }}
+              />
+              <button type="button" onClick={() => move(i, -1)} disabled={i === 0} title="Subir" aria-label="Subir" style={iconButtonStyle}>
+                ↑
+              </button>
+              <button type="button" onClick={() => move(i, 1)} disabled={i === block.items.length - 1} title="Bajar" aria-label="Bajar" style={iconButtonStyle}>
+                ↓
+              </button>
+              <button type="button" onClick={() => removeItem(i)} title="Quitar" aria-label="Quitar foto" style={iconButtonStyle}>
                 ×
               </button>
-              <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
-                <button type="button" onClick={() => move(i, -1)} disabled={i === 0} title="Mover antes" aria-label="Mover antes" style={moveButtonStyle}>
-                  ←
-                </button>
-                <button type="button" onClick={() => move(i, 1)} disabled={i === block.images.length - 1} title="Mover después" aria-label="Mover después" style={moveButtonStyle}>
-                  →
-                </button>
-              </div>
             </div>
           ))}
         </div>
       )}
-      <input ref={inputRef} type="file" accept="image/*" onChange={handleFile} disabled={uploading} />
-      {uploading && <p style={{ fontSize: 12, color: "#5b5f6b", margin: 0 }}>Subiendo…</p>}
-      {error && <p style={{ fontSize: 12, color: "#c2185b", margin: 0 }}>{error}</p>}
     </div>
   );
 }
@@ -1059,17 +1143,6 @@ const iconButtonStyle: React.CSSProperties = {
   fontSize: 14,
   lineHeight: 1,
   flexShrink: 0,
-};
-
-const moveButtonStyle: React.CSSProperties = {
-  flex: 1,
-  height: 30,
-  border: "1px solid #e3e1dc",
-  borderRadius: 4,
-  background: "#fff",
-  cursor: "pointer",
-  fontSize: 14,
-  lineHeight: 1,
 };
 
 const removeImageButtonStyle: React.CSSProperties = {

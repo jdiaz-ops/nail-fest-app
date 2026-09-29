@@ -52,9 +52,22 @@ export function youtubeVideo(url: string): { id: string; vertical: boolean } | n
   return id && /^[A-Za-z0-9_-]{6,20}$/.test(id) ? { id, vertical } : null;
 }
 
+// A grid of photos (2 columns on a phone, 3–4 on a computer). Each photo
+// can carry an Instagram account, offered as a "Ver su Instagram" button
+// when the photo is opened in large (`zoom`). `showFirst` > 0 shows only
+// that many at first, with a "Ver todas" button (`moreLabel`, or a
+// default) for the rest. Galleries saved before these fields existed
+// stored a plain `images: string[]` — read back as items with no handle.
+export interface GalleryItem {
+  url: string;
+  handle: string;
+}
 export interface GalleryLandingBlock {
   type: "gallery";
-  images: string[];
+  items: GalleryItem[];
+  showFirst: number;
+  zoom: boolean;
+  moreLabel: string;
 }
 
 export interface FaqLandingBlock {
@@ -225,8 +238,14 @@ function parseOne(rec: Record<string, unknown>, result: LandingBlock[]): void {
     result.push({ type: "image", url: rec.url, caption: str(rec.caption) });
   } else if (rec.type === "video" && typeof rec.url === "string") {
     result.push({ type: "video", url: rec.url, caption: str(rec.caption), autoplay: rec.autoplay === true });
-  } else if (rec.type === "gallery" && Array.isArray(rec.images) && rec.images.every((u) => typeof u === "string")) {
-    result.push({ type: "gallery", images: rec.images as string[] });
+  } else if (rec.type === "gallery" && (Array.isArray(rec.items) || Array.isArray(rec.images))) {
+    const items: GalleryItem[] = Array.isArray(rec.items)
+      ? rec.items
+          .filter((it): it is Record<string, unknown> => typeof it === "object" && it !== null && typeof (it as Record<string, unknown>).url === "string")
+          .map((it) => ({ url: it.url as string, handle: str(it.handle) }))
+      : (rec.images as unknown[]).filter((u): u is string => typeof u === "string").map((url) => ({ url, handle: "" }));
+    const showFirst = typeof rec.showFirst === "number" && rec.showFirst > 0 ? Math.floor(rec.showFirst) : 0;
+    result.push({ type: "gallery", items, showFirst, zoom: rec.zoom !== false, moreLabel: str(rec.moreLabel) });
   } else if (rec.type === "faq" && Array.isArray(rec.items)) {
     result.push({ type: "faq", title: str(rec.title), items: rec.items.filter(isFaqItem) });
   } else if (rec.type === "heading") {
