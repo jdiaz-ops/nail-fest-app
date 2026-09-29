@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { optimizedSrc, optimizedSrcSet } from "@/lib/optimizedImage";
 import { getOrgSettings } from "@/lib/settings";
 import { getNextEvent } from "@/lib/nextEvent";
 
@@ -188,7 +189,14 @@ export default async function HomePage() {
         {orgSettings.homepageGalleryImageUrls.map((url, i) => (
           <div className="homepage-gallery-tile" key={url + i}>
             {/* eslint-disable-next-line @next/next/no-img-element -- admin-uploaded gallery photo, arbitrary Blob URL */}
-            <img src={url} alt="" />
+            <img
+              src={optimizedSrc(url, 640)}
+              srcSet={optimizedSrcSet(url, [384, 640, 828])}
+              sizes="(min-width: 900px) 25vw, 50vw"
+              alt=""
+              loading="lazy"
+              decoding="async"
+            />
           </div>
         ))}
       </section>

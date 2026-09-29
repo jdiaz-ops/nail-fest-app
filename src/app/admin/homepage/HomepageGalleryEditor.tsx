@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { postSettings, cardStyle, saveButtonStyle } from "../settings/shared";
 import { uploadMany } from "@/lib/uploadMany";
+import { optimizedSrc } from "@/lib/optimizedImage";
 
 // Same upload route as the hero background (/api/admin/uploads/
 // homepage-image) — no need for a second one, it already just returns a
@@ -82,8 +83,9 @@ export default function HomepageGalleryEditor({ initialUrls }: { initialUrls: st
             <div key={url + i} style={{ position: "relative" }}>
               {/* eslint-disable-next-line @next/next/no-img-element -- admin preview of an arbitrary uploaded URL */}
               <img
-                src={url}
+                src={optimizedSrc(url, 256)}
                 alt=""
+                loading="lazy"
                 style={{ width: 110, height: 110, objectFit: "cover", borderRadius: 8, display: "block", border: "1px solid #e3e1dc" }}
               />
               <button type="button" onClick={() => remove(i)} style={removeButtonStyle} aria-label="Quitar foto">

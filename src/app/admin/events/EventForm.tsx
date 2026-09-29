@@ -9,6 +9,7 @@ import LandingBlocksEditor from "./LandingBlocksEditor";
 import type { LandingBlock } from "@/lib/landingBlocks/types";
 import { compressImage } from "@/lib/imageCompression";
 import { uploadMany } from "@/lib/uploadMany";
+import { optimizedSrc } from "@/lib/optimizedImage";
 
 const fraunces = Fraunces({ subsets: ["latin"], weight: ["600", "900"] });
 
@@ -655,8 +656,9 @@ export default function EventForm({
                   <div key={url + i} style={{ position: "relative" }}>
                     {/* eslint-disable-next-line @next/next/no-img-element -- admin preview of an arbitrary uploaded URL */}
                     <img
-                      src={url}
+                      src={optimizedSrc(url, 256)}
                       alt=""
+                      loading="lazy"
                       style={{ width: 110, height: 110, objectFit: "cover", borderRadius: 8, display: "block", border: "1px solid #e3e1dc" }}
                     />
                     <button

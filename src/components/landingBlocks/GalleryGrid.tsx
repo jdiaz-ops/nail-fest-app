@@ -2,6 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { instagramHandles, type GalleryItem } from "@/lib/landingBlocks/types";
+import { optimizedSrc, optimizedSrcSet } from "@/lib/optimizedImage";
+
+// How wide a tile is on screen: half the column on a phone, a third from
+// 640px, a quarter (of the 640px info page / 1080px event page) wider.
+const TILE_SIZES = "(min-width: 900px) 260px, (min-width: 640px) 33vw, 50vw";
 
 // The "Galería" landing block: a grid (2 columns on a phone, 3–4 wider),
 // optionally only the first few with a "Ver todas" button, and — when
@@ -31,11 +36,28 @@ export default function GalleryGrid({
           zoom ? (
             <button key={item.url + i} type="button" className="landing-gallery-tile" onClick={() => setOpen(i)} aria-label={`Ver foto ${i + 1} en grande`}>
               {/* eslint-disable-next-line @next/next/no-img-element -- admin-uploaded gallery photo, arbitrary Blob URL */}
-              <img src={item.url} alt="" loading="lazy" className="landing-block-gallery-img" />
+              <img
+                src={optimizedSrc(item.url, 384)}
+                srcSet={optimizedSrcSet(item.url, [256, 384, 640])}
+                sizes={TILE_SIZES}
+                alt=""
+                loading="lazy"
+                decoding="async"
+                className="landing-block-gallery-img"
+              />
             </button>
           ) : (
             // eslint-disable-next-line @next/next/no-img-element -- admin-uploaded gallery photo, arbitrary Blob URL
-            <img key={item.url + i} src={item.url} alt="" loading="lazy" className="landing-block-gallery-img" />
+            <img
+              key={item.url + i}
+              src={optimizedSrc(item.url, 384)}
+              srcSet={optimizedSrcSet(item.url, [256, 384, 640])}
+              sizes={TILE_SIZES}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              className="landing-block-gallery-img"
+            />
           )
         )}
       </div>
@@ -81,8 +103,8 @@ function Lightbox({
   }, [go, onClose]);
 
   // Neighbours load in the background so a swipe shows the next photo at once.
-  const prevUrl = items[(index - 1 + items.length) % items.length]!.url;
-  const nextUrl = items[(index + 1) % items.length]!.url;
+  const prevUrl = optimizedSrc(items[(index - 1 + items.length) % items.length]!.url, 828, 80);
+  const nextUrl = optimizedSrc(items[(index + 1) % items.length]!.url, 828, 80);
 
   return (
     <div
@@ -127,7 +149,13 @@ function Lightbox({
         </>
       )}
       {/* eslint-disable-next-line @next/next/no-img-element -- admin-uploaded gallery photo, arbitrary Blob URL */}
-      <img src={item.url} alt="" className="landing-lightbox-img" />
+      <img
+        src={optimizedSrc(item.url, 828, 80)}
+        srcSet={optimizedSrcSet(item.url, [640, 828, 1080], 80)}
+        sizes="min(100vw, 720px)"
+        alt=""
+        className="landing-lightbox-img"
+      />
       {handle && (
         <a href={`https://instagram.com/${encodeURIComponent(handle)}`} target="_blank" rel="noopener noreferrer" className="landing-lightbox-ig">
           Ver su Instagram · @{handle}

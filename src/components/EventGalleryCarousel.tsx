@@ -1,4 +1,5 @@
 import ScrollCarousel from "./ScrollCarousel";
+import { optimizedSrc, optimizedSrcSet } from "@/lib/optimizedImage";
 
 interface Props {
   imageUrls: string[];
@@ -18,7 +19,7 @@ export default function EventGalleryCarousel({ imageUrls }: Props) {
       {imageUrls.map((url, i) => (
         <div className="event-gallery-carousel-item" key={url + i}>
           {/* eslint-disable-next-line @next/next/no-img-element -- admin-uploaded gallery photo, arbitrary Blob URL */}
-          <img src={url} alt="" />
+          <img src={optimizedSrc(url, 384)} srcSet={optimizedSrcSet(url, [256, 384])} sizes="150px" alt="" loading="lazy" decoding="async" />
         </div>
       ))}
     </ScrollCarousel>

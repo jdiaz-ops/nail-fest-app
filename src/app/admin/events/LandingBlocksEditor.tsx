@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { upload } from "@vercel/blob/client";
 import { uploadMany } from "@/lib/uploadMany";
+import { optimizedSrc } from "@/lib/optimizedImage";
 import RichTextEditor from "@/components/RichTextEditor";
 import { compressImage } from "@/lib/imageCompression";
 import {
@@ -521,7 +522,7 @@ function GalleryBlockEditor({
             <div key={item.url + i} style={{ display: "flex", gap: 10, alignItems: "center", padding: "8px 0", borderTop: "1px solid #f0efec" }}>
               <span style={{ fontSize: 12, color: "#8a8478", width: 20, textAlign: "right", flexShrink: 0 }}>{i + 1}</span>
               {/* eslint-disable-next-line @next/next/no-img-element -- admin preview of an arbitrary uploaded URL */}
-              <img src={item.url} alt="" style={{ width: 52, height: 52, objectFit: "cover", borderRadius: 6, flexShrink: 0, border: "1px solid #e3e1dc" }} />
+              <img src={optimizedSrc(item.url, 128)} alt="" loading="lazy" style={{ width: 52, height: 52, objectFit: "cover", borderRadius: 6, flexShrink: 0, border: "1px solid #e3e1dc" }} />
               <input
                 value={item.handle}
                 onChange={(e) => updateItem(i, { ...item, handle: e.target.value })}
