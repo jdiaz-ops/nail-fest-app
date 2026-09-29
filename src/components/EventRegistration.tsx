@@ -204,6 +204,19 @@ export default function EventRegistration({
   // separate client island with no shared parent state to prop-drill
   // through) dispatches this on tap — Clarity showed real taps on the
   // banner expecting the registration modal to open.
+  // "?registrar=1" — the "Quiero mi entrada" button on a topic page
+  // ([eventSlug]/[pageSlug]) lands here with the form already open. The
+  // flag is dropped from the address bar so a reload doesn't reopen it;
+  // any utm_* params stay, since RegistrationForm reads them for attribution.
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("registrar") !== "1") return;
+    url.searchParams.delete("registrar");
+    window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+    openModal();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     function handleOpenFromHero() {
       openModal();

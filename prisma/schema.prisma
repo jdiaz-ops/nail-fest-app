@@ -269,6 +269,7 @@ model Event {
   broadcasts    EmailBroadcast[]
   whatsappBroadcasts WhatsAppBroadcast[]
   landingViews  LandingView[]
+  infoPages     InfoPage[]
 
   @@index([city])
   @@index([status])
@@ -1681,4 +1682,32 @@ model LinkPageLink {
   order      Int      @default(0)
   createdAt  DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// A standalone page about one topic of an event — the cronograma, the
+// exhibitor list, the venue, the hours — at /[eventSlug]/[slug], built
+// with the same landing blocks as the event page itself (see
+// lib/landingBlocks/types.ts). Replaces the Canva pages the /links page
+// used to point to: same brand, loads fast, and carries a "Quiero mi
+// entrada" button back to the event's registration form.
+model InfoPage {
+  id      String @id @default(cuid())
+  eventId String
+  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  // URL segment under the event: nailfest.lat/<event.slug>/<slug>.
+  slug    String
+  title   String
+  // Optional short paragraph under the title.
+  intro   String @default("")
+  // Same JSON shape as Event.landingBlocks — parseLandingBlocks reads it.
+  blocks  Json   @default("[]")
+  // Unpublished pages 404 for visitors; a logged-in admin still sees them,
+  // with a "Borrador" banner, to check before publishing.
+  published          Boolean  @default(false)
+  // The registration button(s) back to the event page.
+  showRegisterButton Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([eventId, slug])
 }

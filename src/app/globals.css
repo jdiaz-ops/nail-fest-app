@@ -600,6 +600,60 @@ button.primary:disabled {
   color: var(--ink-muted);
 }
 
+/* [eventSlug]/[pageSlug] — a topic page of an event (see the InfoPage
+   model): one readable column, the event page's own pieces reused. */
+.info-page {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 28px 20px 0;
+}
+.info-page-draft {
+  margin: 0 0 16px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #fdf6e3;
+  color: #8a5a1f;
+  font-size: 13px;
+}
+.info-page-back {
+  display: inline-block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--link);
+  text-decoration: none;
+}
+.info-page-title {
+  margin: 10px 0 0;
+  font-size: 34px;
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+.info-page-intro {
+  margin: 10px 0 0;
+  font-size: 17px;
+  line-height: 1.45;
+  color: var(--ink-muted);
+}
+.info-page-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 20px;
+  padding: 16px 22px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 17px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.info-page-blocks {
+  margin-top: 32px;
+}
+
 .event-page-sidebar {
   display: none;
 }

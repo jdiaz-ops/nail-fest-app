@@ -2,68 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createEvent, DEFAULT_REGISTER_BUTTON_LABEL } from "@/lib/events";
 import { requireUser } from "@/lib/auth/guard";
+import { landingBlockSchema } from "@/lib/landingBlocks/schema";
 
 const scheduleDaySchema = z.object({
   opensAt: z.string().min(1),
   closesAt: z.string().min(1),
 });
-
-// See Event.landingBlocks's own schema comment — LandingBlocksEditor.tsx
-// always sends the complete, current array (a full replace, same as
-// homepageGalleryImageUrls/homepageBrandLogos), never a partial patch.
-const landingBlockSchema = z.discriminatedUnion("type", [
-  z.object({ type: z.literal("text"), html: z.string() }),
-  z.object({ type: z.literal("image"), url: z.string(), caption: z.string() }),
-  z.object({ type: z.literal("video"), url: z.string(), caption: z.string(), autoplay: z.boolean() }),
-  z.object({ type: z.literal("gallery"), images: z.array(z.string()) }),
-  z.object({
-    type: z.literal("faq"),
-    title: z.string(),
-    items: z.array(z.object({ question: z.string(), answer: z.string() })),
-  }),
-  z.object({ type: z.literal("heading"), title: z.string(), intro: z.string() }),
-  z.object({
-    type: z.literal("card"),
-    eyebrow: z.string(),
-    title: z.string(),
-    html: z.string(),
-    icon: z.enum(["none", "gift", "ticket", "star", "clock"]),
-    tone: z.enum(["teal", "pink", "peach"]),
-    imageUrl: z.string().default(""),
-  }),
-  z.object({
-    type: z.literal("agenda"),
-    rows: z.array(
-      z.object({
-        kind: z.enum(["session", "day"]).default("session"),
-        chip: z.string(),
-        topic: z.string().default(""),
-        instructor: z.string().default(""),
-        photoUrl: z.string().default(""),
-        brand: z.string().default(""),
-        brandLogoUrl: z.string().default(""),
-        handles: z.string().default(""),
-        sponsored: z.boolean().default(false),
-        text: z.string().default(""),
-        tone: z.enum(["teal", "pink", "peach"]),
-      })
-    ),
-  }),
-  z.object({ type: z.literal("venue"), imageUrl: z.string(), mapsUrl: z.string() }),
-  z.object({
-    type: z.literal("points"),
-    items: z.array(z.object({ title: z.string(), text: z.string() })),
-    tone: z.enum(["teal", "pink", "peach"]),
-  }),
-  z.object({
-    type: z.literal("people"),
-    items: z.array(
-      z.object({ name: z.string(), handle: z.string(), tag: z.string(), photoUrl: z.string(), tone: z.enum(["teal", "pink", "peach"]) })
-    ),
-  }),
-])
-  // "Oculto" in the editor — see LandingBlock's own hidden flag.
-  .and(z.object({ hidden: z.boolean().optional() }));
 
 const bodySchema = z.object({
   name: z.string().min(1),

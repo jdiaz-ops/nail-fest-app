@@ -10,7 +10,7 @@ import type { LandingBlock } from "@/lib/landingBlocks/types";
 // is — this is the one place that has to hold, since landingBlocks
 // renders on the same unauthenticated public page via dangerouslySetInnerHTML
 // (see LandingBlocksContent.tsx).
-function sanitizeLandingBlocks(blocks: LandingBlock[]): LandingBlock[] {
+export function sanitizeLandingBlocks(blocks: LandingBlock[]): LandingBlock[] {
   return blocks.map((b) => (b.type === "text" || b.type === "card" ? { ...b, html: sanitizeEventDescription(b.html) } : b));
 }
 
@@ -23,7 +23,7 @@ export const DEFAULT_REGISTER_BUTTON_LABEL = "Registrarme GRATIS";
 /** "Nail Fest Cali - 5 & 6 Septiembre" -> "nail-fest-cali-5-6-septiembre" —
  * same shape as the existing seeded slugs (e.g. "bogota-2026") so old and
  * new events sit in the same URL scheme, /[eventSlug]. */
-function slugify(input: string): string {
+export function slugify(input: string): string {
   return input
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "") // strip accents (NFD splits é -> e + combining mark)
