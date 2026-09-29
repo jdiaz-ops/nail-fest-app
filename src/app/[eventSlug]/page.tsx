@@ -100,11 +100,11 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
   // — derived from the same fields as eventWhen/eventVenue above, which
   // stay as-is for the sidebar, the floating CTA and the modal.
   const heroDate = formatHeroDate(event.startsAt, event.endsAt, orgSettings.timezone, orgSettings.language);
-  // Real per-day hours when configured ("Sáb 10 a. m. – 6 p. m.", one line
-  // per day) take the detail line's spot; otherwise the weekday/year line
-  // stays. The "Dónde es" block shows the same short lines.
+  // The hero's small line under the month is always the weekday/year line
+  // ("Sábado y domingo · 2026") — the admin's choice over per-day hours
+  // there. The real per-day hours still show in the "Dónde es" block.
   const heroHours = formatHeroHours(event.scheduleDays, orgSettings.timezone, orgSettings.language);
-  const heroDetail = heroHours ?? [heroDate.detail];
+  const heroDetail = [heroDate.detail];
   const venueCardTitle = event.format === "VIRTUAL" ? "Evento virtual" : event.venueName;
   const venueCardDetail =
     event.format === "VIRTUAL"
