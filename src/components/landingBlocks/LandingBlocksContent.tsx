@@ -84,7 +84,7 @@ export default function LandingBlocksContent({ blocks, venue }: { blocks: Landin
           case "gallery":
             return block.items.length > 0 ? (
               <div key={i}>
-                <GalleryGrid items={block.items} showFirst={block.showFirst} zoom={block.zoom} moreLabel={block.moreLabel} />
+                <GalleryGrid layout={block.layout} items={block.items} showFirst={block.showFirst} zoom={block.zoom} moreLabel={block.moreLabel} />
               </div>
             ) : null;
 

@@ -43,15 +43,17 @@ describe("youtubeVideo", () => {
 describe("gallery block", () => {
   it("reads galleries saved as plain image lists", () => {
     expect(parseLandingBlocks([{ type: "gallery", images: ["a.jpg", "b.jpg"] }])).toEqual([
-      { type: "gallery", items: [{ url: "a.jpg", handle: "" }, { url: "b.jpg", handle: "" }], showFirst: 0, zoom: true, moreLabel: "" },
+      { type: "gallery", layout: "grid", items: [{ url: "a.jpg", handle: "" }, { url: "b.jpg", handle: "" }], showFirst: 0, zoom: true, moreLabel: "" },
     ]);
   });
 
   it("keeps each photo's Instagram and the display options", () => {
     expect(
       parseLandingBlocks([
-        { type: "gallery", items: [{ url: "a.jpg", handle: "@michellnails.24" }, { nope: true }], showFirst: 8, zoom: false, moreLabel: "Ver las 30 embajadoras" },
+        { type: "gallery", layout: "carousel", items: [{ url: "a.jpg", handle: "@michellnails.24" }, { nope: true }], showFirst: 8, zoom: false, moreLabel: "Ver las 30 embajadoras" },
       ])
-    ).toEqual([{ type: "gallery", items: [{ url: "a.jpg", handle: "@michellnails.24" }], showFirst: 8, zoom: false, moreLabel: "Ver las 30 embajadoras" }]);
+    ).toEqual([
+      { type: "gallery", layout: "carousel", items: [{ url: "a.jpg", handle: "@michellnails.24" }], showFirst: 8, zoom: false, moreLabel: "Ver las 30 embajadoras" },
+    ]);
   });
 });

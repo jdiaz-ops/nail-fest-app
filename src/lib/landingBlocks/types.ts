@@ -64,6 +64,9 @@ export interface GalleryItem {
 }
 export interface GalleryLandingBlock {
   type: "gallery";
+  // "grid": every photo (or the first `showFirst`) in columns. "carousel":
+  // one swipeable row, a big photo at a time with the next one peeking.
+  layout: "grid" | "carousel";
   items: GalleryItem[];
   showFirst: number;
   zoom: boolean;
@@ -245,7 +248,14 @@ function parseOne(rec: Record<string, unknown>, result: LandingBlock[]): void {
           .map((it) => ({ url: it.url as string, handle: str(it.handle) }))
       : (rec.images as unknown[]).filter((u): u is string => typeof u === "string").map((url) => ({ url, handle: "" }));
     const showFirst = typeof rec.showFirst === "number" && rec.showFirst > 0 ? Math.floor(rec.showFirst) : 0;
-    result.push({ type: "gallery", items, showFirst, zoom: rec.zoom !== false, moreLabel: str(rec.moreLabel) });
+    result.push({
+      type: "gallery",
+      layout: rec.layout === "carousel" ? "carousel" : "grid",
+      items,
+      showFirst,
+      zoom: rec.zoom !== false,
+      moreLabel: str(rec.moreLabel),
+    });
   } else if (rec.type === "faq" && Array.isArray(rec.items)) {
     result.push({ type: "faq", title: str(rec.title), items: rec.items.filter(isFaqItem) });
   } else if (rec.type === "heading") {

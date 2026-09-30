@@ -452,11 +452,56 @@ button.primary:disabled {
   height: auto;
   display: block;
 }
+.scroll-carousel-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+.scroll-carousel-arrow {
+  display: none;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+.scroll-carousel-arrow:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+@media (hover: hover) and (pointer: fine) {
+  /* A mouse can't swipe: show the arrows only where they're needed. */
+  .scroll-carousel-arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+.scroll-carousel-count {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
 .scroll-carousel-dots {
   display: flex;
   justify-content: center;
   gap: 7px;
-  margin-top: 12px;
+}
+.landing-gallery-carousel .scroll-carousel {
+  margin: 0;
+}
+.landing-gallery-slide {
+  flex: 0 0 auto;
+  width: min(80%, 360px);
+  scroll-snap-align: start;
 }
 .scroll-carousel-dot {
   width: 6px;

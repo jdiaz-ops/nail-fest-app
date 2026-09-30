@@ -12,6 +12,7 @@ export const landingBlockSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("video"), url: z.string(), caption: z.string(), autoplay: z.boolean() }),
   z.object({
     type: z.literal("gallery"),
+    layout: z.enum(["grid", "carousel"]).default("grid"),
     items: z.array(z.object({ url: z.string(), handle: z.string().default("") })).default([]),
     showFirst: z.number().int().min(0).default(0),
     zoom: z.boolean().default(true),

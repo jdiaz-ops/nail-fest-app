@@ -42,7 +42,7 @@ export default function LandingBlocksEditor({
           : type === "video"
             ? { type: "video", url: "", caption: "", autoplay: false }
           : type === "gallery"
-            ? { type: "gallery", items: [], showFirst: 0, zoom: true, moreLabel: "" }
+            ? { type: "gallery", layout: "grid", items: [], showFirst: 0, zoom: true, moreLabel: "" }
             : type === "faq"
               ? { type: "faq", title: "", items: [] }
               : type === "heading"
@@ -490,6 +490,18 @@ function GalleryBlockEditor({
 
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "center", fontSize: 13 }}>
         <label style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 400 }}>
+          Formato
+          <select
+            value={block.layout}
+            onChange={(e) => onChange({ ...block, layout: e.target.value === "carousel" ? "carousel" : "grid" })}
+            style={{ width: "auto" }}
+          >
+            <option value="grid">Cuadrícula</option>
+            <option value="carousel">Carrusel (deslizar)</option>
+          </select>
+        </label>
+        {block.layout === "grid" && (
+        <label style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 400 }}>
           Mostrar
           <select
             value={block.showFirst}
@@ -503,12 +515,13 @@ function GalleryBlockEditor({
             ))}
           </select>
         </label>
+        )}
         <label style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 400 }}>
           <input type="checkbox" checked={block.zoom} onChange={(e) => onChange({ ...block, zoom: e.target.checked })} style={{ width: "auto" }} />
           Abrir en grande al tocar
         </label>
       </div>
-      {block.showFirst > 0 && (
+      {block.layout === "grid" && block.showFirst > 0 && (
         <input
           value={block.moreLabel}
           onChange={(e) => onChange({ ...block, moreLabel: e.target.value })}

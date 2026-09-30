@@ -3,10 +3,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { instagramHandles, type GalleryItem } from "@/lib/landingBlocks/types";
 import { optimizedSrc, optimizedSrcSet } from "@/lib/optimizedImage";
+import ScrollCarousel from "@/components/ScrollCarousel";
 
 // How wide a tile is on screen: half the column on a phone, a third from
 // 640px, a quarter (of the 640px info page / 1080px event page) wider.
 const TILE_SIZES = "(min-width: 900px) 260px, (min-width: 640px) 33vw, 50vw";
+// A carousel slide is ~80% of the column, capped at 360px.
+const SLIDE_SIZES = "(min-width: 640px) 360px, 80vw";
 
 // The "Galería" landing block: a grid (2 columns on a phone, 3–4 wider),
 // optionally only the first few with a "Ver todas" button, and — when
@@ -14,11 +17,13 @@ const TILE_SIZES = "(min-width: 900px) 260px, (min-width: 640px) 33vw, 50vw";
 // arrows, swipe left/right between photos, swipe down or ✕ to close, and
 // a "Ver su Instagram" button for a photo that has an account set.
 export default function GalleryGrid({
+  layout,
   items,
   showFirst,
   zoom,
   moreLabel,
 }: {
+  layout: "grid" | "carousel";
   items: GalleryItem[];
   showFirst: number;
   zoom: boolean;
@@ -26,8 +31,51 @@ export default function GalleryGrid({
 }) {
   const [expanded, setExpanded] = useState(false);
   const [open, setOpen] = useState<number | null>(null);
-  const visible = showFirst > 0 && !expanded ? items.slice(0, showFirst) : items;
+  const visible = layout === "grid" && showFirst > 0 && !expanded ? items.slice(0, showFirst) : items;
   const hiddenCount = items.length - visible.length;
+
+  if (layout === "carousel") {
+    // One big photo at a time, the next one peeking so it's obvious there
+    // are more; tapping still opens the large viewer when `zoom` is on.
+    return (
+      <>
+        <div className="landing-gallery-carousel">
+          <ScrollCarousel>
+            {items.map((item, i) => (
+              <div key={item.url + i} className="landing-gallery-slide">
+                {zoom ? (
+                  <button type="button" className="landing-gallery-tile" onClick={() => setOpen(i)} aria-label={`Ver foto ${i + 1} en grande`}>
+                    {/* eslint-disable-next-line @next/next/no-img-element -- admin-uploaded gallery photo, arbitrary Blob URL */}
+                    <img
+                      src={optimizedSrc(item.url, 640)}
+                      srcSet={optimizedSrcSet(item.url, [384, 640, 828])}
+                      sizes={SLIDE_SIZES}
+                      alt=""
+                      loading={i < 2 ? "eager" : "lazy"}
+                      decoding="async"
+                      className="landing-block-gallery-img"
+                    />
+                  </button>
+                ) : (
+                  // eslint-disable-next-line @next/next/no-img-element -- admin-uploaded gallery photo, arbitrary Blob URL
+                  <img
+                    src={optimizedSrc(item.url, 640)}
+                    srcSet={optimizedSrcSet(item.url, [384, 640, 828])}
+                    sizes={SLIDE_SIZES}
+                    alt=""
+                    loading={i < 2 ? "eager" : "lazy"}
+                    decoding="async"
+                    className="landing-block-gallery-img"
+                  />
+                )}
+              </div>
+            ))}
+          </ScrollCarousel>
+        </div>
+        {open !== null && <Lightbox items={items} index={open} onIndex={setOpen} onClose={() => setOpen(null)} />}
+      </>
+    );
+  }
 
   return (
     <>
