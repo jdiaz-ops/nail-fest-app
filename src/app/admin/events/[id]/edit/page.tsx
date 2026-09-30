@@ -9,6 +9,8 @@ import { listTicketTypes } from "@/lib/ticketTypes";
 import { requirePageUser } from "@/lib/auth/guard";
 import EventForm from "../../EventForm";
 import TicketTypesSection from "../../TicketTypesSection";
+import DuplicateEventButton from "../../DuplicateEventButton";
+import DeleteEventButton from "../../DeleteEventButton";
 
 export const dynamic = "force-dynamic";
 
@@ -60,29 +62,34 @@ export default async function EditEventPage({ params }: { params: { id: string }
         }}
         timezone={orgSettings.timezone}
         baseUrl={baseUrl}
+        ticketsSlot={
+          <TicketTypesSection
+            eventId={event.id}
+            initialTicketTypes={ticketTypes.map((t) => ({
+              id: t.id,
+              name: t.name,
+              quantity: t.quantity,
+              price: t.price,
+              bookingFee: t.bookingFee,
+              description: t.description ?? "",
+              status: t.status,
+              minPerOrder: t.minPerOrder,
+              maxPerOrder: t.maxPerOrder,
+              issuance: t.issuance,
+              hideUntil: t.hideUntil ? t.hideUntil.toISOString() : null,
+              hideAfter: t.hideAfter ? t.hideAfter.toISOString() : null,
+              hideWhenSoldOut: t.hideWhenSoldOut,
+              showRemainingOnPage: t.showRemainingOnPage,
+            }))}
+          />
+        }
+        publicationActions={
+          <>
+            <DuplicateEventButton eventId={event.id} />
+            <DeleteEventButton eventId={event.id} />
+          </>
+        }
       />
-
-      <div style={{ marginTop: 32, maxWidth: 900 }}>
-        <TicketTypesSection
-          eventId={event.id}
-          initialTicketTypes={ticketTypes.map((t) => ({
-            id: t.id,
-            name: t.name,
-            quantity: t.quantity,
-            price: t.price,
-            bookingFee: t.bookingFee,
-            description: t.description ?? "",
-            status: t.status,
-            minPerOrder: t.minPerOrder,
-            maxPerOrder: t.maxPerOrder,
-            issuance: t.issuance,
-            hideUntil: t.hideUntil ? t.hideUntil.toISOString() : null,
-            hideAfter: t.hideAfter ? t.hideAfter.toISOString() : null,
-            hideWhenSoldOut: t.hideWhenSoldOut,
-            showRemainingOnPage: t.showRemainingOnPage,
-          }))}
-        />
-      </div>
     </div>
   );
 }

@@ -34,7 +34,7 @@ export default async function NewEventPage() {
           venueAddress: "",
           description: "",
           landingBlocks: [],
-          useLandingBlocks: false,
+          useLandingBlocks: true,
           imageUrl: null,
           galleryImageUrls: [],
           galleryTitle: "",

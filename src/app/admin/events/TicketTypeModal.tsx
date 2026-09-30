@@ -10,12 +10,12 @@ type Issuance = "INDIVIDUAL" | "GROUP";
 // previous ticketing platform's own admin UI text verbatim, field for field, per the actual
 // screenshots this was built from.
 const STATUS_LABELS: Record<Status, string> = {
-  ON_SALE: "On sale",
-  HIDDEN: "Hidden",
-  ACCESS_CODE_REQUIRED: "Access code required",
-  SOLD_OUT: "Display as Sold Out",
-  UNAVAILABLE: "Display as Unavailable",
-  ADMIN_ONLY: "Only visible to admin",
+  ON_SALE: "A la venta",
+  HIDDEN: "Oculta",
+  ACCESS_CODE_REQUIRED: "Requiere código de acceso",
+  SOLD_OUT: "Mostrar como agotada",
+  UNAVAILABLE: "Mostrar como no disponible",
+  ADMIN_ONLY: "Solo visible para admin",
 };
 
 const PER_ORDER_OPTIONS = Array.from({ length: 20 }, (_, i) => i + 1);
@@ -95,13 +95,13 @@ export default function TicketTypeModal({
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <div className="field">
         <label>
-          Ticket name <span style={{ color: "#c2185b" }}>*</span>
+          Nombre de la entrada <span style={{ color: "#c2185b" }}>*</span>
         </label>
         <input value={values.name} onChange={(e) => set("name", e.target.value)} placeholder="General Admission" required />
       </div>
 
       <div>
-        <div style={{ fontWeight: 600, marginBottom: 8 }}>Ticket quantity</div>
+        <div style={{ fontWeight: 600, marginBottom: 8 }}>Cantidad de entradas</div>
         <div style={{ display: "flex", gap: 16, alignItems: "flex-end" }}>
           <div className="field" style={{ flex: 1, marginBottom: 0 }}>
             <label>
@@ -121,14 +121,14 @@ export default function TicketTypeModal({
               fontSize: 14,
             }}
           >
-            <span>Total quantity</span>
+            <span>Cantidad total</span>
             <span style={{ fontWeight: 700 }}>{totalQuantity}</span>
           </div>
         </div>
       </div>
 
       <div>
-        <div style={{ fontWeight: 600, marginBottom: 8 }}>Ticket price</div>
+        <div style={{ fontWeight: 600, marginBottom: 8 }}>Precio</div>
         <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
           <div className="field" style={{ flex: 1, marginBottom: 0 }}>
             <div style={{ display: "flex" }}>
@@ -155,16 +155,16 @@ export default function TicketTypeModal({
             </div>
             <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, marginTop: 8 }}>
               <input type="checkbox" checked={values.hasBookingFee} onChange={(e) => set("hasBookingFee", e.target.checked)} />
-              Add booking fee
+              Agregar cargo por servicio
             </label>
             {values.hasBookingFee && (
               <div style={{ marginTop: 8 }}>
-                <input type="number" min={0} value={values.bookingFee} onChange={(e) => set("bookingFee", e.target.value)} placeholder="Booking fee" />
+                <input type="number" min={0} value={values.bookingFee} onChange={(e) => set("bookingFee", e.target.value)} placeholder="Cargo por servicio" />
               </div>
             )}
           </div>
           <div style={{ flex: 1, background: "#f6f5f2", borderRadius: 8, padding: "10px 12px", fontSize: 14 }}>
-            <div>Buyer will pay</div>
+            <div>El comprador paga</div>
             <div style={{ fontWeight: 700, fontSize: 18 }}>${buyerPays.toLocaleString("es-CO")}</div>
           </div>
         </div>
@@ -175,14 +175,14 @@ export default function TicketTypeModal({
         onClick={() => setShowAdvanced((s) => !s)}
         style={{ alignSelf: "flex-start", background: "none", border: "none", color: "#5b5f6b", fontSize: 13, cursor: "pointer", padding: 0 }}
       >
-        {showAdvanced ? "▲ Hide advanced settings" : "▼ Show advanced settings"}
+        {showAdvanced ? "▲ Ocultar opciones avanzadas" : "▼ Mostrar opciones avanzadas"}
       </button>
 
       {showAdvanced && (
         <>
           <div className="field">
-            <label>Description</label>
-            <input value={values.description} onChange={(e) => set("description", e.target.value)} placeholder="Enter any specific information for this ticket." />
+            <label>Descripción</label>
+            <input value={values.description} onChange={(e) => set("description", e.target.value)} placeholder="Información específica de esta entrada (opcional)" />
           </div>
 
           <div className="field">
@@ -201,7 +201,7 @@ export default function TicketTypeModal({
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
             <div className="field">
               <label>
-                Min per order <span style={{ color: "#c2185b" }}>*</span>
+                Mínimo por pedido <span style={{ color: "#c2185b" }}>*</span>
               </label>
               <select value={values.minPerOrder} onChange={(e) => set("minPerOrder", Number(e.target.value))}>
                 {PER_ORDER_OPTIONS.map((n) => (
@@ -213,7 +213,7 @@ export default function TicketTypeModal({
             </div>
             <div className="field">
               <label>
-                Max per order <span style={{ color: "#c2185b" }}>*</span>
+                Máximo por pedido <span style={{ color: "#c2185b" }}>*</span>
               </label>
               <select value={values.maxPerOrder} onChange={(e) => set("maxPerOrder", Number(e.target.value))}>
                 {PER_ORDER_OPTIONS.map((n) => (
@@ -227,17 +227,17 @@ export default function TicketTypeModal({
 
           <div className="field">
             <label>
-              How would you like to issue tickets for this ticket type? <span style={{ color: "#c2185b" }}>*</span>
+              ¿Cómo se emiten las entradas de este tipo? <span style={{ color: "#c2185b" }}>*</span>
             </label>
             <select value={values.issuance} onChange={(e) => set("issuance", e.target.value as Issuance)}>
-              <option value="INDIVIDUAL">Issue individual ticket QR codes for each ticket (e.g 5 tickets of this type = 5 barcodes)</option>
-              <option value="GROUP">Issue a &quot;group ticket&quot; QR code for all tickets of this type (e.g 5 tickets of this type = 1 barcode)</option>
+              <option value="INDIVIDUAL">Un QR por cada entrada (ej. 5 entradas = 5 códigos QR)</option>
+              <option value="GROUP">Un solo QR de grupo para todas (ej. 5 entradas = 1 código QR)</option>
             </select>
           </div>
 
           <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
             <input type="checkbox" checked={values.hasHideUntil} onChange={(e) => set("hasHideUntil", e.target.checked)} />
-            Hide until a set date and time
+            Ocultar hasta una fecha y hora
           </label>
           {values.hasHideUntil && (
             <input type="datetime-local" value={values.hideUntil} onChange={(e) => set("hideUntil", e.target.value)} />
@@ -245,7 +245,7 @@ export default function TicketTypeModal({
 
           <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
             <input type="checkbox" checked={values.hasHideAfter} onChange={(e) => set("hasHideAfter", e.target.checked)} />
-            Hide after a set date and time
+            Ocultar después de una fecha y hora
           </label>
           {values.hasHideAfter && (
             <input type="datetime-local" value={values.hideAfter} onChange={(e) => set("hideAfter", e.target.value)} />
@@ -253,11 +253,11 @@ export default function TicketTypeModal({
 
           <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
             <input type="checkbox" checked={values.hideWhenSoldOut} onChange={(e) => set("hideWhenSoldOut", e.target.checked)} />
-            Hide when sold out
+            Ocultar cuando se agote
           </label>
           <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
             <input type="checkbox" checked={values.showRemainingOnPage} onChange={(e) => set("showRemainingOnPage", e.target.checked)} />
-            Show quantity remaining on event page
+            Mostrar cuántas quedan en la página del evento
           </label>
           {/* "Exclude from lowest price ticket calculation" removed — there
               was never a "lowest price" display anywhere in the app for it
@@ -269,7 +269,7 @@ export default function TicketTypeModal({
 
       <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
         <button type="button" onClick={onCancel} style={{ padding: "8px 20px", borderRadius: 999, border: "1px solid #e3e1dc", background: "#fff", fontSize: 13, cursor: "pointer" }}>
-          Cancel
+          Cancelar
         </button>
         <button
           type="button"
@@ -277,7 +277,7 @@ export default function TicketTypeModal({
           onClick={() => onSave(values)}
           style={{ padding: "8px 20px", borderRadius: 999, border: "none", background: "#12966b", color: "#fff", fontSize: 13, cursor: "pointer" }}
         >
-          {isEdit ? "Save ticket type" : "Add ticket type"}
+          {isEdit ? "Guardar entrada" : "Agregar entrada"}
         </button>
       </div>
     </div>

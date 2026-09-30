@@ -22,12 +22,12 @@ export interface TicketTypeRow {
 }
 
 const STATUS_BADGE: Record<string, { label: string; bg: string; fg: string }> = {
-  ON_SALE: { label: "On sale", bg: "#e8f6ef", fg: "#0e6b4c" },
-  HIDDEN: { label: "Hidden", bg: "#f6f5f2", fg: "#5b5f6b" },
-  ACCESS_CODE_REQUIRED: { label: "Access code required", bg: "#fdf1e6", fg: "#8a5a1f" },
-  SOLD_OUT: { label: "Sold Out", bg: "#fbe9ea", fg: "#a3212b" },
-  UNAVAILABLE: { label: "Unavailable", bg: "#fbe9ea", fg: "#a3212b" },
-  ADMIN_ONLY: { label: "Only visible to admin", bg: "#f6f5f2", fg: "#5b5f6b" },
+  ON_SALE: { label: "A la venta", bg: "#e8f6ef", fg: "#0e6b4c" },
+  HIDDEN: { label: "Oculta", bg: "#f6f5f2", fg: "#5b5f6b" },
+  ACCESS_CODE_REQUIRED: { label: "Requiere código", bg: "#fdf1e6", fg: "#8a5a1f" },
+  SOLD_OUT: { label: "Agotada", bg: "#fbe9ea", fg: "#a3212b" },
+  UNAVAILABLE: { label: "No disponible", bg: "#fbe9ea", fg: "#a3212b" },
+  ADMIN_ONLY: { label: "Solo visible para admin", bg: "#f6f5f2", fg: "#5b5f6b" },
 };
 
 function toModalValues(t?: TicketTypeRow): TicketTypeValues {
@@ -97,7 +97,7 @@ export default function TicketTypesSection({ eventId, initialTicketTypes }: { ev
       setAdding(false);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error && err.message === "min_greater_than_max" ? "Min per order no puede ser mayor que Max per order." : "No se pudo crear el tipo de boleta.");
+      setError(err instanceof Error && err.message === "min_greater_than_max" ? "El mínimo por pedido no puede ser mayor que el máximo." : "No se pudo crear el tipo de entrada.");
     } finally {
       setBusy(false);
     }
@@ -112,21 +112,21 @@ export default function TicketTypesSection({ eventId, initialTicketTypes }: { ev
       setEditingId(null);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error && err.message === "min_greater_than_max" ? "Min per order no puede ser mayor que Max per order." : "No se pudo guardar el tipo de boleta.");
+      setError(err instanceof Error && err.message === "min_greater_than_max" ? "El mínimo por pedido no puede ser mayor que el máximo." : "No se pudo guardar el tipo de entrada.");
     } finally {
       setBusy(false);
     }
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("¿Borrar este tipo de boleta?")) return;
+    if (!confirm("¿Borrar este tipo de entrada?")) return;
     setBusy(true);
     setError(null);
     try {
       await api(`/api/admin/events/${eventId}/ticket-types/${id}`, { method: "DELETE" });
       router.refresh();
     } catch {
-      setError("No se pudo borrar el tipo de boleta.");
+      setError("No se pudo borrar el tipo de entrada.");
     } finally {
       setBusy(false);
     }
@@ -138,27 +138,26 @@ export default function TicketTypesSection({ eventId, initialTicketTypes }: { ev
   return (
     <div style={{ background: "#fff", border: "1px solid #e3e1dc", borderRadius: 12, padding: 24 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-        <div style={{ fontWeight: 600 }}>Tickets and items</div>
+        <div style={{ fontWeight: 600 }}>Tipos de entrada</div>
         <button
           type="button"
           onClick={() => setAdding(true)}
           style={{ padding: "8px 16px", borderRadius: 999, border: "none", background: "#1c1310", color: "#fff", fontSize: 13, cursor: "pointer" }}
         >
-          Add ticket type
+          + Nuevo tipo de entrada
         </button>
       </div>
       <p style={{ fontSize: 12, color: "#5b5f6b", marginTop: 0, marginBottom: 16 }}>
-        Todos los eventos de Nail Fest son gratuitos hoy — el precio siempre queda en $0, pero el
-        tipo de boleta en sí es real (cantidad, estado, límites por orden, etc.), listo para el día
-        que se conecte un método de pago.
+        Los tipos de entrada que se pueden pedir en el formulario de inscripción. Cada cambio aquí se guarda al
+        confirmarlo en su ventana — no hace falta el botón &quot;Guardar cambios&quot; de arriba.
       </p>
 
       {error && <p style={{ color: "#c2185b", fontSize: 13 }}>{error}</p>}
 
       {initialTicketTypes.length === 0 && (
         <div style={{ border: "1px dashed #e3e1dc", borderRadius: 8, padding: 24, textAlign: "center", color: "#5b5f6b", fontSize: 14 }}>
-          Add a ticket type
-          <div style={{ fontSize: 12, marginTop: 4 }}>You must create at least one ticket type</div>
+          Todavía no hay tipos de entrada
+          <div style={{ fontSize: 12, marginTop: 4 }}>Crea al menos uno para que la gente pueda inscribirse</div>
         </div>
       )}
 
@@ -196,7 +195,7 @@ export default function TicketTypesSection({ eventId, initialTicketTypes }: { ev
       })}
 
       {adding && (
-        <Modal title="Add a new ticket type" onClose={() => setAdding(false)}>
+        <Modal title="Nuevo tipo de entrada" onClose={() => setAdding(false)}>
           <TicketTypeModal
             initial={EMPTY_TICKET_TYPE}
             otherTypesQuantity={otherTypesQuantity()}
@@ -208,7 +207,7 @@ export default function TicketTypesSection({ eventId, initialTicketTypes }: { ev
       )}
 
       {editing && (
-        <Modal title="Edit ticket type" onClose={() => setEditingId(null)}>
+        <Modal title="Editar tipo de entrada" onClose={() => setEditingId(null)}>
           <TicketTypeModal
             initial={toModalValues(editing)}
             otherTypesQuantity={otherTypesQuantity(editing.id)}
