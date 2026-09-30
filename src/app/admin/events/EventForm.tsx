@@ -18,7 +18,11 @@ type EventFormat = "IN_PERSON" | "VIRTUAL" | "HYBRID";
 
 export interface EventFormValues {
   id?: string;
+  // Internal label — admin lists, reports, filters. See publicName.
   name: string;
+  // What people see (page, emails, ticket, WhatsApp); empty = `name`.
+  // See Event.publicName's own schema comment.
+  publicName: string;
   // Optional one-line tagline shown on the public page between the
   // event's name (h1) and its venue/address line — see [eventSlug]/page.tsx.
   subtitle: string;
@@ -68,6 +72,7 @@ export interface EventFormValues {
 export interface DuplicateSource {
   id: string;
   name: string;
+  publicName: string;
   subtitle: string;
   city: string;
   format: EventFormat;
@@ -209,6 +214,7 @@ export default function EventForm({
     setValues((v) => ({
       ...v,
       name: `${source.name} (copia)`,
+      publicName: source.publicName,
       subtitle: source.subtitle,
       city: source.city,
       format: source.format,
@@ -334,7 +340,7 @@ export default function EventForm({
 
     // The form spans tabs, so the browser's own "required" bubbles can't
     // point at a field that's on a hidden tab — check here and jump there.
-    const missing = !values.name.trim() ? "el nombre" : !values.city.trim() ? "la ciudad" : !values.startsAtLocal ? "la fecha de inicio" : null;
+    const missing = !values.name.trim() ? "el nombre interno" : !values.city.trim() ? "la ciudad" : !values.startsAtLocal ? "la fecha de inicio" : null;
     if (missing) {
       goToTab("informacion");
       setError(`Falta ${missing} (pestaña Información).`);
@@ -375,6 +381,7 @@ export default function EventForm({
 
     const body = {
       name: values.name.trim(),
+      publicName: values.publicName.trim(),
       subtitle: values.subtitle.trim(),
       city: values.city.trim(),
       format: values.format,
@@ -670,10 +677,22 @@ export default function EventForm({
 
               <Section title="El evento">
                 <div className="field" style={{ marginBottom: 0 }}>
-                  <label>Nombre del evento</label>
-                  <input value={values.name} onChange={(e) => set("name", e.target.value)} placeholder="Nail Fest Cali" required />
+                  <label>Nombre interno</label>
+                  <input value={values.name} onChange={(e) => set("name", e.target.value)} placeholder="Cali 2026 — feria septiembre" required />
                   <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>
-                    Sin la fecha — la página pública la muestra aparte, en grande.
+                    Solo para ti dentro de la app — listas, reportes, filtros, difusiones. La gente no lo ve.
+                  </p>
+                </div>
+                <div className="field" style={{ marginBottom: 0 }}>
+                  <label>Nombre público</label>
+                  <input
+                    value={values.publicName}
+                    onChange={(e) => set("publicName", e.target.value)}
+                    placeholder={values.name.trim() || "Nail Fest Cali"}
+                  />
+                  <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>
+                    El que ve la gente — página del evento, correo de confirmación, entrada (PDF) y WhatsApp. Sin la fecha:
+                    la página la muestra aparte, en grande. Vacío = se usa el nombre interno.
                   </p>
                 </div>
                 <div className="field" style={{ marginBottom: 0 }}>

@@ -5,6 +5,7 @@ import { dynamicUrlButtonIndex, getEnabledAutomation } from "./automations";
 import { resolveMergeTag } from "./mergeTags";
 import { whatsappProvider } from "./index";
 import { recordOutboundMessage } from "./inbox";
+import { publicEventName } from "@/lib/eventDisplayName";
 
 /** Fires the REGISTRATION_CONFIRMED automation (see lib/whatsapp/
  * automations.ts and the "Automatizaciones" tab, /admin/crm/whatsapp/
@@ -42,7 +43,7 @@ import { recordOutboundMessage } from "./inbox";
  */
 export async function sendTicketLinkViaWhatsApp(params: {
   person: Person;
-  event: Pick<Event, "name" | "startsAt" | "endsAt" | "venueName" | "venueAddress" | "format" | "scheduleDays">;
+  event: Pick<Event, "name" | "publicName" | "startsAt" | "endsAt" | "venueName" | "venueAddress" | "format" | "scheduleDays">;
   qrToken: string;
 }): Promise<boolean> {
   const { person, event, qrToken } = params;
@@ -64,7 +65,7 @@ export async function sendTicketLinkViaWhatsApp(params: {
     const ctx = { person, event, timezone: orgSettings.timezone, language: orgSettings.language };
     variables = Array.from({ length: template.variableCount }, (_, i) => resolveMergeTag(mapping[String(i + 1)] ?? "", ctx));
   } else {
-    variables = [person.firstName ?? "", event.name].slice(0, template.variableCount);
+    variables = [person.firstName ?? "", publicEventName(event)].slice(0, template.variableCount);
   }
   const link = `${process.env.APP_BASE_URL || ""}/api/ticket-pdf/${qrToken}`;
   // Only when the CHOSEN template actually has one — Meta rejects a send

@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { registerParticipant } from "@/lib/zoom";
 import { whatsappProvider } from "./index";
 import { recordOutboundMessage } from "./inbox";
+import { publicEventName } from "@/lib/eventDisplayName";
 
 /** On-demand "send me my Zoom link" — the WhatsApp-native equivalent of
  * "Reenviar PDF por WhatsApp" (sendTicketPdfViaWhatsApp), for when
@@ -46,7 +47,7 @@ export async function sendZoomLinkViaWhatsApp(
   }
   if (!joinUrl) return { ok: false, error: "zoom_link_not_available" };
 
-  const text = `Aquí tienes tu link personal para unirte a "${registration.event.name}" por Zoom:\n${joinUrl}\n\nEs personal — no lo compartas.`;
+  const text = `Aquí tienes tu link personal para unirte a "${publicEventName(registration.event)}" por Zoom:\n${joinUrl}\n\nEs personal — no lo compartas.`;
 
   try {
     const result = await whatsappProvider.sendFreeform({ to: phone, text });

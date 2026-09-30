@@ -24,6 +24,7 @@ export default async function NewEventPage() {
         title="Nuevo evento"
         initial={{
           name: "",
+          publicName: "",
           subtitle: "",
           city: "",
           format: "IN_PERSON",
@@ -53,6 +54,7 @@ export default async function NewEventPage() {
         duplicateFrom={events.map((ev) => ({
           id: ev.id,
           name: ev.name,
+          publicName: ev.publicName ?? "",
           subtitle: ev.subtitle ?? "",
           city: ev.city,
           format: ev.format,

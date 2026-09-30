@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { getOrgSettings } from "@/lib/settings";
 import { formatEventScheduleLines } from "@/lib/eventSchedule";
 import { confirmationCodeFor, renderQrPngBuffer, ticketHolderName, ticketsFor, verifyQrToken } from "@/lib/ticket";
+import { publicEventName } from "@/lib/eventDisplayName";
 
 // One self-contained, printable ticket — same fields and the same teal
 // accent as the inline "Tu entrada" voucher block in the email
@@ -175,7 +176,7 @@ export async function buildTicketPdfDataForRegistration(registrationId: string):
   return {
     firstName: registration.person.firstName ?? "",
     lastName: registration.person.lastName ?? undefined,
-    eventName: registration.event.name,
+    eventName: publicEventName(registration.event),
     venueName: registration.event.venueName ?? undefined,
     venueAddress: registration.event.venueAddress ?? undefined,
     startsAt: registration.event.startsAt,

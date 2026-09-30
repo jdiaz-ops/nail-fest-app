@@ -9,6 +9,7 @@ import { formatEventScheduleLines } from "@/lib/eventSchedule";
 import MetaPixelScript from "@/components/MetaPixelScript";
 import LandingBlocksContent from "@/components/landingBlocks/LandingBlocksContent";
 import { parseLandingBlocks } from "@/lib/landingBlocks/types";
+import { publicEventName } from "@/lib/eventDisplayName";
 
 export const dynamic = "force-dynamic";
 
@@ -32,9 +33,9 @@ export async function generateMetadata({ params }: { params: { eventSlug: string
   if (!found) return {};
   const { event, page } = found;
   return {
-    title: `${page.title} · ${event.name}`,
+    title: `${page.title} · ${publicEventName(event)}`,
     description: page.intro || undefined,
-    openGraph: { title: `${page.title} · ${event.name}`, description: page.intro || undefined, images: event.imageUrl ? [event.imageUrl] : undefined },
+    openGraph: { title: `${page.title} · ${publicEventName(event)}`, description: page.intro || undefined, images: event.imageUrl ? [event.imageUrl] : undefined },
   };
 }
 

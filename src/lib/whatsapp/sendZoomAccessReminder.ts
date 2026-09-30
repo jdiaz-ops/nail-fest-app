@@ -33,7 +33,7 @@ import { recordOutboundMessage } from "./inbox";
  * silently swallowed. */
 export async function sendZoomAccessReminder(params: {
   person: Person;
-  event: Pick<Event, "name" | "startsAt" | "endsAt" | "venueName" | "venueAddress" | "format" | "scheduleDays">;
+  event: Pick<Event, "name" | "publicName" | "startsAt" | "endsAt" | "venueName" | "venueAddress" | "format" | "scheduleDays">;
   zoomJoinUrl: string;
   /** This registration's own signed ticket token — reused (not a new
    * token type) as the credential /api/zoom-join/[token] verifies, only

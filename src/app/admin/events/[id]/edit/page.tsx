@@ -33,6 +33,7 @@ export default async function EditEventPage({ params }: { params: { id: string }
         initial={{
           id: event.id,
           name: event.name,
+          publicName: event.publicName ?? "",
           subtitle: event.subtitle ?? "",
           city: event.city,
           format: event.format,

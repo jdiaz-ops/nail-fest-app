@@ -4,6 +4,7 @@ import { emailProvider } from "@/lib/email";
 import { abandonedCartEmail } from "@/lib/email/templates";
 import { getOrgSettings } from "@/lib/settings";
 import { abandonedCartCallbackUrl, verifyQstashSignature } from "@/lib/qstash";
+import { publicEventName } from "@/lib/eventDisplayName";
 
 // QStash's callback for one abandoned-cart reminder (see
 // lib/abandonedCart.ts / lib/qstash.ts's scheduleAbandonedCartEmail) —
@@ -62,7 +63,7 @@ export async function POST(req: NextRequest) {
   const { subject, text, html } = abandonedCartEmail({
     step,
     firstName: registration.person.firstName ?? "",
-    eventName: registration.event.name,
+    eventName: publicEventName(registration.event),
     eventCity: registration.event.city,
     eventUrl: `${process.env.APP_BASE_URL || ""}/${registration.event.slug}`,
     ticketTypeName: registration.ticketType?.name,

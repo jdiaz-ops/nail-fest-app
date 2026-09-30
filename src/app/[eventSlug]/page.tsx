@@ -21,6 +21,7 @@ import SalesPageContent from "@/components/salesPage/SalesPageContent";
 import { parseSalesPageContent } from "@/lib/salesPage/types";
 import LandingBlocksContent from "@/components/landingBlocks/LandingBlocksContent";
 import { parseLandingBlocks } from "@/lib/landingBlocks/types";
+import { publicEventName } from "@/lib/eventDisplayName";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +42,7 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
   if (event.status === "DRAFT") {
     return (
       <main style={{ maxWidth: 480, margin: "0 auto", padding: "40px 20px", textAlign: "center" }}>
-        <h1>{event.name}</h1>
+        <h1>{publicEventName(event)}</h1>
         <p style={{ color: "#5b5f6b" }}>Este evento todavía no está publicado.</p>
       </main>
     );
@@ -158,7 +159,7 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
         // ClickableHero (not a plain div) — Clarity showed real taps
         // landing here expecting the registration modal to open, same
         // instinct as tapping a poster. See that component's own comment.
-        <ClickableHero imageUrl={event.imageUrl} width={imageDimensions.width} height={imageDimensions.height} alt={event.name} />
+        <ClickableHero imageUrl={event.imageUrl} width={imageDimensions.width} height={imageDimensions.height} alt={publicEventName(event)} />
       )}
 
       {salesPage ? (
@@ -170,7 +171,7 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
         <SalesPageHero hero={salesPage.hero} />
       ) : (
         <>
-          <FitTitle text={event.name} className={`event-hero-title ${fraunces.className}`} />
+          <FitTitle text={publicEventName(event)} className={`event-hero-title ${fraunces.className}`} />
           <p className="event-hero-date">
             <span className={`event-hero-date-days ${fraunces.className}`}>{heroDate.days}</span>
             <span className="event-hero-date-rest">
@@ -223,7 +224,7 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
       <Suspense>
         <EventRegistration
           eventSlug={event.slug}
-          eventName={event.name}
+          eventName={publicEventName(event)}
           eventCity={event.city}
           eventWhen={eventWhen}
           eventVenue={eventVenue}

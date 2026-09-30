@@ -2,6 +2,7 @@ import Link from "next/link";
 import { optimizedSrc, optimizedSrcSet } from "@/lib/optimizedImage";
 import { getOrgSettings } from "@/lib/settings";
 import { getNextEvent } from "@/lib/nextEvent";
+import { publicEventName } from "@/lib/eventDisplayName";
 
 export const dynamic = "force-dynamic";
 
@@ -131,7 +132,7 @@ export default async function HomePage() {
                 textShadow: hasMedia ? "0 2px 16px rgba(0,0,0,0.35)" : "none",
               }}
             >
-              {nextEvent.name}
+              {publicEventName(nextEvent)}
             </h1>
             {eventPlace && (
               <p style={{ fontSize: 16, margin: "0 0 20px", fontWeight: 600, textShadow: hasMedia ? "0 1px 8px rgba(0,0,0,0.35)" : "none" }}>

@@ -11,6 +11,7 @@ const scheduleDaySchema = z.object({
 
 const bodySchema = z.object({
   name: z.string().min(1),
+  publicName: z.string().default(""),
   subtitle: z.string().default(""),
   city: z.string().min(1),
   venueName: z.string().default(""),
@@ -66,6 +67,7 @@ export async function POST(req: NextRequest) {
 
   const event = await createEvent({
     name: data.name,
+    publicName: data.publicName,
     subtitle: data.subtitle,
     city: data.city,
     venueName: data.venueName,

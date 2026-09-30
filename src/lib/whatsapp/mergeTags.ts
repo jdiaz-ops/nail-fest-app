@@ -1,6 +1,7 @@
 import type { Event, Person } from "@prisma/client";
 import { formatDateInTz } from "@/lib/dateFormat";
 import { formatEventScheduleLines } from "@/lib/eventSchedule";
+import { publicEventName } from "@/lib/eventDisplayName";
 
 // The fixed set of merge tags a WhatsApp broadcast's (or automation's —
 // see WhatsAppAutomation.variableMapping) variableMapping can reference —
@@ -28,7 +29,7 @@ export const WHATSAPP_MERGE_TAGS: { key: string; label: string }[] = [
 
 export interface MergeTagContext {
   person: Pick<Person, "firstName" | "lastName" | "city">;
-  event?: Pick<Event, "name" | "startsAt" | "endsAt" | "venueName" | "venueAddress" | "format" | "scheduleDays"> | null;
+  event?: Pick<Event, "name" | "publicName" | "startsAt" | "endsAt" | "venueName" | "venueAddress" | "format" | "scheduleDays"> | null;
   timezone: string;
   language: string;
   /** This registrant's own personal Zoom join link — see
@@ -55,7 +56,7 @@ export function resolveMergeTag(key: string, ctx: MergeTagContext): string {
     case "CIUDAD":
       return ctx.person.city ?? "";
     case "EVENTO_NOMBRE":
-      return ctx.event?.name ?? "";
+      return ctx.event ? publicEventName(ctx.event) : "";
     case "EVENTO_FECHA_INICIO":
       return ctx.event
         ? formatDateInTz(ctx.event.startsAt, { day: "numeric", month: "long" }, ctx.timezone, ctx.language)

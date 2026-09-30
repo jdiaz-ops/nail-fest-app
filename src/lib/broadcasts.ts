@@ -10,6 +10,7 @@ import { confirmationCodeFor } from "@/lib/ticket";
 import { getOrgSettings } from "@/lib/settings";
 import { publishChunkContinuation } from "@/lib/qstash";
 import { tagOwnLinksInHtml, tagOwnLinksInText, slugifyForCampaign } from "@/lib/outboundLinkTagging";
+import { publicEventName } from "@/lib/eventDisplayName";
 
 const CONCURRENCY = 10;
 // How many recipients one chunk sends before either finishing or handing
@@ -149,7 +150,7 @@ export async function sendEventBroadcast(
               ? await renderTicketPdfBuffer({
                   firstName: person.firstName ?? "",
                   lastName: person.lastName ?? undefined,
-                  eventName: broadcast.event!.name,
+                  eventName: publicEventName(broadcast.event!),
                   venueName: broadcast.event!.venueName ?? undefined,
                   venueAddress: broadcast.event!.venueAddress ?? undefined,
                   startsAt: broadcast.event!.startsAt,

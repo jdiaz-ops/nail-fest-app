@@ -4,6 +4,7 @@ import { getOrgSettings } from "@/lib/settings";
 import { fetchTransaction } from "@/lib/payments/wompi";
 import { confirmRegistrationPayment, type ConfirmResult } from "@/lib/payments/confirmRegistrationPayment";
 import { INSTAGRAM_HANDLE, INSTAGRAM_URL } from "@/lib/brand";
+import { publicEventName } from "@/lib/eventDisplayName";
 
 export const dynamic = "force-dynamic";
 
@@ -47,7 +48,7 @@ export default async function PaymentReturnPage({
   }
 
   const brandName = orgSettings.name;
-  const eventName = event?.name ?? "tu evento";
+  const eventName = event ? publicEventName(event) : "tu evento";
   const isVirtualOnly = event?.format === "VIRTUAL";
 
   const COPY: Record<ConfirmResult | "unknown", { title: string; body: string; tone: "ok" | "warn" | "bad" }> = {

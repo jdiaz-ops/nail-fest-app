@@ -13,6 +13,7 @@ import { recordOutboundMessage } from "./inbox";
 import { addNote } from "./notes";
 import { sendTicketPdfViaWhatsApp, listResendableRegistrations } from "./sendTicketPdf";
 import { sendZoomLinkViaWhatsApp, listZoomResendableRegistrations } from "./sendZoomLink";
+import { publicEventName } from "@/lib/eventDisplayName";
 
 const WINDOW_MS = 24 * 60 * 60 * 1000;
 const MODEL = "claude-sonnet-5";
@@ -77,7 +78,7 @@ async function buildEventContext(personId: string | null): Promise<string> {
       ? ev.ticketTypes.map((t) => `  - ${t.name}: ${t.price === 0 ? "GRATIS" : `$${t.price}`}`).join("\n")
       : "  - Entrada general: GRATIS";
     return [
-      `Evento: ${ev.name}${ownEventIds.has(ev.id) ? " (esta persona YA está inscrita a este evento)" : ""}`,
+      `Evento: ${publicEventName(ev)}${ownEventIds.has(ev.id) ? " (esta persona YA está inscrita a este evento)" : ""}`,
       `Ciudad: ${ev.city}`,
       `Cuándo: ${when}`,
       ev.venueName ? `Lugar: ${ev.venueName}` : null,
@@ -179,12 +180,12 @@ export async function respondWithAi(conversationId: string): Promise<void> {
       }
       if (!input.eventId && registrations.length > 1) {
         return `Esta persona tiene ${registrations.length} inscripciones: ${registrations
-          .map((r) => `"${r.event.name}" (eventId: ${r.eventId})`)
+          .map((r) => `"${publicEventName(r.event)}" (eventId: ${r.eventId})`)
           .join(", ")}. Pregúntale cuál quiere antes de reenviar, y vuelve a llamar este tool con el eventId correcto.`;
       }
       const result = await sendTicketPdfViaWhatsApp(target.id, conversation.phone);
       return result.ok
-        ? `Listo — se envió el PDF de la entrada para "${target.event.name}" por este mismo WhatsApp.`
+        ? `Listo — se envió el PDF de la entrada para "${publicEventName(target.event)}" por este mismo WhatsApp.`
         : `No se pudo enviar el PDF (${result.error}). Dile a la persona que un asesor se lo va a mandar en un momento, y considera usar escalate_to_human.`;
     },
   });
@@ -213,12 +214,12 @@ export async function respondWithAi(conversationId: string): Promise<void> {
       }
       if (!input.eventId && registrations.length > 1) {
         return `Esta persona tiene ${registrations.length} inscripciones a eventos virtuales: ${registrations
-          .map((r) => `"${r.event.name}" (eventId: ${r.eventId})`)
+          .map((r) => `"${publicEventName(r.event)}" (eventId: ${r.eventId})`)
           .join(", ")}. Pregúntale cuál quiere antes de enviar, y vuelve a llamar este tool con el eventId correcto.`;
       }
       const result = await sendZoomLinkViaWhatsApp(target.id, conversation.phone);
       return result.ok
-        ? `Listo — se envió el link de Zoom para "${target.event.name}" por este mismo WhatsApp.`
+        ? `Listo — se envió el link de Zoom para "${publicEventName(target.event)}" por este mismo WhatsApp.`
         : `No se pudo enviar el link (${result.error}). Dile a la persona que un asesor se lo va a mandar en un momento, y considera usar escalate_to_human.`;
     },
   });

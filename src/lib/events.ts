@@ -49,6 +49,8 @@ async function uniqueSlug(base: string, excludeId?: string): Promise<string> {
 
 export interface EventInput {
   name: string;
+  // See Event.publicName's own schema comment.
+  publicName: string;
   // See Event.subtitle's own schema comment.
   subtitle: string;
   city: string;
@@ -95,6 +97,7 @@ export async function createEvent(input: EventInput): Promise<Event> {
     data: {
       slug,
       name: input.name,
+      publicName: input.publicName.trim() || null,
       subtitle: input.subtitle ? sanitizeEventDescription(input.subtitle) : null,
       city: input.city,
       venueName: input.venueName || null,
@@ -130,6 +133,7 @@ export async function updateEvent(id: string, input: EventInput): Promise<Event>
     data: {
       slug,
       name: input.name,
+      publicName: input.publicName.trim() || null,
       subtitle: input.subtitle ? sanitizeEventDescription(input.subtitle) : null,
       city: input.city,
       venueName: input.venueName || null,
@@ -186,6 +190,7 @@ export async function duplicateEvent(sourceId: string): Promise<Event> {
     data: {
       slug,
       name: `${source.name} (copia)`,
+      publicName: source.publicName,
       subtitle: source.subtitle,
       city: source.city,
       venueName: source.venueName,

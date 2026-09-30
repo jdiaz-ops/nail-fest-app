@@ -22,7 +22,7 @@ const CHUNK_SIZE = 500;
 
 interface Recipient {
   person: Person;
-  event: Pick<Event, "name" | "startsAt" | "endsAt" | "venueName" | "venueAddress" | "format" | "scheduleDays"> | null;
+  event: Pick<Event, "name" | "publicName" | "startsAt" | "endsAt" | "venueName" | "venueAddress" | "format" | "scheduleDays"> | null;
 }
 
 type BroadcastWithTemplate = WhatsAppBroadcast & { template: WhatsAppTemplate };
@@ -130,7 +130,7 @@ export function duplicatePhoneRecipients(
 async function sendOneTemplateMessage(
   broadcast: BroadcastWithTemplate,
   person: Person,
-  event: Pick<Event, "name" | "startsAt" | "endsAt" | "venueName" | "venueAddress" | "format" | "scheduleDays"> | null,
+  event: Pick<Event, "name" | "publicName" | "startsAt" | "endsAt" | "venueName" | "venueAddress" | "format" | "scheduleDays"> | null,
   orgSettings: OrgSettingsValue,
   ticketToken?: string
 ): Promise<"sent" | "failed"> {

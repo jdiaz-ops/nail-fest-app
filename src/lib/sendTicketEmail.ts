@@ -6,6 +6,7 @@ import { renderConfirmationFromTemplate, renderSubjectFromTemplate } from "@/lib
 import { renderTicketPdfBuffer } from "@/lib/ticketPdf";
 import { getOrgSettings } from "@/lib/settings";
 import { confirmationCodeFor, ticketHolderName, ticketsFor } from "@/lib/ticket";
+import { publicEventName } from "@/lib/eventDisplayName";
 
 // Shared by /api/register (first send + resend-on-resubmit), /api/resend-
 // ticket (the self-serve "I lost my email" flow), and /api/admin/
@@ -16,6 +17,8 @@ export async function sendTicketEmail(params: {
   person: { id: string; email: string; firstName: string | null; lastName?: string | null };
   event: {
     name: string;
+    // See lib/eventDisplayName.ts — what the person sees in the email.
+    publicName?: string | null;
     city: string;
     startsAt: Date;
     endsAt?: Date | null;
@@ -100,7 +103,7 @@ export async function sendTicketEmail(params: {
       ? renderConfirmationFromTemplate(customTemplate, {
           firstName: params.person.firstName ?? "",
           lastName: params.person.lastName ?? undefined,
-          eventName: params.event.name,
+          eventName: publicEventName(params.event),
           venueName: params.event.venueName ?? undefined,
           venueAddress: params.event.venueAddress ?? undefined,
           startsAt: params.event.startsAt,
@@ -120,7 +123,7 @@ export async function sendTicketEmail(params: {
       : confirmationEmail({
           firstName: params.person.firstName ?? "",
           lastName: params.person.lastName ?? undefined,
-          eventName: params.event.name,
+          eventName: publicEventName(params.event),
           eventCity: params.event.city,
           venueName: params.event.venueName ?? undefined,
           venueAddress: params.event.venueAddress ?? undefined,
@@ -147,7 +150,7 @@ export async function sendTicketEmail(params: {
     // each function stays independently testable/callable.
     const subjectTemplate = params.event.confirmationEmailSubject ?? orgSettings.confirmationEmailSubject ?? "Tu entrada para {{EVENTO_NOMBRE}}";
     const subject = renderSubjectFromTemplate(subjectTemplate, {
-      eventName: params.event.name,
+      eventName: publicEventName(params.event),
       startsAt: params.event.startsAt,
       endsAt: params.event.endsAt ?? undefined,
       scheduleDays: params.event.scheduleDays,
@@ -172,7 +175,7 @@ export async function sendTicketEmail(params: {
       ? await renderTicketPdfBuffer({
           firstName: params.person.firstName ?? "",
           lastName: params.person.lastName ?? undefined,
-          eventName: params.event.name,
+          eventName: publicEventName(params.event),
           venueName: params.event.venueName ?? undefined,
           venueAddress: params.event.venueAddress ?? undefined,
           startsAt: params.event.startsAt,
