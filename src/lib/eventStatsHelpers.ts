@@ -49,6 +49,24 @@ export function fillDayRange(buckets: Map<string, number>): { key: string; count
   return out;
 }
 
+// Groups fillDayRange's output by day of the week, Monday first — to spot
+// days that are consistently stronger than others. `average` (total ÷ how
+// many of that weekday the range covers) is the fair comparison: a range
+// can hold five Mondays but only four Sundays. Weekdays the range doesn't
+// reach yet (under a week of data) are left out instead of reading as 0.
+export const WEEKDAY_NAMES_ES = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+export function weekdayTotals(days: { key: string; count: number }[]): { weekday: number; total: number; days: number; average: number }[] {
+  const rows = Array.from({ length: 7 }, (_, weekday) => ({ weekday, total: 0, days: 0, average: 0 }));
+  for (const d of days) {
+    // The key is already the org-timezone calendar date, so its UTC weekday
+    // is that date's weekday. getUTCDay(): 0 = Sunday → shift to Monday = 0.
+    const row = rows[(new Date(`${d.key}T12:00:00Z`).getUTCDay() + 6) % 7]!;
+    row.total += d.count;
+    row.days += 1;
+  }
+  return rows.filter((r) => r.days > 0).map((r) => ({ ...r, average: r.total / r.days }));
+}
+
 export function bucketHours(dates: Date[], timezone: string): { key: string; count: number }[] {
   const map = new Map<string, number>();
   for (const d of dates) {

@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { getOrgSettings } from "@/lib/settings";
 import { formatDateInTz } from "@/lib/dateFormat";
-import { bucketDates, fillDayRange, bucketHours, channelKey, capitalize, topN } from "@/lib/eventStatsHelpers";
+import { bucketDates, fillDayRange, bucketHours, channelKey, capitalize, topN, weekdayTotals, WEEKDAY_NAMES_ES } from "@/lib/eventStatsHelpers";
 import { findCountry } from "@/lib/worldCountries";
 import { Section, EmptyNote, ScrollBox, BarList, StatCard } from "../StatsUI";
 
@@ -139,6 +139,17 @@ export default async function EventDecisionStats({ eventId }: { eventId: string 
     count: d.count,
   }));
   const dayMax = Math.max(1, ...dayRows.map((d) => d.count));
+
+  // Same curve folded by day of the week — average per Monday, Tuesday…
+  // (see weekdayTotals for why average, not total). One decimal for small
+  // numbers so "0,4 vs 1,2" doesn't round away into "0 vs 1".
+  const weekdays = weekdayTotals(fillDayRange(dayBuckets));
+  const weekdayRows = weekdays.map((w) => {
+    const count = w.average >= 10 ? Math.round(w.average) : Math.round(w.average * 10) / 10;
+    return { label: WEEKDAY_NAMES_ES[w.weekday]!, count, display: count.toLocaleString("es-CO") };
+  });
+  const weekdayMax = Math.max(1, ...weekdayRows.map((w) => w.count));
+  const strongestWeekday = weekdays.length === 7 ? weekdays.reduce((a, b) => (b.average > a.average ? b : a)) : null;
 
   // Todas las secciones de "cuánto % del total" comparten el mismo universo
   // — las mismas inscripciones confirmadas — así que comparten un único
@@ -281,6 +292,21 @@ export default async function EventDecisionStats({ eventId }: { eventId: string 
           </ScrollBox>
         )}
       </Section>
+
+      {dayRows.length > 0 && (
+        <Section
+          title="Por día de la semana"
+          note={`Promedio de inscripciones confirmadas por cada lunes, martes… desde la primera inscripción.${
+            strongestWeekday && strongestWeekday.total > 0 ? ` El más fuerte hasta ahora: ${WEEKDAY_NAMES_ES[strongestWeekday.weekday]!.toLowerCase()}.` : ""
+          }`}
+        >
+          {dayRows.length < 7 ? (
+            <EmptyNote text="Hace falta al menos una semana de inscripciones para comparar días." />
+          ) : (
+            <BarList rows={weekdayRows} max={weekdayMax} />
+          )}
+        </Section>
+      )}
 
       <Section title="Check-ins por franja horaria" note="A qué hora llegó la gente el día del evento — para saber si hubo picos y planear personal/puertas para el próximo.">
         {hourRows.length === 0 ? (

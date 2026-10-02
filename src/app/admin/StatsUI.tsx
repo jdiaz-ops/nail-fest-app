@@ -39,7 +39,7 @@ export function ScrollBox({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function BarList({ rows, max, showPct }: { rows: { label: string; count: number; pct?: number }[]; max: number; showPct?: boolean }) {
+export function BarList({ rows, max, showPct }: { rows: { label: string; count: number; pct?: number; display?: string }[]; max: number; showPct?: boolean }) {
   return (
     <div>
       {rows.map((r, i) => (
@@ -68,7 +68,7 @@ export function BarList({ rows, max, showPct }: { rows: { label: string; count: 
             />
           </div>
           <div style={{ width: showPct ? 56 : 32, textAlign: "right", flexShrink: 0 }}>
-            <span style={{ fontWeight: 600 }}>{r.count}</span>
+            <span style={{ fontWeight: 600 }}>{r.display ?? r.count}</span>
             {showPct && r.pct != null && <span style={{ color: "#5b5f6b" }}> · {r.pct}%</span>}
           </div>
         </div>
