@@ -131,7 +131,11 @@ export default async function EventDecisionStats({ eventId }: { eventId: string 
     timezone
   );
   const dayRows = fillDayRange(dayBuckets).map((d) => ({
-    label: formatDateInTz(new Date(`${d.key}T12:00:00Z`), { day: "2-digit", month: "short" }, timezone, language),
+    // Weekday first ("Lun 31 de ago") so strong/weak days of the week
+    // stand out when scanning down the list.
+    label: capitalize(
+      formatDateInTz(new Date(`${d.key}T12:00:00Z`), { weekday: "short", day: "numeric", month: "short" }, timezone, language).replace(",", "")
+    ),
     count: d.count,
   }));
   const dayMax = Math.max(1, ...dayRows.map((d) => d.count));
