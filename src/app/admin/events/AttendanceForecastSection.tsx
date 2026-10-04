@@ -1,4 +1,6 @@
 import { db } from "@/lib/db";
+import { getOrgSettings } from "@/lib/settings";
+import { formatDateInTz } from "@/lib/dateFormat";
 import { forecastAttendance, SEGMENT_LABELS, type ForecastRegistration } from "@/lib/attendanceForecast";
 import { Section, EmptyNote, StatCard } from "../StatsUI";
 
@@ -24,13 +26,25 @@ function cedulaFrom(customFields: unknown): string | null {
 
 export default async function AttendanceForecastSection({ eventId }: { eventId: string }) {
   const now = Date.now();
-  const [target, events, doorTotals] = await Promise.all([
+  const [target, eventRows, doorTotals, orgSettings] = await Promise.all([
     db.event.findUnique({ where: { id: eventId }, select: { id: true, format: true, startsAt: true, endsAt: true } }),
     // Virtual events are left out entirely — "attending" a Zoom isn't the
     // same behavior as showing up at a venue.
-    db.event.findMany({ where: { format: { not: "VIRTUAL" } }, select: { id: true, name: true, startsAt: true, endsAt: true } }),
+    db.event.findMany({ where: { format: { not: "VIRTUAL" } }, select: { id: true, city: true, startsAt: true, endsAt: true } }),
     db.registration.groupBy({ by: ["eventId"], where: { status: "CONFIRMED", checkedInCount: { gt: 0 } }, _sum: { checkedInCount: true } }),
+    getOrgSettings(),
   ]);
+  // Short names ("Bogotá · mar 2025") so the tables fit on a phone without
+  // sideways scrolling — the full names ran to four lines each.
+  const { timezone, language } = orgSettings;
+  const shortName = (e: { city: string; startsAt: Date }, withDay: boolean) =>
+    `${e.city} · ${formatDateInTz(e.startsAt, withDay ? { day: "numeric", month: "short", year: "numeric" } : { month: "short", year: "numeric" }, timezone, language).replace(/ de /g, " ")}`;
+  const monthNames = eventRows.map((e) => shortName(e, false));
+  // Two events in the same city and month get the day too, to tell apart.
+  const events = eventRows.map((e, i) => ({
+    ...e,
+    name: monthNames.filter((n) => n === monthNames[i]).length > 1 ? shortName(e, true) : monthNames[i]!,
+  }));
   if (!target || target.format === "VIRTUAL") return null;
 
   const scannedByEvent = new Map(doorTotals.map((d) => [d.eventId, d._sum.checkedInCount ?? 0]));
@@ -106,7 +120,7 @@ export default async function AttendanceForecastSection({ eventId }: { eventId: 
       </div>
 
       <div className="admin-table-wrap" style={{ border: "1px solid #e3e1dc", borderRadius: 10, marginBottom: 12 }}>
-        <table style={{ borderCollapse: "collapse", fontSize: 13, width: "100%" }}>
+        <table className="forecast-table" style={{ borderCollapse: "collapse", fontSize: 13, width: "100%" }}>
           <thead>
             <tr style={{ textAlign: "left", background: "#faf9f7" }}>
               <th style={{ padding: "8px 12px" }}>De dónde sale</th>
@@ -153,7 +167,7 @@ export default async function AttendanceForecastSection({ eventId }: { eventId: 
             Cada evento pasado pronosticado solo con los demás, como si todavía no hubiera pasado, comparado con lo que llegó.
           </p>
           <div className="admin-table-wrap" style={{ border: "1px solid #e3e1dc", borderRadius: 10, marginBottom: 12 }}>
-            <table style={{ borderCollapse: "collapse", fontSize: 13, width: "100%" }}>
+            <table className="forecast-table" style={{ borderCollapse: "collapse", fontSize: 13, width: "100%" }}>
               <thead>
                 <tr style={{ textAlign: "left", background: "#faf9f7" }}>
                   <th style={{ padding: "8px 12px" }}>Evento</th>

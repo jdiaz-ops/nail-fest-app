@@ -1975,3 +1975,24 @@ button.primary:disabled {
     font-size: 16px;
   }
 }
+
+/* Pronóstico de asistencia (AttendanceForecastSection.tsx) — on a phone
+   its tables have to fit five columns without sideways scrolling, so the
+   cell padding and type tighten up. !important beats the inline padding. */
+@media (max-width: 480px) {
+  .forecast-table {
+    font-size: 12px !important;
+  }
+  .forecast-table th,
+  .forecast-table td {
+    padding: 7px 5px !important;
+  }
+  .forecast-table th:first-child,
+  .forecast-table td:first-child {
+    padding-left: 10px !important;
+  }
+  .forecast-table th:last-child,
+  .forecast-table td:last-child {
+    padding-right: 10px !important;
+  }
+}
