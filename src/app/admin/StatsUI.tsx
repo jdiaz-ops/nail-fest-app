@@ -7,7 +7,7 @@
 
 export const ACCENT = "#00beb5";
 
-export function StatCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
+export function StatCard({ label, value, sub }: { label: string; value: string; sub?: React.ReactNode }) {
   return (
     <div style={{ border: "1px solid #e3e1dc", borderRadius: 10, padding: "14px 16px", minWidth: 140, flex: "1 1 140px" }}>
       <div style={{ fontSize: 11, color: "#5b5f6b", textTransform: "uppercase", letterSpacing: "0.04em" }}>{label}</div>

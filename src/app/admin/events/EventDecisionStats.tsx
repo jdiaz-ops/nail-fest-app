@@ -1,10 +1,12 @@
 import { db } from "@/lib/db";
 import { getOrgSettings } from "@/lib/settings";
-import { formatDateInTz } from "@/lib/dateFormat";
+import { formatDateInTz, utcToZonedInputValue } from "@/lib/dateFormat";
 import { bucketDates, fillDayRange, bucketHours, channelKey, capitalize, topN, weekdayTotals, WEEKDAY_NAMES_ES } from "@/lib/eventStatsHelpers";
 import { findCountry } from "@/lib/worldCountries";
 import { Section, EmptyNote, ScrollBox, BarList, StatCard } from "../StatsUI";
 import AttendanceForecastSection from "./AttendanceForecastSection";
+import VelocityPanel, { PACE_STYLE } from "./VelocityPanel";
+import { loadForecastData, loadVelocityData } from "@/lib/eventReportData";
 
 // Planning numbers for THIS event — before it happens (¿va bien la venta?
 // ¿en qué canal seguir invirtiendo?) and after it happens (¿a quién le
@@ -92,6 +94,31 @@ export default async function EventDecisionStats({ eventId }: { eventId: string 
   if (!event) return null;
 
   const { timezone, language } = orgSettings;
+
+  // Forecast + velocity — loaded once, feeding both the summary row and
+  // their own detail sections, so no number is shown twice.
+  const [forecastData, velocityData] = await Promise.all([
+    loadForecastData(eventId, timezone, language),
+    loadVelocityData(eventId, timezone, language),
+  ]);
+  const fmtN = (n: number) => Math.round(n).toLocaleString("es-CO");
+  const fmtRate = (n: number) => (n >= 10 ? fmtN(n) : (Math.round(n * 10) / 10).toLocaleString("es-CO"));
+  // Before the doors open the row is about pace and forecast; from the
+  // event's start on it's about who actually came.
+  const beforeEvent = Date.now() < event.startsAt.getTime();
+  const forecastOk = forecastData?.status === "ok" ? forecastData.result : null;
+  const velocity = velocityData?.result ?? null;
+  const pace = velocity?.byDaysBefore.pace ?? null;
+  const projection = velocity?.byDaysBefore.projection ?? null;
+  const expectedTickets = forecastOk?.forecast.expectedTickets ?? null;
+  const forecastMargin = forecastOk?.margin ?? null;
+  // "23 de sept" — the target's own opening day, for the ritmo section.
+  const openingLabel = (() => {
+    if (!velocity) return "";
+    const startKey = utcToZonedInputValue(event.startsAt, timezone).slice(0, 10);
+    const opening = new Date(Date.parse(`${startKey}T12:00:00Z`) - velocity.target.openingDaysBefore * 86400000);
+    return formatDateInTz(opening, { day: "numeric", month: "short" }, "UTC", language);
+  })();
 
   const issued = ticketAgg._sum.ticketCount ?? 0;
   const remaining = event.capacity != null ? Math.max(0, event.capacity - issued) : null;
@@ -226,19 +253,107 @@ export default async function EventDecisionStats({ eventId }: { eventId: string 
   return (
     <div>
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 24 }}>
-        <StatCard label="Boletas emitidas" value={String(issued)} sub={event.capacity != null ? `de ${event.capacity} cupos` : undefined} />
         <StatCard
-          label="Registros únicos"
-          value={String(uniqueRegs)}
-          sub={multiTicketRegs > 0 ? `${multiTicketRegs} con 2+ boletas` : undefined}
+          label="Inscritos"
+          value={fmtN(uniqueRegs)}
+          sub={`${fmtN(issued)} entradas${multiTicketRegs > 0 ? ` · ${fmtN(multiTicketRegs)} con acompañante` : ""}`}
         />
-        <StatCard label="Restantes" value={remaining != null ? String(remaining) : "—"} />
-        <StatCard label="Carritos abandonados" value={String(abandonedCount)} />
-        <StatCard label="Escaneadas (entraron)" value={String(checkedIn)} sub={`${checkInRate}% de las emitidas`} />
-        <StatCard label="Reingresos" value={String(reentryCount)} sub={checkedIn > 0 ? `${reentryRate} por cada 100 entradas` : undefined} />
+        {beforeEvent ? (
+          <>
+            <StatCard
+              label="Ritmo 7 días"
+              value={velocity ? `${fmtRate(velocity.rhythm7)} / día` : "—"}
+              sub={
+                pace && velocity ? (
+                  <span style={{ color: PACE_STYLE[pace].color, fontWeight: 600 }}>
+                    {PACE_STYLE[pace].icon} {PACE_STYLE[pace].label}
+                    {pace !== "on_track" && velocity.byDaysBefore.paceRatio != null
+                      ? ` ${velocity.byDaysBefore.paceRatio > 0 ? "+" : "−"}${Math.round(Math.abs(velocity.byDaysBefore.paceRatio) * 100)} %`
+                      : ""}{" "}
+                    <span style={{ color: "#5b5f6b", fontWeight: 400 }}>vs. otros eventos a {velocity.daysBefore} días</span>
+                  </span>
+                ) : (
+                  "sin eventos anteriores con fechas para comparar"
+                )
+              }
+            />
+            <StatCard
+              label="Proyección final"
+              value={projection ? `~${fmtN(projection.mid)}` : "—"}
+              sub={projection ? `inscritos · entre ${fmtN(projection.low)} y ${fmtN(projection.high)}` : "falta historia para proyectar"}
+            />
+            <StatCard
+              label="Llegarían a puerta"
+              value={expectedTickets != null ? `≈ ${fmtN(expectedTickets)}` : "—"}
+              sub={
+                forecastOk && expectedTickets != null
+                  ? `${forecastMargin != null ? `entre ${fmtN(expectedTickets * (1 - forecastMargin))} y ${fmtN(expectedTickets * (1 + forecastMargin))} · ` : ""}${Math.round(
+                      (expectedTickets / Math.max(1, forecastOk.forecast.tickets)) * 100
+                    )}% de las entradas · ≈ ${fmtN(forecastOk.forecast.expectedPeople)} personas`
+                  : "sin historia de puerta todavía"
+              }
+            />
+          </>
+        ) : (
+          <>
+            <StatCard label="Entraron" value={fmtN(checkedIn)} sub={`${checkInRate}% de las entradas`} />
+            <StatCard
+              label="Pronóstico"
+              value={expectedTickets != null ? `≈ ${fmtN(expectedTickets)}` : "—"}
+              sub={
+                expectedTickets != null && checkedIn > 0
+                  ? `llegó ${checkedIn >= expectedTickets ? "+" : "−"}${Math.round((Math.abs(checkedIn - expectedTickets) / Math.max(1, expectedTickets)) * 100)} % ${
+                      checkedIn >= expectedTickets ? "más" : "menos"
+                    } de lo pronosticado${Date.now() < (event.endsAt ?? event.startsAt).getTime() ? " (hasta ahora)" : ""}`
+                  : "entradas que se esperaban en puerta"
+              }
+            />
+            <StatCard label="Reingresos" value={fmtN(reentryCount)} sub={checkedIn > 0 ? `${reentryRate} por cada 100 entradas` : undefined} />
+          </>
+        )}
+        {remaining != null && <StatCard label="Restantes" value={fmtN(remaining)} sub={`de ${fmtN(event.capacity!)} cupos`} />}
+        <StatCard label="Carritos abandonados" value={fmtN(abandonedCount)} />
       </div>
 
-      <AttendanceForecastSection eventId={eventId} />
+      {velocityData && velocity && velocity.target.total > 0 && (
+        <Section
+          title="Ritmo de inscripción"
+          note={`Comparado con ${velocity.comparisons.length} ${velocity.comparisons.length === 1 ? "evento anterior" : "eventos anteriores"}, alineados por días antes del evento o por días desde que abrieron las inscripciones.`}
+        >
+          <VelocityPanel
+            target={{
+              id: velocity.target.id,
+              name: velocity.target.name,
+              total: velocity.target.total,
+              launchDayCount: velocity.target.launchDayCount,
+              openingDaysBefore: velocity.target.openingDaysBefore,
+              cumulative: velocity.target.cumulativeAtDaysBefore,
+            }}
+            upcoming={velocityData.targetIsUpcoming}
+            daysBefore={velocity.daysBefore}
+            daysSinceOpening={velocity.daysSinceOpening}
+            openingLabel={openingLabel}
+            rhythm7={velocity.rhythm7}
+            rows={velocity.comparisons.map((c) => ({
+              id: c.curve.id,
+              name: c.curve.name,
+              total: c.curve.total,
+              launchDayCount: c.curve.launchDayCount,
+              openingDaysBefore: c.curve.openingDaysBefore,
+              cumulative: c.curve.cumulativeAtDaysBefore,
+              atBefore: c.atSameDaysBefore,
+              rhythmBefore: c.rhythmAtSameDaysBefore,
+              atSince: c.atSameDaysSinceOpening,
+              rhythmSince: c.rhythmAtSameDaysSinceOpening,
+            }))}
+            byDaysBefore={velocity.byDaysBefore}
+            bySinceOpening={velocity.bySinceOpening}
+            withoutDates={velocityData.withoutDates}
+          />
+        </Section>
+      )}
+
+      <AttendanceForecastSection data={forecastData} />
 
       <Section
         title="Embudo de registro"

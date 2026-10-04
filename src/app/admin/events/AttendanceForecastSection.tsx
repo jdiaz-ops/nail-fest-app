@@ -1,98 +1,37 @@
-import { db } from "@/lib/db";
-import { getOrgSettings } from "@/lib/settings";
-import { formatDateInTz } from "@/lib/dateFormat";
-import { forecastAttendance, SEGMENT_LABELS, type ForecastRegistration } from "@/lib/attendanceForecast";
-import { Section, EmptyNote, StatCard } from "../StatsUI";
+import { SEGMENT_LABELS } from "@/lib/attendanceForecast";
+import type { ForecastData } from "@/lib/eventReportData";
+import { Section, EmptyNote } from "../StatsUI";
 
-// "¿Cuánta gente va a llegar?" — see lib/attendanceForecast.ts for the
-// method. Lives on the event's report page: for an upcoming event it's
-// the door forecast with today's registrations; for a past event it shows
-// what the forecast would have said next to what really happened.
+// "¿Cuánta gente va a llegar?" — the detail behind the report's
+// "Llegarían a puerta" summary card: which groups the forecast is made of
+// (see lib/attendanceForecast.ts for the method, lib/eventReportData.ts for
+// the loading). The headline numbers live in the summary row above, not
+// repeated here.
 
 const fmt = (n: number) => Math.round(n).toLocaleString("es-CO");
 const pct = (n: number) => `${Math.round(n * 100)}%`;
-// An event counts as "done" a day after it ends — so a Sunday-night scan
-// session finishes before its numbers become someone else's history.
-const doneAt = (e: { startsAt: Date; endsAt: Date | null }) => (e.endsAt ?? e.startsAt).getTime() + 24 * 60 * 60 * 1000;
 
-function cedulaFrom(customFields: unknown): string | null {
-  if (!customFields || typeof customFields !== "object" || Array.isArray(customFields)) return null;
-  const raw = (customFields as Record<string, unknown>).cedula;
-  const digits = typeof raw === "string" ? raw.replace(/\D/g, "").replace(/^0+/, "") : "";
-  // Too short to be a real document number — a typo like "0" or "123"
-  // would otherwise link strangers together.
-  return digits.length >= 5 ? digits : null;
-}
-
-export default async function AttendanceForecastSection({ eventId }: { eventId: string }) {
-  const now = Date.now();
-  const [target, eventRows, doorTotals, orgSettings] = await Promise.all([
-    db.event.findUnique({ where: { id: eventId }, select: { id: true, format: true, startsAt: true, endsAt: true } }),
-    // Virtual events are left out entirely — "attending" a Zoom isn't the
-    // same behavior as showing up at a venue.
-    db.event.findMany({ where: { format: { not: "VIRTUAL" } }, select: { id: true, city: true, startsAt: true, endsAt: true } }),
-    db.registration.groupBy({ by: ["eventId"], where: { status: "CONFIRMED", checkedInCount: { gt: 0 } }, _sum: { checkedInCount: true } }),
-    getOrgSettings(),
-  ]);
-  // Short names ("Bogotá · mar 2025") so the tables fit on a phone without
-  // sideways scrolling — the full names ran to four lines each.
-  const { timezone, language } = orgSettings;
-  const shortName = (e: { city: string; startsAt: Date }, withDay: boolean) =>
-    `${e.city} · ${formatDateInTz(e.startsAt, withDay ? { day: "numeric", month: "short", year: "numeric" } : { month: "short", year: "numeric" }, timezone, language).replace(/ de /g, " ")}`;
-  const monthNames = eventRows.map((e) => shortName(e, false));
-  // Two events in the same city and month get the day too, to tell apart.
-  const events = eventRows.map((e, i) => ({
-    ...e,
-    name: monthNames.filter((n) => n === monthNames[i]).length > 1 ? shortName(e, true) : monthNames[i]!,
-  }));
-  if (!target || target.format === "VIRTUAL") return null;
-
-  const scannedByEvent = new Map(doorTotals.map((d) => [d.eventId, d._sum.checkedInCount ?? 0]));
-  // History = finished in-person events that actually have door data.
-  const historyEventIds = events.filter((e) => e.id !== eventId && doneAt(e) < now && (scannedByEvent.get(e.id) ?? 0) > 0).map((e) => e.id);
-  const targetIsPast = doneAt(target) < now && (scannedByEvent.get(eventId) ?? 0) > 0;
-
-  const title = targetIsPast ? "Pronóstico de asistencia vs. lo que pasó" : "Pronóstico de asistencia";
-  if (historyEventIds.length === 0) {
+export default function AttendanceForecastSection({ data }: { data: ForecastData | null }) {
+  if (!data) return null;
+  const title = data.status === "ok" && data.targetIsPast ? "Pronóstico de asistencia (antes del evento)" : "Pronóstico de asistencia";
+  if (data.status === "no_history") {
     return (
       <Section title={title} note="Cuánta gente llegaría a puerta, aprendido de eventos anteriores.">
         <EmptyNote text="Todavía no hay eventos pasados con datos de puerta (escaneos o asistencia importada) para aprender." />
       </Section>
     );
   }
-
-  const rows = await db.registration.findMany({
-    where: { status: "CONFIRMED", eventId: { in: [...historyEventIds, eventId] } },
-    select: { eventId: true, personId: true, ticketCount: true, checkedInCount: true, attendanceIntent: true, customFields: true },
-  });
-  const registrations: ForecastRegistration[] = rows.map((r) => ({
-    eventId: r.eventId,
-    personId: r.personId,
-    cedula: cedulaFrom(r.customFields),
-    ticketCount: Math.max(1, r.ticketCount),
-    checkedInCount: r.checkedInCount,
-    intent: r.attendanceIntent,
-  }));
-
-  const result = forecastAttendance({ events, registrations, historyEventIds, targetEventId: eventId });
-  // The per-event backtest still runs — it's where the ± margin comes from —
-  // but its table was taken off the page (asked to: too much detail here).
-  const { forecast, margin, historyEvents } = result;
-
-  if (forecast.registrations === 0) {
+  if (data.status === "no_registrations") {
     return (
       <Section title={title} note="Cuánta gente llegaría a puerta, aprendido de eventos anteriores.">
         <EmptyNote text="Aún no hay inscripciones confirmadas para pronosticar." />
       </Section>
     );
   }
+  const { result, targetIsPast } = data;
+  const { forecast, historyEvents } = result;
 
   const expectedRate = forecast.tickets > 0 ? forecast.expectedTickets / forecast.tickets : 0;
-  const rangeSub =
-    margin != null
-      ? `entre ${fmt(forecast.expectedTickets * (1 - margin))} y ${fmt(forecast.expectedTickets * (1 + margin))} · margen histórico ±${pct(margin)}`
-      : "sin margen todavía — hace falta más de un evento pasado para medirlo";
-  const actual = targetIsPast ? (scannedByEvent.get(eventId) ?? 0) : null;
   // Someone here answered «Sí voy»/«No puedo» but no past event has
   // answers yet — say so, since those rows fall back to the general rate.
   const intentNoHistory = forecast.rows.some((r) => !r.key.endsWith(":none") && r.registrations > 0 && r.rate.historyRegistrations === 0);
@@ -102,25 +41,10 @@ export default async function AttendanceForecastSection({ eventId }: { eventId: 
   return (
     <Section
       title={title}
-      note={`${
-        targetIsPast ? "Lo que el modelo habría pronosticado antes del evento, al lado de lo que realmente llegó" : "Cuánta gente llegaría a puerta con los inscritos de hoy"
-      } — aprendido de ${historyEvents.length} ${historyEvents.length === 1 ? "evento anterior" : "eventos anteriores"} (${historyEvents.map((e) => e.name).join(", ")}). Cada inscrito pesa según si ya asistió antes y lo que respondió al «¿vienes?».`}
+      note={`${targetIsPast ? "Lo que el modelo pronosticaba antes del evento" : "Cuánta gente llegaría a puerta con los inscritos de hoy"}, por grupo — aprendido de ${historyEvents.length} ${
+        historyEvents.length === 1 ? "evento anterior" : "eventos anteriores"
+      }. Cada inscrito pesa según si ya asistió antes y lo que respondió al «¿vienes?».`}
     >
-      <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 14 }}>
-        <StatCard label="Entradas emitidas" value={fmt(forecast.tickets)} sub={`${fmt(forecast.registrations)} inscripciones`} />
-        <StatCard label={targetIsPast ? "Pronóstico (entradas)" : "Llegarían a puerta"} value={`≈ ${fmt(forecast.expectedTickets)}`} sub={rangeSub} />
-        {actual != null ? (
-          <StatCard
-            label="Llegaron de verdad"
-            value={fmt(actual)}
-            sub={`${forecast.expectedTickets >= actual ? "+" : "−"}${pct(Math.abs(forecast.expectedTickets - actual) / Math.max(1, actual))} de diferencia`}
-          />
-        ) : (
-          <StatCard label="Personas distintas" value={`≈ ${fmt(forecast.expectedPeople)}`} sub="sin contar acompañantes" />
-        )}
-        <StatCard label="Tasa esperada" value={pct(expectedRate)} sub="de las entradas emitidas" />
-      </div>
-
       <div className="admin-table-wrap" style={{ border: "1px solid #e3e1dc", borderRadius: 10, marginBottom: 12 }}>
         <table className="forecast-table" style={{ borderCollapse: "collapse", fontSize: 13, width: "100%" }}>
           <thead>
