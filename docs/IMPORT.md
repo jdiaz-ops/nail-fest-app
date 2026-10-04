@@ -76,6 +76,19 @@ distinto: solo se registra una vez, la primera vez que esa persona entra a
 ese evento — una segunda corrida no vuelve a insertar filas de
 consentimiento.
 
+## Fechas de inscripción (export de órdenes)
+
+La lista de puerta no trae la fecha en que cada persona se inscribió, así
+que toda inscripción importada queda con la fecha del día de la
+importación. Para corregirlo: en Ticket Tailor, evento → **Orders** →
+exportar CSV, y subirlo en la sección «Fechas de inscripción» de la misma
+página, eligiendo el evento. Cada persona se encuentra por correo (o por
+cédula si el correo no coincide) y se le pone la fecha de su primera orden
+(hora de Colombia) como `createdAt`/`confirmedAt`. Solo toca inscripciones
+que vinieron de la lista de puerta — las hechas directamente en la app ya
+tienen su fecha real y no se cambian — y ningún otro dato. Las órdenes
+canceladas se omiten. Se puede correr dos veces sin problema.
+
 ## Después de importar
 
 El registro por sí solo no sincroniza nada con Meta. Para que estas

@@ -1,6 +1,9 @@
 import { db } from "@/lib/db";
 import { requirePageUser } from "@/lib/auth/guard";
 import ImportComposer from "@/components/ImportComposer";
+import OrderDatesComposer from "@/components/OrderDatesComposer";
+import { getOrgSettings } from "@/lib/settings";
+import { utcToZonedInputValue } from "@/lib/dateFormat";
 import CrmPageHeader from "../CrmPageHeader";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +13,7 @@ export const dynamic = "force-dynamic";
 // real access control.
 export default async function ImportPage() {
   await requirePageUser(["ADMIN"]);
-  const events = await db.event.findMany({ orderBy: { startsAt: "desc" } });
+  const [events, orgSettings] = await Promise.all([db.event.findMany({ orderBy: { startsAt: "desc" } }), getOrgSettings()]);
 
   return (
     <div>
@@ -21,6 +24,9 @@ export default async function ImportPage() {
         }
       />
       <ImportComposer events={events.map((e) => ({ slug: e.slug, name: e.name }))} />
+      <OrderDatesComposer
+        events={events.map((e) => ({ slug: e.slug, name: e.name, startsOn: utcToZonedInputValue(e.startsAt, orgSettings.timezone).slice(0, 10) }))}
+      />
     </div>
   );
 }
