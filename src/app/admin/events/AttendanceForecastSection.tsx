@@ -75,7 +75,9 @@ export default async function AttendanceForecastSection({ eventId }: { eventId: 
   }));
 
   const result = forecastAttendance({ events, registrations, historyEventIds, targetEventId: eventId });
-  const { forecast, margin, backtest, historyEvents } = result;
+  // The per-event backtest still runs — it's where the ± margin comes from —
+  // but its table was taken off the page (asked to: too much detail here).
+  const { forecast, margin, historyEvents } = result;
 
   if (forecast.registrations === 0) {
     return (
@@ -159,42 +161,6 @@ export default async function AttendanceForecastSection({ eventId }: { eventId: 
           </tbody>
         </table>
       </div>
-
-      {backtest.length > 0 && (
-        <>
-          <h3 style={{ fontSize: 13, margin: "16px 0 4px" }}>¿Qué tan bien acierta?</h3>
-          <p style={{ fontSize: 12, color: "#5b5f6b", margin: "0 0 8px" }}>
-            Cada evento pasado pronosticado solo con los demás, como si todavía no hubiera pasado, comparado con lo que llegó.
-          </p>
-          <div className="admin-table-wrap" style={{ border: "1px solid #e3e1dc", borderRadius: 10, marginBottom: 12 }}>
-            <table className="forecast-table" style={{ borderCollapse: "collapse", fontSize: 13, width: "100%" }}>
-              <thead>
-                <tr style={{ textAlign: "left", background: "#faf9f7" }}>
-                  <th style={{ padding: "8px 12px" }}>Evento</th>
-                  <th style={{ padding: "8px 12px", textAlign: "right" }}>Entradas</th>
-                  <th style={{ padding: "8px 12px", textAlign: "right" }}>Pronóstico</th>
-                  <th style={{ padding: "8px 12px", textAlign: "right" }}>Llegaron</th>
-                  <th style={{ padding: "8px 12px", textAlign: "right" }}>Diferencia</th>
-                </tr>
-              </thead>
-              <tbody>
-                {backtest.map((b) => (
-                  <tr key={b.eventId}>
-                    <td style={cell}>{b.name}</td>
-                    <td style={num}>{fmt(b.tickets)}</td>
-                    <td style={num}>{fmt(b.predictedTickets)}</td>
-                    <td style={num}>{fmt(b.actualTickets)}</td>
-                    <td style={{ ...num, color: Math.abs(b.error) <= 0.1 ? "#12966b" : Math.abs(b.error) <= 0.2 ? "#b25e00" : "#c2185b" }}>
-                      {b.error >= 0 ? "+" : "−"}
-                      {pct(Math.abs(b.error))}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </>
-      )}
 
       <p style={{ fontSize: 12, color: "#5b5f6b", margin: 0 }}>
         Se cuenta en entradas: una inscripción con acompañante son 2. «Ya asistió antes» une a la misma persona por correo o
