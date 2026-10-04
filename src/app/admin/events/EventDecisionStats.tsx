@@ -5,7 +5,8 @@ import { bucketDates, fillDayRange, bucketHours, channelKey, capitalize, topN, w
 import { findCountry } from "@/lib/worldCountries";
 import { Section, EmptyNote, ScrollBox, BarList, StatCard } from "../StatsUI";
 import AttendanceForecastSection from "./AttendanceForecastSection";
-import VelocityPanel, { PACE_STYLE } from "./VelocityPanel";
+import VelocityPanel from "./VelocityPanel";
+import { PACE_STYLE } from "@/lib/registrationVelocity";
 import { loadForecastData, loadVelocityData } from "@/lib/eventReportData";
 
 // Planning numbers for THIS event — before it happens (¿va bien la venta?

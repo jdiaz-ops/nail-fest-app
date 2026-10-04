@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { AlignedSummary, Pace } from "@/lib/registrationVelocity";
+import { PACE_STYLE, type AlignedSummary } from "@/lib/registrationVelocity";
 
 // "Ritmo de inscripción" — the interactive part: two ways to line events up
 // (días antes del evento / días desde la apertura), the cumulative curves,
@@ -50,11 +50,6 @@ const fmt = (n: number) => Math.round(n).toLocaleString("es-CO");
 const fmtRate = (n: number) => (n >= 10 ? fmt(n) : (Math.round(n * 10) / 10).toLocaleString("es-CO"));
 const cum = (c: VelocityCurveData, d: number) => (d <= 0 ? c.total : d < c.cumulative.length ? c.cumulative[d]! : 0);
 
-export const PACE_STYLE: Record<Pace, { icon: string; label: string; color: string }> = {
-  ahead: { icon: "▲", label: "Acelerado", color: "#12966b" },
-  on_track: { icon: "●", label: "En línea", color: INK },
-  behind: { icon: "▼", label: "Por debajo", color: "#b25e00" },
-};
 
 // Top of the Y axis: four equal gridline steps, each a round number
 // (… 2.500, 3.000, 4.000, 5.000 …) — 13.279 → 16.000, not 40.000.

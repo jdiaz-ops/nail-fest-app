@@ -107,6 +107,15 @@ export interface Comparison {
 
 export type Pace = "ahead" | "on_track" | "behind";
 
+// How each pace reads on screen — here (plain module) rather than in the
+// client panel, so server components can use it too: a value imported from
+// a "use client" file is only a reference on the server, not the object.
+export const PACE_STYLE: Record<Pace, { icon: string; label: string; color: string }> = {
+  ahead: { icon: "▲", label: "Acelerado", color: "#12966b" },
+  on_track: { icon: "●", label: "En línea", color: "#1c1310" },
+  behind: { icon: "▼", label: "Por debajo", color: "#b25e00" },
+};
+
 export interface AlignedSummary {
   medianRhythm: number | null;
   pace: Pace | null;
