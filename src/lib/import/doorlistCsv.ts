@@ -19,6 +19,9 @@ export interface DoorlistRow {
   ticketType: string;
   ticketCode: string;
   orderId: string;
+  // Ticket Tailor's per-ticket status — "void" for a cancelled ticket,
+  // empty for a valid one.
+  status: string;
   checkedIn: string; // "Yes" | "No"
   email: string;
   phone: string;
@@ -95,6 +98,7 @@ const COLUMN_MAP: Record<string, keyof DoorlistRow> = {
   "Ticket type": "ticketType",
   "Ticket code": "ticketCode",
   "Order ID": "orderId",
+  Status: "status",
   "Checked-in": "checkedIn",
   "Email address": "email",
   "Número de celular con WhatsApp - (asegúrate que sea correcto para recibir info del evento)": "phone",
@@ -125,6 +129,7 @@ export function parseDoorlistCsv(text: string): DoorlistRow[] {
       ticketType: get("ticketType"),
       ticketCode: get("ticketCode"),
       orderId: get("orderId"),
+      status: get("status"),
       checkedIn: get("checkedIn"),
       email: get("email"),
       phone: get("phone"),
@@ -214,6 +219,9 @@ export interface GroupResult {
   // opaque bucket.
   skippedInvalidEmail: number;
   invalidEmailSamples: string[];
+  // Cancelled ("void") tickets and Ticket Tailor's own "[TEST ORDER – NOT
+  // VALID]" tickets — never real attendees, so never imported.
+  skippedVoidOrTest: number;
   unmappedProfessions: string[];
 }
 
@@ -226,10 +234,15 @@ export function groupIntoImportPeople(rows: DoorlistRow[]): GroupResult {
   const byEmail = new Map<string, ImportPerson>();
   let skippedNoEmail = 0;
   let skippedInvalidEmail = 0;
+  let skippedVoidOrTest = 0;
   const invalidEmailSamples: string[] = [];
   const unmapped = new Set<string>();
 
   for (const row of rows) {
+    if (row.status.trim().toLowerCase() === "void" || /test order/i.test(row.ticketType)) {
+      skippedVoidOrTest++;
+      continue;
+    }
     const email = row.email.trim().toLowerCase();
     if (!email) {
       skippedNoEmail++;
@@ -283,6 +296,7 @@ export function groupIntoImportPeople(rows: DoorlistRow[]): GroupResult {
     skippedNoEmail,
     skippedInvalidEmail,
     invalidEmailSamples,
+    skippedVoidOrTest,
     unmappedProfessions: [...unmapped],
   };
 }

@@ -18,6 +18,7 @@ interface Preview {
   people: ImportPerson[];
   skippedNoEmail: number;
   skippedInvalidEmail: number;
+  skippedVoidOrTest: number;
   invalidEmailSamples: string[];
   unmappedProfessions: string[];
   cityCounts: [string, number][];
@@ -73,6 +74,7 @@ export default function ImportComposer({ events }: Props) {
         people: grouped.people,
         skippedNoEmail: grouped.skippedNoEmail,
         skippedInvalidEmail: grouped.skippedInvalidEmail,
+        skippedVoidOrTest: grouped.skippedVoidOrTest,
         invalidEmailSamples: grouped.invalidEmailSamples,
         unmappedProfessions: grouped.unmappedProfessions,
         cityCounts: [...cityCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12),
@@ -112,7 +114,7 @@ export default function ImportComposer({ events }: Props) {
     setImporting(false);
     if (res.ok) {
       setResult(
-        `Listo — "${body.event.name}": ${body.created} registros nuevos, ${body.updated} ya existían y se actualizaron (sin duplicar). ${body.peopleWithAnyCheckIn} personas con asistencia real. Aforo real: ${body.ticketsCheckedIn} de ${body.ticketsIssued} boletas escaneadas en la puerta. ${body.professionsCreated.length > 0 ? `Profesiones nuevas creadas: ${body.professionsCreated.join(", ")}.` : ""}`
+        `Listo — "${body.event.name}": ${body.created} registros nuevos, ${body.updated} ya existían y solo se completó lo que les faltaba (sin duplicar ni borrar nada). ${body.peopleWithAnyCheckIn} personas con asistencia real. Aforo real: ${body.ticketsCheckedIn} de ${body.ticketsIssued} boletas escaneadas en la puerta. ${body.professionsCreated.length > 0 ? `Profesiones nuevas creadas: ${body.professionsCreated.join(", ")}.` : ""}`
       );
       router.refresh();
     } else if (body.error === "invalid_body" && Array.isArray(body.issues) && body.issues.length > 0) {
@@ -144,6 +146,7 @@ export default function ImportComposer({ events }: Props) {
           <p>
             <strong>{preview.people.length}</strong> personas únicas detectadas
             {preview.skippedNoEmail > 0 && <> — {preview.skippedNoEmail} filas sin email fueron omitidas</>}
+            {preview.skippedVoidOrTest > 0 && <> — {preview.skippedVoidOrTest} entradas anuladas o de prueba fueron omitidas</>}
             {preview.skippedInvalidEmail > 0 && (
               <>
                 {" "}

@@ -114,6 +114,12 @@ export async function POST(req: NextRequest) {
   // UPDATE never touches `id`, so an existing person keeps their id (and
   // therefore keeps every Registration/Consent/MetaEvent already linked to
   // them from a prior event).
+  //
+  // Fill-only for someone who already exists: a field is only written when
+  // it's empty in our database. Re-importing an old export must never undo
+  // the CRM's own cleanup (normalized cities, fixed names/phones) — and an
+  // export with an empty column (e.g. no city question) would otherwise
+  // wipe that field for thousands of people at once.
   for (const batch of chunk(people, BATCH_SIZE)) {
     const values = batch.map(
       (p) =>
@@ -123,11 +129,11 @@ export async function POST(req: NextRequest) {
       INSERT INTO "Person" (id, email, phone, "firstName", "lastName", city, profession, "createdAt", "updatedAt")
       VALUES ${Prisma.join(values)}
       ON CONFLICT (email) DO UPDATE SET
-        phone = EXCLUDED.phone,
-        "firstName" = EXCLUDED."firstName",
-        "lastName" = EXCLUDED."lastName",
-        city = EXCLUDED.city,
-        profession = EXCLUDED.profession,
+        phone = COALESCE(NULLIF("Person".phone, ''), EXCLUDED.phone),
+        "firstName" = COALESCE(NULLIF("Person"."firstName", ''), EXCLUDED."firstName"),
+        "lastName" = COALESCE(NULLIF("Person"."lastName", ''), EXCLUDED."lastName"),
+        city = COALESCE(NULLIF("Person".city, ''), EXCLUDED.city),
+        profession = COALESCE(NULLIF("Person".profession, ''), EXCLUDED.profession),
         "updatedAt" = NOW()
     `;
   }
@@ -153,10 +159,11 @@ export async function POST(req: NextRequest) {
   const alreadyRegisteredIds = new Set(existingBefore.map((r) => r.personId));
 
   // 4. Upsert Registration by (personId, eventId) — raw SQL, batched. A
-  // second import of the same event updates ticketCount/checkedInCount/
-  // customFields in place instead of being silently skipped, so a
-  // corrected or richer re-export (e.g. one that finally has accurate
-  // check-in data) actually takes effect.
+  // second import of the same event completes the existing row instead of
+  // replacing it: ticket/check-in counts only ever go up (GREATEST — a
+  // check-in our own scanner recorded is never undone by an older
+  // export), and customFields keeps every value already there, only
+  // adding keys that were missing or empty.
   for (const batch of chunk(people, BATCH_SIZE)) {
     const values = batch.map((p) => {
       const customFields = JSON.stringify({
@@ -170,9 +177,9 @@ export async function POST(req: NextRequest) {
       INSERT INTO "Registration" (id, "eventId", "personId", status, "confirmedAt", "ticketCount", "checkedInCount", "customFields")
       VALUES ${Prisma.join(values)}
       ON CONFLICT ("personId", "eventId") DO UPDATE SET
-        "ticketCount" = EXCLUDED."ticketCount",
-        "checkedInCount" = EXCLUDED."checkedInCount",
-        "customFields" = EXCLUDED."customFields"
+        "ticketCount" = GREATEST("Registration"."ticketCount", EXCLUDED."ticketCount"),
+        "checkedInCount" = GREATEST("Registration"."checkedInCount", EXCLUDED."checkedInCount"),
+        "customFields" = EXCLUDED."customFields" || jsonb_strip_nulls(COALESCE("Registration"."customFields", '{}'::jsonb))
     `;
   }
 

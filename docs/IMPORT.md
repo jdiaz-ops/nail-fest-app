@@ -63,10 +63,15 @@ mismas preguntas del formulario de registro.
 
 Si subes el mismo archivo (o una versión corregida, ej. con datos de
 check-in actualizados) otra vez para el mismo evento: `Person` y
-`Registration` se actualizan en el lugar (upsert por email, y por
-persona+evento respectivamente) — nunca se duplica un registro. El
-resultado distingue `created` (gente nueva) de `updated` (ya existía, se
-refrescaron sus datos). El consentimiento SÍ es a prueba de duplicados
+`Registration` se completan en el lugar (upsert por email, y por
+persona+evento respectivamente) — nunca se duplica un registro. Para
+quien ya existe, la importación **solo llena lo que está vacío**: nunca
+reemplaza una ciudad, nombre, celular o profesión que ya tengamos (así una
+limpieza hecha en el CRM no se pierde al reimportar un archivo viejo), los
+conteos de boletas y de check-in solo suben, y los campos extra (cédula,
+Instagram) conservan el valor existente. Las entradas anuladas («void») y
+las órdenes de prueba de Ticket Tailor se omiten. El resultado distingue
+`created` (gente nueva) de `updated` (ya existía, se completó). El consentimiento SÍ es a prueba de duplicados
 distinto: solo se registra una vez, la primera vez que esa persona entra a
 ese evento — una segunda corrida no vuelve a insertar filas de
 consentimiento.
