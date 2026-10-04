@@ -4,6 +4,7 @@ import { formatDateInTz } from "@/lib/dateFormat";
 import { bucketDates, fillDayRange, bucketHours, channelKey, capitalize, topN, weekdayTotals, WEEKDAY_NAMES_ES } from "@/lib/eventStatsHelpers";
 import { findCountry } from "@/lib/worldCountries";
 import { Section, EmptyNote, ScrollBox, BarList, StatCard } from "../StatsUI";
+import AttendanceForecastSection from "./AttendanceForecastSection";
 
 // Planning numbers for THIS event — before it happens (¿va bien la venta?
 // ¿en qué canal seguir invirtiendo?) and after it happens (¿a quién le
@@ -236,6 +237,8 @@ export default async function EventDecisionStats({ eventId }: { eventId: string 
         <StatCard label="Escaneadas (entraron)" value={String(checkedIn)} sub={`${checkInRate}% de las emitidas`} />
         <StatCard label="Reingresos" value={String(reentryCount)} sub={checkedIn > 0 ? `${reentryRate} por cada 100 entradas` : undefined} />
       </div>
+
+      <AttendanceForecastSection eventId={eventId} />
 
       <Section
         title="Embudo de registro"
