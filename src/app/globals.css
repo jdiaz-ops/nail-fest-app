@@ -1996,3 +1996,17 @@ button.primary:disabled {
     padding-right: 10px !important;
   }
 }
+
+/* "¿Cuándo empujar?" timeline (DecisionSections.tsx): the SVG on wide
+   screens, a plain list on phones where the scaled-down SVG is unreadable. */
+.push-timeline-list {
+  display: none;
+}
+@media (max-width: 600px) {
+  .push-timeline-list {
+    display: block;
+  }
+  .push-timeline-svg {
+    display: none;
+  }
+}

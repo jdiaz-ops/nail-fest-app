@@ -355,9 +355,24 @@ function PushTimeline({ daysBefore, timing, eventDateLabel }: { daysBefore: numb
     { d: 7, label: `última semana · ${Math.round(timing.shareLast7 * 100)} %` },
     ...(timing.reboundDaysBefore != null && timing.reboundDaysBefore < span ? [{ d: timing.reboundDaysBefore, label: "arranca el repunte" }] : []),
   ].filter((m) => m.d <= span);
+  // On a phone the scaled-down SVG is unreadable (tiny, overlapping
+  // labels) — the same milestones go in a short list instead; globals.css
+  // swaps the two under 600px.
+  const listItems = [
+    `Hoy: faltan ${daysBefore} días`,
+    ...(timing.reboundDaysBefore != null ? [`Arranca el repunte: ~${Math.round(timing.reboundDaysBefore)} días antes`] : []),
+    `Últimos 14 días: ${Math.round(timing.shareLast14 * 100)} % de los inscritos`,
+    `Última semana: ${Math.round(timing.shareLast7 * 100)} %`,
+    `Evento: ${eventDateLabel}`,
+  ];
   return (
     <div style={{ border: "1px solid #e3e1dc", borderRadius: 10, background: "#fff", padding: "6px 8px" }}>
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Línea de tiempo hasta el evento con los momentos de empuje">
+      <ol className="push-timeline-list" style={{ margin: 0, padding: "4px 4px 4px 20px", fontSize: 13, lineHeight: 1.7 }}>
+        {listItems.map((t) => (
+          <li key={t}>{t}</li>
+        ))}
+      </ol>
+      <svg className="push-timeline-svg" viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label="Línea de tiempo hasta el evento con los momentos de empuje">
         <line x1={x(span)} x2={x(0)} y1={50} y2={50} stroke="#e3e1dc" strokeWidth={2} />
         {daysBefore <= span && (
           <>
