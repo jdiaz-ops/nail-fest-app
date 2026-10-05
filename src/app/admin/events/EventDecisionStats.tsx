@@ -4,7 +4,6 @@ import { formatDateInTz, utcToZonedInputValue } from "@/lib/dateFormat";
 import { bucketDates, fillDayRange, bucketHours, channelKey, capitalize, topN, weekdayTotals, WEEKDAY_NAMES_ES } from "@/lib/eventStatsHelpers";
 import { findCountry } from "@/lib/worldCountries";
 import { Section, EmptyNote, ScrollBox, BarList, StatCard } from "../StatsUI";
-import AttendanceForecastSection from "./AttendanceForecastSection";
 import VelocityPanel from "./VelocityPanel";
 import DecisionSections from "./DecisionSections";
 import { PACE_STYLE } from "@/lib/registrationVelocity";
@@ -366,7 +365,9 @@ export default async function EventDecisionStats({ eventId }: { eventId: string 
         </Section>
       )}
 
-      <AttendanceForecastSection data={forecastData} />
+      {/* AttendanceForecastSection (the per-group "De dónde sale" table) is
+          hidden on request — forecastData still feeds the summary card,
+          the door goal and the logistics block. */}
 
       <Section
         title="Embudo de registro"
