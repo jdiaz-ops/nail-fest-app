@@ -6,6 +6,7 @@ import { findCountry } from "@/lib/worldCountries";
 import { Section, EmptyNote, ScrollBox, BarList, StatCard } from "../StatsUI";
 import VelocityPanel from "./VelocityPanel";
 import DecisionSections from "./DecisionSections";
+import AttendanceForecastSection from "./AttendanceForecastSection";
 import { PACE_STYLE } from "@/lib/registrationVelocity";
 import { loadForecastData, loadVelocityData } from "@/lib/eventReportData";
 
@@ -317,15 +318,23 @@ export default async function EventDecisionStats({ eventId }: { eventId: string 
             any more — still counted, it's in the funnel below. */}
       </div>
 
-      <DecisionSections
-        velocityData={velocityData}
-        forecastData={forecastData}
-        issued={issued}
-        uniqueRegs={uniqueRegs}
-        timezone={timezone}
-        language={language}
-        briefingEmails={orgSettings.briefingEmails}
-      />
+      {/* Everything below the summary row that was asked to be hidden stays
+          computed and reachable, folded behind one line (closed by default). */}
+      <details className="report-fold">
+        <summary>Ver análisis de decisión (meta, escenarios, cuándo empujar, semanas, logística, pronóstico)</summary>
+        <div style={{ marginTop: 16 }}>
+          <DecisionSections
+            velocityData={velocityData}
+            forecastData={forecastData}
+            issued={issued}
+            uniqueRegs={uniqueRegs}
+            timezone={timezone}
+            language={language}
+            briefingEmails={orgSettings.briefingEmails}
+          />
+          <AttendanceForecastSection data={forecastData} />
+        </div>
+      </details>
 
       {velocityData && velocity && velocity.target.total > 0 && (
         <Section
@@ -365,9 +374,6 @@ export default async function EventDecisionStats({ eventId }: { eventId: string 
         </Section>
       )}
 
-      {/* AttendanceForecastSection (the per-group "De dónde sale" table) is
-          hidden on request — forecastData still feeds the summary card,
-          the door goal and the logistics block. */}
 
       <Section
         title="Embudo de registro"

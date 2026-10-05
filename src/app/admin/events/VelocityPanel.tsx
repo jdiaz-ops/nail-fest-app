@@ -127,6 +127,8 @@ export default function VelocityPanel(props: VelocityPanelProps) {
 
       <VelocityChart mode={mode} target={target} rows={rows} upcoming={upcoming} daysBefore={daysBefore} daysSinceOpening={daysSinceOpening} />
 
+      <details className="report-fold" style={{ margin: "12px 0" }}>
+        <summary>Ver tabla comparativa por evento</summary>
       <div className="admin-table-wrap" style={{ border: "1px solid #e3e1dc", borderRadius: 10, margin: "12px 0" }}>
         <table className="forecast-table" style={{ borderCollapse: "collapse", fontSize: 13, width: "100%" }}>
           <thead>
@@ -161,6 +163,7 @@ export default function VelocityPanel(props: VelocityPanelProps) {
           </tbody>
         </table>
       </div>
+      </details>
       <p style={{ fontSize: 12, color: MUTED, margin: 0 }}>
         Inscripciones confirmadas (personas, no entradas). «Lanzamiento» = el primer día real de inscripciones — en casi todos los eventos es el
         día más grande, por eso el ritmo se mide con los últimos 7 días y no con el promedio desde la apertura.

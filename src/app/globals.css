@@ -2010,3 +2010,25 @@ button.primary:disabled {
     display: none;
   }
 }
+
+/* Folded report blocks (EventDecisionStats / VelocityPanel): hidden by
+   default behind one line, nothing recomputed when opened. */
+.report-fold {
+  margin-bottom: 24px;
+}
+.report-fold > summary {
+  cursor: pointer;
+  font-size: 13px;
+  color: #5b5f6b;
+  padding: 8px 0;
+  list-style: none;
+}
+.report-fold > summary::-webkit-details-marker {
+  display: none;
+}
+.report-fold > summary::before {
+  content: "▸ ";
+}
+.report-fold[open] > summary::before {
+  content: "▾ ";
+}
