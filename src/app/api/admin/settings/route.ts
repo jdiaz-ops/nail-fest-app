@@ -12,6 +12,7 @@ const patchSchema = z
     timezone: z.string().min(1),
     language: z.enum(["es", "en"]),
     replyToEmail: z.string().email().or(z.literal("")),
+    briefingEmails: z.array(z.string().email()),
     privacyPolicyText: z.string(),
     termsAndConditionsText: z.string(),
     bannedEmails: z.array(z.string().email()),

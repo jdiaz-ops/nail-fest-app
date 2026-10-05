@@ -63,19 +63,40 @@ export async function loadForecastData(eventId: string, timezone: string, langua
   return { status: "ok", result, targetIsPast, actual: targetIsPast ? (scannedByEvent.get(eventId) ?? 0) : null };
 }
 
+export interface VelocityPastEvent {
+  id: string;
+  name: string;
+  city: string;
+  startsAt: Date;
+  // Door data: tickets issued and scanned (null rate when never scanned).
+  tickets: number;
+  scanned: number;
+  attendanceRate: number | null;
+}
+
 export interface VelocityData {
   result: VelocityResult;
   // Finished events left out because their sign-up dates aren't real yet
   // (orders export not applied) — named so it's clear what's missing.
   withoutDates: string[];
   targetIsUpcoming: boolean;
+  target: { id: string; city: string; startsAt: Date; endsAt: Date | null; goalRegistrations: number | null; goalAttendance: number | null; referenceEventId: string | null };
+  // Every finished same-kind event (with or without real dates) — for
+  // scenarios, the previous-edition comparison and the reference picker.
+  pastEvents: VelocityPastEvent[];
+  // First entries at the door of past events scanned with the app, per
+  // event day and local hour — lib/eventDecisions.ts's doorPattern input.
+  doorRows: { eventId: string; dayIndex: number; hour: number; count: number }[];
 }
 
 /** Compares against finished events of the same kind (in-person with
  * in-person, virtual with virtual). */
 export async function loadVelocityData(eventId: string, timezone: string, language: string): Promise<VelocityData | null> {
   const now = new Date();
-  const target = await db.event.findUnique({ where: { id: eventId }, select: { id: true, format: true, city: true, startsAt: true, endsAt: true } });
+  const target = await db.event.findUnique({
+    where: { id: eventId },
+    select: { id: true, format: true, city: true, startsAt: true, endsAt: true, goalRegistrations: true, goalAttendance: true, referenceEventId: true },
+  });
   if (!target) return null;
   const virtual = target.format === "VIRTUAL";
   const eventRows = await db.event.findMany({
@@ -96,6 +117,24 @@ export async function loadVelocityData(eventId: string, timezone: string, langua
   `;
   const daily = new Map<string, Map<string, number>>(ids.map((id) => [id, new Map()]));
   for (const c of counts) daily.get(c.eventId)?.set(c.day, c.n);
+  const pastIds = pastRows.map((e) => e.id);
+  const [door, scanRows] = await Promise.all([
+    db.registration.groupBy({ by: ["eventId"], where: { status: "CONFIRMED", eventId: { in: pastIds } }, _sum: { ticketCount: true, checkedInCount: true } }),
+    // Only events scanned with our own app have these; imported doorlists
+    // carry a Yes/No per ticket and no time at all.
+    pastIds.length > 0
+      ? db.$queryRaw<{ eventId: string; dayIndex: number; hour: number; count: number }[]>`
+          SELECT s."scannedForEventId" AS "eventId",
+                 (DATE((s."scannedAt" AT TIME ZONE 'UTC') AT TIME ZONE ${timezone}) - DATE((e."startsAt" AT TIME ZONE 'UTC') AT TIME ZONE ${timezone}))::int AS "dayIndex",
+                 EXTRACT(HOUR FROM (s."scannedAt" AT TIME ZONE 'UTC') AT TIME ZONE ${timezone})::int AS hour,
+                 COUNT(*)::int AS count
+          FROM "ScanLog" s JOIN "Event" e ON e.id = s."scannedForEventId"
+          WHERE s.result = 'VALID_FIRST' AND s."scannedForEventId" = ANY(${pastIds})
+          GROUP BY 1, 2, 3
+        `
+      : Promise.resolve([]),
+  ]);
+  const doorByEvent = new Map(door.map((d) => [d.eventId, { tickets: d._sum.ticketCount ?? 0, scanned: d._sum.checkedInCount ?? 0 }]));
 
   const names = shortEventNames([target, ...pastRows], timezone, language);
   const toInput = (e: { id: string; startsAt: Date; endsAt: Date | null }): VelocityEventInput => ({
@@ -108,5 +147,16 @@ export async function loadVelocityData(eventId: string, timezone: string, langua
   const past = pastRows.sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime()).map(toInput);
   const withoutDates = past.filter((p) => p.daily.size > 0 && !hasRealDates(p)).map((p) => p.name);
   const result = compareVelocity({ target: toInput(target), past, todayKey: dayKey(now, timezone) });
-  return { result, withoutDates, targetIsUpcoming: now < target.startsAt };
+  const pastEvents: VelocityPastEvent[] = pastRows.map((e) => {
+    const d = doorByEvent.get(e.id) ?? { tickets: 0, scanned: 0 };
+    return { id: e.id, name: names.get(e.id)!, city: e.city, startsAt: e.startsAt, tickets: d.tickets, scanned: d.scanned, attendanceRate: d.scanned > 0 && d.tickets > 0 ? d.scanned / d.tickets : null };
+  });
+  return {
+    result,
+    withoutDates,
+    targetIsUpcoming: now < target.startsAt,
+    target: { id: target.id, city: target.city, startsAt: target.startsAt, endsAt: target.endsAt, goalRegistrations: target.goalRegistrations, goalAttendance: target.goalAttendance, referenceEventId: target.referenceEventId },
+    pastEvents,
+    doorRows: scanRows.filter((r) => r.dayIndex >= 0 && r.dayIndex < 7),
+  };
 }

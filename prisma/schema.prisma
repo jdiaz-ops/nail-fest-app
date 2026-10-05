@@ -129,6 +129,15 @@ model Event {
   // differs from `name`, which stays the admin's own internal label.
   // Null/empty = people see `name` — see lib/eventDisplayName.ts.
   publicName   String?
+  // Decision targets for the report page (see EventDecisionStats and
+  // lib/eventDecisions.ts): how many confirmed registrations / people at
+  // the door this event is aiming for, and which past event the admin
+  // thinks it will most resemble (the "base" scenario). All optional —
+  // without a goal the report still compares against past events, it
+  // just can't say "a este ritmo llegas".
+  goalRegistrations Int?
+  goalAttendance    Int?
+  referenceEventId  String?
   // Optional one-line tagline shown on the public page between the
   // event's name (h1) and its venue/address line — see
   // [eventSlug]/page.tsx. Null means "don't show anything there", same
@@ -1277,6 +1286,10 @@ model OrgSettings {
   // `send()` as the Reply-To header; null means "reply goes to the From
   // address", same as today's behavior before this existed.
   replyToEmail String?
+  // Who gets the Monday "briefing semanal" email per upcoming event (see
+  // lib/weeklyBriefing.ts). Empty = falls back to replyToEmail; none = no
+  // briefing is sent.
+  briefingEmails String[] @default([])
 
   // Privacy policy — rendered at /privacidad, linked from the
   // registration form's consent section.

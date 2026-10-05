@@ -6,6 +6,7 @@ import { findCountry } from "@/lib/worldCountries";
 import { Section, EmptyNote, ScrollBox, BarList, StatCard } from "../StatsUI";
 import AttendanceForecastSection from "./AttendanceForecastSection";
 import VelocityPanel from "./VelocityPanel";
+import DecisionSections from "./DecisionSections";
 import { PACE_STYLE } from "@/lib/registrationVelocity";
 import { loadForecastData, loadVelocityData } from "@/lib/eventReportData";
 
@@ -20,7 +21,7 @@ import { loadForecastData, loadVelocityData } from "@/lib/eventReportData";
 // own comment for what's still door-side-only (the live per-scan log,
 // the emergency CSV export).
 export default async function EventDecisionStats({ eventId }: { eventId: string }) {
-  const [event, orgSettings, ticketAgg, abandonedCount, confirmedRegs, checkedInAgg, scanCounts, byTicketType, checkInScans, reachedEmailStep, pickedTicketType, landingViewsByCountry, landingSinceAgg] = await Promise.all([
+  const [event, orgSettings, ticketAgg, _abandonedCount, confirmedRegs, checkedInAgg, scanCounts, byTicketType, checkInScans, reachedEmailStep, pickedTicketType, landingViewsByCountry, landingSinceAgg] = await Promise.all([
     db.event.findUnique({ where: { id: eventId } }),
     getOrgSettings(),
     db.registration.aggregate({ where: { eventId, status: "CONFIRMED" }, _sum: { ticketCount: true } }),
@@ -255,9 +256,9 @@ export default async function EventDecisionStats({ eventId }: { eventId: string 
     <div>
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 24 }}>
         <StatCard
-          label="Inscritos"
-          value={fmtN(uniqueRegs)}
-          sub={`${fmtN(issued)} entradas${multiTicketRegs > 0 ? ` · ${fmtN(multiTicketRegs)} con acompañante` : ""}`}
+          label="Entradas"
+          value={fmtN(issued)}
+          sub={`${fmtN(uniqueRegs)} inscritos${multiTicketRegs > 0 ? ` · ${fmtN(multiTicketRegs)} con acompañante` : ""}`}
         />
         {beforeEvent ? (
           <>
@@ -313,8 +314,19 @@ export default async function EventDecisionStats({ eventId }: { eventId: string 
           </>
         )}
         {remaining != null && <StatCard label="Restantes" value={fmtN(remaining)} sub={`de ${fmtN(event.capacity!)} cupos`} />}
-        <StatCard label="Carritos abandonados" value={fmtN(abandonedCount)} />
+        {/* Carritos abandonados (abandonedCount) deliberately not a card
+            any more — still counted, it's in the funnel below. */}
       </div>
+
+      <DecisionSections
+        velocityData={velocityData}
+        forecastData={forecastData}
+        issued={issued}
+        uniqueRegs={uniqueRegs}
+        timezone={timezone}
+        language={language}
+        briefingEmails={orgSettings.briefingEmails}
+      />
 
       {velocityData && velocity && velocity.target.total > 0 && (
         <Section

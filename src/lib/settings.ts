@@ -20,6 +20,8 @@ export interface OrgSettingsValue {
   timezone: string;
   language: string;
   replyToEmail: string | null;
+  // See OrgSettings.briefingEmails's own schema comment.
+  briefingEmails: string[];
   privacyPolicyText: string | null;
   termsAndConditionsText: string | null;
   bannedEmails: string[];
@@ -49,6 +51,7 @@ const DEFAULTS: OrgSettingsValue = {
   timezone: "America/Bogota",
   language: "es",
   replyToEmail: null,
+  briefingEmails: [],
   privacyPolicyText: null,
   termsAndConditionsText: null,
   bannedEmails: [],
@@ -82,6 +85,7 @@ export async function getOrgSettings(): Promise<OrgSettingsValue> {
     timezone: row.timezone,
     language: row.language,
     replyToEmail: row.replyToEmail,
+    briefingEmails: row.briefingEmails,
     privacyPolicyText: row.privacyPolicyText,
     termsAndConditionsText: row.termsAndConditionsText,
     bannedEmails: row.bannedEmails,
@@ -116,6 +120,7 @@ export async function updateOrgSettings(patch: Partial<OrgSettingsValue>): Promi
     timezone: row.timezone,
     language: row.language,
     replyToEmail: row.replyToEmail,
+    briefingEmails: row.briefingEmails,
     privacyPolicyText: row.privacyPolicyText,
     termsAndConditionsText: row.termsAndConditionsText,
     bannedEmails: row.bannedEmails,
