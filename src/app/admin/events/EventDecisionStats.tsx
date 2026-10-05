@@ -337,6 +337,9 @@ export default async function EventDecisionStats({ eventId }: { eventId: string 
       </details>
 
       {velocityData && velocity && velocity.target.total > 0 && (
+        <details className="report-fold">
+          <summary>Ver ritmo de inscripción (gráfica comparada con eventos anteriores)</summary>
+          <div style={{ marginTop: 16 }}>
         <Section
           title="Ritmo de inscripción"
           note={`Comparado con ${velocity.comparisons.length} ${velocity.comparisons.length === 1 ? "evento anterior" : "eventos anteriores"}, alineados por días antes del evento o por días desde que abrieron las inscripciones.`}
@@ -372,6 +375,8 @@ export default async function EventDecisionStats({ eventId }: { eventId: string 
             withoutDates={velocityData.withoutDates}
           />
         </Section>
+          </div>
+        </details>
       )}
 
 
