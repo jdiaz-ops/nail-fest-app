@@ -132,12 +132,18 @@ export default async function EventBroadcastsPage({ params }: { params: { id: st
                             title="Puede incluir aperturas falsas de Apple Mail Privacy Protection — los clics son la señal más confiable"
                           />
                           <Bar label="Clics" count={s.clicked} total={s.sent} color="#5b3fa8" />
-                          <Bar label="Rebotes" count={s.bounced} total={s.sent} color="var(--danger)" />
+                          {s.bounced > 0 ? (
+                            <Link href={`/admin/events/${event.id}/broadcasts/${b.id}/fallidos`} style={{ textDecoration: "none" }} title="Ver fallidos y rebotes por motivo">
+                              <Bar label="Rebotes ↗" count={s.bounced} total={s.sent} color="var(--danger)" />
+                            </Link>
+                          ) : (
+                            <Bar label="Rebotes" count={s.bounced} total={s.sent} color="var(--danger)" />
+                          )}
                         </div>
                         {s.failed > 0 && (
-                          <span style={{ fontSize: 11, color: "var(--danger)" }}>
-                            {s.failed} {s.failed === 1 ? "envío falló" : "envíos fallaron"} antes de salir (no se cuentan arriba)
-                          </span>
+                          <Link href={`/admin/events/${event.id}/broadcasts/${b.id}/fallidos`} style={{ fontSize: 11, color: "var(--danger)" }}>
+                            {s.failed} {s.failed === 1 ? "envío falló" : "envíos fallaron"} antes de salir (no se cuentan arriba) — ver por qué ↗
+                          </Link>
                         )}
                         {s.complained > 0 && (
                           <span style={{ fontSize: 11, color: "var(--danger)", fontWeight: 600 }}>

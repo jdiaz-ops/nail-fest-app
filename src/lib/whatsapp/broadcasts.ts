@@ -7,10 +7,11 @@ import { resolveEventBroadcastRecipients } from "@/lib/broadcastRecipients";
 import { publishChunkContinuation, scheduleWhatsAppBroadcastSend, QSTASH_MAX_DELAY_MS, CHUNK_WATCHDOG_SECONDS, CHUNK_LOCK_SECONDS } from "@/lib/qstash";
 import { whatsappProvider } from "./index";
 import { recordOutboundMessage } from "./inbox";
+import { categorizeWhatsAppFailure, WHATSAPP_FAILURE_INFO, type WhatsAppFailureCategory } from "./failureCategories";
 import { resolveMergeTag } from "./mergeTags";
 import { dynamicUrlButtonIndex } from "./automations";
 import type { WhatsAppTemplateButton } from "./provider";
-import type { Person, Event, WhatsAppBroadcast, WhatsAppTemplate } from "@prisma/client";
+import type { Person, Event, WhatsAppBroadcast, WhatsAppTemplate, WhatsAppMessageStatus } from "@prisma/client";
 
 const CONCURRENCY = 10;
 // How many recipients one chunk sends before either finishing or handing
@@ -475,16 +476,32 @@ async function alreadyMessagedInBroadcast(broadcastId: string, people: Person[])
  * revoked since the original send still blocks the retry). Skips a
  * FAILED row with no linked Person (shouldn't happen — every original
  * send resolved a real Person first — but never silently guesses one). */
-export async function retryFailedMessages(broadcastId: string): Promise<{ retried: number; sent: number; failed: number; skipped: number }> {
+export async function retryFailedMessages(
+  broadcastId: string
+): Promise<{ retried: number; sent: number; failed: number; skipped: number; skippedNotRetryable: number }> {
   const broadcast = await db.whatsAppBroadcast.findUniqueOrThrow({
     where: { id: broadcastId },
     include: { template: true, event: true },
   });
 
-  const failedMessages = await db.whatsAppMessage.findMany({
-    where: { broadcastId, kind: "TEMPLATE", status: "FAILED" },
-    include: { conversation: { include: { person: true } } },
-  });
+  // Only numbers whose LATEST attempt failed (a retry that already went
+  // through isn't failed any more), and only for reasons a retry can fix
+  // — a dead number or a user Meta is shielding is left alone, see
+  // failureCategories.ts.
+  const latest = await latestMessagesFor(broadcastId);
+  let skippedNotRetryable = 0;
+  const retryIds: string[] = [];
+  for (const row of latest) {
+    if (row.status !== "FAILED") continue;
+    if (!WHATSAPP_FAILURE_INFO[categorizeWhatsAppFailure(row.errorMessage)].retryable) {
+      skippedNotRetryable++;
+      continue;
+    }
+    retryIds.push(row.messageId);
+  }
+  const failedMessages = retryIds.length
+    ? await db.whatsAppMessage.findMany({ where: { id: { in: retryIds } }, include: { conversation: { include: { person: true } } } })
+    : [];
 
   let sent = 0;
   let failed = 0;
@@ -520,7 +537,7 @@ export async function retryFailedMessages(broadcastId: string): Promise<{ retrie
     else failed++;
   }
 
-  return { retried: failedMessages.length, sent, failed, skipped };
+  return { retried: failedMessages.length, sent, failed, skipped, skippedNotRetryable };
 }
 
 /** Delivery breakdown for one broadcast's history row — Processed/
@@ -539,14 +556,62 @@ export interface BroadcastStats {
   duplicates: number;
 }
 
+interface LatestMessageRow {
+  messageId: string;
+  conversationId: string;
+  status: WhatsAppMessageStatus;
+  errorMessage: string | null;
+  personId: string | null;
+  phone: string;
+  firstName: string | null;
+  lastName: string | null;
+}
+
+/** One row per number — its LATEST TEMPLATE message for this broadcast,
+ * so a number whose first attempt failed and was then retried counts
+ * once, by the outcome of the retry. */
+async function latestMessagesFor(broadcastId: string): Promise<LatestMessageRow[]> {
+  return db.$queryRaw<LatestMessageRow[]>(Prisma.sql`
+    SELECT DISTINCT ON (m."conversationId")
+      m.id AS "messageId", m."conversationId", m.status, m."errorMessage",
+      c."personId", c.phone, p."firstName", p."lastName"
+    FROM "WhatsAppMessage" m
+    JOIN "WhatsAppConversation" c ON c.id = m."conversationId"
+    LEFT JOIN "Person" p ON p.id = c."personId"
+    WHERE m."broadcastId" = ${broadcastId} AND m.kind = 'TEMPLATE'::"WhatsAppMessageKind"
+    ORDER BY m."conversationId", m."createdAt" DESC, m.id DESC
+  `);
+}
+
+export interface WhatsAppFailureGroup {
+  category: WhatsAppFailureCategory;
+  label: string;
+  action: string;
+  retryable: boolean;
+  people: { personId: string | null; name: string; phone: string; detail: string | null }[];
+}
+
+/** Every number whose latest attempt for this broadcast FAILED, grouped by
+ * what to do about it — biggest group first. */
+export async function getBroadcastFailureBreakdown(broadcastId: string): Promise<WhatsAppFailureGroup[]> {
+  const rows = await latestMessagesFor(broadcastId);
+  const groups = new Map<WhatsAppFailureCategory, WhatsAppFailureGroup>();
+  for (const r of rows) {
+    if (r.status !== "FAILED") continue;
+    const category = categorizeWhatsAppFailure(r.errorMessage);
+    const group = groups.get(category) ?? { category, ...WHATSAPP_FAILURE_INFO[category], people: [] };
+    group.people.push({ personId: r.personId, name: [r.firstName, r.lastName].filter(Boolean).join(" ") || "—", phone: r.phone, detail: r.errorMessage });
+    groups.set(category, group);
+  }
+  return [...groups.values()].sort((a, b) => b.people.length - a.people.length);
+}
+
 export async function getBroadcastStats(broadcastId: string): Promise<BroadcastStats> {
-  const rows = await db.whatsAppMessage.groupBy({
-    by: ["status"],
-    where: { broadcastId, kind: "TEMPLATE" },
-    _count: { _all: true },
-  });
-  const byStatus = Object.fromEntries(rows.map((r) => [r.status, r._count._all]));
-  const processed = rows.reduce((sum, r) => sum + r._count._all, 0);
+  // Per number, by its latest row (see latestMessagesFor).
+  const latest = await latestMessagesFor(broadcastId);
+  const byStatus: Partial<Record<WhatsAppMessageStatus, number>> = {};
+  for (const r of latest) byStatus[r.status] = (byStatus[r.status] ?? 0) + 1;
+  const processed = latest.length;
   const perConversation = await db.whatsAppMessage.groupBy({
     by: ["conversationId"],
     where: { broadcastId, kind: "TEMPLATE", status: { not: "FAILED" } },

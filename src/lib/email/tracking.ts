@@ -30,12 +30,17 @@ const STAGE_FIELD: Record<EmailTrackingStage, "deliveredAt" | "openedAt" | "firs
 // progressed further (STAGE_ORDER), and never overwrites an
 // already-recorded timestamp for the same field (first occurrence wins,
 // since a provider can redeliver the same event on retry).
-export async function applyEmailTrackingEvent(providerMessageId: string, stage: EmailTrackingStage, at: Date = new Date()): Promise<void> {
+export async function applyEmailTrackingEvent(providerMessageId: string, stage: EmailTrackingStage, at: Date = new Date(), detail?: string | null): Promise<void> {
   const existing = await db.emailLog.findFirst({ where: { providerMessageId } });
   if (!existing) return;
 
   const field = STAGE_FIELD[stage];
   const patch: Record<string, unknown> = { status: stage, [field]: at };
+  // The provider's own reason for a bounce/complaint — kept for the
+  // failure breakdown (lib/email/failureCategories.ts). First one wins.
+  if ((stage === "BOUNCED" || stage === "COMPLAINED") && detail && !existing.errorMessage) {
+    patch.errorMessage = detail.slice(0, 500);
+  }
 
   if (STAGE_ORDER.indexOf(stage) < STAGE_ORDER.indexOf(existing.status)) {
     delete patch.status;

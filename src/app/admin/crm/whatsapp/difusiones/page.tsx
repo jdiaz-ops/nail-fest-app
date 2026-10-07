@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { db } from "@/lib/db";
 import { countSegment, type SegmentFilter } from "@/lib/segments/builder";
 import { WHATSAPP_MERGE_TAGS } from "@/lib/whatsapp/mergeTags";
@@ -130,7 +131,13 @@ export default async function WhatsAppDifusionesPage() {
                       <div style={{ display: "flex", gap: 12 }}>
                         <Bar label="Entregados" count={s.delivered} total={s.processed} color="#12966b" />
                         <Bar label="Leídos" count={s.read} total={s.processed} color="#2f6fed" />
-                        <Bar label="Fallidos" count={s.failed} total={s.processed} color="#c2185b" />
+                        {s.failed > 0 ? (
+                          <Link href={`/admin/crm/whatsapp/difusiones/${b.id}/fallidos`} style={{ textDecoration: "none" }} title="Ver fallidos por motivo y qué hacer con cada grupo">
+                            <Bar label="Fallidos ↗" count={s.failed} total={s.processed} color="#c2185b" />
+                          </Link>
+                        ) : (
+                          <Bar label="Fallidos" count={s.failed} total={s.processed} color="#c2185b" />
+                        )}
                         {s.duplicates > 0 && (
                           <div style={{ minWidth: 110, fontSize: 11, color: "#c2185b", fontWeight: 600 }} title="Mensajes de más que llegaron a un número que esta difusión ya había alcanzado">
                             Duplicados {s.duplicates}

@@ -903,6 +903,12 @@ model EmailLog {
   // event destination exists, at which point existing rows just start
   // filling in going forward.
   status      EmailLogStatus  @default(QUEUED)
+  // Why it FAILED (the provider's refusal, verbatim) or BOUNCED/COMPLAINED
+  // (bounce type + diagnostic from the webhook, when the provider gives
+  // one) — what lib/email/failureCategories.ts turns into a plan of
+  // action. Null for a healthy row, and for failures logged before this
+  // existed (2026-10-07).
+  errorMessage String?
   deliveredAt    DateTime?
   openedAt       DateTime?
   firstClickedAt DateTime?

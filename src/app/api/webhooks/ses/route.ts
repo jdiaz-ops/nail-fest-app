@@ -34,6 +34,8 @@ function isAuthorized(req: NextRequest): boolean {
 interface SesMailEvent {
   eventType: "Send" | "Delivery" | "Open" | "Click" | "Bounce" | "Complaint" | "Reject" | "DeliveryDelay" | "Subscription";
   mail: { messageId: string };
+  bounce?: { bounceType?: string; bounceSubType?: string; bouncedRecipients?: { diagnosticCode?: string }[] };
+  complaint?: { complaintFeedbackType?: string };
 }
 
 const STAGE_BY_EVENT_TYPE: Partial<Record<SesMailEvent["eventType"], EmailTrackingStage>> = {
@@ -85,6 +87,15 @@ export async function POST(req: NextRequest) {
   const stage = STAGE_BY_EVENT_TYPE[event.eventType];
   if (!stage) return NextResponse.json({ ok: true });
 
-  await applyEmailTrackingEvent(event.mail.messageId, stage);
+  // bounceType Permanent/Transient + the SMTP diagnostic — see
+  // lib/email/failureCategories.ts for what the breakdown does with it.
+  const detail =
+    stage === "BOUNCED" && event.bounce
+      ? [event.bounce.bounceType, event.bounce.bounceSubType].filter(Boolean).join("/") +
+        (event.bounce.bouncedRecipients?.[0]?.diagnosticCode ? ` — ${event.bounce.bouncedRecipients[0].diagnosticCode}` : "")
+      : stage === "COMPLAINED"
+        ? `Queja de spam${event.complaint?.complaintFeedbackType ? ` (${event.complaint.complaintFeedbackType})` : ""}`
+        : null;
+  await applyEmailTrackingEvent(event.mail.messageId, stage, new Date(), detail || null);
   return NextResponse.json({ ok: true });
 }

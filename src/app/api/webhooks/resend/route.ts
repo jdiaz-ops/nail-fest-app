@@ -70,6 +70,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  await applyEmailTrackingEvent(messageId, stage);
+  // Resend's bounce payload carries type (Permanent/Transient/
+  // Undetermined), subType and the SMTP message — exactly what the
+  // failure breakdown needs to tell a dead address from a full inbox.
+  const data = event.data as { bounce?: { type?: string; subType?: string; message?: string } };
+  const detail =
+    stage === "BOUNCED" && data.bounce
+      ? [data.bounce.type, data.bounce.subType].filter(Boolean).join("/") + (data.bounce.message ? ` — ${data.bounce.message}` : "")
+      : stage === "COMPLAINED"
+        ? "Queja de spam reportada por el proveedor"
+        : null;
+  await applyEmailTrackingEvent(messageId, stage, new Date(), detail || null);
   return NextResponse.json({ ok: true });
 }

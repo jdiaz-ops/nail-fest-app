@@ -1,4 +1,6 @@
 import { db } from "@/lib/db";
+import { Prisma, type EmailLogStatus } from "@prisma/client";
+import { categorizeEmailFailure, EMAIL_FAILURE_INFO, type EmailFailureCategory } from "@/lib/email/failureCategories";
 import { resolveEventBroadcastRecipients } from "@/lib/broadcastRecipients";
 import { resolveSegment, type SegmentFilter } from "@/lib/segments/builder";
 import { bulkActiveConsent } from "@/lib/consent";
@@ -100,9 +102,7 @@ export async function sendEventBroadcast(
     // Anyone in this chunk who already has a log row for this broadcast
     // was handled by an earlier invocation that died before advancing the
     // cursor — never email them twice.
-    const alreadyLogged = new Set(
-      (await db.emailLog.findMany({ where: { broadcastId: broadcast.id, personId: { in: chunkIds } }, select: { personId: true } })).map((l) => l.personId)
-    );
+    const alreadyLogged = await alreadyHandledInBroadcast(broadcast.id, chunkIds);
     // Re-resolved every chunk (cheap — one query, not a per-recipient
     // loop) so each recipient's registration/ticket-type data is
     // current, then filtered down to just this chunk's frozen ids —
@@ -216,7 +216,7 @@ export async function sendEventBroadcast(
             sent++;
           } catch (err) {
             await db.emailLog.create({
-              data: { kind: "TRANSACTIONAL", broadcastId: broadcast.id, personId: person.id, toEmail: person.email, status: "FAILED" },
+              data: { kind: "TRANSACTIONAL", broadcastId: broadcast.id, personId: person.id, toEmail: person.email, status: "FAILED", errorMessage: errorText(err) },
             });
             console.error("event broadcast send failed", person.email, err);
           }
@@ -296,9 +296,7 @@ export async function sendSegmentEmailBroadcast(
     await publishChunkContinuation("email", broadcastId, { delaySeconds: CHUNK_WATCHDOG_SECONDS, expectCursor: cursor });
     // Same resume guard as sendEventBroadcast: anyone already logged for
     // this broadcast was reached by an invocation that died mid-chunk.
-    const alreadyLogged = new Set(
-      (await db.emailLog.findMany({ where: { broadcastId: broadcast.id, personId: { in: chunkIds } }, select: { personId: true } })).map((l) => l.personId)
-    );
+    const alreadyLogged = await alreadyHandledInBroadcast(broadcast.id, chunkIds);
     const people = await db.person.findMany({ where: { id: { in: chunkIds } } });
     const peopleById = new Map(people.map((p) => [p.id, p]));
     const consented = await bulkActiveConsent(chunkIds, "MARKETING");
@@ -348,7 +346,7 @@ export async function sendSegmentEmailBroadcast(
             sent++;
           } catch (err) {
             await db.emailLog.create({
-              data: { kind: "MARKETING", broadcastId: broadcast.id, personId: person.id, toEmail: person.email, status: "FAILED" },
+              data: { kind: "MARKETING", broadcastId: broadcast.id, personId: person.id, toEmail: person.email, status: "FAILED", errorMessage: errorText(err) },
             });
             console.error("broadcast send failed", person.email, err);
           }
@@ -395,6 +393,108 @@ export async function sendSegmentEmailBroadcast(
  * reached the provider at all (see sendEventBroadcast's own per-
  * recipient try/catch, which logs a FAILED row with no timestamps on
  * a provider error). */
+const errorText = (err: unknown) => (err instanceof Error ? err.message : String(err)).slice(0, 500);
+
+/** The people in `personIds` this broadcast already handled — anyone with
+ * a log row, EXCEPT a FAILED row whose reason is retryable (a provider
+ * rate limit, a blip): those get another attempt when the send is resumed
+ * or "Reintentar recuperables" re-walks the list. A FAILED row for a dead
+ * address stays handled, so a re-walk never hammers it again. */
+async function alreadyHandledInBroadcast(broadcastId: string, personIds: string[]): Promise<Set<string>> {
+  const rows = await db.emailLog.findMany({
+    where: { broadcastId, personId: { in: personIds } },
+    select: { personId: true, status: true, errorMessage: true, createdAt: true },
+    orderBy: { createdAt: "asc" },
+  });
+  // Latest row per person decides.
+  const latest = new Map<string, (typeof rows)[number]>();
+  for (const r of rows) if (r.personId) latest.set(r.personId, r);
+  const handled = new Set<string>();
+  for (const [personId, r] of latest) {
+    const category = r.status === "FAILED" ? categorizeEmailFailure(r.status, r.errorMessage) : null;
+    if (category && EMAIL_FAILURE_INFO[category].retryable) continue;
+    handled.add(personId);
+  }
+  return handled;
+}
+
+interface LatestEmailLogRow {
+  personId: string | null;
+  status: EmailLogStatus;
+  errorMessage: string | null;
+  toEmail: string;
+  deliveredAt: Date | null;
+  openedAt: Date | null;
+  firstClickedAt: Date | null;
+  bouncedAt: Date | null;
+  complainedAt: Date | null;
+  firstName: string | null;
+  lastName: string | null;
+}
+
+/** One row per recipient — their LATEST log row for this broadcast, so a
+ * person whose first attempt FAILED and was then retried counts once, by
+ * the outcome of the retry. */
+async function latestEmailLogsFor(broadcastId: string): Promise<LatestEmailLogRow[]> {
+  return db.$queryRaw<LatestEmailLogRow[]>(Prisma.sql`
+    SELECT DISTINCT ON (l."personId")
+      l."personId", l.status, l."errorMessage", l."toEmail",
+      l."deliveredAt", l."openedAt", l."firstClickedAt", l."bouncedAt", l."complainedAt",
+      p."firstName", p."lastName"
+    FROM "EmailLog" l
+    LEFT JOIN "Person" p ON p.id = l."personId"
+    WHERE l."broadcastId" = ${broadcastId}
+    ORDER BY l."personId", l."createdAt" DESC, l.id DESC
+  `);
+}
+
+export interface EmailFailureGroup {
+  category: EmailFailureCategory;
+  label: string;
+  action: string;
+  retryable: boolean;
+  people: { personId: string | null; name: string; email: string; status: EmailLogStatus; detail: string | null }[];
+}
+
+/** Every recipient whose latest outcome for this broadcast is a failure
+ * (refused before sending, bounced, or complained), grouped by what to do
+ * about it — biggest group first. */
+export async function getEmailBroadcastFailureBreakdown(broadcastId: string): Promise<EmailFailureGroup[]> {
+  const rows = await latestEmailLogsFor(broadcastId);
+  const groups = new Map<EmailFailureCategory, EmailFailureGroup>();
+  for (const r of rows) {
+    const category = categorizeEmailFailure(r.status, r.errorMessage);
+    if (!category) continue;
+    const info = EMAIL_FAILURE_INFO[category];
+    const group = groups.get(category) ?? { category, ...info, people: [] };
+    group.people.push({
+      personId: r.personId,
+      name: [r.firstName, r.lastName].filter(Boolean).join(" ") || "—",
+      email: r.toEmail,
+      status: r.status,
+      detail: r.errorMessage,
+    });
+    groups.set(category, group);
+  }
+  return [...groups.values()].sort((a, b) => b.people.length - a.people.length);
+}
+
+/** "Reintentar recuperables" for an event email broadcast: re-walks the
+ * frozen recipient list from the top; alreadyHandledInBroadcast lets only
+ * the retryable failures (see lib/email/failureCategories.ts) through, so
+ * everyone else is skipped untouched. Chunked and locked exactly like the
+ * original send — the broadcast reads "Enviando…" until it is through. */
+export async function retryFailedEventBroadcast(broadcastId: string): Promise<{ retryable: number; started: boolean }> {
+  const broadcast = await db.emailBroadcast.findUniqueOrThrow({ where: { id: broadcastId } });
+  if (!broadcast.eventId) throw new Error("retryFailedEventBroadcast called on a non-event broadcast");
+  if (broadcast.status !== "SENT") throw new Error("Solo se puede reintentar una difusión que ya terminó de enviarse.");
+  const retryable = (await getEmailBroadcastFailureBreakdown(broadcastId)).filter((g) => g.retryable).reduce((n, g) => n + g.people.length, 0);
+  if (retryable === 0) return { retryable: 0, started: false };
+  await db.emailBroadcast.update({ where: { id: broadcastId }, data: { status: "SENDING", cursor: 0 } });
+  await sendEventBroadcast(broadcastId);
+  return { retryable, started: true };
+}
+
 export interface EmailBroadcastStats {
   attempted: number;
   sent: number;
@@ -407,16 +507,22 @@ export interface EmailBroadcastStats {
 }
 
 export async function getEmailBroadcastStats(broadcastId: string): Promise<EmailBroadcastStats> {
-  const [attempted, failed, delivered, opened, clicked, bounced, complained] = await Promise.all([
-    db.emailLog.count({ where: { broadcastId } }),
-    db.emailLog.count({ where: { broadcastId, status: "FAILED" } }),
-    db.emailLog.count({ where: { broadcastId, deliveredAt: { not: null } } }),
-    db.emailLog.count({ where: { broadcastId, openedAt: { not: null } } }),
-    db.emailLog.count({ where: { broadcastId, firstClickedAt: { not: null } } }),
-    db.emailLog.count({ where: { broadcastId, bouncedAt: { not: null } } }),
-    db.emailLog.count({ where: { broadcastId, complainedAt: { not: null } } }),
-  ]);
-  return { attempted, sent: attempted - failed, delivered, opened, clicked, bounced, complained, failed };
+  // Per recipient, by their latest row (see latestEmailLogsFor) — a retry
+  // that succeeded moves someone out of "failed" instead of counting twice.
+  const rows = await latestEmailLogsFor(broadcastId);
+  const count = (pred: (r: LatestEmailLogRow) => boolean) => rows.filter(pred).length;
+  const attempted = rows.length;
+  const failed = count((r) => r.status === "FAILED");
+  return {
+    attempted,
+    sent: attempted - failed,
+    delivered: count((r) => !!r.deliveredAt),
+    opened: count((r) => !!r.openedAt),
+    clicked: count((r) => !!r.firstClickedAt),
+    bounced: count((r) => !!r.bouncedAt),
+    complained: count((r) => !!r.complainedAt),
+    failed,
+  };
 }
 
 /** Every QUEUED, non-immediate broadcast whose computed due time has
