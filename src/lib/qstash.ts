@@ -141,17 +141,33 @@ export function chunkContinuationCallbackUrl(channel: "email" | "whatsapp"): str
  * — null means "QStash isn't configured or the publish failed," and the
  * caller falls back to finishing the send synchronously in the current
  * call instead of leaving it stuck, same as before this chunking existed. */
-export async function publishChunkContinuation(channel: "email" | "whatsapp", broadcastId: string): Promise<string | null> {
+export async function publishChunkContinuation(
+  channel: "email" | "whatsapp",
+  broadcastId: string,
+  opts: { delaySeconds?: number; expectCursor?: number } = {}
+): Promise<string | null> {
   const client = getClient();
   if (!client) return null;
   try {
-    const result = await client.publishJSON({ url: chunkContinuationCallbackUrl(channel), body: { broadcastId } });
+    const result = await client.publishJSON({
+      url: chunkContinuationCallbackUrl(channel),
+      body: { broadcastId, ...(opts.expectCursor !== undefined ? { expectCursor: opts.expectCursor } : {}) },
+      ...(opts.delaySeconds ? { delay: opts.delaySeconds } : {}),
+    });
     return result.messageId;
   } catch (err) {
-    console.error(`qstash: failed to publish ${channel} broadcast chunk continuation`, broadcastId, err);
+    console.error("qstash: failed to publish chunk continuation", channel, broadcastId, err);
     return null;
   }
 }
+
+/** Watchdog for one chunk: a delayed continuation carrying the cursor the
+ * chunk started at. If the function invocation dies mid-chunk (Vercel's
+ * 60s cap, a crash), nothing else would ever continue the broadcast — this
+ * lands after the invocation is surely dead and resumes it. When the chunk
+ * finished normally the cursor has moved on, and process-chunk ignores
+ * the watchdog (see its expectCursor check). */
+export const CHUNK_WATCHDOG_SECONDS = 90;
 
 // --- Abandoned-cart reminder emails -----------------------------------
 //

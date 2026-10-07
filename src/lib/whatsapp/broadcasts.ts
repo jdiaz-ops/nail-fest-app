@@ -3,7 +3,7 @@ import { hasActiveConsent, bulkActiveConsent } from "@/lib/consent";
 import { getOrgSettings, type OrgSettingsValue } from "@/lib/settings";
 import { resolveSegment, type SegmentFilter } from "@/lib/segments/builder";
 import { resolveEventBroadcastRecipients } from "@/lib/broadcastRecipients";
-import { publishChunkContinuation, scheduleWhatsAppBroadcastSend, QSTASH_MAX_DELAY_MS } from "@/lib/qstash";
+import { publishChunkContinuation, scheduleWhatsAppBroadcastSend, QSTASH_MAX_DELAY_MS, CHUNK_WATCHDOG_SECONDS } from "@/lib/qstash";
 import { whatsappProvider } from "./index";
 import { recordOutboundMessage } from "./inbox";
 import { resolveMergeTag } from "./mergeTags";
@@ -18,7 +18,9 @@ const CONCURRENCY = 10;
 // thousands) finishes in one chunk with no behavior change at all;
 // small enough that CHUNK_SIZE / CONCURRENCY batches of real network
 // calls comfortably fit inside one serverless function invocation.
-const CHUNK_SIZE = 500;
+// 100, not 500 — same reasoning as lib/broadcasts.ts: a chunk must finish
+// inside Vercel's 60s cap (Cúcuta's first send died at 329 of a 500 chunk).
+const CHUNK_SIZE = 100;
 
 interface Recipient {
   person: Person;
@@ -316,6 +318,7 @@ export async function sendWhatsAppBroadcast(
 
   while (cursor < recipientIds.length) {
     const chunkIds = recipientIds.slice(cursor, cursor + CHUNK_SIZE);
+    await publishChunkContinuation("whatsapp", broadcastId, { delaySeconds: CHUNK_WATCHDOG_SECONDS, expectCursor: cursor });
     const people = await db.person.findMany({ where: { id: { in: chunkIds } } });
     const peopleById = new Map(people.map((p) => [p.id, p]));
     // One bulk consent check for the whole chunk instead of one DB round

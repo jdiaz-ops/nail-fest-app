@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-export default function WhatsAppBroadcastRowActions({ id, hasFailed }: { id: string; hasFailed: boolean }) {
+export default function WhatsAppBroadcastRowActions({ id, hasFailed, isSending }: { id: string; hasFailed: boolean; isSending?: boolean }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
 
@@ -12,6 +12,17 @@ export default function WhatsAppBroadcastRowActions({ id, hasFailed }: { id: str
     const res = await fetch(`/api/admin/whatsapp/broadcasts/${id}/retry`, { method: "POST" });
     setBusy(false);
     if (res.ok) router.refresh();
+  }
+
+  // A send stuck in SENDING (an invocation died mid-chunk before the
+  // watchdog existed) — picks up from the persisted cursor, skipping
+  // anyone already messaged.
+  async function handleResume() {
+    setBusy(true);
+    const res = await fetch(`/api/admin/whatsapp/broadcasts/${id}/resume`, { method: "POST" });
+    setBusy(false);
+    if (res.ok) router.refresh();
+    else alert("No se pudo reanudar — intenta de nuevo.");
   }
 
   async function handleDelete() {
@@ -24,6 +35,11 @@ export default function WhatsAppBroadcastRowActions({ id, hasFailed }: { id: str
 
   return (
     <div style={{ display: "flex", gap: 12 }}>
+      {isSending && (
+        <button type="button" onClick={handleResume} disabled={busy} style={{ background: "none", border: "none", color: "#0e6b4c", cursor: "pointer", fontSize: 13, padding: 0, fontWeight: 600 }}>
+          {busy ? "Reanudando…" : "Reanudar envío"}
+        </button>
+      )}
       {hasFailed && (
         <button type="button" onClick={handleRetry} disabled={busy} style={{ background: "none", border: "none", color: "#0e6b4c", cursor: "pointer", fontSize: 13, padding: 0 }}>
           Reintentar fallidos

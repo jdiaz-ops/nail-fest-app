@@ -38,6 +38,13 @@ export async function POST(req: NextRequest) {
   if (!broadcast || broadcast.status !== "SENDING") {
     return NextResponse.json({ ok: true, skipped: true });
   }
+  // A chunk watchdog (see lib/qstash.ts's CHUNK_WATCHDOG_SECONDS): only
+  // act if the chunk it guards never finished — the cursor still sits
+  // where that chunk started. Otherwise the normal continuation is (or
+  // was) handling things and acting here would double-process a chunk.
+  if (typeof body?.expectCursor === "number" && broadcast.cursor !== body.expectCursor) {
+    return NextResponse.json({ ok: true, skipped: true, watchdog: "progressed" });
+  }
 
   try {
     const result = await sendWhatsAppBroadcast(broadcastId);

@@ -8,7 +8,7 @@ import { buildUnsubscribeUrl } from "@/lib/unsubscribe";
 import { renderTicketPdfBuffer } from "@/lib/ticketPdf";
 import { confirmationCodeFor } from "@/lib/ticket";
 import { getOrgSettings } from "@/lib/settings";
-import { publishChunkContinuation, scheduleEventBroadcastSend, QSTASH_MAX_DELAY_MS } from "@/lib/qstash";
+import { publishChunkContinuation, scheduleEventBroadcastSend, QSTASH_MAX_DELAY_MS, CHUNK_WATCHDOG_SECONDS } from "@/lib/qstash";
 import { tagOwnLinksInHtml, tagOwnLinksInText, slugifyForCampaign } from "@/lib/outboundLinkTagging";
 import { publicEventName } from "@/lib/eventDisplayName";
 
@@ -17,7 +17,10 @@ const CONCURRENCY = 10;
 // the rest off to QStash — see sendEventBroadcast's own comment for the
 // full reasoning (same mechanism, same constant, as lib/whatsapp/
 // broadcasts.ts's CHUNK_SIZE).
-const CHUNK_SIZE = 500;
+// 100, not 500: a chunk has to finish well inside Vercel's 60s function
+// cap (observed ~5 recipients/s with PDF + DB writes), or the invocation
+// dies mid-chunk — see the watchdog below for the safety net.
+const CHUNK_SIZE = 100;
 
 /** The actual send for an event-scoped broadcast ("Correos del evento")
  * — called either immediately (scheduleKind IMMEDIATE, from the
@@ -79,6 +82,13 @@ export async function sendEventBroadcast(
 
   while (cursor < recipientIds.length) {
     const chunkIds = recipientIds.slice(cursor, cursor + CHUNK_SIZE);
+    await publishChunkContinuation("email", broadcastId, { delaySeconds: CHUNK_WATCHDOG_SECONDS, expectCursor: cursor });
+    // Anyone in this chunk who already has a log row for this broadcast
+    // was handled by an earlier invocation that died before advancing the
+    // cursor — never email them twice.
+    const alreadyLogged = new Set(
+      (await db.emailLog.findMany({ where: { broadcastId: broadcast.id, personId: { in: chunkIds } }, select: { personId: true } })).map((l) => l.personId)
+    );
     // Re-resolved every chunk (cheap — one query, not a per-recipient
     // loop) so each recipient's registration/ticket-type data is
     // current, then filtered down to just this chunk's frozen ids —
@@ -86,7 +96,10 @@ export async function sendEventBroadcast(
     // for it gets refreshed.
     const allRecipients = await resolveEventBroadcastRecipients(broadcast.eventId, broadcast.ticketTypeId);
     const byId = new Map(allRecipients.map((r) => [r.person.id, r]));
-    const chunk = chunkIds.map((id) => byId.get(id)).filter((r): r is (typeof allRecipients)[number] => Boolean(r));
+    const chunk = chunkIds
+      .filter((id) => !alreadyLogged.has(id))
+      .map((id) => byId.get(id))
+      .filter((r): r is (typeof allRecipients)[number] => Boolean(r));
 
     const consented = await bulkActiveConsent(chunkIds, "LOGISTICS");
     const ticketTypeIds = [...new Set(chunk.map((r) => r.registration.ticketTypeId).filter((id): id is string => !!id))];

@@ -7,6 +7,7 @@ import { QSTASH_MAX_DELAY_MS } from "@/lib/qstash";
 import { resolveDueAt } from "@/lib/broadcastSchedule";
 import { getEmailBroadcastStats } from "@/lib/broadcasts";
 import { requirePageUser } from "@/lib/auth/guard";
+import ResumeBroadcastButton from "@/components/ResumeBroadcastButton";
 
 export const dynamic = "force-dynamic";
 
@@ -154,6 +155,7 @@ export default async function EventBroadcastsPage({ params }: { params: { id: st
                         editing it here would be misleading. See
                         [broadcastId]/route.ts's own comment for the matching
                         server-side guard (this link alone isn't the real gate). */}
+                    {b.status === "SENDING" && <ResumeBroadcastButton url={`/api/admin/events/${event.id}/broadcasts/${b.id}/resume`} />}
                     {b.status === "QUEUED" && (
                       <Link href={`/admin/events/${event.id}/broadcasts/${b.id}/edit`} style={{ fontSize: 13 }}>
                         Editar

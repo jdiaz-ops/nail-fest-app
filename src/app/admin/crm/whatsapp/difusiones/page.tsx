@@ -147,7 +147,7 @@ export default async function WhatsAppDifusionesPage() {
                     )}
                   </td>
                   <td style={{ padding: "10px 12px" }}>
-                    <WhatsAppBroadcastRowActions id={b.id} hasFailed={s.failed > 0} />
+                    <WhatsAppBroadcastRowActions id={b.id} hasFailed={s.failed > 0} isSending={b.status === "SENDING"} />
                   </td>
                 </tr>
               );
