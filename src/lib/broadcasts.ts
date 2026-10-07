@@ -8,7 +8,7 @@ import { buildUnsubscribeUrl } from "@/lib/unsubscribe";
 import { renderTicketPdfBuffer } from "@/lib/ticketPdf";
 import { confirmationCodeFor } from "@/lib/ticket";
 import { getOrgSettings } from "@/lib/settings";
-import { publishChunkContinuation, scheduleEventBroadcastSend, QSTASH_MAX_DELAY_MS, CHUNK_WATCHDOG_SECONDS } from "@/lib/qstash";
+import { publishChunkContinuation, scheduleEventBroadcastSend, QSTASH_MAX_DELAY_MS, CHUNK_WATCHDOG_SECONDS, CHUNK_LOCK_SECONDS } from "@/lib/qstash";
 import { tagOwnLinksInHtml, tagOwnLinksInText, slugifyForCampaign } from "@/lib/outboundLinkTagging";
 import { publicEventName } from "@/lib/eventDisplayName";
 
@@ -50,7 +50,7 @@ const CHUNK_SIZE = 100;
  * gone without QStash, surfaced as a warning, not hidden. */
 export async function sendEventBroadcast(
   broadcastId: string
-): Promise<{ sent: number; skippedNoConsent: number; remaining: number; backgrounded: boolean }> {
+): Promise<{ sent: number; skippedNoConsent: number; remaining: number; backgrounded: boolean; locked: boolean }> {
   const broadcast = await db.emailBroadcast.findUniqueOrThrow({ where: { id: broadcastId }, include: { event: true } });
   if (!broadcast.eventId || !broadcast.event) throw new Error("sendEventBroadcast called on a non-event broadcast");
   if (!broadcast.bodyHtml) throw new Error("sendEventBroadcast called on a broadcast with no bodyHtml");
@@ -81,6 +81,20 @@ export async function sendEventBroadcast(
   let backgrounded = false;
 
   while (cursor < recipientIds.length) {
+    // One invocation at a time — same claim as sendWhatsAppBroadcast's,
+    // see its comment. The loser leaves without sending.
+    const claimed = await db.emailBroadcast.updateMany({
+      where: { id: broadcastId, OR: [{ lockedUntil: null }, { lockedUntil: { lt: new Date() } }] },
+      data: { lockedUntil: new Date(Date.now() + CHUNK_LOCK_SECONDS * 1000) },
+    });
+    if (claimed.count === 0) {
+      return { sent, skippedNoConsent, remaining: recipientIds.length - cursor, backgrounded: true, locked: true };
+    }
+    const current = await db.emailBroadcast.findUniqueOrThrow({ where: { id: broadcastId }, select: { cursor: true } });
+    if (current.cursor !== cursor) {
+      cursor = current.cursor;
+      if (cursor >= recipientIds.length) break;
+    }
     const chunkIds = recipientIds.slice(cursor, cursor + CHUNK_SIZE);
     await publishChunkContinuation("email", broadcastId, { delaySeconds: CHUNK_WATCHDOG_SECONDS, expectCursor: cursor });
     // Anyone in this chunk who already has a log row for this broadcast
@@ -211,7 +225,7 @@ export async function sendEventBroadcast(
     }
 
     cursor += chunkIds.length;
-    await db.emailBroadcast.update({ where: { id: broadcast.id }, data: { cursor } });
+    await db.emailBroadcast.update({ where: { id: broadcast.id }, data: { cursor, lockedUntil: null } });
 
     if (cursor >= recipientIds.length) break; // done — falls through to the SENT update below
 
@@ -226,9 +240,9 @@ export async function sendEventBroadcast(
 
   const remaining = recipientIds.length - cursor;
   if (remaining === 0) {
-    await db.emailBroadcast.update({ where: { id: broadcast.id }, data: { status: "SENT", sentAt: new Date() } });
+    await db.emailBroadcast.update({ where: { id: broadcast.id }, data: { status: "SENT", sentAt: new Date(), lockedUntil: null } });
   }
-  return { sent, skippedNoConsent, remaining, backgrounded };
+  return { sent, skippedNoConsent, remaining, backgrounded, locked: false };
 }
 
 /** The actual send for a segment-targeted marketing broadcast (the
@@ -240,7 +254,7 @@ export async function sendEventBroadcast(
  * own POST handler and this file's QStash continuation. */
 export async function sendSegmentEmailBroadcast(
   broadcastId: string
-): Promise<{ sent: number; skippedNoConsent: number; remaining: number; backgrounded: boolean; total: number }> {
+): Promise<{ sent: number; skippedNoConsent: number; remaining: number; backgrounded: boolean; locked: boolean; total: number }> {
   const broadcast = await db.emailBroadcast.findUniqueOrThrow({ where: { id: broadcastId } });
   if (!broadcast.segmentId) throw new Error("sendSegmentEmailBroadcast called on a broadcast with no segmentId");
   if (!broadcast.bodyText) throw new Error("sendSegmentEmailBroadcast called on a broadcast with no bodyText");
@@ -264,7 +278,27 @@ export async function sendSegmentEmailBroadcast(
   let backgrounded = false;
 
   while (cursor < recipientIds.length) {
+    // One invocation at a time — same claim as sendWhatsAppBroadcast's,
+    // see its comment. The loser leaves without sending.
+    const claimed = await db.emailBroadcast.updateMany({
+      where: { id: broadcastId, OR: [{ lockedUntil: null }, { lockedUntil: { lt: new Date() } }] },
+      data: { lockedUntil: new Date(Date.now() + CHUNK_LOCK_SECONDS * 1000) },
+    });
+    if (claimed.count === 0) {
+      return { sent, skippedNoConsent, remaining: recipientIds.length - cursor, backgrounded: true, locked: true, total: recipientIds.length };
+    }
+    const current = await db.emailBroadcast.findUniqueOrThrow({ where: { id: broadcastId }, select: { cursor: true } });
+    if (current.cursor !== cursor) {
+      cursor = current.cursor;
+      if (cursor >= recipientIds.length) break;
+    }
     const chunkIds = recipientIds.slice(cursor, cursor + CHUNK_SIZE);
+    await publishChunkContinuation("email", broadcastId, { delaySeconds: CHUNK_WATCHDOG_SECONDS, expectCursor: cursor });
+    // Same resume guard as sendEventBroadcast: anyone already logged for
+    // this broadcast was reached by an invocation that died mid-chunk.
+    const alreadyLogged = new Set(
+      (await db.emailLog.findMany({ where: { broadcastId: broadcast.id, personId: { in: chunkIds } }, select: { personId: true } })).map((l) => l.personId)
+    );
     const people = await db.person.findMany({ where: { id: { in: chunkIds } } });
     const peopleById = new Map(people.map((p) => [p.id, p]));
     const consented = await bulkActiveConsent(chunkIds, "MARKETING");
@@ -273,6 +307,7 @@ export async function sendSegmentEmailBroadcast(
       const sub = chunkIds.slice(i, i + CONCURRENCY);
       await Promise.allSettled(
         sub.map(async (personId) => {
+          if (alreadyLogged.has(personId)) return;
           const person = peopleById.get(personId);
           if (!person) return; // deleted since the list was frozen
           if (!consented.has(person.id)) {
@@ -322,7 +357,7 @@ export async function sendSegmentEmailBroadcast(
     }
 
     cursor += chunkIds.length;
-    await db.emailBroadcast.update({ where: { id: broadcast.id }, data: { cursor } });
+    await db.emailBroadcast.update({ where: { id: broadcast.id }, data: { cursor, lockedUntil: null } });
 
     if (cursor >= recipientIds.length) break;
 
@@ -335,9 +370,9 @@ export async function sendSegmentEmailBroadcast(
 
   const remaining = recipientIds.length - cursor;
   if (remaining === 0) {
-    await db.emailBroadcast.update({ where: { id: broadcast.id }, data: { status: "SENT", sentAt: new Date() } });
+    await db.emailBroadcast.update({ where: { id: broadcast.id }, data: { status: "SENT", sentAt: new Date(), lockedUntil: null } });
   }
-  return { sent, skippedNoConsent, remaining, backgrounded, total: recipientIds.length };
+  return { sent, skippedNoConsent, remaining, backgrounded, locked: false, total: recipientIds.length };
 }
 
 /** Delivery breakdown for one broadcast's history row — same idea as

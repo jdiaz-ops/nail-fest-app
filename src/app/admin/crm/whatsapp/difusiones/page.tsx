@@ -131,6 +131,11 @@ export default async function WhatsAppDifusionesPage() {
                         <Bar label="Entregados" count={s.delivered} total={s.processed} color="#12966b" />
                         <Bar label="Leídos" count={s.read} total={s.processed} color="#2f6fed" />
                         <Bar label="Fallidos" count={s.failed} total={s.processed} color="#c2185b" />
+                        {s.duplicates > 0 && (
+                          <div style={{ minWidth: 110, fontSize: 11, color: "#c2185b", fontWeight: 600 }} title="Mensajes de más que llegaron a un número que esta difusión ya había alcanzado">
+                            Duplicados {s.duplicates}
+                          </div>
+                        )}
                       </div>
                     ) : b.status === "QUEUED" && b.scheduledAt ? (
                       <span style={{ color: "#2f4ba8" }}>

@@ -10,7 +10,7 @@ const state = vi.hoisted(() => ({
 
 vi.mock("./index", () => ({ whatsappProvider: { sendTemplate } }));
 vi.mock("./inbox", () => ({ recordOutboundMessage }));
-vi.mock("@/lib/qstash", () => ({ publishChunkContinuation: async () => null, scheduleWhatsAppBroadcastSend: async () => null, QSTASH_MAX_DELAY_MS: 7 * 24 * 3600 * 1000, CHUNK_WATCHDOG_SECONDS: 90 }));
+vi.mock("@/lib/qstash", () => ({ publishChunkContinuation: async () => null, scheduleWhatsAppBroadcastSend: async () => null, QSTASH_MAX_DELAY_MS: 7 * 24 * 3600 * 1000, CHUNK_WATCHDOG_SECONDS: 90, CHUNK_LOCK_SECONDS: 70 }));
 vi.mock("@/lib/settings", () => ({ getOrgSettings: async () => ({ timezone: "America/Bogota", language: "es" }) }));
 vi.mock("@/lib/consent", () => ({
   bulkActiveConsent: async (ids: string[]) => new Set(ids),
@@ -23,7 +23,9 @@ vi.mock("@/lib/db", () => ({
     whatsAppBroadcast: {
       findUniqueOrThrow: async () => state.broadcast,
       update: async ({ data }: { data: Record<string, unknown> }) => Object.assign(state.broadcast!, data),
+      updateMany: async () => ({ count: 1 }),
     },
+    $queryRaw: async () => [],
     segmentDefinition: { findUniqueOrThrow: async () => ({ id: "seg", filter: {} }) },
     person: { findMany: async ({ where }: { where: { id: { in: string[] } } }) => state.people.filter((p) => where.id.in.includes(p.id)) },
     whatsAppMessage: { findMany: async () => [] },

@@ -169,6 +169,13 @@ export async function publishChunkContinuation(
  * the watchdog (see its expectCursor check). */
 export const CHUNK_WATCHDOG_SECONDS = 90;
 
+/** How long one invocation's claim on a broadcast (its `lockedUntil`)
+ * lasts. Longer than a function can run (Vercel's 60s cap) so a live
+ * invocation always still holds it, shorter than CHUNK_WATCHDOG_SECONDS so
+ * by the time the watchdog lands after a crash the claim has expired and
+ * the watchdog can take over. */
+export const CHUNK_LOCK_SECONDS = 70;
+
 // --- Abandoned-cart reminder emails -----------------------------------
 //
 // Same reasoning as scheduleWhatsAppBroadcastSend above: a 15-minute and a

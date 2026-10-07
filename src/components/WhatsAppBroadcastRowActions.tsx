@@ -21,8 +21,16 @@ export default function WhatsAppBroadcastRowActions({ id, hasFailed, isSending }
     setBusy(true);
     const res = await fetch(`/api/admin/whatsapp/broadcasts/${id}/resume`, { method: "POST" });
     setBusy(false);
-    if (res.ok) router.refresh();
-    else alert("No se pudo reanudar — intenta de nuevo.");
+    if (res.ok) {
+      router.refresh();
+      return;
+    }
+    const body = await res.json().catch(() => ({}));
+    alert(
+      body?.error === "in_progress"
+        ? "Este envío ya está en curso — otra ejecución lo está procesando. Espera un par de minutos y recarga la página antes de volver a reanudar."
+        : "No se pudo reanudar — intenta de nuevo."
+    );
   }
 
   async function handleDelete() {

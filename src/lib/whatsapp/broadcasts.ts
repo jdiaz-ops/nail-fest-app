@@ -1,9 +1,10 @@
 import { db } from "@/lib/db";
+import { Prisma } from "@prisma/client";
 import { hasActiveConsent, bulkActiveConsent } from "@/lib/consent";
 import { getOrgSettings, type OrgSettingsValue } from "@/lib/settings";
 import { resolveSegment, type SegmentFilter } from "@/lib/segments/builder";
 import { resolveEventBroadcastRecipients } from "@/lib/broadcastRecipients";
-import { publishChunkContinuation, scheduleWhatsAppBroadcastSend, QSTASH_MAX_DELAY_MS, CHUNK_WATCHDOG_SECONDS } from "@/lib/qstash";
+import { publishChunkContinuation, scheduleWhatsAppBroadcastSend, QSTASH_MAX_DELAY_MS, CHUNK_WATCHDOG_SECONDS, CHUNK_LOCK_SECONDS } from "@/lib/qstash";
 import { whatsappProvider } from "./index";
 import { recordOutboundMessage } from "./inbox";
 import { resolveMergeTag } from "./mergeTags";
@@ -258,6 +259,9 @@ export async function sendWhatsAppBroadcast(
   failed: number;
   remaining: number;
   backgrounded: boolean;
+  /** True when another invocation already holds this send's lock (see
+   * WhatsAppBroadcast.lockedUntil) — nothing was sent by this call. */
+  locked: boolean;
 }> {
   const broadcast = await db.whatsAppBroadcast.findUniqueOrThrow({
     where: { id: broadcastId },
@@ -317,6 +321,27 @@ export async function sendWhatsAppBroadcast(
   let backgrounded = false;
 
   while (cursor < recipientIds.length) {
+    // One invocation at a time: claim the send before touching the chunk.
+    // Whoever loses this race (a "Reanudar envío" pressed while a
+    // continuation is already running, a watchdog landing early, QStash
+    // retrying a call that is still alive) leaves without sending — the
+    // holder's own continuation/watchdog carries the send forward.
+    const claimed = await db.whatsAppBroadcast.updateMany({
+      where: { id: broadcastId, OR: [{ lockedUntil: null }, { lockedUntil: { lt: new Date() } }] },
+      data: { lockedUntil: new Date(Date.now() + CHUNK_LOCK_SECONDS * 1000) },
+    });
+    if (claimed.count === 0) {
+      const remaining = recipientIds.length - cursor;
+      return { sent, skippedNoConsent, skippedNoPhone, skippedNoTicket, skippedDuplicatePhone, failed, remaining, backgrounded: true, locked: true };
+    }
+    // The lock holder's cursor is the truth, not the one this call read
+    // before claiming — a continuation that finished a chunk between the
+    // read and the claim must not be replayed.
+    const current = await db.whatsAppBroadcast.findUniqueOrThrow({ where: { id: broadcastId }, select: { cursor: true } });
+    if (current.cursor !== cursor) {
+      cursor = current.cursor;
+      if (cursor >= recipientIds.length) break;
+    }
     const chunkIds = recipientIds.slice(cursor, cursor + CHUNK_SIZE);
     await publishChunkContinuation("whatsapp", broadcastId, { delaySeconds: CHUNK_WATCHDOG_SECONDS, expectCursor: cursor });
     const people = await db.person.findMany({ where: { id: { in: chunkIds } } });
@@ -327,18 +352,16 @@ export async function sendWhatsAppBroadcast(
     // real Nail Fest segment easily does).
     const consented = await bulkActiveConsent(chunkIds, "WHATSAPP");
     const tickets = ticketButton?.eventId ? await ticketTokensFor(ticketButton.eventId, chunkIds) : null;
-    // Belt-and-suspenders against a duplicate send if this exact chunk
-    // gets retried after a crash partway through (cursor only advances
-    // once the whole chunk finishes) — skip anyone who somehow already
-    // has a message row for this broadcast+chunk.
-    const alreadyAttempted = new Set(
-      (
-        await db.whatsAppMessage.findMany({
-          where: { broadcastId, kind: "TEMPLATE", conversation: { personId: { in: chunkIds } } },
-          select: { conversation: { select: { personId: true } } },
-        })
-      ).map((m) => m.conversation.personId)
-    );
+    // Never message a number twice for this broadcast — the guard that
+    // makes resuming a chunk that died partway (cursor only advances once
+    // the whole chunk finishes) safe. Matched by NUMBER, not by person: a
+    // message row hangs off the phone's one conversation, whose personId
+    // is whichever CRM contact matched that phone first, which is often
+    // NOT the contact this frozen list carries for the same number (the
+    // same person registered twice, a shared family phone). Matching on
+    // conversation.personId alone let the 2026-10-07 Colombia resume
+    // re-send to people the first run had already reached.
+    const alreadyMessaged = await alreadyMessagedInBroadcast(broadcastId, people);
 
     // Collected per chunk, not across the whole send — Promise.allSettled
     // callbacks below run sequentially with respect to this array (Node
@@ -350,8 +373,8 @@ export async function sendWhatsAppBroadcast(
       const sub = chunkIds.slice(i, i + CONCURRENCY);
       await Promise.allSettled(
         sub.map(async (personId) => {
-          if (alreadyAttempted.has(personId)) return;
           const person = peopleById.get(personId);
+          if (person && alreadyMessaged(person)) return;
           if (!person) {
             skippedNoPhone++; // a person deleted since the list was frozen — nothing to send to
             return;
@@ -393,7 +416,9 @@ export async function sendWhatsAppBroadcast(
     }
 
     cursor += chunkIds.length;
-    await db.whatsAppBroadcast.update({ where: { id: broadcast.id }, data: { cursor } });
+    // Chunk done: advance the cursor and hand the lock back in the same
+    // write, so the continuation (or a watchdog) can claim it.
+    await db.whatsAppBroadcast.update({ where: { id: broadcast.id }, data: { cursor, lockedUntil: null } });
 
     if (cursor >= recipientIds.length) break; // done — falls through to the SENT update below
 
@@ -408,9 +433,39 @@ export async function sendWhatsAppBroadcast(
 
   const remaining = recipientIds.length - cursor;
   if (remaining === 0) {
-    await db.whatsAppBroadcast.update({ where: { id: broadcast.id }, data: { status: "SENT", sentAt: new Date() } });
+    await db.whatsAppBroadcast.update({ where: { id: broadcast.id }, data: { status: "SENT", sentAt: new Date(), lockedUntil: null } });
   }
-  return { sent, skippedNoConsent, skippedNoPhone, skippedNoTicket, skippedDuplicatePhone, failed, remaining, backgrounded };
+  return { sent, skippedNoConsent, skippedNoPhone, skippedNoTicket, skippedDuplicatePhone, failed, remaining, backgrounded, locked: false };
+}
+
+/** Who among `people` already has a TEMPLATE message (any status but
+ * FAILED — a failed attempt may be retried) logged for this broadcast,
+ * judged by WhatsApp number: the conversation the row hangs off is one
+ * per phone, compared on its last 10 digits the same way phoneKey /
+ * findPersonByPhone do, so "+57 300…", "57300…" and "300…" all count as
+ * reached. The conversation's own personId is checked too, for rows
+ * whose number was later edited on the contact. */
+async function alreadyMessagedInBroadcast(broadcastId: string, people: Person[]): Promise<(person: Person) => boolean> {
+  if (people.length === 0) return () => false;
+  const ids = people.map((p) => p.id);
+  const phoneKeys = people.map((p) => phoneKey(p.phone)).filter((k): k is string => !!k);
+  const rows = await db.$queryRaw<{ personId: string | null; phone: string }[]>(Prisma.sql`
+    SELECT c."personId", c.phone
+    FROM "WhatsAppMessage" m
+    JOIN "WhatsAppConversation" c ON c.id = m."conversationId"
+    WHERE m."broadcastId" = ${broadcastId}
+      AND m.kind = 'TEMPLATE'::"WhatsAppMessageKind"
+      AND m.status <> 'FAILED'::"WhatsAppMessageStatus"
+      AND (c."personId" IN (${Prisma.join(ids)})
+        OR RIGHT(REGEXP_REPLACE(c.phone, '\\D', '', 'g'), 10) IN (${Prisma.join(phoneKeys.length > 0 ? phoneKeys : ["-"])}))
+  `);
+  const seenIds = new Set(rows.map((r) => r.personId).filter((id): id is string => !!id));
+  const seenPhones = new Set(rows.map((r) => phoneKey(r.phone)).filter((k): k is string => !!k));
+  return (person) => {
+    if (seenIds.has(person.id)) return true;
+    const key = phoneKey(person.phone);
+    return !!key && seenPhones.has(key);
+  };
 }
 
 /** Re-attempts every FAILED message logged for this broadcast — for a
@@ -478,6 +533,10 @@ export interface BroadcastStats {
   delivered: number;
   read: number;
   failed: number;
+  /** Extra messages this broadcast put on a number it had already reached
+   * (two non-FAILED rows on one conversation count as one duplicate) —
+   * the honest count of what a bad resume cost. 0 is the only good value. */
+  duplicates: number;
 }
 
 export async function getBroadcastStats(broadcastId: string): Promise<BroadcastStats> {
@@ -488,8 +547,16 @@ export async function getBroadcastStats(broadcastId: string): Promise<BroadcastS
   });
   const byStatus = Object.fromEntries(rows.map((r) => [r.status, r._count._all]));
   const processed = rows.reduce((sum, r) => sum + r._count._all, 0);
+  const perConversation = await db.whatsAppMessage.groupBy({
+    by: ["conversationId"],
+    where: { broadcastId, kind: "TEMPLATE", status: { not: "FAILED" } },
+    _count: { _all: true },
+    having: { conversationId: { _count: { gt: 1 } } },
+  });
+  const duplicates = perConversation.reduce((sum, r) => sum + r._count._all - 1, 0);
   return {
     processed,
+    duplicates,
     // DELIVERED/READ both count as "delivered" for this stat (READ implies
     // it was delivered first) — SENT alone (no delivery receipt yet) does
     // not, since that's still in flight.

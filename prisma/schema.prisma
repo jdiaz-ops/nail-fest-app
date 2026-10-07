@@ -845,6 +845,14 @@ model EmailBroadcast {
   // skipped, or failed) so far; both null/0 until the first chunk runs.
   recipientPersonIds Json?
   cursor      Int               @default(0)
+  // Set while one function invocation is working a chunk of this send —
+  // claimed atomically at each chunk's start (see the send loops'
+  // updateMany) so a second invocation (the admin's "Reanudar envío", a
+  // QStash watchdog landing early, a retried continuation) backs off
+  // instead of sending the same chunk in parallel. Expires on its own
+  // (lib/qstash.ts's CHUNK_LOCK_SECONDS) so a crashed invocation never
+  // leaves the send locked for good.
+  lockedUntil DateTime?
   // QStash message that will call /api/broadcasts/send-scheduled at the
   // exact due time (see lib/qstash.ts's scheduleEventBroadcastSend) —
   // kept to cancel it if the broadcast is edited or deleted first. Null
@@ -1135,6 +1143,14 @@ model WhatsAppBroadcast {
   // recipientPersonIds/cursor's own schema comment.
   recipientPersonIds Json?
   cursor       Int                   @default(0)
+  // Set while one function invocation is working a chunk of this send —
+  // claimed atomically at each chunk's start (see the send loops'
+  // updateMany) so a second invocation (the admin's "Reanudar envío", a
+  // QStash watchdog landing early, a retried continuation) backs off
+  // instead of sending the same chunk in parallel. Expires on its own
+  // (lib/qstash.ts's CHUNK_LOCK_SECONDS) so a crashed invocation never
+  // leaves the send locked for good.
+  lockedUntil  DateTime?
   createdAt    DateTime              @default(now())
   sentAt       DateTime?
 
