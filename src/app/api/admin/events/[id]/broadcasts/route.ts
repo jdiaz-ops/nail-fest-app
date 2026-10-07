@@ -5,6 +5,8 @@ import { sanitizeEventDescription } from "@/lib/sanitizeHtml";
 import { sendEventBroadcast } from "@/lib/broadcasts";
 import { countEventBroadcastRecipients } from "@/lib/broadcastRecipients";
 import { eventBroadcastBodySchema } from "@/lib/eventBroadcastSchema";
+import { resolveDueAt } from "@/lib/broadcastSchedule";
+import { scheduleEventBroadcastSend } from "@/lib/qstash";
 
 // Creates an event-scoped broadcast from EventBroadcastComposer.tsx —
 // "Correos del evento". Same sanitizeEventDescription allowlist as the
@@ -52,6 +54,20 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     return NextResponse.json({ ok: true, broadcastId: broadcast.id, sentNow: true, ...result });
   }
 
+  // Exact-time send via QStash (see /api/broadcasts/send-scheduled); the
+  // daily send-due cron stays as the fallback when this returns null.
+  const dueAt = resolveDueAt(broadcast, event);
+  const qstashMessageId = dueAt ? await scheduleEventBroadcastSend(broadcast.id, dueAt) : null;
+  if (qstashMessageId) await db.emailBroadcast.update({ where: { id: broadcast.id }, data: { qstashMessageId } });
   const recipientCount = await countEventBroadcastRecipients(event.id, data.ticketTypeId || null);
-  return NextResponse.json({ ok: true, broadcastId: broadcast.id, sentNow: false, recipientCount });
+  return NextResponse.json({
+    ok: true,
+    broadcastId: broadcast.id,
+    sentNow: false,
+    recipientCount,
+    exactTime: Boolean(qstashMessageId),
+    scheduleWarning: qstashMessageId
+      ? null
+      : "No se pudo programar la hora exacta (revisa la configuración de QStash) — de todas formas saldrá en el envío de respaldo de medianoche siguiente a la hora programada.",
+  });
 }

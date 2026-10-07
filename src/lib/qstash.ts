@@ -69,6 +69,32 @@ export async function scheduleWhatsAppBroadcastSend(broadcastId: string, at: Dat
   }
 }
 
+/** Email twin of scheduledSendCallbackUrl — where QStash calls back for
+ * an event email broadcast's exact-time send. */
+export function scheduledEmailSendCallbackUrl(): string {
+  return `${process.env.APP_BASE_URL || ""}/api/broadcasts/send-scheduled`;
+}
+
+/** Same as scheduleWhatsAppBroadcastSend, for an event EMAIL broadcast
+ * (EmailBroadcast with an eventId): one exact-time call to
+ * /api/broadcasts/send-scheduled. Null = not scheduled (QStash missing or
+ * the publish failed) — the daily send-due cron remains the fallback. */
+export async function scheduleEventBroadcastSend(broadcastId: string, at: Date): Promise<string | null> {
+  const client = getClient();
+  if (!client) return null;
+  try {
+    const result = await client.publishJSON({
+      url: scheduledEmailSendCallbackUrl(),
+      body: { broadcastId },
+      notBefore: Math.floor(at.getTime() / 1000),
+    });
+    return result.messageId;
+  } catch (err) {
+    console.error("qstash: failed to schedule email broadcast send", broadcastId, err);
+    return null;
+  }
+}
+
 /** Best-effort cancel of a still-pending scheduled message — called when
  * a QUEUED broadcast is deleted before it fires. Never throws: a message
  * that already fired or was never valid just can't be cancelled, which

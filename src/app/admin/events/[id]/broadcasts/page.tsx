@@ -102,6 +102,13 @@ export default async function EventBroadcastsPage({ params }: { params: { id: st
                   <td style={{ padding: "10px 12px", color: "#5b5f6b" }}>
                     {SCHEDULE_LABEL[b.scheduleKind] ?? b.scheduleKind}
                     {dueAt && ` — ${formatDateInTz(dueAt, { dateStyle: "medium", timeStyle: "short" }, orgSettings.timezone, orgSettings.language)}`}
+                    {dueAt && (
+                      <div style={{ fontSize: 12, marginTop: 2, color: b.qstashMessageId ? "#12966b" : "#b25e00" }}>
+                        {b.qstashMessageId
+                          ? "Hora exacta programada ✓"
+                          : "Sin hora exacta: saldría en el envío de respaldo de medianoche. Abre Editar → Guardar para programarlo."}
+                      </div>
+                    )}
                   </td>
                   <td style={{ padding: "10px 12px" }}>
                     <span style={{ padding: "3px 10px", borderRadius: 999, fontSize: 12, fontWeight: 600, background: style.bg, color: style.ink }}>

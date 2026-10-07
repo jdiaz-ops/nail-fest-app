@@ -845,6 +845,11 @@ model EmailBroadcast {
   // skipped, or failed) so far; both null/0 until the first chunk runs.
   recipientPersonIds Json?
   cursor      Int               @default(0)
+  // QStash message that will call /api/broadcasts/send-scheduled at the
+  // exact due time (see lib/qstash.ts's scheduleEventBroadcastSend) —
+  // kept to cancel it if the broadcast is edited or deleted first. Null
+  // = not scheduled with QStash; the daily send-due cron still covers it.
+  qstashMessageId String?
   createdAt   DateTime          @default(now())
   sentAt      DateTime?
 

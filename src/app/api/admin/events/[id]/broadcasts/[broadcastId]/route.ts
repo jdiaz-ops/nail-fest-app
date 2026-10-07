@@ -5,6 +5,8 @@ import { sanitizeEventDescription } from "@/lib/sanitizeHtml";
 import { sendEventBroadcast } from "@/lib/broadcasts";
 import { countEventBroadcastRecipients } from "@/lib/broadcastRecipients";
 import { eventBroadcastBodySchema } from "@/lib/eventBroadcastSchema";
+import { resolveDueAt } from "@/lib/broadcastSchedule";
+import { cancelScheduledSend, scheduleEventBroadcastSend } from "@/lib/qstash";
 
 // Same real send path as immediate creation — see sendEventBroadcast's
 // own comment (PDF rendering per recipient can be slow on a big list).
@@ -61,8 +63,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       scheduledAt: data.scheduledAt ? new Date(data.scheduledAt) : null,
       scheduleOffsetMinutes: data.scheduleOffsetMinutes ?? null,
       status: data.scheduleKind === "IMMEDIATE" ? "SENDING" : "QUEUED",
+      // Re-scheduled below; the old QStash message (if any) is cancelled
+      // so a moved send never fires twice.
+      qstashMessageId: null,
     },
   });
+  if (existing.qstashMessageId) await cancelScheduledSend(existing.qstashMessageId);
   if (count === 0) {
     return NextResponse.json(
       { error: "not_editable", message: "Este correo ya no se puede editar — ya se envió o se está enviando." },
@@ -75,6 +81,19 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ ok: true, broadcastId: existing.id, sentNow: true, ...result });
   }
 
+  const updated = await db.emailBroadcast.findUniqueOrThrow({ where: { id: existing.id } });
+  const dueAt = resolveDueAt(updated, event);
+  const qstashMessageId = dueAt ? await scheduleEventBroadcastSend(existing.id, dueAt) : null;
+  if (qstashMessageId) await db.emailBroadcast.update({ where: { id: existing.id }, data: { qstashMessageId } });
   const recipientCount = await countEventBroadcastRecipients(event.id, data.ticketTypeId || null);
-  return NextResponse.json({ ok: true, broadcastId: existing.id, sentNow: false, recipientCount });
+  return NextResponse.json({
+    ok: true,
+    broadcastId: existing.id,
+    sentNow: false,
+    recipientCount,
+    exactTime: Boolean(qstashMessageId),
+    scheduleWarning: qstashMessageId
+      ? null
+      : "No se pudo programar la hora exacta (revisa la configuración de QStash) — de todas formas saldrá en el envío de respaldo de medianoche siguiente a la hora programada.",
+  });
 }
