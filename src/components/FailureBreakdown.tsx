@@ -18,6 +18,7 @@ export default function FailureBreakdown({
   title,
   subtitle,
   groups,
+  summaryLines,
   csvUrl,
   retryUrl,
   channel,
@@ -27,6 +28,9 @@ export default function FailureBreakdown({
   title: string;
   subtitle: string;
   groups: FailureGroupView[];
+  /** The send's own numbers and automatic-retry status — the report that
+   * used to be emailed now lives here. */
+  summaryLines: string[];
   csvUrl: string;
   retryUrl: string;
   channel: "whatsapp" | "email";
@@ -42,6 +46,11 @@ export default function FailureBreakdown({
       </Link>
       <h1 style={{ fontSize: 20, margin: "12px 0 4px" }}>{title}</h1>
       <p style={{ color: "#5b5f6b", margin: "0 0 16px", maxWidth: 720 }}>{subtitle}</p>
+      <div style={{ background: "#f6f5f2", borderRadius: 12, padding: "12px 16px", marginBottom: 16, fontSize: 14, display: "flex", flexDirection: "column", gap: 4 }}>
+        {summaryLines.map((l, i) => (
+          <div key={i} style={{ fontWeight: i === 0 ? 600 : 400 }}>{l}</div>
+        ))}
+      </div>
 
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center", marginBottom: 20 }}>
         <div style={{ fontSize: 14 }}>
