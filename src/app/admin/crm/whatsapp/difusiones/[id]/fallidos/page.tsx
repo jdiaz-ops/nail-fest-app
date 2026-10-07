@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requirePageUser } from "@/lib/auth/guard";
 import { getBroadcastFailureBreakdown, getBroadcastStats } from "@/lib/whatsapp/broadcasts";
-import { autoRetryStatusLine } from "@/lib/autoRetry";
+import { autoRetryStatusLine, MAX_AUTO_RETRIES } from "@/lib/autoRetry";
 import FailureBreakdown from "@/components/FailureBreakdown";
 
 export const dynamic = "force-dynamic";
@@ -35,7 +35,7 @@ export default async function WhatsAppBroadcastFailuresPage({ params }: { params
         people: g.people.map((p) => ({ name: p.name, contact: p.phone, detail: p.detail })),
       }))}
       csvUrl={`/api/admin/whatsapp/broadcasts/${broadcast.id}/failed-csv`}
-      retryUrl={`/api/admin/whatsapp/broadcasts/${broadcast.id}/retry`}
+      retryUrl={broadcast.status === "SENT" && broadcast.autoRetryCount >= MAX_AUTO_RETRIES ? `/api/admin/whatsapp/broadcasts/${broadcast.id}/retry` : null}
       channel="whatsapp"
       backHref="/admin/crm/whatsapp/difusiones"
       backLabel="Volver a difusiones"

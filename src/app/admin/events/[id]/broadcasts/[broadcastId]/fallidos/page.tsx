@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requirePageUser } from "@/lib/auth/guard";
 import { getEmailBroadcastFailureBreakdown, getEmailBroadcastStats } from "@/lib/broadcasts";
-import { autoRetryStatusLine } from "@/lib/autoRetry";
+import { autoRetryStatusLine, MAX_AUTO_RETRIES } from "@/lib/autoRetry";
 import FailureBreakdown from "@/components/FailureBreakdown";
 
 export const dynamic = "force-dynamic";
@@ -34,7 +34,7 @@ export default async function EventBroadcastFailuresPage({ params }: { params: {
         people: g.people.map((p) => ({ name: p.name, contact: p.email, detail: p.detail, status: p.status })),
       }))}
       csvUrl={`/api/admin/events/${params.id}/broadcasts/${broadcast.id}/failed-csv`}
-      retryUrl={`/api/admin/events/${params.id}/broadcasts/${broadcast.id}/retry`}
+      retryUrl={broadcast.status === "SENT" && broadcast.autoRetryCount >= MAX_AUTO_RETRIES ? `/api/admin/events/${params.id}/broadcasts/${broadcast.id}/retry` : null}
       channel="email"
       backHref={`/admin/events/${params.id}/broadcasts`}
       backLabel="Volver a correos del evento"

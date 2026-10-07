@@ -11,6 +11,7 @@ import { formatDateInTz } from "@/lib/dateFormat";
 import { requirePageUser } from "@/lib/auth/guard";
 import WhatsAppBroadcastComposer from "@/components/WhatsAppBroadcastComposer";
 import WhatsAppBroadcastRowActions from "@/components/WhatsAppBroadcastRowActions";
+import { isBroadcastStuck } from "@/lib/broadcastProgress";
 import CrmPageHeader from "../../CrmPageHeader";
 
 export const dynamic = "force-dynamic";
@@ -159,7 +160,7 @@ export default async function WhatsAppDifusionesPage() {
                     )}
                   </td>
                   <td style={{ padding: "10px 12px" }}>
-                    <WhatsAppBroadcastRowActions id={b.id} hasFailed={s.failed > 0} isSending={b.status === "SENDING"} />
+                    <WhatsAppBroadcastRowActions id={b.id} isStuck={isBroadcastStuck(b)} />
                   </td>
                 </tr>
               );

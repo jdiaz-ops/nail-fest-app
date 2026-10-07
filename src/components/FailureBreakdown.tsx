@@ -32,7 +32,9 @@ export default function FailureBreakdown({
    * used to be emailed now lives here. */
   summaryLines: string[];
   csvUrl: string;
-  retryUrl: string;
+  /** Null hides the manual retry — while the automatic retries are still
+   * due there is nothing for a human to press. */
+  retryUrl: string | null;
   channel: "whatsapp" | "email";
   backHref: string;
   backLabel: string;
@@ -58,7 +60,7 @@ export default function FailureBreakdown({
           <span style={{ color: retryable > 0 ? "#0e6b4c" : "#8a8478" }}>{retryable} recuperables</span> ·{" "}
           <span style={{ color: "#a3212b" }}>{total - retryable} no reintentar</span>
         </div>
-        <RetryRecoverableButton url={retryUrl} count={retryable} channel={channel} />
+        {retryUrl && <RetryRecoverableButton url={retryUrl} count={retryable} channel={channel} />}
         <a href={csvUrl} style={{ fontSize: 13, fontWeight: 600, color: "#0e6b4c" }}>
           Descargar CSV
         </a>
