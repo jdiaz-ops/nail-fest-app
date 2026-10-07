@@ -6,7 +6,7 @@ import { sendEventBroadcast } from "@/lib/broadcasts";
 import { countEventBroadcastRecipients } from "@/lib/broadcastRecipients";
 import { eventBroadcastBodySchema } from "@/lib/eventBroadcastSchema";
 import { resolveDueAt } from "@/lib/broadcastSchedule";
-import { cancelScheduledSend, scheduleEventBroadcastSend } from "@/lib/qstash";
+import { cancelScheduledSend, scheduleEventBroadcastSend, QSTASH_MAX_DELAY_MS } from "@/lib/qstash";
 
 // Same real send path as immediate creation — see sendEventBroadcast's
 // own comment (PDF rendering per recipient can be slow on a big list).
@@ -94,6 +94,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     exactTime: Boolean(qstashMessageId),
     scheduleWarning: qstashMessageId
       ? null
-      : "No se pudo programar la hora exacta (revisa la configuración de QStash) — de todas formas saldrá en el envío de respaldo de medianoche siguiente a la hora programada.",
+      : dueAt && dueAt.getTime() - Date.now() > QSTASH_MAX_DELAY_MS
+        ? "Falta más de una semana: la hora exacta se programa sola 7 días antes del envío."
+        : "No se pudo programar la hora exacta (revisa la configuración de QStash) — se reintenta cada medianoche y, si no, saldrá en el envío de respaldo.",
   });
 }

@@ -29,6 +29,12 @@ import { Client, Receiver } from "@upstash/qstash";
 // throw past this module, they return null/false so the caller falls
 // back to the daily cron instead of failing the whole broadcast.
 
+/** How far ahead QStash lets us schedule a message (`notBefore`). On the
+ * free plan it's 7 days; a publish further out is rejected. Anything
+ * beyond this gets armed by the nightly send-due crons once it comes
+ * within reach (see sendDueEventBroadcasts / sendDueWhatsAppBroadcasts). */
+export const QSTASH_MAX_DELAY_MS = 7 * 24 * 60 * 60 * 1000;
+
 function getClient(): Client | null {
   const token = process.env.QSTASH_TOKEN;
   if (!token) return null;

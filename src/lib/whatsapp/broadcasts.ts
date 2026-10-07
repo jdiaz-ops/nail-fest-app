@@ -3,7 +3,7 @@ import { hasActiveConsent, bulkActiveConsent } from "@/lib/consent";
 import { getOrgSettings, type OrgSettingsValue } from "@/lib/settings";
 import { resolveSegment, type SegmentFilter } from "@/lib/segments/builder";
 import { resolveEventBroadcastRecipients } from "@/lib/broadcastRecipients";
-import { publishChunkContinuation } from "@/lib/qstash";
+import { publishChunkContinuation, scheduleWhatsAppBroadcastSend, QSTASH_MAX_DELAY_MS } from "@/lib/qstash";
 import { whatsappProvider } from "./index";
 import { recordOutboundMessage } from "./inbox";
 import { resolveMergeTag } from "./mergeTags";
@@ -499,16 +499,29 @@ export async function getBroadcastStats(broadcastId: string): Promise<BroadcastS
 /** Every QUEUED, non-immediate WhatsApp broadcast whose computed due time
  * has arrived — see /api/whatsapp/send-due, the cron entry point. Same
  * shape as lib/broadcasts.ts's sendDueEventBroadcasts. */
-export async function sendDueWhatsAppBroadcasts(now: Date = new Date()): Promise<{ processed: number }> {
+export async function sendDueWhatsAppBroadcasts(now: Date = new Date()): Promise<{ processed: number; armed: number }> {
   const { resolveDueAt, isDue } = await import("@/lib/broadcastSchedule");
   const candidates = await db.whatsAppBroadcast.findMany({
     where: { status: "QUEUED", scheduleKind: { not: "IMMEDIATE" } },
     include: { event: true },
   });
   let processed = 0;
+  let armed = 0;
   for (const b of candidates) {
     const dueAt = resolveDueAt(b, b.event);
-    if (!isDue(dueAt, now)) continue;
+    if (!dueAt) continue;
+    if (!isDue(dueAt, now)) {
+      // Same nightly arming as sendDueEventBroadcasts (lib/broadcasts.ts):
+      // QStash can't be asked more than QSTASH_MAX_DELAY_MS ahead.
+      if (!b.qstashMessageId && dueAt.getTime() - now.getTime() <= QSTASH_MAX_DELAY_MS) {
+        const qstashMessageId = await scheduleWhatsAppBroadcastSend(b.id, dueAt);
+        if (qstashMessageId) {
+          await db.whatsAppBroadcast.update({ where: { id: b.id }, data: { qstashMessageId } });
+          armed++;
+        }
+      }
+      continue;
+    }
     try {
       await sendWhatsAppBroadcast(b.id);
       processed++;
@@ -516,5 +529,5 @@ export async function sendDueWhatsAppBroadcasts(now: Date = new Date()): Promise
       console.error("sendDueWhatsAppBroadcasts: failed to send", b.id, err);
     }
   }
-  return { processed };
+  return { processed, armed };
 }

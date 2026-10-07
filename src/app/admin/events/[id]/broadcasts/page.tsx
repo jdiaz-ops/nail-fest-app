@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { getOrgSettings } from "@/lib/settings";
 import { formatDateInTz } from "@/lib/dateFormat";
+import { QSTASH_MAX_DELAY_MS } from "@/lib/qstash";
 import { resolveDueAt } from "@/lib/broadcastSchedule";
 import { getEmailBroadcastStats } from "@/lib/broadcasts";
 import { requirePageUser } from "@/lib/auth/guard";
@@ -103,10 +104,12 @@ export default async function EventBroadcastsPage({ params }: { params: { id: st
                     {SCHEDULE_LABEL[b.scheduleKind] ?? b.scheduleKind}
                     {dueAt && ` — ${formatDateInTz(dueAt, { dateStyle: "medium", timeStyle: "short" }, orgSettings.timezone, orgSettings.language)}`}
                     {dueAt && (
-                      <div style={{ fontSize: 12, marginTop: 2, color: b.qstashMessageId ? "#12966b" : "#b25e00" }}>
+                      <div style={{ fontSize: 12, marginTop: 2, color: b.qstashMessageId ? "#12966b" : dueAt.getTime() - Date.now() > QSTASH_MAX_DELAY_MS ? "#5b5f6b" : "#b25e00" }}>
                         {b.qstashMessageId
                           ? "Hora exacta programada ✓"
-                          : "Sin hora exacta: saldría en el envío de respaldo de medianoche. Abre Editar → Guardar para programarlo."}
+                          : dueAt.getTime() - Date.now() > QSTASH_MAX_DELAY_MS
+                            ? "La hora exacta se programa sola 7 días antes del envío (cada medianoche)."
+                            : "Sin hora exacta todavía: se programa esta medianoche; si sigue así mañana, abre Editar → Guardar."}
                       </div>
                     )}
                   </td>

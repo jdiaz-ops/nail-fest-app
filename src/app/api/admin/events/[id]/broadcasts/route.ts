@@ -6,7 +6,7 @@ import { sendEventBroadcast } from "@/lib/broadcasts";
 import { countEventBroadcastRecipients } from "@/lib/broadcastRecipients";
 import { eventBroadcastBodySchema } from "@/lib/eventBroadcastSchema";
 import { resolveDueAt } from "@/lib/broadcastSchedule";
-import { scheduleEventBroadcastSend } from "@/lib/qstash";
+import { scheduleEventBroadcastSend, QSTASH_MAX_DELAY_MS } from "@/lib/qstash";
 
 // Creates an event-scoped broadcast from EventBroadcastComposer.tsx —
 // "Correos del evento". Same sanitizeEventDescription allowlist as the
@@ -68,6 +68,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     exactTime: Boolean(qstashMessageId),
     scheduleWarning: qstashMessageId
       ? null
-      : "No se pudo programar la hora exacta (revisa la configuración de QStash) — de todas formas saldrá en el envío de respaldo de medianoche siguiente a la hora programada.",
+      : dueAt && dueAt.getTime() - Date.now() > QSTASH_MAX_DELAY_MS
+        ? "Falta más de una semana: la hora exacta se programa sola 7 días antes del envío."
+        : "No se pudo programar la hora exacta (revisa la configuración de QStash) — se reintenta cada medianoche y, si no, saldrá en el envío de respaldo.",
   });
 }

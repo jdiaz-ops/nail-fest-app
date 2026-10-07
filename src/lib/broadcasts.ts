@@ -8,7 +8,7 @@ import { buildUnsubscribeUrl } from "@/lib/unsubscribe";
 import { renderTicketPdfBuffer } from "@/lib/ticketPdf";
 import { confirmationCodeFor } from "@/lib/ticket";
 import { getOrgSettings } from "@/lib/settings";
-import { publishChunkContinuation } from "@/lib/qstash";
+import { publishChunkContinuation, scheduleEventBroadcastSend, QSTASH_MAX_DELAY_MS } from "@/lib/qstash";
 import { tagOwnLinksInHtml, tagOwnLinksInText, slugifyForCampaign } from "@/lib/outboundLinkTagging";
 import { publicEventName } from "@/lib/eventDisplayName";
 
@@ -376,16 +376,31 @@ export async function getEmailBroadcastStats(broadcastId: string): Promise<Email
  * event-scoped broadcasts support scheduling today (see
  * BroadcastComposer.tsx's own comment — a segment broadcast is always
  * IMMEDIATE), so this only ever needs sendEventBroadcast. */
-export async function sendDueEventBroadcasts(now: Date = new Date()): Promise<{ processed: number }> {
+export async function sendDueEventBroadcasts(now: Date = new Date()): Promise<{ processed: number; armed: number }> {
   const { resolveDueAt, isDue } = await import("@/lib/broadcastSchedule");
   const candidates = await db.emailBroadcast.findMany({
     where: { status: "QUEUED", eventId: { not: null }, scheduleKind: { not: "IMMEDIATE" } },
     include: { event: true },
   });
   let processed = 0;
+  let armed = 0;
   for (const b of candidates) {
     const dueAt = resolveDueAt(b, b.event);
-    if (!isDue(dueAt, now)) continue;
+    if (!dueAt) continue;
+    if (!isDue(dueAt, now)) {
+      // Not due yet: make sure it has its exact-time ticket. QStash only
+      // accepts a delay up to QSTASH_MAX_DELAY_MS, so a send created
+      // weeks ahead can't be armed at creation — this nightly pass arms
+      // it once it comes within reach (see /api/broadcasts/send-scheduled).
+      if (!b.qstashMessageId && dueAt.getTime() - now.getTime() <= QSTASH_MAX_DELAY_MS) {
+        const qstashMessageId = await scheduleEventBroadcastSend(b.id, dueAt);
+        if (qstashMessageId) {
+          await db.emailBroadcast.update({ where: { id: b.id }, data: { qstashMessageId } });
+          armed++;
+        }
+      }
+      continue;
+    }
     try {
       await sendEventBroadcast(b.id);
       processed++;
@@ -393,5 +408,5 @@ export async function sendDueEventBroadcasts(now: Date = new Date()): Promise<{ 
       console.error("sendDueEventBroadcasts: failed to send", b.id, err);
     }
   }
-  return { processed };
+  return { processed, armed };
 }
