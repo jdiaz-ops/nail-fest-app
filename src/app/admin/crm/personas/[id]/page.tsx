@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { db } from "@/lib/db";
 import { getPersonProfile, type TimelineItem } from "@/lib/personTimeline";
+import { HYGIENE_LABELS } from "@/lib/contactHygiene";
+
+const HYGIENE_LABEL_NAMES = new Set<string>(Object.values(HYGIENE_LABELS));
 import StageBadge from "../../StageBadge";
 
 export const dynamic = "force-dynamic";
@@ -121,6 +125,7 @@ function fullDate(d: Date): string {
 
 export default async function PersonaPage({ params }: { params: { id: string } }) {
   const profile = await getPersonProfile(params.id);
+  const labels = (await db.person.findUnique({ where: { id: params.id }, select: { labels: { select: { name: true }, orderBy: { name: "asc" } } } }))?.labels ?? [];
   if (!profile) notFound();
 
   const name = [profile.firstName, profile.lastName].filter(Boolean).join(" ") || profile.email;
@@ -161,6 +166,15 @@ export default async function PersonaPage({ params }: { params: { id: string } }
             {profile.phone ? ` · ${profile.phone}` : ""}
             {profile.city ? ` · ${profile.city}` : ""}
           </div>
+          {labels.length > 0 && (
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
+              {labels.map((l) => (
+                <span key={l.name} style={{ fontSize: 11, fontWeight: 600, padding: "3px 10px", borderRadius: 999, background: HYGIENE_LABEL_NAMES.has(l.name) ? "#fbe9ea" : "#f0efec", color: HYGIENE_LABEL_NAMES.has(l.name) ? "#a3212b" : "#5b5f6b" }}>
+                  {l.name}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

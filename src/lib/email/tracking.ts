@@ -1,6 +1,8 @@
 import { db } from "@/lib/db";
 import type { EmailLogStatus } from "@prisma/client";
 import { revokeConsent } from "@/lib/consent";
+import { markEmailInvalid, markSpamComplaint } from "@/lib/contactHygiene";
+import { categorizeEmailFailure } from "@/lib/email/failureCategories";
 
 // Shared by both provider webhooks (/api/webhooks/ses's SNS-based events
 // and /api/webhooks/resend's Svix-based ones) — each just maps its own
@@ -73,5 +75,15 @@ export async function applyEmailTrackingEvent(providerMessageId: string, stage: 
   // redelivery of the same event.
   if ((stage === "BOUNCED" || stage === "COMPLAINED") && existing.personId) {
     await revokeConsent(existing.personId, "MARKETING", { onlyIfActive: true });
+    // And say so on the profile (lib/contactHygiene.ts): a hard bounce
+    // means a dead address, a complaint means never again. A soft bounce
+    // (full inbox) gets no label — the automatic retry handles it.
+    try {
+      const category = categorizeEmailFailure(stage, (patch.errorMessage as string | undefined) ?? existing.errorMessage);
+      if (category === "address") await markEmailInvalid(existing.personId);
+      else if (category === "complaint") await markSpamComplaint(existing.personId);
+    } catch (err) {
+      console.error("email tracking: hygiene reaction failed", existing.personId, err);
+    }
   }
 }

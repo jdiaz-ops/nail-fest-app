@@ -845,6 +845,14 @@ model EmailBroadcast {
   // skipped, or failed) so far; both null/0 until the first chunk runs.
   recipientPersonIds Json?
   cursor      Int               @default(0)
+  // How many automatic retries (lib/autoRetry.ts) have run for this send —
+  // stops at MAX_AUTO_RETRIES.
+  autoRetryCount Int            @default(0)
+  // Set for the duration of a retry pass (retryFailedEmailBroadcast): the
+  // send loop walks THIS list instead of recipientPersonIds, so a retry of
+  // 40 people costs one chunk, not a re-walk of the whole frozen list.
+  // Cleared when the pass completes.
+  retryPersonIds Json?
   // Set while one function invocation is working a chunk of this send —
   // claimed atomically at each chunk's start (see the send loops'
   // updateMany) so a second invocation (the admin's "Reanudar envío", a
@@ -1149,6 +1157,9 @@ model WhatsAppBroadcast {
   // recipientPersonIds/cursor's own schema comment.
   recipientPersonIds Json?
   cursor       Int                   @default(0)
+  // How many automatic retries (lib/autoRetry.ts) have run for this send —
+  // stops at MAX_AUTO_RETRIES.
+  autoRetryCount Int                 @default(0)
   // Set while one function invocation is working a chunk of this send —
   // claimed atomically at each chunk's start (see the send loops'
   // updateMany) so a second invocation (the admin's "Reanudar envío", a

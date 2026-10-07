@@ -4,7 +4,7 @@ import { hasActiveConsent, bulkActiveConsent } from "@/lib/consent";
 import { getOrgSettings, type OrgSettingsValue } from "@/lib/settings";
 import { resolveSegment, type SegmentFilter } from "@/lib/segments/builder";
 import { resolveEventBroadcastRecipients } from "@/lib/broadcastRecipients";
-import { publishChunkContinuation, scheduleWhatsAppBroadcastSend, QSTASH_MAX_DELAY_MS, CHUNK_WATCHDOG_SECONDS, CHUNK_LOCK_SECONDS } from "@/lib/qstash";
+import { publishChunkContinuation, scheduleWhatsAppBroadcastSend, scheduleAutoRetry, AUTO_RETRY_DELAYS_SECONDS, QSTASH_MAX_DELAY_MS, CHUNK_WATCHDOG_SECONDS, CHUNK_LOCK_SECONDS } from "@/lib/qstash";
 import { whatsappProvider } from "./index";
 import { recordOutboundMessage } from "./inbox";
 import { categorizeWhatsAppFailure, WHATSAPP_FAILURE_INFO, type WhatsAppFailureCategory } from "./failureCategories";
@@ -435,6 +435,9 @@ export async function sendWhatsAppBroadcast(
   const remaining = recipientIds.length - cursor;
   if (remaining === 0) {
     await db.whatsAppBroadcast.update({ where: { id: broadcast.id }, data: { status: "SENT", sentAt: new Date(), lockedUntil: null } });
+    // Book the automatic retry of whatever failed for a passing reason
+    // (lib/autoRetry.ts) — and the report that goes with it.
+    await scheduleAutoRetry("whatsapp", broadcastId, AUTO_RETRY_DELAYS_SECONDS.whatsapp[1]!);
   }
   return { sent, skippedNoConsent, skippedNoPhone, skippedNoTicket, skippedDuplicatePhone, failed, remaining, backgrounded, locked: false };
 }
@@ -477,7 +480,8 @@ async function alreadyMessagedInBroadcast(broadcastId: string, people: Person[])
  * FAILED row with no linked Person (shouldn't happen — every original
  * send resolved a real Person first — but never silently guesses one). */
 export async function retryFailedMessages(
-  broadcastId: string
+  broadcastId: string,
+  opts: { categories?: WhatsAppFailureCategory[] } = {}
 ): Promise<{ retried: number; sent: number; failed: number; skipped: number; skippedNotRetryable: number }> {
   const broadcast = await db.whatsAppBroadcast.findUniqueOrThrow({
     where: { id: broadcastId },
@@ -493,7 +497,8 @@ export async function retryFailedMessages(
   const retryIds: string[] = [];
   for (const row of latest) {
     if (row.status !== "FAILED") continue;
-    if (!WHATSAPP_FAILURE_INFO[categorizeWhatsAppFailure(row.errorMessage)].retryable) {
+    const category = categorizeWhatsAppFailure(row.errorMessage);
+    if (!WHATSAPP_FAILURE_INFO[category].retryable || (opts.categories && !opts.categories.includes(category))) {
       skippedNotRetryable++;
       continue;
     }
@@ -515,26 +520,32 @@ export async function retryFailedMessages(
       )
     : null;
 
-  for (const msg of failedMessages) {
-    const person = msg.conversation.person;
-    if (!person || !person.phone) {
-      skipped++;
-      continue;
-    }
-    if (!(await hasActiveConsent(person.id, "WHATSAPP"))) {
-      skipped++;
-      continue;
-    }
-    // Same rule as the original send: a button template needs this
-    // person's own entrada (it may have been cancelled since).
-    const ticketToken = tickets?.get(person.id);
-    if (ticketButton && !ticketToken) {
-      skipped++;
-      continue;
-    }
-    const outcome = await sendOneTemplateMessage(broadcast, person, broadcast.event, orgSettings, ticketToken);
-    if (outcome === "sent") sent++;
-    else failed++;
+  // CONCURRENCY at a time, like the main send — a few hundred retries
+  // one by one would not fit in a 60s function.
+  for (let i = 0; i < failedMessages.length; i += CONCURRENCY) {
+    await Promise.allSettled(
+      failedMessages.slice(i, i + CONCURRENCY).map(async (msg) => {
+        const person = msg.conversation.person;
+        if (!person || !person.phone) {
+          skipped++;
+          return;
+        }
+        if (!(await hasActiveConsent(person.id, "WHATSAPP"))) {
+          skipped++;
+          return;
+        }
+        // Same rule as the original send: a button template needs this
+        // person's own entrada (it may have been cancelled since).
+        const ticketToken = tickets?.get(person.id);
+        if (ticketButton && !ticketToken) {
+          skipped++;
+          return;
+        }
+        const outcome = await sendOneTemplateMessage(broadcast, person, broadcast.event, orgSettings, ticketToken);
+        if (outcome === "sent") sent++;
+        else failed++;
+      })
+    );
   }
 
   return { retried: failedMessages.length, sent, failed, skipped, skippedNotRetryable };

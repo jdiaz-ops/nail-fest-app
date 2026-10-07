@@ -16,6 +16,7 @@ const fraunces = Fraunces({ subsets: ["latin"], weight: ["600", "900"] });
 const NAV: { href: string; label: string; adminOnly?: boolean }[] = [
   { href: "/admin/crm/personas", label: "Personas" },
   { href: "/admin/crm/ciudades", label: "Limpiar ciudades" },
+  { href: "/admin/crm/limpieza", label: "Limpieza automática" },
   { href: "/admin/crm/abandonados", label: "Abandonados" },
   // Importar/Broadcasts/Segmentos: COORDINADOR doesn't get these — hidden
   // here AND gated again on each own page (see those pages' own

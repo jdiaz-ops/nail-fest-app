@@ -5,6 +5,7 @@ import { emailProvider } from "@/lib/email";
 import { loadForecastData, loadVelocityData } from "@/lib/eventReportData";
 import { goalStatus, pushTiming, weeklyMomentum, PACE_WORDS } from "@/lib/eventDecisions";
 import { PACE_STYLE } from "@/lib/registrationVelocity";
+import { hygieneSummary } from "@/lib/contactHygiene";
 
 // "Briefing semanal" — every Monday (vercel.json cron), one email per
 // upcoming published event with what the report page would say today and
@@ -67,6 +68,10 @@ export async function buildBriefing(eventId: string): Promise<BriefingText | nul
   else if (pace === "ahead" && (!goal || goal.light === "green")) action = `Vas adelante: puedes pasar presupuesto de awareness a retargeting${goal ? " o subir la meta" : ""}, y confirmar logística con el escenario alto.`;
   else if (pace === "behind") action = `Vas por debajo de los otros eventos en este punto: prueba un creativo nuevo o una audiencia nueva esta semana, antes del repunte final.`;
   else action = `Mantener: el ritmo está en línea. Revisa el reporte el próximo lunes.`;
+  // List health, org-wide (lib/contactHygiene.ts) — what the app cleaned
+  // up on its own since the last send, so nobody has to go looking.
+  const hygiene = (await hygieneSummary()).filter((h) => h.count > 0);
+  if (hygiene.length > 0) lines.push(`Limpieza automática: ${hygiene.map((h) => `${fmt(h.count)} ${h.label}`).join(" · ")}. Revisa /admin/crm/limpieza.`);
   lines.push(`Sugerido: ${action}`);
 
   const url = `${(process.env.APP_BASE_URL ?? "").replace(/\/$/, "")}/admin/events/${event.id}/reports`;

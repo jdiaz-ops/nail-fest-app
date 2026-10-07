@@ -10,7 +10,8 @@ import { buildUnsubscribeUrl } from "@/lib/unsubscribe";
 import { renderTicketPdfBuffer } from "@/lib/ticketPdf";
 import { confirmationCodeFor } from "@/lib/ticket";
 import { getOrgSettings } from "@/lib/settings";
-import { publishChunkContinuation, scheduleEventBroadcastSend, QSTASH_MAX_DELAY_MS, CHUNK_WATCHDOG_SECONDS, CHUNK_LOCK_SECONDS } from "@/lib/qstash";
+import { publishChunkContinuation, scheduleEventBroadcastSend, scheduleAutoRetry, AUTO_RETRY_DELAYS_SECONDS, QSTASH_MAX_DELAY_MS, CHUNK_WATCHDOG_SECONDS, CHUNK_LOCK_SECONDS } from "@/lib/qstash";
+import { markEmailInvalid } from "@/lib/contactHygiene";
 import { tagOwnLinksInHtml, tagOwnLinksInText, slugifyForCampaign } from "@/lib/outboundLinkTagging";
 import { publicEventName } from "@/lib/eventDisplayName";
 
@@ -59,8 +60,13 @@ export async function sendEventBroadcast(
 
   // First call for this broadcast: resolve the full recipient list once
   // and freeze it. A later (continuation) call reuses the frozen list.
+  // A retry pass (retryFailedEmailBroadcast) walks only the people being
+  // retried — see EmailBroadcast.retryPersonIds's own schema comment.
+  const retryPass = Array.isArray(broadcast.retryPersonIds);
   let recipientIds: string[];
-  if (broadcast.recipientPersonIds) {
+  if (retryPass) {
+    recipientIds = broadcast.retryPersonIds as unknown as string[];
+  } else if (broadcast.recipientPersonIds) {
     recipientIds = broadcast.recipientPersonIds as unknown as string[];
   } else {
     const recipients = await resolveEventBroadcastRecipients(broadcast.eventId, broadcast.ticketTypeId);
@@ -218,6 +224,7 @@ export async function sendEventBroadcast(
             await db.emailLog.create({
               data: { kind: "TRANSACTIONAL", broadcastId: broadcast.id, personId: person.id, toEmail: person.email, status: "FAILED", errorMessage: errorText(err) },
             });
+            await reactToRefusal(person.id, errorText(err));
             console.error("event broadcast send failed", person.email, err);
           }
         })
@@ -240,7 +247,7 @@ export async function sendEventBroadcast(
 
   const remaining = recipientIds.length - cursor;
   if (remaining === 0) {
-    await db.emailBroadcast.update({ where: { id: broadcast.id }, data: { status: "SENT", sentAt: new Date(), lockedUntil: null } });
+    await finishEmailBroadcast(broadcast.id, retryPass);
   }
   return { sent, skippedNoConsent, remaining, backgrounded, locked: false };
 }
@@ -259,8 +266,11 @@ export async function sendSegmentEmailBroadcast(
   if (!broadcast.segmentId) throw new Error("sendSegmentEmailBroadcast called on a broadcast with no segmentId");
   if (!broadcast.bodyText) throw new Error("sendSegmentEmailBroadcast called on a broadcast with no bodyText");
 
+  const retryPass = Array.isArray(broadcast.retryPersonIds);
   let recipientIds: string[];
-  if (broadcast.recipientPersonIds) {
+  if (retryPass) {
+    recipientIds = broadcast.retryPersonIds as unknown as string[];
+  } else if (broadcast.recipientPersonIds) {
     recipientIds = broadcast.recipientPersonIds as unknown as string[];
   } else {
     const segment = await db.segmentDefinition.findUniqueOrThrow({ where: { id: broadcast.segmentId } });
@@ -348,6 +358,7 @@ export async function sendSegmentEmailBroadcast(
             await db.emailLog.create({
               data: { kind: "MARKETING", broadcastId: broadcast.id, personId: person.id, toEmail: person.email, status: "FAILED", errorMessage: errorText(err) },
             });
+            await reactToRefusal(person.id, errorText(err));
             console.error("broadcast send failed", person.email, err);
           }
         })
@@ -368,7 +379,7 @@ export async function sendSegmentEmailBroadcast(
 
   const remaining = recipientIds.length - cursor;
   if (remaining === 0) {
-    await db.emailBroadcast.update({ where: { id: broadcast.id }, data: { status: "SENT", sentAt: new Date(), lockedUntil: null } });
+    await finishEmailBroadcast(broadcast.id, retryPass);
   }
   return { sent, skippedNoConsent, remaining, backgrounded, locked: false, total: recipientIds.length };
 }
@@ -395,6 +406,27 @@ export async function sendSegmentEmailBroadcast(
  * a provider error). */
 const errorText = (err: unknown) => (err instanceof Error ? err.message : String(err)).slice(0, 500);
 
+/** The provider refused the address itself (not a blip): label the
+ * contact now — lib/contactHygiene.ts. Never throws. */
+async function reactToRefusal(personId: string, errorMessage: string): Promise<void> {
+  try {
+    if (categorizeEmailFailure("FAILED", errorMessage) === "address") await markEmailInvalid(personId);
+  } catch (err) {
+    console.error("email broadcast: hygiene reaction failed", personId, err);
+  }
+}
+
+/** The last chunk is through: mark SENT, drop the lock and any retry
+ * list, and — for the original pass only — book the automatic retry
+ * (lib/autoRetry.ts). sentAt stays the ORIGINAL send's time. */
+async function finishEmailBroadcast(broadcastId: string, retryPass: boolean): Promise<void> {
+  await db.emailBroadcast.update({
+    where: { id: broadcastId },
+    data: { status: "SENT", lockedUntil: null, retryPersonIds: Prisma.DbNull, ...(retryPass ? {} : { sentAt: new Date() }) },
+  });
+  if (!retryPass) await scheduleAutoRetry("email", broadcastId, AUTO_RETRY_DELAYS_SECONDS.email[1]!);
+}
+
 /** The people in `personIds` this broadcast already handled — anyone with
  * a log row, EXCEPT a FAILED row whose reason is retryable (a provider
  * rate limit, a blip): those get another attempt when the send is resumed
@@ -411,7 +443,7 @@ async function alreadyHandledInBroadcast(broadcastId: string, personIds: string[
   for (const r of rows) if (r.personId) latest.set(r.personId, r);
   const handled = new Set<string>();
   for (const [personId, r] of latest) {
-    const category = r.status === "FAILED" ? categorizeEmailFailure(r.status, r.errorMessage) : null;
+    const category = categorizeEmailFailure(r.status, r.errorMessage);
     if (category && EMAIL_FAILURE_INFO[category].retryable) continue;
     handled.add(personId);
   }
@@ -484,16 +516,23 @@ export async function getEmailBroadcastFailureBreakdown(broadcastId: string): Pr
  * the retryable failures (see lib/email/failureCategories.ts) through, so
  * everyone else is skipped untouched. Chunked and locked exactly like the
  * original send — the broadcast reads "Enviando…" until it is through. */
-export async function retryFailedEventBroadcast(broadcastId: string): Promise<{ retryable: number; started: boolean }> {
+export async function retryFailedEmailBroadcast(
+  broadcastId: string,
+  opts: { categories?: EmailFailureCategory[] } = {}
+): Promise<{ retryable: number; started: boolean }> {
   const broadcast = await db.emailBroadcast.findUniqueOrThrow({ where: { id: broadcastId } });
-  if (!broadcast.eventId) throw new Error("retryFailedEventBroadcast called on a non-event broadcast");
   if (broadcast.status !== "SENT") throw new Error("Solo se puede reintentar una difusión que ya terminó de enviarse.");
-  const retryable = (await getEmailBroadcastFailureBreakdown(broadcastId)).filter((g) => g.retryable).reduce((n, g) => n + g.people.length, 0);
-  if (retryable === 0) return { retryable: 0, started: false };
-  await db.emailBroadcast.update({ where: { id: broadcastId }, data: { status: "SENDING", cursor: 0 } });
-  await sendEventBroadcast(broadcastId);
-  return { retryable, started: true };
+  const groups = (await getEmailBroadcastFailureBreakdown(broadcastId)).filter((g) => g.retryable && (!opts.categories || opts.categories.includes(g.category)));
+  const personIds = [...new Set(groups.flatMap((g) => g.people.map((p) => p.personId)).filter((id): id is string => !!id))];
+  if (personIds.length === 0) return { retryable: 0, started: false };
+  await db.emailBroadcast.update({ where: { id: broadcastId }, data: { status: "SENDING", cursor: 0, retryPersonIds: personIds } });
+  if (broadcast.eventId) await sendEventBroadcast(broadcastId);
+  else await sendSegmentEmailBroadcast(broadcastId);
+  return { retryable: personIds.length, started: true };
 }
+
+/** Kept under its old name for the admin route. */
+export const retryFailedEventBroadcast = retryFailedEmailBroadcast;
 
 export interface EmailBroadcastStats {
   attempted: number;

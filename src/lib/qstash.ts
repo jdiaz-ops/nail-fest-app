@@ -176,6 +176,35 @@ export const CHUNK_WATCHDOG_SECONDS = 90;
  * the watchdog can take over. */
 export const CHUNK_LOCK_SECONDS = 70;
 
+// --- Automatic retries after a send completes (lib/autoRetry.ts) ------
+//
+// Attempt 1 half an hour after the send finished (deliveries and failures
+// have been reported by then), attempt 2 later: hours for WhatsApp, a day
+// for email so a full inbox has had time to make room.
+export const AUTO_RETRY_DELAYS_SECONDS: Record<"whatsapp" | "email", Record<number, number>> = {
+  whatsapp: { 1: 30 * 60, 2: 3 * 60 * 60 },
+  email: { 1: 30 * 60, 2: 24 * 60 * 60 },
+};
+
+export function autoRetryCallbackUrl(channel: "whatsapp" | "email"): string {
+  return `${process.env.APP_BASE_URL || ""}/api/${channel === "whatsapp" ? "whatsapp" : "broadcasts"}/auto-retry`;
+}
+
+/** Schedules one automatic-retry callback for this broadcast. Best-effort
+ * like every other publish here: null means no QStash, and the send is
+ * simply left for the admin's own "Reintentar recuperables". */
+export async function scheduleAutoRetry(channel: "whatsapp" | "email", broadcastId: string, delaySeconds: number): Promise<string | null> {
+  const client = getClient();
+  if (!client) return null;
+  try {
+    const result = await client.publishJSON({ url: autoRetryCallbackUrl(channel), body: { broadcastId }, delay: delaySeconds });
+    return result.messageId;
+  } catch (err) {
+    console.error("qstash: failed to schedule auto retry", channel, broadcastId, err);
+    return null;
+  }
+}
+
 // --- Abandoned-cart reminder emails -----------------------------------
 //
 // Same reasoning as scheduleWhatsAppBroadcastSend above: a 15-minute and a

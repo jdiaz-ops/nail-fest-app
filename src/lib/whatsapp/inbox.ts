@@ -1,6 +1,8 @@
 import { db } from "@/lib/db";
 import type { WhatsAppMessageKind, WhatsAppMessageStatus } from "@prisma/client";
 import { revokeConsent } from "@/lib/consent";
+import { markMetaBlocked, markPhoneInvalid } from "@/lib/contactHygiene";
+import { categorizeWhatsAppFailure } from "./failureCategories";
 import { whatsappProvider } from "./index";
 
 // Digits only — Meta's webhook payload identifies contacts by "wa_id"
@@ -120,6 +122,24 @@ export async function recordOutboundMessage(input: {
   });
   if (input.status !== "FAILED") {
     await db.whatsAppConversation.update({ where: { id: conversation.id }, data: { lastOutboundAt: new Date() } });
+  } else if (input.kind === "TEMPLATE") {
+    // An immediate rejection already tells us what kind of problem this
+    // is — act on it now, not after the next difusión (lib/contactHygiene.ts).
+    await reactToTemplateFailure(input.phone, input.errorMessage ?? null);
+  }
+}
+
+/** The one place a failed template send (immediate or via the webhook)
+ * turns into list hygiene: a dead number gets labelled and loses its
+ * WhatsApp consent on the spot; a user Meta is shielding gets a label
+ * only. Never throws — hygiene must never break the send that found it. */
+async function reactToTemplateFailure(phone: string, errorMessage: string | null): Promise<void> {
+  try {
+    const category = categorizeWhatsAppFailure(errorMessage);
+    if (category === "number") await markPhoneInvalid(phone);
+    else if (category === "meta") await markMetaBlocked(phone);
+  } catch (err) {
+    console.error("whatsapp: hygiene reaction failed", phone, err);
   }
 }
 
@@ -341,15 +361,6 @@ async function resolveAttendancePollReply(personId: string | null, contextMessag
   });
 }
 
-// Meta's "Message Undeliverable" code — the number isn't reachable/valid
-// on WhatsApp. Deliberately the ONLY failure code this file reacts to for
-// list hygiene: most other "failed" statuses have nothing to do with the
-// recipient at all — most commonly 131047 (a freeform reply attempted
-// outside Meta's 24h customer-service window, routine in this app's own
-// automations) — and auto-suppressing on those would silently cut off
-// perfectly good numbers.
-const UNDELIVERABLE_ERROR_CODE = 131026;
-
 async function handleStatusUpdate(status: WebhookStatus): Promise<void> {
   const mapped = STATUS_MAP[status.status];
   if (!mapped) return;
@@ -362,7 +373,7 @@ async function handleStatusUpdate(status: WebhookStatus): Promise<void> {
   // table existed) — that's a no-op, not an error.
   const existing = await db.whatsAppMessage.findFirst({
     where: { providerMessageId: status.id },
-    select: { id: true, conversationId: true, conversation: { select: { personId: true } } },
+    select: { id: true, kind: true, conversationId: true, conversation: { select: { phone: true } } },
   });
   if (!existing) return;
 
@@ -378,21 +389,13 @@ async function handleStatusUpdate(status: WebhookStatus): Promise<void> {
   }
   await db.whatsAppMessage.update({ where: { id: existing.id }, data });
 
-  if (mapped === "FAILED" && firstError?.code === UNDELIVERABLE_ERROR_CODE && existing.conversation.personId) {
-    const personId = existing.conversation.personId;
-    // Conservative on purpose — even this one specific code could in
-    // principle be a one-off transient issue, so this only acts once the
-    // SAME conversation has hit it twice, same "repeated soft bounce ==
-    // functionally dead" reasoning as email (lib/email/tracking.ts's own
-    // comment). onlyIfActive keeps a chronically-undeliverable number
-    // from growing a new Consent row on every future attempt.
-    const priorFailures = await db.whatsAppMessage.count({
-      where: { conversationId: existing.conversationId, status: "FAILED", errorMessage: { startsWith: `[${UNDELIVERABLE_ERROR_CODE}]` } },
-    });
-    if (priorFailures >= 2) {
-      await revokeConsent(personId, "WHATSAPP", { onlyIfActive: true }).catch((err) =>
-        console.error("whatsapp webhook: undeliverable consent revoke failed", err)
-      );
-    }
+  // Only template sends (a difusión, a confirmation) feed hygiene: a
+  // FREEFORM reply failing with 131047 (outside Meta's 24h window) says
+  // nothing about the number, and categorizeWhatsAppFailure leaves that
+  // code unclassified anyway. Used to wait for a second 131026 on the
+  // same number; a freshly typed number that Meta calls undeliverable is
+  // not ambiguous, and the label is reversible by fixing the celular.
+  if (mapped === "FAILED" && existing.kind === "TEMPLATE") {
+    await reactToTemplateFailure(existing.conversation.phone, data.errorMessage ?? null);
   }
 }
