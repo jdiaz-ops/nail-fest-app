@@ -3,6 +3,7 @@ import { optimizedSrc, optimizedSrcSet } from "@/lib/optimizedImage";
 import { getOrgSettings } from "@/lib/settings";
 import { getNextEvent } from "@/lib/nextEvent";
 import { publicEventName } from "@/lib/eventDisplayName";
+import { formatHeroDate } from "@/lib/eventHeroDate";
 import ReviewsSection from "@/components/reviews/ReviewsSection";
 import ReviewsBadge from "@/components/reviews/ReviewsBadge";
 
@@ -20,6 +21,9 @@ export default async function HomePage() {
   // (see EventForm's own "Nombre del evento" convention, e.g. "Nail Fest
   // Cúcuta"), so repeating it here just duplicated the h1 right above.
   const eventPlace = nextEvent?.venueName ?? "";
+  // The date, derived from startsAt/endsAt exactly as the event's own
+  // landing does (lib/eventHeroDate.ts), so the two can never disagree.
+  const heroDate = nextEvent ? formatHeroDate(nextEvent.startsAt, nextEvent.endsAt, orgSettings.timezone, orgSettings.language) : null;
   // Video takes priority if somehow both are set (shouldn't happen from
   // the editor form, which keeps them mutually exclusive — see
   // OrgSettings.homepageVideoUrl's own schema comment). A GIF needs no
@@ -136,6 +140,12 @@ export default async function HomePage() {
             >
               {publicEventName(nextEvent)}
             </h1>
+            {heroDate && (
+              <p style={{ fontSize: 20, lineHeight: 1.25, margin: `0 0 ${eventPlace ? 6 : 20}px`, fontWeight: 800, textShadow: hasMedia ? "0 1px 8px rgba(0,0,0,0.35)" : "none" }}>
+                {heroDate.days} {heroDate.month}
+                <span style={{ fontWeight: 500, opacity: 0.85 }}> · {heroDate.detail}</span>
+              </p>
+            )}
             {eventPlace && (
               <p style={{ fontSize: 16, margin: "0 0 20px", fontWeight: 600, textShadow: hasMedia ? "0 1px 8px rgba(0,0,0,0.35)" : "none" }}>
                 {eventPlace}
