@@ -27,6 +27,7 @@ export interface ReviewTextField {
 
 export type ReviewTextKey =
   | "formEyebrow"
+  | "seal"
   | "formTitle"
   | "formIntro"
   | "ratingLabel"
@@ -39,6 +40,7 @@ export type ReviewTextKey =
   | "instagramHint"
   | "consentText"
   | "raffleOptInText"
+  | "raffleOptInLabel"
   | "submitLabel"
   | "formFootnote"
   | "thanksTitle"
@@ -65,6 +67,7 @@ const RAFFLE = ["{{evento}}", "{{premios}}", "{{fecha}}"];
 export const REVIEW_TEXT_FIELDS: ReviewTextField[] = [
   // ── El formulario ──
   { key: "formEyebrow", page: "form", label: "Etiqueta arriba a la derecha", default: "Tu reseña" },
+  { key: "seal", page: "form", label: "Sello de asistencia", default: "Asistió a {{evento}}", placeholders: EVENT },
   { key: "formTitle", page: "form", label: "Título", default: "Hola {{nombre}}, ¿cómo estuvo {{evento}}?", placeholders: NAME_EVENT },
   { key: "formIntro", page: "form", label: "Texto bajo el título", default: "Tu opinión se publica con tu nombre y ciudad para que otras manicuristas sepan qué esperar. Toma un minuto.", multiline: true, placeholders: NAME_EVENT },
   { key: "ratingLabel", page: "form", label: "Etiqueta de las estrellas", default: "Tu calificación" },
@@ -76,7 +79,9 @@ export const REVIEW_TEXT_FIELDS: ReviewTextField[] = [
   { key: "instagramLabel", page: "form", label: "Etiqueta del Instagram", default: "Tu Instagram" },
   { key: "instagramHint", page: "form", label: "Nota junto a la etiqueta del Instagram", default: "(opcional, sale en tu reseña destacada)" },
   { key: "consentText", page: "form", label: "Casilla de permiso para publicar", default: "Autorizo a Nail Fest a publicar mi reseña con mi nombre, ciudad y fotos en su sitio, redes y publicidad. Puedo retirar este permiso cuando quiera escribiéndonos. Sin esta casilla tu calificación cuenta igual, pero no se muestra con tu nombre.", multiline: true },
-  { key: "raffleOptInText", page: "form", label: "Casilla del sorteo (solo mientras el sorteo está abierto)", default: "Quiero participar en el sorteo de {{evento}}: {{premios}} entre las reseñas recibidas hasta el {{fecha}}. Participa toda reseña enviada a tiempo, sin importar la calificación.", multiline: true, placeholders: RAFFLE },
+  { key: "raffleEyebrow", page: "form", label: "Sorteo · etiqueta pequeña (en el formulario y en gracias)", default: "Sorteo · {{evento}}", placeholders: EVENT },
+  { key: "raffleOptInText", page: "form", label: "Sorteo · texto (solo mientras el sorteo está abierto)", default: "{{premios}} entre las reseñas recibidas hasta el {{fecha}}. Participa toda reseña enviada a tiempo, sin importar la calificación.", multiline: true, placeholders: RAFFLE },
+  { key: "raffleOptInLabel", page: "form", label: "Sorteo · casilla", default: "Quiero participar" },
   { key: "submitLabel", page: "form", label: "Botón de enviar", default: "Enviar mi reseña" },
   { key: "formFootnote", page: "form", label: "Nota bajo el botón", default: "Solo pueden reseñar las asistentes escaneadas en la puerta. Tu reseña se publica después de una revisión del equipo.", multiline: true },
   // ── La pantalla de gracias ──
@@ -85,7 +90,6 @@ export const REVIEW_TEXT_FIELDS: ReviewTextField[] = [
   { key: "rewardEyebrow", page: "thanks", label: "Recompensa · etiqueta pequeña", default: "", optional: true },
   { key: "rewardTitle", page: "thanks", label: "Recompensa · título (la caja solo sale si escribes algo aquí)", default: "", optional: true, placeholders: EVENT },
   { key: "rewardText", page: "thanks", label: "Recompensa · texto", default: "", optional: true, multiline: true, placeholders: EVENT },
-  { key: "raffleEyebrow", page: "thanks", label: "Sorteo · etiqueta pequeña", default: "Sorteo · {{evento}}", placeholders: EVENT },
   { key: "raffleInTitle", page: "thanks", label: "Sorteo · título si participa", default: "Estás participando" },
   { key: "raffleOutTitle", page: "thanks", label: "Sorteo · título si no participa", default: "No estás participando" },
   { key: "raffleText", page: "thanks", label: "Sorteo · texto", default: "{{premios}} entre las reseñas recibidas hasta el {{fecha}}. Las ganadoras se anuncian por WhatsApp e Instagram.", multiline: true, placeholders: RAFFLE },

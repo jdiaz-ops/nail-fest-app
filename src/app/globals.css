@@ -2033,6 +2033,84 @@ button.primary:disabled {
   content: "▾ ";
 }
 
+/* ── Página de reseña (app/resena/[token]: ReviewHero, ReviewForm,
+   ReviewThanks). The event's photo up top under a green scrim, then the
+   content column (560px max on a desktop) with its first card riding up
+   over the header. ── */
+.rv-page { min-height: 100dvh; background: #faf9f7; display: flex; flex-direction: column; }
+.rv-head { position: relative; color: #fff; background: #0b2e2c; overflow: hidden; }
+.rv-head-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: blur(3px) saturate(1.1); transform: scale(1.06); }
+.rv-head-scrim { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(11,46,44,0.55) 0%, rgba(11,46,44,0.8) 60%, rgba(11,46,44,0.94) 100%); }
+.rv-head-glow { position: absolute; inset: 0; background: radial-gradient(circle at 92% 0%, rgba(255,197,168,0.5) 0, rgba(255,197,168,0) 40%), radial-gradient(circle at 0% 100%, rgba(0,190,181,0.45) 0, rgba(0,190,181,0) 36%); }
+.rv-head-inner { position: relative; max-width: 560px; margin: 0 auto; padding: 18px 20px 44px; display: flex; flex-direction: column; gap: 14px; }
+.rv-bar { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.rv-logo { height: 28px; width: auto; display: block; }
+.rv-eyebrow { font-size: 11px; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; color: #9ef0ea; }
+.rv-eyebrow-ink { color: var(--link); }
+.rv-seal { display: inline-flex; align-items: center; gap: 7px; background: #fff; color: #0b2e2c; border-radius: 999px; padding: 7px 12px; font-size: 12px; font-weight: 800; align-self: flex-start; }
+.rv-title { margin: 0; font-size: 31px; line-height: 1.08; font-weight: 800; letter-spacing: -0.02em; text-wrap: balance; }
+.rv-title-lg { font-size: 34px; line-height: 1.05; }
+.rv-intro { margin: 0; font-size: 14px; line-height: 1.45; opacity: 0.88; }
+.rv-intro strong { color: #fff; }
+.rv-check-circle { width: 56px; height: 56px; border-radius: 50%; background: var(--accent); color: #0b2e2c; display: flex; align-items: center; justify-content: center; }
+.rv-body { position: relative; width: 100%; max-width: 560px; margin: -26px auto 0; padding: 0 16px 48px; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px; }
+.rv-body > :first-child { box-shadow: 0 14px 34px -18px rgba(11,46,44,0.35); }
+.rv-card { background: #fff; border-radius: 20px; padding: 20px 18px; display: flex; flex-direction: column; gap: 18px; }
+.rv-field { display: flex; flex-direction: column; gap: 8px; }
+.rv-label { font-size: 13px; font-weight: 800; }
+.rv-hint { font-weight: 400; color: var(--ink-muted); }
+.rv-stars { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: #fff3ea; border-radius: 16px; padding: 6px 12px 6px 6px; }
+.rv-stars-row { display: flex; }
+.rv-star { width: 44px; height: 44px; border: 0; background: transparent; padding: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; border-radius: 12px; }
+.rv-star:focus-visible { outline: 2px solid var(--accent); }
+.rv-star svg { width: 36px; height: 36px; }
+.rv-stars-word { font-size: 12px; font-weight: 800; color: #0b2e2c; background: #fff; border-radius: 999px; padding: 6px 10px; white-space: nowrap; }
+.rv-input, .rv-textarea { width: 100%; box-sizing: border-box; border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; font: inherit; font-size: 14px; background: #faf9f7; color: var(--ink); }
+.rv-textarea { resize: vertical; min-height: 96px; }
+.rv-input:focus, .rv-textarea:focus { outline: 2px solid var(--accent); outline-offset: 0; border-color: transparent; background: #fff; }
+.rv-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.rv-tile { position: relative; aspect-ratio: 1 / 1; border-radius: 14px; overflow: hidden; background: #f0efec; }
+.rv-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.rv-tile-remove { position: absolute; top: 6px; right: 6px; width: 28px; height: 28px; border-radius: 50%; border: 0; background: #1c1310; color: #fff; font-size: 16px; line-height: 1; cursor: pointer; }
+.rv-tile-add { aspect-ratio: 1 / 1; border-radius: 14px; border: 1.5px dashed #c9c5bd; background: #faf9f7; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--ink-muted); font: inherit; font-size: 11px; font-weight: 600; cursor: pointer; }
+.rv-tile-add:disabled { cursor: default; opacity: 0.7; }
+.rv-handle { display: flex; align-items: center; border: 1px solid var(--border); border-radius: 14px; background: #faf9f7; overflow: hidden; }
+.rv-handle:focus-within { outline: 2px solid var(--accent); border-color: transparent; background: #fff; }
+.rv-handle-at { padding: 12px 0 12px 14px; font-size: 15px; font-weight: 800; color: var(--link); }
+.rv-handle input { flex: 1 1 auto; min-width: 0; border: 0; background: transparent; padding: 12px 10px; font: inherit; font-size: 14px; color: var(--ink); outline: none; }
+.rv-raffle { background: #fff3ea; border-radius: 18px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+.rv-raffle-head { display: flex; align-items: center; gap: 10px; }
+.rv-raffle-icon { width: 32px; height: 32px; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center; flex: 0 0 auto; color: #0b2e2c; }
+.rv-raffle .rv-eyebrow { color: var(--link); }
+.rv-raffle-text { font-size: 14px; line-height: 1.45; color: #1c1310; }
+.rv-raffle-title { font-size: 20px; font-weight: 800; letter-spacing: -0.01em; line-height: 1.15; }
+.rv-check { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }
+.rv-check input { width: 22px; height: 22px; margin: 0; accent-color: #0b2e2c; flex: 0 0 auto; }
+.rv-check-strong { align-items: center; font-size: 13.5px; font-weight: 700; }
+.rv-consent { font-size: 12.5px; line-height: 1.45; color: var(--ink-muted); padding: 2px 4px; }
+.rv-consent input { margin-top: 1px; }
+.rv-cta { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; height: 56px; border: 0; border-radius: 999px; background: var(--accent); color: #0b2e2c; font: inherit; font-size: 16px; font-weight: 800; cursor: pointer; box-shadow: 0 12px 28px -12px rgba(0,190,181,0.7); }
+.rv-cta:disabled { opacity: 0.6; cursor: default; }
+.rv-foot { font-size: 11.5px; color: var(--ink-muted); line-height: 1.45; text-align: center; margin: 0; }
+.rv-error { margin: 0; color: var(--danger); font-size: 13px; }
+.rv-box { border-radius: 18px; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.rv-box-cream { background: #fff3ea; }
+.rv-box-white { background: #fff; border: 1px solid var(--border); }
+.rv-box-text { font-size: 13.5px; line-height: 1.45; color: var(--ink-muted); margin: 0; }
+.rv-ig { background: #1c1310; color: #fff; border-radius: 18px; padding: 16px; display: flex; gap: 14px; align-items: center; }
+.rv-ig-mini { width: 72px; height: 128px; border-radius: 10px; flex: 0 0 auto; display: flex; flex-direction: column; justify-content: flex-end; padding: 8px; box-sizing: border-box; gap: 4px; background: #2a1d18; }
+.rv-ig-mini-photo { flex: 1 1 auto; border-radius: 4px; background: var(--accent-secondary); margin-bottom: 4px; }
+.rv-ig-title { font-size: 19px; font-weight: 800; line-height: 1.15; letter-spacing: -0.01em; }
+.rv-ig-text { font-size: 12.5px; line-height: 1.4; opacity: 0.8; margin: 0; }
+.rv-ig-btn { align-self: flex-start; height: 40px; padding: 0 16px; border-radius: 999px; background: var(--accent); color: #0b2e2c; font-size: 13px; font-weight: 800; display: inline-flex; align-items: center; text-decoration: none; }
+.rv-back { text-align: center; font-size: 13px; font-weight: 700; padding: 6px 0; }
+@media (min-width: 700px) {
+  .rv-head-inner { padding: 24px 24px 60px; }
+  .rv-title { font-size: 36px; }
+  .rv-title-lg { font-size: 40px; }
+  .rv-body { margin-top: -32px; }
+}
+
 /* ── Home hero (app/page.tsx): the landing's title / big date / venue
    card block, in white over the full-bleed photo or video. Phone sizes
    first; the desktop block is wider and puts the venue beside the CTA. */

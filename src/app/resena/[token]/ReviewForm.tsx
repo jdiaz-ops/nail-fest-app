@@ -3,31 +3,32 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ReviewPageTexts } from "@/lib/reviewPageTexts";
-import ReviewPageHeader from "./ReviewPageHeader";
+import ReviewHero from "./ReviewHero";
 
 const MAX_PHOTOS = 3;
 const RATING_WORDS: Record<number, string> = { 1: "Muy malo", 2: "Malo", 3: "Regular", 4: "Muy bueno", 5: "Excelente" };
 
-// The review form (see /resena/[token]/page.tsx for who gets here).
-// Photos upload as they are picked; the submit only carries their URLs.
-// `texts` arrive with the placeholders already filled (page.tsx).
-// `preview` (the team's ?vista=formulario): photos stay local and the
-// submit just says so — nothing reaches the server.
+// The review form (see /resena/[token]/page.tsx for who gets here):
+// the event's photo up top, then one white card with the four steps,
+// the raffle box and the consent line. Photos upload as they are picked;
+// the submit only carries their URLs. `texts` arrive with the
+// placeholders already filled (page.tsx). `preview` (the team's
+// ?vista=formulario): photos stay local and the submit just says so —
+// nothing reaches the server. Styles: globals.css (.rv-*).
 export default function ReviewForm({
   texts,
   brandName,
   displayClassName,
+  eventImageUrl,
   token,
-  eventName,
   raffle,
   preview = false,
 }: {
   texts: ReviewPageTexts;
   brandName: string;
   displayClassName: string;
+  eventImageUrl: string | null;
   token: string;
-  firstName: string;
-  eventName: string;
   raffle: { prizeCount: number; prizeLabel: string; closesLabel: string; open: boolean } | null;
   preview?: boolean;
 }) {
@@ -95,103 +96,121 @@ export default function ReviewForm({
   }
 
   const shown = hover || rating;
+  const check = (
+    <svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  );
+
   return (
-    <main style={{ maxWidth: 480, margin: "0 auto", padding: "18px 20px 48px", display: "flex", flexDirection: "column", gap: 18 }}>
-      <ReviewPageHeader brandName={brandName} eyebrow={texts.formEyebrow} displayClassName={displayClassName} />
-      <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#e6f9f7", color: "#0b2e2c", borderRadius: 999, padding: "7px 12px", fontSize: 12, fontWeight: 700, alignSelf: "flex-start" }}>
-        <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0b2e2c" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
-        <span>Asistió a {eventName}</span>
-      </div>
-      <h1 className={displayClassName} style={{ margin: 0, fontSize: 28, lineHeight: 1.1, fontWeight: 800, letterSpacing: "-0.02em" }}>
-        {texts.formTitle}
-      </h1>
-      <p style={{ margin: 0, fontSize: 14, color: "#5b5f6b", lineHeight: 1.45 }}>{texts.formIntro}</p>
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <div style={{ fontSize: 13, fontWeight: 700 }}>{texts.ratingLabel}</div>
-        <div style={{ display: "flex", alignItems: "center", gap: 2 }} onMouseLeave={() => setHover(0)}>
-          {[1, 2, 3, 4, 5].map((n) => (
-            <button
-              key={n}
-              type="button"
-              aria-label={`${n} ${n === 1 ? "estrella" : "estrellas"}`}
-              aria-pressed={rating === n}
-              onClick={() => setRating(n)}
-              onMouseEnter={() => setHover(n)}
-              style={{ width: 48, height: 48, border: "none", background: "transparent", padding: 0, cursor: "pointer" }}
-            >
-              <svg aria-hidden="true" width="40" height="40" viewBox="0 0 24 24">
-                <path fill={n <= shown ? "#f2b01e" : "none"} stroke={n <= shown ? "none" : "#c9b58a"} strokeWidth="1.6" d="M12 2.5l2.9 6.2 6.8.8-5 4.6 1.3 6.7L12 17.5l-6 3.3 1.3-6.7-5-4.6 6.8-.8z" />
-              </svg>
-            </button>
-          ))}
-          <span style={{ fontSize: 13, fontWeight: 700, color: "#0b2e2c", marginLeft: 6, minWidth: 80 }}>{shown ? RATING_WORDS[shown] : ""}</span>
-        </div>
-      </div>
-
-      <label style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13, fontWeight: 700 }}>
-        <span>
-          {texts.commentLabel} {texts.commentHint && <span style={{ fontWeight: 400, color: "#5b5f6b" }}>{texts.commentHint}</span>}
+    <div className="rv-page">
+      <ReviewHero brandName={brandName} eyebrow={texts.formEyebrow} imageUrl={eventImageUrl}>
+        <span className="rv-seal">
+          {check}
+          <span>{texts.seal}</span>
         </span>
-        <textarea
-          rows={4}
-          maxLength={1500}
-          value={comment}
-          onChange={(e) => setComment(e.target.value)}
-          placeholder={texts.commentPlaceholder}
-          style={{ width: "100%", boxSizing: "border-box", border: "1px solid var(--border)", borderRadius: 12, padding: "12px 14px", font: "inherit", fontSize: 14, fontWeight: 400, background: "#fff", resize: "vertical" }}
-        />
-      </label>
+        <h1 className={`rv-title ${displayClassName}`}>{texts.formTitle}</h1>
+        <p className="rv-intro">{texts.formIntro}</p>
+      </ReviewHero>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <div style={{ fontSize: 13, fontWeight: 700 }}>
-          {texts.photosLabel} {texts.photosHint && <span style={{ fontWeight: 400, color: "#5b5f6b" }}>{texts.photosHint}</span>}
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 10 }}>
-          {photos.map((p) => (
-            <div key={p.url} style={{ position: "relative", aspectRatio: "1 / 1", borderRadius: 12, overflow: "hidden", background: "#f0efec" }}>
-              {/* eslint-disable-next-line @next/next/no-img-element -- just-uploaded Blob URL */}
-              <img src={p.url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-              <button type="button" aria-label="Quitar foto" onClick={() => setPhotos((prev) => prev.filter((x) => x.url !== p.url))} style={{ position: "absolute", top: 4, right: 4, width: 32, height: 32, borderRadius: "50%", border: "none", background: "#1c1310", color: "#fff", fontSize: 16, cursor: "pointer" }}>
-                ×
-              </button>
+      <div className="rv-body">
+        <div className="rv-card">
+          <div className="rv-field">
+            <div className="rv-label">{texts.ratingLabel}</div>
+            <div className="rv-stars" onMouseLeave={() => setHover(0)}>
+              <div className="rv-stars-row">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <button key={n} type="button" className="rv-star" aria-label={`${n} ${n === 1 ? "estrella" : "estrellas"}`} aria-pressed={rating === n} onClick={() => setRating(n)} onMouseEnter={() => setHover(n)}>
+                    <svg aria-hidden="true" viewBox="0 0 24 24">
+                      <path fill={n <= shown ? "#f2b01e" : "none"} stroke={n <= shown ? "none" : "#d9c79a"} strokeWidth="1.6" d="M12 2.5l2.9 6.2 6.8.8-5 4.6 1.3 6.7L12 17.5l-6 3.3 1.3-6.7-5-4.6 6.8-.8z" />
+                    </svg>
+                  </button>
+                ))}
+              </div>
+              {shown > 0 && <span className="rv-stars-word">{RATING_WORDS[shown]}</span>}
             </div>
-          ))}
-          {photos.length < MAX_PHOTOS && (
-            <button type="button" onClick={() => fileInput.current?.click()} disabled={uploading} style={{ aspectRatio: "1 / 1", borderRadius: 12, border: "1.5px dashed #c9c5bd", background: "#fff", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, cursor: "pointer", color: "#5b5f6b", font: "inherit", fontSize: 11 }}>
-              <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#5b5f6b" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
-              <span>{uploading ? "Subiendo…" : "Agregar"}</span>
-            </button>
-          )}
+          </div>
+
+          <label className="rv-field">
+            <span className="rv-label">
+              {texts.commentLabel} {texts.commentHint && <span className="rv-hint">{texts.commentHint}</span>}
+            </span>
+            <textarea className="rv-textarea" rows={4} maxLength={1500} value={comment} onChange={(e) => setComment(e.target.value)} placeholder={texts.commentPlaceholder} />
+          </label>
+
+          <div className="rv-field">
+            <div className="rv-label">
+              {texts.photosLabel} {texts.photosHint && <span className="rv-hint">{texts.photosHint}</span>}
+            </div>
+            <div className="rv-tiles">
+              {photos.map((p) => (
+                <div key={p.url} className="rv-tile">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- just-uploaded Blob URL */}
+                  <img src={p.url} alt="" />
+                  <button type="button" className="rv-tile-remove" aria-label="Quitar foto" onClick={() => setPhotos((prev) => prev.filter((x) => x.url !== p.url))}>
+                    ×
+                  </button>
+                </div>
+              ))}
+              {photos.length < MAX_PHOTOS && (
+                <button type="button" className="rv-tile-add" onClick={() => fileInput.current?.click()} disabled={uploading}>
+                  <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 7h3l2-2h6l2 2h3v12H4z" />
+                    <circle cx="12" cy="13" r="3.5" />
+                  </svg>
+                  <span>{uploading ? "Subiendo…" : "Agregar"}</span>
+                </button>
+              )}
+            </div>
+            <input ref={fileInput} type="file" accept="image/*" multiple hidden onChange={(e) => pickPhotos(e.target.files)} />
+          </div>
+
+          <label className="rv-field">
+            <span className="rv-label">
+              {texts.instagramLabel} {texts.instagramHint && <span className="rv-hint">{texts.instagramHint}</span>}
+            </span>
+            <span className="rv-handle">
+              <span className="rv-handle-at" aria-hidden="true">
+                @
+              </span>
+              <input type="text" value={handle} onChange={(e) => setHandle(e.target.value.replace(/^@+/, ""))} placeholder="tu_usuario" maxLength={60} autoCapitalize="none" autoCorrect="off" />
+            </span>
+          </label>
         </div>
-        <input ref={fileInput} type="file" accept="image/*" multiple hidden onChange={(e) => pickPhotos(e.target.files)} />
-      </div>
 
-      <label style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13, fontWeight: 700 }}>
-        <span>
-          {texts.instagramLabel} {texts.instagramHint && <span style={{ fontWeight: 400, color: "#5b5f6b" }}>{texts.instagramHint}</span>}
-        </span>
-        <input type="text" value={handle} onChange={(e) => setHandle(e.target.value)} placeholder="@tu_usuario" maxLength={60} style={{ width: "100%", boxSizing: "border-box", border: "1px solid var(--border)", borderRadius: 12, padding: "12px 14px", font: "inherit", fontSize: 14, fontWeight: 400, background: "#fff" }} />
-      </label>
+        {raffle?.open && (
+          <div className="rv-raffle">
+            <div className="rv-raffle-head">
+              <span className="rv-raffle-icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 12v10H4V12M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z" />
+                </svg>
+              </span>
+              <span className="rv-eyebrow">{texts.raffleEyebrow}</span>
+            </div>
+            <div className="rv-raffle-text">{texts.raffleOptInText}</div>
+            <label className="rv-check rv-check-strong">
+              <input type="checkbox" checked={raffleOptIn} onChange={(e) => setRaffleOptIn(e.target.checked)} />
+              <span>{texts.raffleOptInLabel}</span>
+            </label>
+          </div>
+        )}
 
-      <label style={{ display: "flex", gap: 10, alignItems: "flex-start", fontSize: 12.5, lineHeight: 1.45, cursor: "pointer" }}>
-        <input type="checkbox" checked={publishConsent} onChange={(e) => setPublishConsent(e.target.checked)} style={{ width: 20, height: 20, margin: "1px 0 0", accentColor: "#00beb5", flex: "0 0 auto" }} />
-        <span>{texts.consentText}</span>
-      </label>
-
-      {raffle?.open && (
-        <label style={{ display: "flex", gap: 10, alignItems: "flex-start", fontSize: 12.5, lineHeight: 1.45, cursor: "pointer" }}>
-          <input type="checkbox" checked={raffleOptIn} onChange={(e) => setRaffleOptIn(e.target.checked)} style={{ width: 20, height: 20, margin: "1px 0 0", accentColor: "#00beb5", flex: "0 0 auto" }} />
-          <span>{texts.raffleOptInText}</span>
+        <label className="rv-check rv-consent">
+          <input type="checkbox" checked={publishConsent} onChange={(e) => setPublishConsent(e.target.checked)} />
+          <span>{texts.consentText}</span>
         </label>
-      )}
 
-      {error && <p style={{ margin: 0, color: "var(--danger)", fontSize: 13 }}>{error}</p>}
+        {error && <p className="rv-error">{error}</p>}
 
-      <button type="button" onClick={submit} disabled={submitting || uploading} style={{ width: "100%", height: 52, border: "none", borderRadius: 14, background: "var(--accent)", color: "#0b2e2c", font: "inherit", fontSize: 16, fontWeight: 800, cursor: "pointer" }}>
-        {submitting ? "Enviando…" : texts.submitLabel}
-      </button>
-      {texts.formFootnote && <p style={{ margin: 0, fontSize: 11.5, color: "#5b5f6b", lineHeight: 1.45, textAlign: "center" }}>{texts.formFootnote}</p>}
-    </main>
+        <button type="button" className="rv-cta" onClick={submit} disabled={submitting || uploading}>
+          {submitting ? "Enviando…" : texts.submitLabel}
+          <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M5 12h14M13 6l6 6-6 6" />
+          </svg>
+        </button>
+        {texts.formFootnote && <p className="rv-foot">{texts.formFootnote}</p>}
+      </div>
+    </div>
   );
 }
