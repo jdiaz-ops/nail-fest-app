@@ -73,6 +73,9 @@ export default async function ReviewsModulePage({ searchParams }: { searchParams
           Todas las reseñas de todos los eventos, para aprobar, destacar u ocultar. Nada se publica sin aprobar.
           {pendingTotal > 0 ? ` Hay ${pendingTotal} pendientes.` : " No hay pendientes."} El sorteo, el resumen con Claude y los datos de muestra están en la pestaña Reseñas de cada evento.
         </p>
+        <p style={{ margin: "10px 0 0", fontSize: 13.5 }}>
+          <Link href="/admin/resenas/textos">Textos de la página de reseña (formulario, gracias y mensajes) →</Link>
+        </p>
       </div>
 
       {editions.length > 0 && (

@@ -2,21 +2,29 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import type { ReviewPageTexts } from "@/lib/reviewPageTexts";
+import ReviewPageHeader from "./ReviewPageHeader";
 
 const MAX_PHOTOS = 3;
 const RATING_WORDS: Record<number, string> = { 1: "Muy malo", 2: "Malo", 3: "Regular", 4: "Muy bueno", 5: "Excelente" };
 
 // The review form (see /resena/[token]/page.tsx for who gets here).
 // Photos upload as they are picked; the submit only carries their URLs.
+// `texts` arrive with the placeholders already filled (page.tsx).
 // `preview` (the team's ?vista=formulario): photos stay local and the
 // submit just says so — nothing reaches the server.
 export default function ReviewForm({
+  texts,
+  brandName,
+  displayClassName,
   token,
-  firstName,
   eventName,
   raffle,
   preview = false,
 }: {
+  texts: ReviewPageTexts;
+  brandName: string;
+  displayClassName: string;
   token: string;
   firstName: string;
   eventName: string;
@@ -88,16 +96,19 @@ export default function ReviewForm({
 
   const shown = hover || rating;
   return (
-    <main style={{ maxWidth: 480, margin: "0 auto", padding: "24px 20px 48px", display: "flex", flexDirection: "column", gap: 18 }}>
+    <main style={{ maxWidth: 480, margin: "0 auto", padding: "18px 20px 48px", display: "flex", flexDirection: "column", gap: 18 }}>
+      <ReviewPageHeader brandName={brandName} eyebrow={texts.formEyebrow} displayClassName={displayClassName} />
       <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "#e6f9f7", color: "#0b2e2c", borderRadius: 999, padding: "7px 12px", fontSize: 12, fontWeight: 700, alignSelf: "flex-start" }}>
         <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0b2e2c" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
         <span>Asistió a {eventName}</span>
       </div>
-      <h1 style={{ margin: 0, fontSize: 28, lineHeight: 1.1 }}>{firstName ? `Hola ${firstName}, ¿cómo estuvo ${eventName}?` : `¿Cómo estuvo ${eventName}?`}</h1>
-      <p style={{ margin: 0, fontSize: 14, color: "#5b5f6b", lineHeight: 1.45 }}>Tu opinión ayuda a otras manicuristas a saber qué esperar. Toma un minuto.</p>
+      <h1 className={displayClassName} style={{ margin: 0, fontSize: 28, lineHeight: 1.1, fontWeight: 800, letterSpacing: "-0.02em" }}>
+        {texts.formTitle}
+      </h1>
+      <p style={{ margin: 0, fontSize: 14, color: "#5b5f6b", lineHeight: 1.45 }}>{texts.formIntro}</p>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <div style={{ fontSize: 13, fontWeight: 700 }}>Tu calificación</div>
+        <div style={{ fontSize: 13, fontWeight: 700 }}>{texts.ratingLabel}</div>
         <div style={{ display: "flex", alignItems: "center", gap: 2 }} onMouseLeave={() => setHover(0)}>
           {[1, 2, 3, 4, 5].map((n) => (
             <button
@@ -120,21 +131,21 @@ export default function ReviewForm({
 
       <label style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13, fontWeight: 700 }}>
         <span>
-          Cuéntanos tu experiencia <span style={{ fontWeight: 400, color: "#5b5f6b" }}>(opcional)</span>
+          {texts.commentLabel} {texts.commentHint && <span style={{ fontWeight: 400, color: "#5b5f6b" }}>{texts.commentHint}</span>}
         </span>
         <textarea
           rows={4}
           maxLength={1500}
           value={comment}
           onChange={(e) => setComment(e.target.value)}
-          placeholder="Las demostraciones, las marcas que encontraste, lo que más te gustó…"
+          placeholder={texts.commentPlaceholder}
           style={{ width: "100%", boxSizing: "border-box", border: "1px solid var(--border)", borderRadius: 12, padding: "12px 14px", font: "inherit", fontSize: 14, fontWeight: 400, background: "#fff", resize: "vertical" }}
         />
       </label>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         <div style={{ fontSize: 13, fontWeight: 700 }}>
-          Sube hasta {MAX_PHOTOS} fotos <span style={{ fontWeight: 400, color: "#5b5f6b" }}>(tus uñas, el evento, tu equipo)</span>
+          {texts.photosLabel} {texts.photosHint && <span style={{ fontWeight: 400, color: "#5b5f6b" }}>{texts.photosHint}</span>}
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 10 }}>
           {photos.map((p) => (
@@ -158,31 +169,29 @@ export default function ReviewForm({
 
       <label style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 13, fontWeight: 700 }}>
         <span>
-          Tu Instagram <span style={{ fontWeight: 400, color: "#5b5f6b" }}>(opcional, sale en tu reseña destacada)</span>
+          {texts.instagramLabel} {texts.instagramHint && <span style={{ fontWeight: 400, color: "#5b5f6b" }}>{texts.instagramHint}</span>}
         </span>
         <input type="text" value={handle} onChange={(e) => setHandle(e.target.value)} placeholder="@tu_usuario" maxLength={60} style={{ width: "100%", boxSizing: "border-box", border: "1px solid var(--border)", borderRadius: 12, padding: "12px 14px", font: "inherit", fontSize: 14, fontWeight: 400, background: "#fff" }} />
       </label>
 
       <label style={{ display: "flex", gap: 10, alignItems: "flex-start", fontSize: 12.5, lineHeight: 1.45, cursor: "pointer" }}>
         <input type="checkbox" checked={publishConsent} onChange={(e) => setPublishConsent(e.target.checked)} style={{ width: 20, height: 20, margin: "1px 0 0", accentColor: "#00beb5", flex: "0 0 auto" }} />
-        <span>Autorizo a Nail Fest a publicar mi reseña con mi nombre, ciudad y fotos en su sitio, redes y publicidad. Puedo retirar este permiso cuando quiera escribiéndonos. Sin esta casilla tu calificación cuenta igual, pero no se muestra con tu nombre.</span>
+        <span>{texts.consentText}</span>
       </label>
 
       {raffle?.open && (
         <label style={{ display: "flex", gap: 10, alignItems: "flex-start", fontSize: 12.5, lineHeight: 1.45, cursor: "pointer" }}>
           <input type="checkbox" checked={raffleOptIn} onChange={(e) => setRaffleOptIn(e.target.checked)} style={{ width: 20, height: 20, margin: "1px 0 0", accentColor: "#00beb5", flex: "0 0 auto" }} />
-          <span>
-            Quiero participar en el sorteo de {eventName}: {raffle.prizeCount} {raffle.prizeLabel} entre las reseñas recibidas hasta el {raffle.closesLabel}. Participa toda reseña enviada a tiempo, sin importar la calificación.
-          </span>
+          <span>{texts.raffleOptInText}</span>
         </label>
       )}
 
       {error && <p style={{ margin: 0, color: "var(--danger)", fontSize: 13 }}>{error}</p>}
 
       <button type="button" onClick={submit} disabled={submitting || uploading} style={{ width: "100%", height: 52, border: "none", borderRadius: 14, background: "var(--accent)", color: "#0b2e2c", font: "inherit", fontSize: 16, fontWeight: 800, cursor: "pointer" }}>
-        {submitting ? "Enviando…" : "Enviar mi reseña"}
+        {submitting ? "Enviando…" : texts.submitLabel}
       </button>
-      <p style={{ margin: 0, fontSize: 11.5, color: "#5b5f6b", lineHeight: 1.45, textAlign: "center" }}>Solo pueden reseñar las asistentes escaneadas en la puerta. Tu reseña se publica después de una revisión del equipo.</p>
+      {texts.formFootnote && <p style={{ margin: 0, fontSize: 11.5, color: "#5b5f6b", lineHeight: 1.45, textAlign: "center" }}>{texts.formFootnote}</p>}
     </main>
   );
 }

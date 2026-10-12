@@ -87,9 +87,14 @@ export default async function EventReviewsPage({ params }: { params: { id: strin
           <a href={`/resena/${encodeURIComponent(previewToken)}?vista=gracias`} target="_blank" rel="noreferrer" style={previewLinkStyle}>
             Pantalla de gracias ↗
           </a>
+          <a href="/admin/resenas/textos" style={previewLinkStyle}>
+            Editar los textos
+          </a>
         </div>
       ) : (
-        <div style={{ fontSize: 12.5, color: "#5b5f6b" }}>Para ver la página de reseña como la asistente, crea las reseñas de muestra (abajo) o espera a la primera escaneada en puerta.</div>
+        <div style={{ fontSize: 12.5, color: "#5b5f6b" }}>
+          Para ver la página de reseña como la asistente, crea las reseñas de muestra (abajo) o espera a la primera escaneada en puerta. Sus textos se editan en <a href="/admin/resenas/textos">Textos de la página de reseña</a>.
+        </div>
       )}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12 }}>

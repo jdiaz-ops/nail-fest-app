@@ -1410,6 +1410,13 @@ model OrgSettings {
   homepageReviews         String  @default("block")
   homepageReviewsPosition String  @default("before_logos")
   linksPageReviewsBadge   Boolean @default(false)
+  // The attendee-facing review pages' copy — title, intro, labels, the
+  // consent and raffle lines, the thanks page's boxes and the "not
+  // eligible" messages — as a {key: text} override map edited at
+  // /admin/resenas/textos. Keys and defaults live in lib/reviewPageTexts.ts;
+  // a missing or empty key falls back to its default there. Null = all
+  // defaults.
+  reviewPageTexts         Json?
 
   // Microsoft Clarity project id (see /admin/settings/analytics) — null
   // means the script is never injected (today's behavior). Just an id,
