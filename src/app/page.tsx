@@ -1,9 +1,12 @@
 import Link from "next/link";
+import { Fraunces } from "next/font/google";
 import { optimizedSrc, optimizedSrcSet } from "@/lib/optimizedImage";
 import { getOrgSettings } from "@/lib/settings";
 import { getNextEvent } from "@/lib/nextEvent";
 import { publicEventName } from "@/lib/eventDisplayName";
 import { formatHeroDate } from "@/lib/eventHeroDate";
+
+const fraunces = Fraunces({ subsets: ["latin"], weight: ["900"] });
 import ReviewsSection from "@/components/reviews/ReviewsSection";
 import ReviewsBadge from "@/components/reviews/ReviewsBadge";
 
@@ -113,6 +116,7 @@ export default async function HomePage() {
       </div>
 
       <div
+        className="home-hero-block"
         style={{
           position: "relative",
           zIndex: 1,
@@ -120,58 +124,50 @@ export default async function HomePage() {
           display: "flex",
           flexDirection: "column",
           justifyContent: "flex-end",
-          padding: "40px 24px 64px",
           maxWidth: 640,
         }}
       >
         {nextEvent ? (
           <>
-            <h1
-              style={{
-                fontSize: "clamp(32px, 8vw, 56px)",
-                lineHeight: 1.05,
-                margin: "0 0 12px",
-                fontWeight: 800,
-                // A little lift off a busy photo — subtle on purpose, this
-                // is backup for the gradient above, not doing the work
-                // itself.
-                textShadow: hasMedia ? "0 2px 16px rgba(0,0,0,0.35)" : "none",
-              }}
-            >
+            {/* The same title / big date / venue card the event landing
+                has ([eventSlug]/page.tsx, .event-hero-*), in white over
+                the photo — so the home and the landing feel like one
+                site. The venue card names the place only: the city is
+                in the event name right above it. */}
+            <h1 className={`home-hero-title ${fraunces.className}`} style={{ textShadow: hasMedia ? "0 2px 16px rgba(0,0,0,0.35)" : "none" }}>
               {publicEventName(nextEvent)}
             </h1>
             {heroDate && (
-              <p style={{ fontSize: 20, lineHeight: 1.25, margin: `0 0 ${eventPlace ? 6 : 20}px`, fontWeight: 800, textShadow: hasMedia ? "0 1px 8px rgba(0,0,0,0.35)" : "none" }}>
-                {heroDate.days} {heroDate.month}
-                <span style={{ fontWeight: 500, opacity: 0.85 }}> · {heroDate.detail}</span>
+              <p className="home-hero-date" style={{ textShadow: hasMedia ? "0 1px 8px rgba(0,0,0,0.35)" : "none" }}>
+                <span className={`home-hero-days ${fraunces.className}`} style={{ color: hasMedia ? "var(--accent)" : "#fff" }}>
+                  {heroDate.days}
+                </span>
+                <span className="home-hero-date-rest">
+                  <span className="home-hero-month">{heroDate.month}</span>
+                  <span className="home-hero-detail">{heroDate.detail}</span>
+                </span>
               </p>
             )}
-            {eventPlace && (
-              <p style={{ fontSize: 16, margin: "0 0 20px", fontWeight: 600, textShadow: hasMedia ? "0 1px 8px rgba(0,0,0,0.35)" : "none" }}>
-                {eventPlace}
-              </p>
-            )}
-            <div>
+            <div className="home-hero-actions">
+              {eventPlace && (
+                <div className="home-hero-venue">
+                  <span className="home-hero-venue-icon" aria-hidden="true">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0Z" />
+                      <circle cx="12" cy="10" r="3" />
+                    </svg>
+                  </span>
+                  <strong>{eventPlace}</strong>
+                </div>
+              )}
               <Link
                 href={`/${nextEvent.slug}`}
+                className="home-hero-cta"
                 style={{
-                  display: "inline-block",
-                  textDecoration: "none",
-                  padding: "16px 34px",
-                  fontSize: 16,
-                  fontWeight: 700,
-                  borderRadius: 999,
-                  // The button always needs to read as a distinct, tappable
-                  // surface against whichever background is active — the
-                  // solid-teal state would make an accent-colored button
-                  // vanish into it, so that state flips to the dark ink
-                  // fill (still the brand palette, just the other half of
-                  // the pairing) while the photo state uses the bright
-                  // accent, same as the reference screenshot's cyan button
-                  // on a dark photo. The shadow only earns its keep over a
-                  // photo/video — floating a pill button off a busy image
-                  // reads as designed; the same shadow on the flat teal
-                  // solid state would just look like a smudge.
+                  // Against a photo the bright accent, against the solid
+                  // teal fallback the dark ink fill (an accent button would
+                  // vanish into it); the shadow only earns its keep over a
+                  // photo.
                   background: hasMedia ? "var(--accent)" : "var(--accent-ink)",
                   color: hasMedia ? "var(--accent-ink)" : "#fff",
                   boxShadow: hasMedia ? "0 10px 28px -10px rgba(0,0,0,0.55)" : "none",
