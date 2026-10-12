@@ -3,6 +3,7 @@ import { optimizedSrc, optimizedSrcSet } from "@/lib/optimizedImage";
 import { getOrgSettings } from "@/lib/settings";
 import { getNextEvent } from "@/lib/nextEvent";
 import { publicEventName } from "@/lib/eventDisplayName";
+import ReviewsSection from "@/components/reviews/ReviewsSection";
 
 export const dynamic = "force-dynamic";
 
@@ -206,6 +207,10 @@ export default async function HomePage() {
     {/* Brand/sponsor logo wall — plain white tiles, logo centered via
         object-fit: contain (unlike the gallery above, these vary in
         aspect ratio and must never crop). */}
+    {/* Reseñas de todas las ediciones — renders nothing below three
+        approved reviews (components/reviews/ReviewsSection.tsx). */}
+    <ReviewsSection scope="global" />
+
     {orgSettings.homepageBrandLogos.length > 0 && (
       <>
         {orgSettings.homepageBrandLogosTitle && (

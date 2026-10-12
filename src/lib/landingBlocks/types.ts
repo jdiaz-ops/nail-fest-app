@@ -182,7 +182,18 @@ export interface PointsLandingBlock {
   tone: LandingTone;
 }
 
+// Reseñas de asistentes (lib/reviews.ts): this event's, the previous
+// edition's in the same city, or every edition's. Renders nothing below
+// three approved reviews — see components/reviews/ReviewsSection.tsx.
+export interface ReviewsLandingBlock {
+  type: "reviews";
+  scope: "event" | "previous" | "global";
+  title: string; // blank = the block's own default heading
+  limit: number; // how many cards, 1..12
+}
+
 export type LandingBlock = (
+  | ReviewsLandingBlock
   | TextLandingBlock
   | ImageLandingBlock
   | VideoLandingBlock
@@ -301,5 +312,8 @@ function parseOne(rec: Record<string, unknown>, result: LandingBlock[]): void {
       .filter((p): p is Record<string, unknown> => typeof p === "object" && p !== null)
       .map((p) => ({ name: str(p.name), handle: str(p.handle), tag: str(p.tag), photoUrl: str(p.photoUrl), tone: tone(p.tone) }));
     result.push({ type: "people", items });
+  } else if (rec.type === "reviews") {
+    const limit = typeof rec.limit === "number" && rec.limit >= 1 ? Math.min(12, Math.floor(rec.limit)) : 6;
+    result.push({ type: "reviews", scope: rec.scope === "event" || rec.scope === "global" ? rec.scope : "previous", title: str(rec.title), limit });
   }
 }

@@ -59,6 +59,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       subject: data.subject,
       bodyHtml: sanitizeEventDescription(data.bodyHtml),
       attachTicketPdf: data.attachTicketPdf,
+      onlyCheckedIn: data.onlyCheckedIn,
       scheduleKind: data.scheduleKind,
       scheduledAt: data.scheduledAt ? new Date(data.scheduledAt) : null,
       scheduleOffsetMinutes: data.scheduleOffsetMinutes ?? null,
@@ -85,7 +86,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const dueAt = resolveDueAt(updated, event);
   const qstashMessageId = dueAt ? await scheduleEventBroadcastSend(existing.id, dueAt) : null;
   if (qstashMessageId) await db.emailBroadcast.update({ where: { id: existing.id }, data: { qstashMessageId } });
-  const recipientCount = await countEventBroadcastRecipients(event.id, data.ticketTypeId || null);
+  const recipientCount = await countEventBroadcastRecipients(event.id, data.ticketTypeId || null, data.onlyCheckedIn);
   return NextResponse.json({
     ok: true,
     broadcastId: existing.id,

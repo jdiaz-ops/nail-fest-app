@@ -1,6 +1,7 @@
 import { Fraunces } from "next/font/google";
 import ScrollCarousel from "@/components/ScrollCarousel";
 import GalleryGrid from "./GalleryGrid";
+import ReviewsSection from "@/components/reviews/ReviewsSection";
 import { instagramHandles, youtubeVideo, type AgendaRow, type LandingBlock, type LandingCardIcon } from "@/lib/landingBlocks/types";
 
 // "Michell Rodríguez" -> "MR"; a single name gives one letter.
@@ -29,11 +30,24 @@ export interface LandingVenueContext {
 // comment. Sits in the exact same spot descriptionHtml/salesContent do
 // today (EventRegistration.tsx), so it inherits the same column width;
 // no full-bleed breakout for the image/gallery blocks.
-export default function LandingBlocksContent({ blocks, venue }: { blocks: LandingBlock[]; venue: LandingVenueContext }) {
+export interface LandingEventContext {
+  id: string;
+  name: string;
+  publicName: string | null;
+  city: string;
+  startsAt: Date;
+}
+
+export default function LandingBlocksContent({ blocks, venue, event }: { blocks: LandingBlock[]; venue: LandingVenueContext; event?: LandingEventContext | null }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
       {blocks.map((block, i) => {
         switch (block.type) {
+          case "reviews":
+            // Async server component: loads its own data and renders
+            // nothing below three approved reviews.
+            return <ReviewsSection key={i} scope={block.scope} event={event ?? null} title={block.title} limit={block.limit} />;
+
           case "text":
             // Sanitized server-side before storage (lib/events.ts, same
             // sanitizeEventDescription as the plain `description` field)

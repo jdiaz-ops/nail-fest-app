@@ -13,6 +13,8 @@ export const eventBroadcastBodySchema = z
     subject: z.string().min(1),
     bodyHtml: z.string().min(1),
     attachTicketPdf: z.boolean().optional().default(false),
+    // Only registrants scanned at the door (the review ask) — see lib/reviews.ts.
+    onlyCheckedIn: z.boolean().optional().default(false),
     scheduleKind: z.enum(["IMMEDIATE", "AT_DATETIME", "BEFORE_EVENT_START", "AFTER_EVENT_END"]),
     scheduledAt: z.string().datetime().optional(),
     scheduleOffsetMinutes: z.number().int().min(0).optional(),

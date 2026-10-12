@@ -12,6 +12,7 @@ import { confirmationCodeFor } from "@/lib/ticket";
 import { getOrgSettings } from "@/lib/settings";
 import { publishChunkContinuation, scheduleEventBroadcastSend, scheduleAutoRetry, AUTO_RETRY_DELAYS_SECONDS, QSTASH_MAX_DELAY_MS, CHUNK_WATCHDOG_SECONDS, CHUNK_LOCK_SECONDS } from "@/lib/qstash";
 import { markEmailInvalid } from "@/lib/contactHygiene";
+import { REVIEW_LINK_TAG, reviewUrl } from "@/lib/reviews";
 import { tagOwnLinksInHtml, tagOwnLinksInText, slugifyForCampaign } from "@/lib/outboundLinkTagging";
 import { publicEventName } from "@/lib/eventDisplayName";
 
@@ -69,7 +70,7 @@ export async function sendEventBroadcast(
   } else if (broadcast.recipientPersonIds) {
     recipientIds = broadcast.recipientPersonIds as unknown as string[];
   } else {
-    const recipients = await resolveEventBroadcastRecipients(broadcast.eventId, broadcast.ticketTypeId);
+    const recipients = await resolveEventBroadcastRecipients(broadcast.eventId, broadcast.ticketTypeId, broadcast.onlyCheckedIn);
     recipientIds = recipients.map((r) => r.person.id);
     await db.emailBroadcast.update({
       where: { id: broadcast.id },
@@ -114,7 +115,7 @@ export async function sendEventBroadcast(
     // current, then filtered down to just this chunk's frozen ids —
     // membership itself never grows beyond recipientIds, only the DATA
     // for it gets refreshed.
-    const allRecipients = await resolveEventBroadcastRecipients(broadcast.eventId, broadcast.ticketTypeId);
+    const allRecipients = await resolveEventBroadcastRecipients(broadcast.eventId, broadcast.ticketTypeId, broadcast.onlyCheckedIn);
     const byId = new Map(allRecipients.map((r) => [r.person.id, r]));
     const chunk = chunkIds
       .filter((id) => !alreadyLogged.has(id))
@@ -172,7 +173,11 @@ export async function sendEventBroadcast(
           // registration hasn't succeeded) — same "nothing to substitute"
           // fallback as every other merge tag in this app.
           const personalizedBodyHtml = taggedBodyHtml.split("{{ZOOM_LINK}}").join(registration.zoomJoinUrl ?? "");
-          const content = broadcastEmailHtml({ subject: broadcast.subject, bodyHtml: personalizedBodyHtml });
+          // The review ask: each registrant's own /resena/<token> link
+          // (lib/reviews.ts). Blank when the registration has no token,
+          // same fallback as every other merge tag.
+          const withReviewLink = personalizedBodyHtml.split(REVIEW_LINK_TAG).join(registration.qrToken ? reviewUrl(registration.qrToken) : "");
+          const content = broadcastEmailHtml({ subject: broadcast.subject, bodyHtml: withReviewLink });
           // Same "never let a PDF problem block the whole send" reasoning
           // as sendTicketEmail.ts — a recipient with no qrToken
           // (shouldn't happen for a CONFIRMED registration, but not

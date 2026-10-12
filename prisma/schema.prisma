@@ -72,6 +72,7 @@ model Person {
   consents      Consent[]
   whatsappConversations WhatsAppConversation[]
   labels        Label[]
+  reviews       Review[]
 
   @@index([phone])
   @@index([city])
@@ -280,6 +281,13 @@ model Event {
   zoomAttendance ZoomAttendanceLog[]
   ticketTypes   TicketType[]
   broadcasts    EmailBroadcast[]
+  reviews       Review[]
+  reviewRaffle  ReviewRaffle?
+  // Cached "de qué hablan los comentarios" (lib/reviews.ts's
+  // summarizeReviews) — regenerated on demand from the admin, never on
+  // page load, so a Claude call is a deliberate click, not a side effect.
+  reviewSummary   Json?
+  reviewSummaryAt DateTime?
   whatsappBroadcasts WhatsAppBroadcast[]
   landingViews  LandingView[]
   infoPages     InfoPage[]
@@ -480,6 +488,7 @@ model Registration {
   scans      ScanLog[]
   payments   Payment[]
   zoomAttendance ZoomAttendanceLog[]
+  review     Review?
 
   @@unique([personId, eventId])
   @@index([eventId, status])
@@ -817,6 +826,10 @@ model EmailBroadcast {
   // EventBroadcastComposer.tsx when they actually want recipients to get
   // their entrada attached again (e.g. a reminder broadcast).
   attachTicketPdf Boolean       @default(false)
+  // Event broadcasts only: send to the registrants who were scanned at the
+  // door (Registration.checkedInCount > 0) instead of everyone CONFIRMED —
+  // the "ask attendees for a review" send, see lib/reviews.ts.
+  onlyCheckedIn Boolean         @default(false)
   subject     String
   // Plain text — the original /admin/crm/broadcasts flow (escaped +
   // newline-to-<br/> at send time, see lib/email/templates.ts's
@@ -1769,4 +1782,97 @@ model InfoPage {
   updatedAt DateTime @updatedAt
 
   @@unique([eventId, slug])
+}
+
+// ── Reseñas ─────────────────────────────────────────────────────────────
+//
+// One review per registration, written by an attendee who was scanned at
+// the door (lib/reviews.ts's eligibility), reached through the same signed
+// qrToken the ticket link uses (/resena/<token>). Nothing is public until
+// an admin APPROVES it, and a review shows with name/city/photos only when
+// publishConsent was given (kept with its timestamp: image rights).
+// A review without consent still counts in the averages.
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  HIDDEN
+}
+
+model Review {
+  id             String       @id @default(cuid())
+  event          Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId        String
+  registration   Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  registrationId String       @unique
+  person         Person       @relation(fields: [personId], references: [id], onDelete: Cascade)
+  personId       String
+  rating         Int // 1..5
+  comment        String?
+  instagramHandle String?
+  publishConsent   Boolean   @default(false)
+  publishConsentAt DateTime?
+  raffleOptIn    Boolean      @default(false)
+  status         ReviewStatus @default(PENDING)
+  // Hand-picked by an admin for landings, difusiones and the Instagram
+  // card. Only an APPROVED review with publishConsent can be featured.
+  featured       Boolean      @default(false)
+  moderatedAt    DateTime?
+  moderatedBy    String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  photos     ReviewPhoto[]
+  raffleWins ReviewRaffleWinner[]
+
+  @@index([eventId, status, featured])
+  @@index([personId])
+}
+
+model ReviewPhoto {
+  id        String   @id @default(cuid())
+  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  reviewId  String
+  url       String // Blob storage, uploaded by the attendee (reviews/<registrationId>/…)
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([reviewId])
+}
+
+// The per-event sorteo among reviewers (lib/reviews.ts's drawRaffle): N
+// winners plus N backups picked at random among opted-in reviews received
+// before closesAt. The draw is recorded once (drawnAt, participants, seed)
+// and never re-run — an acta, not a button to press twice.
+model ReviewRaffle {
+  id           String    @id @default(cuid())
+  event        Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId      String    @unique
+  prizeCount   Int       @default(3)
+  prizeLabel   String    @default("kit de marcas")
+  closesAt     DateTime
+  drawnAt      DateTime?
+  participants Int?
+  seed         String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  winners ReviewRaffleWinner[]
+}
+
+enum ReviewRaffleWinnerKind {
+  WINNER
+  BACKUP
+}
+
+model ReviewRaffleWinner {
+  id       String                 @id @default(cuid())
+  raffle   ReviewRaffle           @relation(fields: [raffleId], references: [id], onDelete: Cascade)
+  raffleId String
+  review   Review                 @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  reviewId String
+  position Int
+  kind     ReviewRaffleWinnerKind
+
+  @@unique([raffleId, reviewId])
 }

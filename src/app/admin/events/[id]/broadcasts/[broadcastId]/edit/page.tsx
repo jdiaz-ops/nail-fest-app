@@ -68,7 +68,7 @@ export default async function EditEventBroadcastPage({
           ticketTypeId: broadcast.ticketTypeId,
           subject: broadcast.subject,
           bodyHtml: broadcast.bodyHtml ?? "",
-          attachTicketPdf: broadcast.attachTicketPdf,
+          attachTicketPdf: broadcast.attachTicketPdf, onlyCheckedIn: broadcast.onlyCheckedIn,
           scheduleKind: broadcast.scheduleKind,
           scheduledAt: broadcast.scheduledAt ? broadcast.scheduledAt.toISOString() : null,
           scheduleOffsetMinutes: broadcast.scheduleOffsetMinutes,

@@ -55,6 +55,8 @@ export default function LandingBlocksEditor({
                       ? { type: "points", items: [{ title: "", text: "" }], tone: "pink" }
                       : type === "venue"
                       ? { type: "venue", imageUrl: "", mapsUrl: "" }
+                      : type === "reviews"
+                        ? { type: "reviews", scope: "previous", title: "", limit: 6 }
                       : { type: "people", items: [{ name: "", handle: "", tag: "", photoUrl: "", tone: "pink" }] };
     onChange([...blocks, block]);
   }
@@ -181,6 +183,7 @@ export default function LandingBlocksEditor({
               {block.type === "venue" && <VenueBlockEditor block={block} onChange={(b) => updateAt(i, b)} />}
               {block.type === "people" && <PeopleBlockEditor block={block} onChange={(b) => updateAt(i, b)} />}
               {block.type === "points" && <PointsBlockEditor block={block} onChange={(b) => updateAt(i, b)} />}
+              {block.type === "reviews" && <ReviewsBlockEditor block={block} onChange={(b) => updateAt(i, b)} />}
             </div>
           ))}
         </div>
@@ -210,6 +213,7 @@ const BLOCK_LABELS: Record<LandingBlock["type"], string> = {
   people: "Personas",
   venue: "Dónde es",
   faq: "Preguntas frecuentes",
+  reviews: "Reseñas de asistentes",
 };
 
 const TONE_LABELS: Record<LandingTone, string> = { teal: "Turquesa", pink: "Rosa", peach: "Durazno" };
@@ -610,6 +614,32 @@ function FaqBlockEditor({
       >
         + Agregar pregunta
       </button>
+    </div>
+  );
+}
+
+function ReviewsBlockEditor({
+  block,
+  onChange,
+}: {
+  block: Extract<LandingBlock, { type: "reviews" }>;
+  onChange: (block: LandingBlock) => void;
+}) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <select value={block.scope} onChange={(e) => onChange({ ...block, scope: e.target.value as "event" | "previous" | "global" })} style={{ width: "auto" }}>
+        <option value="previous">La edición anterior en esta ciudad</option>
+        <option value="event">Este evento</option>
+        <option value="global">Todas las ediciones de Nail Fest</option>
+      </select>
+      <input value={block.title} onChange={(e) => onChange({ ...block, title: e.target.value })} placeholder="Título (opcional — si lo dejas vacío sale el automático)" />
+      <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+        <span>Cuántas reseñas mostrar</span>
+        <input type="number" min={1} max={12} value={block.limit} onChange={(e) => onChange({ ...block, limit: Math.max(1, Math.min(12, Number(e.target.value) || 6)) })} style={{ width: 70 }} />
+      </label>
+      <p style={{ fontSize: 12, color: "#8a8478", margin: 0 }}>
+        Solo salen reseñas aprobadas con permiso de publicar, verificadas en puerta. Con menos de 3 aprobadas el bloque no se muestra. Se moderan en Reseñas, dentro de cada evento.
+      </p>
     </div>
   );
 }

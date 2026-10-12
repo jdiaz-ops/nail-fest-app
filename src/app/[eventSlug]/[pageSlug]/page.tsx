@@ -106,7 +106,7 @@ export default async function InfoPagePublic({
 
       {blocks.length > 0 && (
         <div className="info-page-blocks">
-          <LandingBlocksContent blocks={blocks} venue={{ name: event.venueName ?? "", address: event.venueAddress ?? "", hours }} />
+          <LandingBlocksContent blocks={blocks} event={{ id: event.id, name: event.name, publicName: event.publicName, city: event.city, startsAt: event.startsAt }} venue={{ name: event.venueName ?? "", address: event.venueAddress ?? "", hours }} />
         </div>
       )}
 

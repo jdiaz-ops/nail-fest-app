@@ -15,6 +15,7 @@ type EditingBroadcast = {
   subject: string;
   bodyHtml: string;
   attachTicketPdf: boolean;
+  onlyCheckedIn: boolean;
   scheduleKind: ScheduleKind;
   scheduledAt: string | null; // ISO, or null when scheduleKind isn't AT_DATETIME
   scheduleOffsetMinutes: number | null;
@@ -67,7 +68,7 @@ export default function EventBroadcastComposer({
   // deliberately NOT copied — this is always a brand-new send the admin
   // configures fresh (a stale scheduled date from the original wouldn't
   // make sense to inherit silently), same as the plain "new" case.
-  initial?: { ticketTypeId: string | null; subject: string; bodyHtml: string; attachTicketPdf: boolean };
+  initial?: { ticketTypeId: string | null; subject: string; bodyHtml: string; attachTicketPdf: boolean; onlyCheckedIn?: boolean };
   // Set when this composer opened from "Editar" on an existing QUEUED
   // broadcast (see the list's own "Editar" link, shown only for QUEUED
   // rows). Unlike `initial`, this ALSO pre-fills the existing schedule
@@ -84,6 +85,7 @@ export default function EventBroadcastComposer({
   const [subject, setSubject] = useState(editing?.subject ?? initial?.subject ?? "");
   const [bodyHtml, setBodyHtml] = useState(editing?.bodyHtml ?? initial?.bodyHtml ?? "");
   const [attachTicketPdf, setAttachTicketPdf] = useState(editing?.attachTicketPdf ?? initial?.attachTicketPdf ?? false);
+  const [onlyCheckedIn, setOnlyCheckedIn] = useState(editing?.onlyCheckedIn ?? initial?.onlyCheckedIn ?? false);
   const [scheduleKind, setScheduleKind] = useState<ScheduleKind>(editing?.scheduleKind ?? "IMMEDIATE");
   const [scheduledAtLocal, setScheduledAtLocal] = useState(
     editing?.scheduledAt ? toLocalInputValue(new Date(editing.scheduledAt)) : ""
@@ -126,6 +128,7 @@ export default function EventBroadcastComposer({
       subject,
       bodyHtml,
       attachTicketPdf,
+      onlyCheckedIn,
       scheduleKind,
     };
     if (scheduleKind === "AT_DATETIME") {
@@ -197,7 +200,29 @@ export default function EventBroadcastComposer({
             </p>
           </div>
         )}
+        <div style={{ marginBottom: 6 }}>
+          <button
+            type="button"
+            onClick={() => editorRef.current?.insertAtCursor("{{LINK_RESENA}} ")}
+            style={{ fontSize: 12, padding: "4px 10px", borderRadius: 999, border: "1px solid #e3e1dc", background: "#fff", cursor: "pointer" }}
+          >
+            + Insertar enlace de reseña
+          </button>
+          <p style={{ fontSize: 11, color: "#8a8478", margin: "4px 0 0" }}>
+            Cada destinataria recibe su propio enlace para calificar el evento (solo abre para quien fue escaneada en puerta). Combínalo con "Solo a quienes asistieron".
+          </p>
+        </div>
         <RichTextEditor ref={editorRef} value={bodyHtml} onChange={setBodyHtml} />
+      </div>
+
+      <div className="field">
+        <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <input type="checkbox" checked={onlyCheckedIn} onChange={(e) => setOnlyCheckedIn(e.target.checked)} />
+          <span>Solo a quienes asistieron (escaneadas en puerta)</span>
+        </label>
+        <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>
+          Para pedir la reseña después del evento. El conteo de destinatarios de arriba no aplica este filtro; el número real se muestra al programar.
+        </p>
       </div>
 
       <div className="field">

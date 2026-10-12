@@ -55,6 +55,7 @@ export default function EventModuleShell({
       heading: "Administrar",
       items: [
         { href: `${base}/tickets`, label: "Entradas emitidas" },
+        { href: `${base}/resenas`, label: "Reseñas" },
         ...(isAdmin ? [{ href: `${base}/broadcasts`, label: "Correos del evento" }] : []),
       ],
     },

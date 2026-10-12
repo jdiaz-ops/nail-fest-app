@@ -239,6 +239,7 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
             landingBlocks ? (
               <LandingBlocksContent
                 blocks={landingBlocks}
+                event={{ id: event.id, name: event.name, publicName: event.publicName, city: event.city, startsAt: event.startsAt }}
                 venue={{
                   name: event.venueName ?? "",
                   address: event.venueAddress ?? "",

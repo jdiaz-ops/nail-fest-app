@@ -42,6 +42,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       subject: data.subject,
       bodyHtml: sanitizeEventDescription(data.bodyHtml),
       attachTicketPdf: data.attachTicketPdf,
+      onlyCheckedIn: data.onlyCheckedIn,
       scheduleKind: data.scheduleKind,
       scheduledAt: data.scheduledAt ? new Date(data.scheduledAt) : null,
       scheduleOffsetMinutes: data.scheduleOffsetMinutes ?? null,
@@ -59,7 +60,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const dueAt = resolveDueAt(broadcast, event);
   const qstashMessageId = dueAt ? await scheduleEventBroadcastSend(broadcast.id, dueAt) : null;
   if (qstashMessageId) await db.emailBroadcast.update({ where: { id: broadcast.id }, data: { qstashMessageId } });
-  const recipientCount = await countEventBroadcastRecipients(event.id, data.ticketTypeId || null);
+  const recipientCount = await countEventBroadcastRecipients(event.id, data.ticketTypeId || null, data.onlyCheckedIn);
   return NextResponse.json({
     ok: true,
     broadcastId: broadcast.id,

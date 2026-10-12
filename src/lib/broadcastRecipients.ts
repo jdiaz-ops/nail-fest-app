@@ -36,9 +36,9 @@ export interface EventBroadcastRecipient {
 // but keeping the registration attached is what lets a broadcast attach a
 // real, personalized entrada PDF (needs that registration's own qrToken)
 // instead of only the person's contact info.
-export async function resolveEventBroadcastRecipients(eventId: string, ticketTypeId?: string | null): Promise<EventBroadcastRecipient[]> {
+export async function resolveEventBroadcastRecipients(eventId: string, ticketTypeId?: string | null, onlyCheckedIn = false): Promise<EventBroadcastRecipient[]> {
   const registrations = await db.registration.findMany({
-    where: { eventId, status: "CONFIRMED", ...(ticketTypeId ? { ticketTypeId } : {}) },
+    where: { eventId, status: "CONFIRMED", ...(ticketTypeId ? { ticketTypeId } : {}), ...(onlyCheckedIn ? { checkedInCount: { gt: 0 } } : {}) },
     include: { person: true },
   });
   return registrations.map((r) => ({
@@ -47,6 +47,6 @@ export async function resolveEventBroadcastRecipients(eventId: string, ticketTyp
   }));
 }
 
-export async function countEventBroadcastRecipients(eventId: string, ticketTypeId?: string | null): Promise<number> {
-  return db.registration.count({ where: { eventId, status: "CONFIRMED", ...(ticketTypeId ? { ticketTypeId } : {}) } });
+export async function countEventBroadcastRecipients(eventId: string, ticketTypeId?: string | null, onlyCheckedIn = false): Promise<number> {
+  return db.registration.count({ where: { eventId, status: "CONFIRMED", ...(ticketTypeId ? { ticketTypeId } : {}), ...(onlyCheckedIn ? { checkedInCount: { gt: 0 } } : {}) } });
 }
