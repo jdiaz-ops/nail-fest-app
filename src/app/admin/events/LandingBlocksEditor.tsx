@@ -57,6 +57,8 @@ export default function LandingBlocksEditor({
                       ? { type: "venue", imageUrl: "", mapsUrl: "" }
                       : type === "reviews"
                         ? { type: "reviews", scope: "previous", title: "", limit: 6 }
+                        : type === "reviewsBadge"
+                          ? { type: "reviewsBadge", scope: "global" }
                       : { type: "people", items: [{ name: "", handle: "", tag: "", photoUrl: "", tone: "pink" }] };
     onChange([...blocks, block]);
   }
@@ -184,6 +186,7 @@ export default function LandingBlocksEditor({
               {block.type === "people" && <PeopleBlockEditor block={block} onChange={(b) => updateAt(i, b)} />}
               {block.type === "points" && <PointsBlockEditor block={block} onChange={(b) => updateAt(i, b)} />}
               {block.type === "reviews" && <ReviewsBlockEditor block={block} onChange={(b) => updateAt(i, b)} />}
+              {block.type === "reviewsBadge" && <ReviewsBadgeBlockEditor block={block} onChange={(b) => updateAt(i, b)} />}
             </div>
           ))}
         </div>
@@ -214,6 +217,7 @@ const BLOCK_LABELS: Record<LandingBlock["type"], string> = {
   venue: "Dónde es",
   faq: "Preguntas frecuentes",
   reviews: "Reseñas de asistentes",
+  reviewsBadge: "Insignia de reseñas",
 };
 
 const TONE_LABELS: Record<LandingTone, string> = { teal: "Turquesa", pink: "Rosa", peach: "Durazno" };
@@ -639,6 +643,27 @@ function ReviewsBlockEditor({
       </label>
       <p style={{ fontSize: 12, color: "#8a8478", margin: 0 }}>
         Solo salen reseñas aprobadas con permiso de publicar, verificadas en puerta. Con menos de 3 aprobadas el bloque no se muestra. Se moderan en Reseñas, dentro de cada evento.
+      </p>
+    </div>
+  );
+}
+
+function ReviewsBadgeBlockEditor({
+  block,
+  onChange,
+}: {
+  block: Extract<LandingBlock, { type: "reviewsBadge" }>;
+  onChange: (block: LandingBlock) => void;
+}) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <select value={block.scope} onChange={(e) => onChange({ ...block, scope: e.target.value as "event" | "previous" | "global" })} style={{ width: "auto" }}>
+        <option value="global">Todas las ediciones de Nail Fest</option>
+        <option value="previous">La edición anterior en esta ciudad</option>
+        <option value="event">Este evento</option>
+      </select>
+      <p style={{ fontSize: 12, color: "#8a8478", margin: 0 }}>
+        Una sola línea: estrellas, promedio y número de reseñas verificadas en puerta. Al tocarla abre nailfest.lat/resenas. No se muestra con menos de 3 reseñas aprobadas.
       </p>
     </div>
   );

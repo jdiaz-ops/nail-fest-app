@@ -1,4 +1,5 @@
 import { getOrgSettings } from "@/lib/settings";
+import ReviewsBadge from "@/components/reviews/ReviewsBadge";
 import { getEnabledLinks } from "@/lib/linkPage";
 import TrackedLink from "./TrackedLink";
 
@@ -78,6 +79,11 @@ export default async function LinksPage() {
             >
               {orgSettings.homepageTagline}
             </p>
+          )}
+          {orgSettings.linksPageReviewsBadge && (
+            <div style={{ display: "flex", justifyContent: "center", marginTop: 16 }}>
+              <ReviewsBadge scope="global" variant="dark" />
+            </div>
           )}
         </div>
 

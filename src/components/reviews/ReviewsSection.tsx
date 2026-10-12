@@ -2,6 +2,7 @@ import { Fraunces } from "next/font/google";
 import { optimizedSrc } from "@/lib/optimizedImage";
 import { listPublicReviews, resolveReviewScope, reviewAggregate, type ReviewScope } from "@/lib/reviews";
 import { publicEventName } from "@/lib/eventDisplayName";
+import Link from "next/link";
 import Stars from "./Stars";
 
 const fraunces = Fraunces({ subsets: ["latin"], weight: ["800", "900"] });
@@ -89,6 +90,9 @@ export default async function ReviewsSection({
           ))}
         </div>
       )}
+      <div className="reviews-all-link">
+        <Link href="/resenas">Leer todas las reseñas</Link>
+      </div>
     </section>
   );
 }

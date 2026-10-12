@@ -192,8 +192,17 @@ export interface ReviewsLandingBlock {
   limit: number; // how many cards, 1..12
 }
 
+// The compact rating pill (components/reviews/ReviewsBadge.tsx): average,
+// stars and the count, linking to /resenas. Same scopes and same
+// three-reviews minimum as the full block.
+export interface ReviewsBadgeLandingBlock {
+  type: "reviewsBadge";
+  scope: "event" | "previous" | "global";
+}
+
 export type LandingBlock = (
   | ReviewsLandingBlock
+  | ReviewsBadgeLandingBlock
   | TextLandingBlock
   | ImageLandingBlock
   | VideoLandingBlock
@@ -315,5 +324,7 @@ function parseOne(rec: Record<string, unknown>, result: LandingBlock[]): void {
   } else if (rec.type === "reviews") {
     const limit = typeof rec.limit === "number" && rec.limit >= 1 ? Math.min(12, Math.floor(rec.limit)) : 6;
     result.push({ type: "reviews", scope: rec.scope === "event" || rec.scope === "global" ? rec.scope : "previous", title: str(rec.title), limit });
+  } else if (rec.type === "reviewsBadge") {
+    result.push({ type: "reviewsBadge", scope: rec.scope === "event" || rec.scope === "previous" ? rec.scope : "global" });
   }
 }

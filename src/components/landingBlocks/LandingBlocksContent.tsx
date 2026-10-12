@@ -2,6 +2,7 @@ import { Fraunces } from "next/font/google";
 import ScrollCarousel from "@/components/ScrollCarousel";
 import GalleryGrid from "./GalleryGrid";
 import ReviewsSection from "@/components/reviews/ReviewsSection";
+import ReviewsBadge from "@/components/reviews/ReviewsBadge";
 import { instagramHandles, youtubeVideo, type AgendaRow, type LandingBlock, type LandingCardIcon } from "@/lib/landingBlocks/types";
 
 // "Michell Rodríguez" -> "MR"; a single name gives one letter.
@@ -47,6 +48,13 @@ export default function LandingBlocksContent({ blocks, venue, event }: { blocks:
             // Async server component: loads its own data and renders
             // nothing below three approved reviews.
             return <ReviewsSection key={i} scope={block.scope} event={event ?? null} title={block.title} limit={block.limit} />;
+
+          case "reviewsBadge":
+            return (
+              <div key={i} style={{ display: "flex", justifyContent: "center" }}>
+                <ReviewsBadge scope={block.scope} event={event ?? null} />
+              </div>
+            );
 
           case "text":
             // Sanitized server-side before storage (lib/events.ts, same

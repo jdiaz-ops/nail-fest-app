@@ -2,6 +2,7 @@ import { requirePageUser } from "@/lib/auth/guard";
 import { getOrderedLinks } from "@/lib/linkPage";
 import { getOrgSettings } from "@/lib/settings";
 import LinksPageBackgroundForm from "./LinksPageBackgroundForm";
+import LinksReviewsBadgeForm from "./LinksReviewsBadgeForm";
 import LinksEditor from "./LinksEditor";
 
 export const dynamic = "force-dynamic";
@@ -32,6 +33,8 @@ export default async function AdminLinksPage() {
         initialImageUrl={orgSettings.linksPageImageUrl}
         initialVideoUrl={orgSettings.linksPageVideoUrl}
       />
+
+      <LinksReviewsBadgeForm initialEnabled={orgSettings.linksPageReviewsBadge} />
 
       <LinksEditor
         initialLinks={links.map((l) => ({

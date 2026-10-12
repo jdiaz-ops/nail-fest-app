@@ -2066,3 +2066,17 @@ button.primary:disabled {
 @media (max-width: 860px) {
   .reviews-admin-grid { grid-template-columns: minmax(0, 1fr) !important; }
 }
+
+/* ── Insignia de reseñas (components/reviews/ReviewsBadge.tsx) ───────── */
+.reviews-badge { display: inline-flex; align-items: center; gap: 10px; padding: 9px 16px; border-radius: 999px; text-decoration: none; font-size: 13px; line-height: 1.2; max-width: 100%; }
+.reviews-badge-light { background: var(--surface); border: 1px solid var(--border); color: var(--ink); }
+.reviews-badge-light:hover { border-color: var(--accent); }
+.reviews-badge-dark { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.3); color: #fff; }
+.reviews-badge-dark:hover { background: rgba(255,255,255,0.2); }
+.reviews-badge-score { font-weight: 800; white-space: nowrap; }
+.reviews-badge-count { font-weight: 600; opacity: 0.8; }
+.homepage-reviews-badge { display: flex; justify-content: center; padding: 24px 16px 0; }
+.reviews-all-link { font-size: 14px; font-weight: 700; }
+@media (max-width: 480px) {
+  .reviews-badge { flex-wrap: wrap; justify-content: center; text-align: center; }
+}

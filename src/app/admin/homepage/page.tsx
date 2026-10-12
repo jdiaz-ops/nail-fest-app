@@ -5,6 +5,7 @@ import HomepageEditorForm from "./HomepageEditorForm";
 import HomepageGalleryEditor from "./HomepageGalleryEditor";
 import HomepageBrandLogosEditor from "./HomepageBrandLogosEditor";
 import HomepageClosingTextEditor from "./HomepageClosingTextEditor";
+import HomepageReviewsEditor from "./HomepageReviewsEditor";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,7 @@ export default async function AdminHomepagePage() {
         nextEventLabel={nextEvent ? `${nextEvent.name} — ${nextEvent.city}` : null}
       />
       <HomepageGalleryEditor initialUrls={orgSettings.homepageGalleryImageUrls} />
+      <HomepageReviewsEditor initialMode={orgSettings.homepageReviews} initialPosition={orgSettings.homepageReviewsPosition} />
       <HomepageBrandLogosEditor initialLogos={orgSettings.homepageBrandLogos} initialTitle={orgSettings.homepageBrandLogosTitle} />
       <HomepageClosingTextEditor initialText={orgSettings.homepageClosingText} />
     </div>

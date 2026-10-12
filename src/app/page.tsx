@@ -4,6 +4,7 @@ import { getOrgSettings } from "@/lib/settings";
 import { getNextEvent } from "@/lib/nextEvent";
 import { publicEventName } from "@/lib/eventDisplayName";
 import ReviewsSection from "@/components/reviews/ReviewsSection";
+import ReviewsBadge from "@/components/reviews/ReviewsBadge";
 
 export const dynamic = "force-dynamic";
 
@@ -186,6 +187,14 @@ export default async function HomePage() {
     {/* Photo gallery — square tiles, already fully designed by whoever
         made them (photo + caption baked in); this just lays them out.
         Empty array = section doesn't render, same as the hero above. */}
+    {/* Reseñas, right under the hero — see OrgSettings.homepageReviews. */}
+    {orgSettings.homepageReviewsPosition === "after_hero" && orgSettings.homepageReviews === "block" && <ReviewsSection scope="global" />}
+    {orgSettings.homepageReviewsPosition === "after_hero" && orgSettings.homepageReviews === "badge" && (
+      <div className="homepage-reviews-badge">
+        <ReviewsBadge scope="global" />
+      </div>
+    )}
+
     {orgSettings.homepageGalleryImageUrls.length > 0 && (
       <section className="homepage-gallery-grid">
         {orgSettings.homepageGalleryImageUrls.map((url, i) => (
@@ -207,9 +216,14 @@ export default async function HomePage() {
     {/* Brand/sponsor logo wall — plain white tiles, logo centered via
         object-fit: contain (unlike the gallery above, these vary in
         aspect ratio and must never crop). */}
-    {/* Reseñas de todas las ediciones — renders nothing below three
-        approved reviews (components/reviews/ReviewsSection.tsx). */}
-    <ReviewsSection scope="global" />
+    {/* Reseñas above the brand wall — see OrgSettings.homepageReviews.
+        Either form renders nothing below three approved reviews. */}
+    {orgSettings.homepageReviewsPosition === "before_logos" && orgSettings.homepageReviews === "block" && <ReviewsSection scope="global" />}
+    {orgSettings.homepageReviewsPosition === "before_logos" && orgSettings.homepageReviews === "badge" && (
+      <div className="homepage-reviews-badge">
+        <ReviewsBadge scope="global" />
+      </div>
+    )}
 
     {orgSettings.homepageBrandLogos.length > 0 && (
       <>

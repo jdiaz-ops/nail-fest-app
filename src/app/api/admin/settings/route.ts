@@ -57,6 +57,10 @@ const patchSchema = z
     // reasoning as the homepage fields above.
     linksPageImageUrl: z.string(),
     linksPageVideoUrl: z.string(),
+    // Reseñas on the home and the links page — see OrgSettings.homepageReviews.
+    homepageReviews: z.enum(["block", "badge", "off"]),
+    homepageReviewsPosition: z.enum(["after_hero", "before_logos"]),
+    linksPageReviewsBadge: z.boolean(),
   })
   .partial();
 

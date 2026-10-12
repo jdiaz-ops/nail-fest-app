@@ -1401,6 +1401,16 @@ model OrgSettings {
   // override — one account-wide switch, same as that platform's own single checkbox.
   attachTicketPdf Boolean @default(true)
 
+  // Reseñas on the home (/admin/homepage): "block" = the full reviews
+  // section, "badge" = just the rating pill, "off" = nothing; and where:
+  // "after_hero" (right under the hero) or "before_logos" (above the brand
+  // wall). Either way nothing shows below three approved reviews — see
+  // components/reviews/. linksPageReviewsBadge puts the pill under the
+  // logo on nailfest.lat/links (/admin/links).
+  homepageReviews         String  @default("block")
+  homepageReviewsPosition String  @default("before_logos")
+  linksPageReviewsBadge   Boolean @default(false)
+
   // Microsoft Clarity project id (see /admin/settings/analytics) — null
   // means the script is never injected (today's behavior). Just an id,
   // not a secret: Clarity's tracking snippet is public-facing JS by

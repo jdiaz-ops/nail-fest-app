@@ -44,6 +44,10 @@ export interface OrgSettingsValue {
   homepageClosingText: string | null;
   linksPageImageUrl: string | null;
   linksPageVideoUrl: string | null;
+  // See OrgSettings.homepageReviews's own schema comment.
+  homepageReviews: "block" | "badge" | "off";
+  homepageReviewsPosition: "after_hero" | "before_logos";
+  linksPageReviewsBadge: boolean;
 }
 
 const DEFAULTS: OrgSettingsValue = {
@@ -72,6 +76,9 @@ const DEFAULTS: OrgSettingsValue = {
   homepageClosingText: null,
   linksPageImageUrl: null,
   linksPageVideoUrl: null,
+  homepageReviews: "block",
+  homepageReviewsPosition: "before_logos",
+  linksPageReviewsBadge: false,
 };
 
 // No row exists until the first save from /admin/settings — reads never
@@ -106,6 +113,9 @@ export async function getOrgSettings(): Promise<OrgSettingsValue> {
     homepageClosingText: row.homepageClosingText,
     linksPageImageUrl: row.linksPageImageUrl,
     linksPageVideoUrl: row.linksPageVideoUrl,
+    homepageReviews: row.homepageReviews === "badge" || row.homepageReviews === "off" ? row.homepageReviews : "block",
+    homepageReviewsPosition: row.homepageReviewsPosition === "after_hero" ? "after_hero" : "before_logos",
+    linksPageReviewsBadge: row.linksPageReviewsBadge,
   };
 }
 
@@ -141,5 +151,8 @@ export async function updateOrgSettings(patch: Partial<OrgSettingsValue>): Promi
     homepageClosingText: row.homepageClosingText,
     linksPageImageUrl: row.linksPageImageUrl,
     linksPageVideoUrl: row.linksPageVideoUrl,
+    homepageReviews: row.homepageReviews === "badge" || row.homepageReviews === "off" ? row.homepageReviews : "block",
+    homepageReviewsPosition: row.homepageReviewsPosition === "after_hero" ? "after_hero" : "before_logos",
+    linksPageReviewsBadge: row.linksPageReviewsBadge,
   };
 }

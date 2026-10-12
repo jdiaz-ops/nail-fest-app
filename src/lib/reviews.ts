@@ -256,6 +256,24 @@ export async function resolveReviewScope(scope: ReviewScope, event: { id: string
   return previous ? { eventIds: [previous.id], sourceEvent: previous } : { eventIds: [], sourceEvent: null };
 }
 
+/** Cities with approved, consented reviews — the filter chips on
+ * /resenas. One entry per city (case-insensitive), with the events behind
+ * it. */
+export async function publicReviewCities(): Promise<{ city: string; eventIds: string[]; count: number }[]> {
+  const rows = await db.review.groupBy({ by: ["eventId"], where: { status: "APPROVED", publishConsent: true }, _count: { _all: true } });
+  if (rows.length === 0) return [];
+  const events = await db.event.findMany({ where: { id: { in: rows.map((r) => r.eventId) } }, select: { id: true, city: true } });
+  const byCity = new Map<string, { city: string; eventIds: string[]; count: number }>();
+  for (const e of events) {
+    const key = e.city.trim().toLowerCase();
+    const entry = byCity.get(key) ?? { city: e.city.trim(), eventIds: [], count: 0 };
+    entry.eventIds.push(e.id);
+    entry.count += rows.find((r) => r.eventId === e.id)?._count._all ?? 0;
+    byCity.set(key, entry);
+  }
+  return [...byCity.values()].sort((a, b) => b.count - a.count);
+}
+
 // ── Admin: moderation, stats ─────────────────────────────────────────────
 
 export type ModerationAction = "approve" | "hide" | "pending" | "feature" | "unfeature";

@@ -30,7 +30,12 @@ Reglas fijas (lib/reviews.ts):
 - Bloque de landing "Reseñas" (editor de bloques): este evento, la edición
   anterior en la misma ciudad, o todas las ediciones. No se muestra con
   menos de 3 reseñas aprobadas.
-- Home: bloque global automático con el mismo mínimo.
+- Home (`/admin/homepage`): bloque completo, solo la insignia, o nada; debajo
+  del hero o antes de las marcas. Mismo mínimo.
+- Insignia (`components/reviews/ReviewsBadge.tsx`): estrellas, promedio y
+  número de reseñas, enlaza a `/resenas`. También como bloque de landing
+  ("Insignia de reseñas") y en nailfest.lat/links (`/admin/links`).
+- `/resenas`: todas las aprobadas con permiso, con filtro por ciudad.
 - Tarjeta para historia de Instagram (PNG 1080×1920) desde la pantalla de
   gracias y desde el admin.
 
