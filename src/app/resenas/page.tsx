@@ -9,7 +9,7 @@ import { viewerCanSeeSamples } from "@/lib/reviewsViewer";
 const fraunces = Fraunces({ subsets: ["latin"], weight: ["800", "900"] });
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Reseñas · Nail Fest", description: "Lo que dicen las manicuristas que han ido a Nail Fest, verificado en puerta." };
+export const metadata: Metadata = { title: "Reseñas · Nail Fest", description: "Lo que dicen las que visitaron Nail Fest." };
 
 const PAGE_SIZE = 48;
 
@@ -27,9 +27,9 @@ export default async function ReviewsIndexPage({ searchParams }: { searchParams:
   return (
     <main style={{ maxWidth: 1100, margin: "0 auto", padding: "40px 20px 64px" }}>
       <div style={{ display: "flex", flexDirection: "column", gap: 10, maxWidth: 680 }}>
-        <div className="reviews-eyebrow">Reseñas verificadas en puerta</div>
-        <h1 className={`reviews-title ${fraunces.className}`}>{city ? `Lo que dicen de Nail Fest en ${city.city}` : "Lo que dicen las manicuristas de Nail Fest"}</h1>
-        <p className="reviews-intro">Opiniones de asistentes que entraron a alguna edición con su entrada escaneada, publicadas con su nombre y con su permiso.</p>
+        <div className="reviews-eyebrow">Reseñas</div>
+        <h1 className={`reviews-title ${fraunces.className}`}>{city ? `Lo que dicen las que visitaron Nail Fest en ${city.city}` : "Lo que dicen las que visitaron Nail Fest"}</h1>
+        <p className="reviews-intro">Opiniones de asistentes a nuestras ediciones, publicadas con su nombre y con su permiso.</p>
       </div>
 
       {average && (

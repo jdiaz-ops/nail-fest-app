@@ -26,10 +26,10 @@ export default async function ReviewsBadge({
   if (aggregate.count < MIN_REVIEWS_TO_SHOW || aggregate.average == null) return null;
   const average = aggregate.average.toLocaleString("es-CO", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
   return (
-    <Link href="/resenas" className={`reviews-badge reviews-badge-${variant}`} aria-label={`Calificación ${average} de 5 según ${aggregate.count} reseñas verificadas en puerta. Ver todas las reseñas.`}>
+    <Link href="/resenas" className={`reviews-badge reviews-badge-${variant}`} aria-label={`Calificación ${average} de 5 según ${aggregate.count} reseñas. Ver todas las reseñas.`}>
       <Stars rating={Math.round(aggregate.average)} size={15} />
       <span className="reviews-badge-score">{average} de 5</span>
-      <span className="reviews-badge-count">{aggregate.count.toLocaleString("es-CO")} reseñas verificadas en puerta</span>
+      <span className="reviews-badge-count">{aggregate.count.toLocaleString("es-CO")} {aggregate.count === 1 ? "reseña" : "reseñas"}</span>
     </Link>
   );
 }

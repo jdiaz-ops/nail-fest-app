@@ -4,6 +4,7 @@ import { listPublicReviews, resolveReviewScope, reviewAggregate, type ReviewScop
 import { publicEventName } from "@/lib/eventDisplayName";
 import { viewerCanSeeSamples } from "@/lib/reviewsViewer";
 import Link from "next/link";
+import ScrollCarousel from "@/components/ScrollCarousel";
 import Stars from "./Stars";
 
 const fraunces = Fraunces({ subsets: ["latin"], weight: ["800", "900"] });
@@ -33,14 +34,14 @@ export default async function ReviewsSection({
   if (aggregate.count < MIN_REVIEWS_TO_SHOW || aggregate.average == null) return null;
 
   const sourceName = resolved.sourceEvent ? publicEventName(resolved.sourceEvent) : event ? publicEventName(event) : null;
-  const heading = title?.trim() || (scope === "global" ? "Lo que dicen las manicuristas" : sourceName ? `Lo que vivieron en ${sourceName}` : "Lo que dicen quienes fueron");
+  const heading = title?.trim() || (scope === "global" ? "Lo que dicen las que visitaron Nail Fest" : sourceName ? `Lo que dicen las que visitaron ${sourceName}` : "Lo que dicen las que visitaron Nail Fest");
   const pct = (n: number) => (aggregate.count > 0 ? Math.round((n / aggregate.count) * 100) : 0);
 
   return (
     <section className="reviews-section" aria-label={heading}>
       <div className="reviews-head">
         <div className="reviews-head-text">
-          <div className="reviews-eyebrow">Reseñas verificadas en puerta</div>
+          <div className="reviews-eyebrow">Reseñas</div>
           <h2 className={`reviews-title ${fraunces.className}`}>{heading}</h2>
         </div>
         <div className="reviews-score">
@@ -64,9 +65,10 @@ export default async function ReviewsSection({
       </div>
 
       {reviews.length > 0 && (
-        <div className="reviews-grid">
+        <ScrollCarousel>
           {reviews.map((r) => (
-            <article className="review-card" key={r.id}>
+            <div className="review-slide" key={r.id}>
+            <article className="review-card">
               {r.photos[0] && (
                 // eslint-disable-next-line @next/next/no-img-element -- attendee-uploaded Blob photo
                 <img className="review-card-photo" src={optimizedSrc(r.photos[0], 640)} alt="" loading="lazy" decoding="async" />
@@ -87,8 +89,9 @@ export default async function ReviewsSection({
                 </div>
               </div>
             </article>
+            </div>
           ))}
-        </div>
+        </ScrollCarousel>
       )}
       <div className="reviews-all-link">
         <Link href="/resenas">Leer todas las reseñas</Link>
