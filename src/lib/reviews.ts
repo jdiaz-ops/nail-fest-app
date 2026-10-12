@@ -13,7 +13,7 @@ import { createHash, randomBytes } from "crypto";
 import Anthropic from "@anthropic-ai/sdk";
 import type { Event, Person, Registration, Review, ReviewRaffle, ReviewRaffleWinner, ReviewStatus } from "@prisma/client";
 import { db } from "@/lib/db";
-import { verifyQrToken } from "@/lib/ticket";
+import { issueQrToken, verifyQrToken } from "@/lib/ticket";
 import { publicEventName } from "@/lib/eventDisplayName";
 
 export const MAX_REVIEW_PHOTOS = 3;
@@ -188,10 +188,18 @@ export function publicReviewerName(person: { firstName: string | null; lastName:
 
 /** Approved reviews with publish consent, featured first. `eventIds`
  * null = every event. */
-export async function listPublicReviews(eventIds: string[] | null, limit = 12): Promise<PublicReview[]> {
+export interface PublicReadOptions {
+  /** Sample reviews (createSampleReviews) are for staff eyes only — see
+   * lib/reviewsViewer.ts for who gets them. */
+  includeSamples?: boolean;
+}
+
+const sampleFilter = (opts?: PublicReadOptions) => (opts?.includeSamples ? {} : { isSample: false });
+
+export async function listPublicReviews(eventIds: string[] | null, limit = 12, opts?: PublicReadOptions): Promise<PublicReview[]> {
   if (eventIds && eventIds.length === 0) return [];
   const rows = await db.review.findMany({
-    where: { status: "APPROVED", publishConsent: true, ...(eventIds ? { eventId: { in: eventIds } } : {}) },
+    where: { status: "APPROVED", publishConsent: true, ...sampleFilter(opts), ...(eventIds ? { eventId: { in: eventIds } } : {}) },
     orderBy: [{ featured: "desc" }, { rating: "desc" }, { createdAt: "desc" }],
     take: limit,
     include: { photos: { orderBy: { position: "asc" } }, person: { select: { firstName: true, lastName: true, city: true } }, event: { select: { name: true, publicName: true } } },
@@ -212,12 +220,12 @@ export async function listPublicReviews(eventIds: string[] | null, limit = 12): 
 
 /** Average and distribution over every APPROVED review (consent or not:
  * a person who declined to be named still rated the event). */
-export async function reviewAggregate(eventIds: string[] | null): Promise<ReviewAggregate> {
+export async function reviewAggregate(eventIds: string[] | null, opts?: PublicReadOptions): Promise<ReviewAggregate> {
   const empty: ReviewAggregate = { average: null, count: 0, distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } };
   if (eventIds && eventIds.length === 0) return empty;
   const rows = await db.review.groupBy({
     by: ["rating"],
-    where: { status: "APPROVED", ...(eventIds ? { eventId: { in: eventIds } } : {}) },
+    where: { status: "APPROVED", ...sampleFilter(opts), ...(eventIds ? { eventId: { in: eventIds } } : {}) },
     _count: { _all: true },
   });
   return aggregateFromCounts(rows.map((r) => ({ rating: r.rating, count: r._count._all })));
@@ -240,7 +248,7 @@ export type ReviewScope = "event" | "previous" | "global";
 
 /** Which events a public block shows: this one, the latest earlier edition
  * in the same city that has approved reviews, or all of them. */
-export async function resolveReviewScope(scope: ReviewScope, event: { id: string; city: string; startsAt: Date }): Promise<{ eventIds: string[] | null; sourceEvent: { id: string; name: string; publicName: string | null } | null }> {
+export async function resolveReviewScope(scope: ReviewScope, event: { id: string; city: string; startsAt: Date }, opts?: PublicReadOptions): Promise<{ eventIds: string[] | null; sourceEvent: { id: string; name: string; publicName: string | null } | null }> {
   if (scope === "global") return { eventIds: null, sourceEvent: null };
   if (scope === "event") return { eventIds: [event.id], sourceEvent: null };
   const previous = await db.event.findFirst({
@@ -248,7 +256,7 @@ export async function resolveReviewScope(scope: ReviewScope, event: { id: string
       id: { not: event.id },
       city: { equals: event.city.trim(), mode: "insensitive" },
       startsAt: { lt: event.startsAt },
-      reviews: { some: { status: "APPROVED" } },
+      reviews: { some: { status: "APPROVED", ...sampleFilter(opts) } },
     },
     orderBy: { startsAt: "desc" },
     select: { id: true, name: true, publicName: true },
@@ -259,8 +267,8 @@ export async function resolveReviewScope(scope: ReviewScope, event: { id: string
 /** Cities with approved, consented reviews — the filter chips on
  * /resenas. One entry per city (case-insensitive), with the events behind
  * it. */
-export async function publicReviewCities(): Promise<{ city: string; eventIds: string[]; count: number }[]> {
-  const rows = await db.review.groupBy({ by: ["eventId"], where: { status: "APPROVED", publishConsent: true }, _count: { _all: true } });
+export async function publicReviewCities(opts?: PublicReadOptions): Promise<{ city: string; eventIds: string[]; count: number }[]> {
+  const rows = await db.review.groupBy({ by: ["eventId"], where: { status: "APPROVED", publishConsent: true, ...sampleFilter(opts) }, _count: { _all: true } });
   if (rows.length === 0) return [];
   const events = await db.event.findMany({ where: { id: { in: rows.map((r) => r.eventId) } }, select: { id: true, city: true } });
   const byCity = new Map<string, { city: string; eventIds: string[]; count: number }>();
@@ -528,4 +536,85 @@ export async function reviewCardData(reviewId: string): Promise<ReviewCardData |
   });
   if (!r) return null;
   return { name: publicReviewerName(r.person), city: r.person.city, instagramHandle: r.instagramHandle, rating: r.rating, comment: r.comment, photo: r.photos[0]?.url ?? null, eventName: publicEventName(r.event) };
+}
+
+// ── Reseñas de muestra ───────────────────────────────────────────────────
+//
+// "Crear reseñas de muestra" on the admin page: twelve believable reviews
+// with sample people and registrations, so the blocks, the badge, the
+// /resenas index and the moderation page can be seen before a single real
+// review exists. They are APPROVED with consent (that is what the public
+// blocks need) but flagged isSample, and the public pages show them only
+// to a logged-in admin or coordinator. One click deletes them.
+
+export const SAMPLE_EMAIL_DOMAIN = "muestra.nailfest.lat";
+
+export const SAMPLE_REVIEWS: { firstName: string; lastName: string; city: string; rating: number; comment: string | null; handle: string | null; photos: number; featured?: boolean; daysAgo: number }[] = [
+  { firstName: "Karen", lastName: "Mantilla", city: "Cúcuta", rating: 5, comment: "Encontré marcas que no había visto en ningún lado y las demostraciones fueron de otro nivel. Salí con tres proveedores nuevos.", handle: "karen.nailart", photos: 2, featured: true, daysAgo: 1 },
+  { firstName: "Yolanda", lastName: "Rincón", city: "Pamplona", rating: 5, comment: "Fui con mi hija que está empezando y las dos aprendimos. Las demos gratis de nail art valieron el viaje.", handle: null, photos: 1, daysAgo: 1 },
+  { firstName: "Daniela", lastName: "Peñaranda", city: "Cúcuta", rating: 4, comment: "Muy organizado, entré en dos minutos con el QR. Solo le pondría más sillas en la zona de demostraciones.", handle: "dani.nails", photos: 0, daysAgo: 2 },
+  { firstName: "Luisa", lastName: "Fernández", city: "Bucaramanga", rating: 5, comment: "Es el único evento donde pruebo los productos antes de comprar. Volví con mi equipo completo.", handle: "luisa.studio", photos: 1, featured: true, daysAgo: 2 },
+  { firstName: "María José", lastName: "Torres", city: "Cúcuta", rating: 4, comment: "Las charlas de negocio me sirvieron tanto como las técnicas. Faltó más tiempo para recorrer todo.", handle: null, photos: 0, daysAgo: 3 },
+  { firstName: "Andrea", lastName: "Gómez", city: "Ocaña", rating: 5, comment: "Me gané un kit en una demostración y conocí a la distribuidora de la marca que uso. Imperdible.", handle: "andrea.gomez.nails", photos: 1, daysAgo: 3 },
+  { firstName: "Paula", lastName: "Hernández", city: "Cúcuta", rating: 5, comment: "Precios de feria de verdad, no de vitrina. Compré lo del semestre en una tarde.", handle: null, photos: 0, daysAgo: 4 },
+  { firstName: "Valentina", lastName: "Ruiz", city: "San Cristóbal", rating: 5, comment: "Vine desde Venezuela y valió cada kilómetro. Atención impecable en la entrada y en los estands.", handle: "vale.ruiz.nails", photos: 2, daysAgo: 4 },
+  { firstName: "Carolina", lastName: "Suárez", city: "Cúcuta", rating: 3, comment: "Buenas marcas, pero a mediodía la fila del baño era larga y hacía calor en el salón principal.", handle: null, photos: 0, daysAgo: 5 },
+  { firstName: "Natalia", lastName: "Ortiz", city: "Villa del Rosario", rating: 5, comment: null, handle: null, photos: 0, daysAgo: 5 },
+  { firstName: "Sofía", lastName: "Castro", city: "Cúcuta", rating: 4, comment: "La demostración de uñas acrílicas fue lo mejor del día. Ojalá la repitan en la próxima edición con más cupos.", handle: "sofi.castro.nails", photos: 1, daysAgo: 6 },
+  { firstName: "Laura", lastName: "Jaimes", city: "Pamplona", rating: 5, comment: "Salí con ideas nuevas, contactos y un bolso lleno de muestras. Ya estoy esperando la siguiente.", handle: null, photos: 0, daysAgo: 6 },
+];
+
+export function samplePhotoUrl(n: number): string {
+  return `/api/resenas/muestra/${n}`;
+}
+
+export async function countSampleReviews(eventId: string): Promise<number> {
+  return db.review.count({ where: { eventId, isSample: true } });
+}
+
+export async function createSampleReviews(eventId: string): Promise<number> {
+  const existing = await countSampleReviews(eventId);
+  if (existing > 0) return existing;
+  const event = await db.event.findUniqueOrThrow({ where: { id: eventId }, select: { id: true, slug: true } });
+  let photoIndex = 0;
+  for (const [i, sample] of SAMPLE_REVIEWS.entries()) {
+    const person = await db.person.create({
+      data: { email: `muestra-${i + 1}-${event.slug}@${SAMPLE_EMAIL_DOMAIN}`, firstName: sample.firstName, lastName: sample.lastName, city: sample.city, country: "CO" },
+    });
+    const registration = await db.registration.create({ data: { eventId: event.id, personId: person.id, status: "CONFIRMED", ticketCount: 1, checkedInCount: 1 } });
+    await db.registration.update({ where: { id: registration.id }, data: { qrToken: issueQrToken(registration.id) } });
+    const createdAt = new Date(Date.now() - sample.daysAgo * 86400000 - i * 3600000);
+    await db.review.create({
+      data: {
+        eventId: event.id,
+        registrationId: registration.id,
+        personId: person.id,
+        rating: sample.rating,
+        comment: sample.comment,
+        instagramHandle: sample.handle,
+        publishConsent: true,
+        publishConsentAt: createdAt,
+        raffleOptIn: i % 3 !== 0,
+        status: "APPROVED",
+        featured: Boolean(sample.featured),
+        isSample: true,
+        moderatedAt: createdAt,
+        moderatedBy: "muestra",
+        createdAt,
+        photos: { create: Array.from({ length: sample.photos }, (_, position) => ({ url: samplePhotoUrl((photoIndex++ % 6) + 1), position })) },
+      },
+    });
+  }
+  return SAMPLE_REVIEWS.length;
+}
+
+export async function deleteSampleReviews(eventId: string): Promise<number> {
+  const samples = await db.review.findMany({ where: { eventId, isSample: true }, select: { id: true, registrationId: true, personId: true } });
+  if (samples.length === 0) return 0;
+  await db.$transaction([
+    db.review.deleteMany({ where: { id: { in: samples.map((s) => s.id) } } }),
+    db.registration.deleteMany({ where: { id: { in: samples.map((s) => s.registrationId) } } }),
+    db.person.deleteMany({ where: { id: { in: samples.map((s) => s.personId) }, email: { endsWith: `@${SAMPLE_EMAIL_DOMAIN}` } } }),
+  ]);
+  return samples.length;
 }

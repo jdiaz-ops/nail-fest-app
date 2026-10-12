@@ -20,6 +20,10 @@ export interface ModerationRow {
   personName: string;
   city: string | null;
   photos: string[];
+  isSample: boolean;
+  // Shown on the global queue (/admin/resenas), where rows mix events.
+  eventName?: string;
+  eventId?: string;
 }
 
 const TABS: { key: "PENDING" | "APPROVED" | "FEATURED" | "HIDDEN"; label: string }[] = [
@@ -91,10 +95,16 @@ export default function ReviewModerationList({ rows }: { rows: ModerationRow[] }
                 {r.instagramHandle ? `@${r.instagramHandle} · ` : ""}
                 {r.createdLabel}
               </span>
+              {r.eventName && r.eventId && (
+                <Link href={`/admin/events/${r.eventId}/resenas`} style={{ fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 999, background: "#f6f5f2", color: "#17181c", textDecoration: "none" }}>
+                  {r.eventName}
+                </Link>
+              )}
               <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 999, background: "#e6f9f7", color: "#0b2e2c" }}>{r.scannedLabel ? `Asistió · escaneada ${r.scannedLabel}` : "Asistió"}</span>
               <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 999, background: r.publishConsent ? "#e8f6ef" : "#f6f5f2", color: r.publishConsent ? "#0e6b4c" : "#5b5f6b" }}>Permiso de publicar · {r.publishConsent ? "sí" : "no"}</span>
               {r.raffleOptIn && <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 999, background: "#fdf1e6", color: "#8a5a1f" }}>En el sorteo</span>}
               {r.featured && <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 999, background: "#ffc5a8", color: "#1c1310" }}>Destacada</span>}
+              {r.isSample && <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 9px", borderRadius: 999, background: "#fbe9ea", color: "#a3212b" }}>Muestra</span>}
             </div>
             <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{r.comment ?? <span style={{ color: "#8a8478" }}>Sin comentario, solo calificación.</span>}</p>
             <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>

@@ -4,6 +4,7 @@ import { Fraunces } from "next/font/google";
 import { listPublicReviews, publicReviewCities, reviewAggregate } from "@/lib/reviews";
 import { optimizedSrc } from "@/lib/optimizedImage";
 import Stars from "@/components/reviews/Stars";
+import { viewerCanSeeSamples } from "@/lib/reviewsViewer";
 
 const fraunces = Fraunces({ subsets: ["latin"], weight: ["800", "900"] });
 
@@ -15,11 +16,12 @@ const PAGE_SIZE = 48;
 // nailfest.lat/resenas — every approved, consented review, with a city
 // filter (?ciudad=). Where the badge and "Leer todas las reseñas" land.
 export default async function ReviewsIndexPage({ searchParams }: { searchParams: { ciudad?: string } }) {
-  const cities = await publicReviewCities();
+  const opts = { includeSamples: await viewerCanSeeSamples() };
+  const cities = await publicReviewCities(opts);
   const selected = (searchParams.ciudad ?? "").trim().toLowerCase();
   const city = cities.find((c) => c.city.toLowerCase() === selected) ?? null;
   const eventIds = city ? city.eventIds : null;
-  const [aggregate, reviews] = await Promise.all([reviewAggregate(eventIds), listPublicReviews(eventIds, PAGE_SIZE)]);
+  const [aggregate, reviews] = await Promise.all([reviewAggregate(eventIds, opts), listPublicReviews(eventIds, PAGE_SIZE, opts)]);
   const average = aggregate.average?.toLocaleString("es-CO", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) ?? null;
 
   return (

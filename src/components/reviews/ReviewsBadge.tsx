@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { resolveReviewScope, reviewAggregate, type ReviewScope } from "@/lib/reviews";
+import { viewerCanSeeSamples } from "@/lib/reviewsViewer";
 import Stars from "./Stars";
 
 const MIN_REVIEWS_TO_SHOW = 3;
@@ -19,8 +20,9 @@ export default async function ReviewsBadge({
   variant?: "light" | "dark";
 }) {
   if (scope !== "global" && !event) return null;
-  const resolved = scope === "global" || !event ? { eventIds: null as string[] | null } : await resolveReviewScope(scope, event);
-  const aggregate = await reviewAggregate(resolved.eventIds);
+  const opts = { includeSamples: await viewerCanSeeSamples() };
+  const resolved = scope === "global" || !event ? { eventIds: null as string[] | null } : await resolveReviewScope(scope, event, opts);
+  const aggregate = await reviewAggregate(resolved.eventIds, opts);
   if (aggregate.count < MIN_REVIEWS_TO_SHOW || aggregate.average == null) return null;
   const average = aggregate.average.toLocaleString("es-CO", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
   return (

@@ -1829,6 +1829,11 @@ model Review {
   featured       Boolean      @default(false)
   moderatedAt    DateTime?
   moderatedBy    String?
+  // Created by "Crear reseñas de muestra" on the admin page (lib/reviews.ts's
+  // createSampleReviews) to see what the blocks look like before any real
+  // review exists. Public pages show them only to a logged-in admin or
+  // coordinator; one click deletes them with their sample people.
+  isSample       Boolean      @default(false)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 

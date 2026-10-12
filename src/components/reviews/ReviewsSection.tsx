@@ -2,6 +2,7 @@ import { Fraunces } from "next/font/google";
 import { optimizedSrc } from "@/lib/optimizedImage";
 import { listPublicReviews, resolveReviewScope, reviewAggregate, type ReviewScope } from "@/lib/reviews";
 import { publicEventName } from "@/lib/eventDisplayName";
+import { viewerCanSeeSamples } from "@/lib/reviewsViewer";
 import Link from "next/link";
 import Stars from "./Stars";
 
@@ -26,8 +27,9 @@ export default async function ReviewsSection({
   limit?: number;
 }) {
   if (scope !== "global" && !event) return null;
-  const resolved = scope === "global" || !event ? { eventIds: null as string[] | null, sourceEvent: null } : await resolveReviewScope(scope, event);
-  const [aggregate, reviews] = await Promise.all([reviewAggregate(resolved.eventIds), listPublicReviews(resolved.eventIds, limit)]);
+  const opts = { includeSamples: await viewerCanSeeSamples() };
+  const resolved = scope === "global" || !event ? { eventIds: null as string[] | null, sourceEvent: null } : await resolveReviewScope(scope, event, opts);
+  const [aggregate, reviews] = await Promise.all([reviewAggregate(resolved.eventIds, opts), listPublicReviews(resolved.eventIds, limit, opts)]);
   if (aggregate.count < MIN_REVIEWS_TO_SHOW || aggregate.average == null) return null;
 
   const sourceName = resolved.sourceEvent ? publicEventName(resolved.sourceEvent) : event ? publicEventName(event) : null;

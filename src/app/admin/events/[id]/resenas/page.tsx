@@ -4,10 +4,11 @@ import { requirePageUser } from "@/lib/auth/guard";
 import { getOrgSettings } from "@/lib/settings";
 import { formatDateInTz, utcToZonedInputValue } from "@/lib/dateFormat";
 import { publicEventName } from "@/lib/eventDisplayName";
-import { ensureRaffle, eventReviewStats, parseReviewSummary, reviewsByEdition, reviewUrl, REVIEW_LINK_TAG, winnerMessage } from "@/lib/reviews";
-import ReviewModerationList, { type ModerationRow } from "./ReviewModerationList";
+import { countSampleReviews, ensureRaffle, eventReviewStats, parseReviewSummary, reviewsByEdition, reviewUrl, REVIEW_LINK_TAG, winnerMessage } from "@/lib/reviews";
+import ReviewModerationList, { type ModerationRow } from "@/components/reviews/ReviewModerationList";
 import RaffleBox, { type RaffleWinnerRow } from "./RaffleBox";
 import ReviewSummaryBox from "./ReviewSummaryBox";
+import SampleReviewsBox from "./SampleReviewsBox";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +22,7 @@ export default async function EventReviewsPage({ params }: { params: { id: strin
   if (!event) notFound();
   const { timezone, language } = orgSettings;
 
-  const [stats, raffle, editions, reviews, commentCount] = await Promise.all([
+  const [stats, raffle, editions, reviews, commentCount, sampleCount] = await Promise.all([
     eventReviewStats(event.id),
     ensureRaffle(event.id),
     reviewsByEdition(),
@@ -31,6 +32,7 @@ export default async function EventReviewsPage({ params }: { params: { id: strin
       include: { photos: { orderBy: { position: "asc" } }, person: { select: { id: true, firstName: true, lastName: true, city: true } }, registration: { select: { scans: { where: { result: "VALID_FIRST" }, orderBy: { scannedAt: "asc" }, take: 1, select: { scannedAt: true } } } } },
     }),
     db.review.count({ where: { eventId: event.id, status: { not: "HIDDEN" }, comment: { not: null } } }),
+    countSampleReviews(event.id),
   ]);
 
   const dt = (d: Date) => formatDateInTz(d, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }, timezone, language);
@@ -49,6 +51,7 @@ export default async function EventReviewsPage({ params }: { params: { id: strin
     personName: [r.person.firstName, r.person.lastName].filter(Boolean).join(" ") || "—",
     city: r.person.city,
     photos: r.photos.map((p) => p.url),
+    isSample: r.isSample,
   }));
 
   const eventName = publicEventName(event);
@@ -112,6 +115,7 @@ export default async function EventReviewsPage({ params }: { params: { id: strin
             winners={winners}
             isAdmin={isAdmin}
           />
+          {isAdmin && <SampleReviewsBox eventId={event.id} eventSlug={event.slug} count={sampleCount} />}
           <section style={{ background: "#fff", border: "1px solid #e3e1dc", borderRadius: 14, padding: "16px 18px", display: "flex", flexDirection: "column", gap: 8 }}>
             <div style={{ fontSize: 13, fontWeight: 800 }}>Comparado con otras ediciones</div>
             {editions.length === 0 ? (
