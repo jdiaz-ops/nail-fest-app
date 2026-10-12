@@ -4,7 +4,7 @@ import { requirePageUser } from "@/lib/auth/guard";
 import { getOrgSettings } from "@/lib/settings";
 import { formatDateInTz, utcToZonedInputValue } from "@/lib/dateFormat";
 import { publicEventName } from "@/lib/eventDisplayName";
-import { countSampleReviews, ensureRaffle, eventReviewStats, parseReviewSummary, reviewsByEdition, reviewUrl, REVIEW_LINK_TAG, winnerMessage } from "@/lib/reviews";
+import { countSampleReviews, ensureRaffle, eventReviewStats, parseReviewSummary, previewReviewToken, reviewsByEdition, reviewUrl, REVIEW_LINK_TAG, winnerMessage } from "@/lib/reviews";
 import ReviewModerationList, { type ModerationRow } from "@/components/reviews/ReviewModerationList";
 import RaffleBox, { type RaffleWinnerRow } from "./RaffleBox";
 import ReviewSummaryBox from "./ReviewSummaryBox";
@@ -22,7 +22,7 @@ export default async function EventReviewsPage({ params }: { params: { id: strin
   if (!event) notFound();
   const { timezone, language } = orgSettings;
 
-  const [stats, raffle, editions, reviews, commentCount, sampleCount] = await Promise.all([
+  const [stats, raffle, editions, reviews, commentCount, sampleCount, previewToken] = await Promise.all([
     eventReviewStats(event.id),
     ensureRaffle(event.id),
     reviewsByEdition(),
@@ -33,6 +33,7 @@ export default async function EventReviewsPage({ params }: { params: { id: strin
     }),
     db.review.count({ where: { eventId: event.id, status: { not: "HIDDEN" }, comment: { not: null } } }),
     countSampleReviews(event.id),
+    previewReviewToken(event.id),
   ]);
 
   const dt = (d: Date) => formatDateInTz(d, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }, timezone, language);
@@ -73,6 +74,23 @@ export default async function EventReviewsPage({ params }: { params: { id: strin
         <h2 style={{ fontSize: 18, margin: "0 0 4px" }}>Reseñas · {eventName}</h2>
         <p style={{ margin: 0, fontSize: 14, color: "#5b5f6b", maxWidth: 760 }}>Nada se publica sin aprobar. Destaca las que quieras usar en landings, difusiones y tarjetas. Solo pueden reseñar las asistentes escaneadas en puerta.</p>
       </div>
+
+      {/* See the attendee's page as she does — a sample registration's
+          token when there are sample reviews, else a real attendee's; the
+          page renders the asked state for staff and sends nothing. */}
+      {previewToken ? (
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+          <span style={{ fontSize: 12.5, color: "#5b5f6b" }}>Cómo la ve la asistente:</span>
+          <a href={`/resena/${encodeURIComponent(previewToken)}?vista=formulario`} target="_blank" rel="noreferrer" style={previewLinkStyle}>
+            Formulario de reseña ↗
+          </a>
+          <a href={`/resena/${encodeURIComponent(previewToken)}?vista=gracias`} target="_blank" rel="noreferrer" style={previewLinkStyle}>
+            Pantalla de gracias ↗
+          </a>
+        </div>
+      ) : (
+        <div style={{ fontSize: 12.5, color: "#5b5f6b" }}>Para ver la página de reseña como la asistente, crea las reseñas de muestra (abajo) o espera a la primera escaneada en puerta.</div>
+      )}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12 }}>
         <Stat value={avg(stats.average)} label="promedio" />
@@ -147,3 +165,5 @@ function Stat({ value, label, tone }: { value: string; label: string; tone?: str
     </div>
   );
 }
+
+const previewLinkStyle = { fontSize: 13, padding: "7px 14px", borderRadius: 999, border: "1px solid #e3e1dc", background: "#fff", color: "#1c1310", textDecoration: "none", whiteSpace: "nowrap" } as const;

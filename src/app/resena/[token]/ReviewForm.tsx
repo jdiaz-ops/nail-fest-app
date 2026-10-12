@@ -8,16 +8,20 @@ const RATING_WORDS: Record<number, string> = { 1: "Muy malo", 2: "Malo", 3: "Reg
 
 // The review form (see /resena/[token]/page.tsx for who gets here).
 // Photos upload as they are picked; the submit only carries their URLs.
+// `preview` (the team's ?vista=formulario): photos stay local and the
+// submit just says so — nothing reaches the server.
 export default function ReviewForm({
   token,
   firstName,
   eventName,
   raffle,
+  preview = false,
 }: {
   token: string;
   firstName: string;
   eventName: string;
   raffle: { prizeCount: number; prizeLabel: string; closesLabel: string; open: boolean } | null;
+  preview?: boolean;
 }) {
   const router = useRouter();
   const [rating, setRating] = useState(0);
@@ -35,8 +39,13 @@ export default function ReviewForm({
   async function pickPhotos(files: FileList | null) {
     if (!files || files.length === 0) return;
     setError(null);
-    setUploading(true);
     const room = MAX_PHOTOS - photos.length;
+    if (preview) {
+      setPhotos((prev) => [...prev, ...Array.from(files).slice(0, room).map((file) => ({ url: URL.createObjectURL(file), name: file.name }))].slice(0, MAX_PHOTOS));
+      if (fileInput.current) fileInput.current.value = "";
+      return;
+    }
+    setUploading(true);
     for (const file of Array.from(files).slice(0, room)) {
       const form = new FormData();
       form.append("file", file);
@@ -55,6 +64,10 @@ export default function ReviewForm({
   async function submit() {
     if (rating === 0) {
       setError("Elige cuántas estrellas le das al evento.");
+      return;
+    }
+    if (preview) {
+      setError("Vista previa: aquí no se envía nada. La asistente real pasaría ahora a la pantalla de gracias.");
       return;
     }
     setSubmitting(true);

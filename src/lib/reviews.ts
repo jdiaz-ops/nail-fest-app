@@ -186,6 +186,22 @@ export function publicReviewerName(person: { firstName: string | null; lastName:
   return last ? `${first} ${last[0]!.toUpperCase()}.`.trim() : first;
 }
 
+/** A token the team can open /resena/<token>?vista=formulario|gracias
+ * with, to see the page as an attendee does (page.tsx renders the asked
+ * state for staff without submitting anything): a sample registration's
+ * if the event has sample reviews, else the first scanned attendee's.
+ * Null when there is neither. */
+export async function previewReviewToken(eventId: string): Promise<string | null> {
+  const sample = await db.review.findFirst({ where: { eventId, isSample: true }, select: { registration: { select: { qrToken: true } } } });
+  if (sample?.registration.qrToken) return sample.registration.qrToken;
+  const attendee = await db.registration.findFirst({
+    where: { eventId, status: "CONFIRMED", checkedInCount: { gt: 0 }, qrToken: { not: null } },
+    orderBy: { createdAt: "asc" },
+    select: { qrToken: true },
+  });
+  return attendee?.qrToken ?? null;
+}
+
 /** Approved reviews with publish consent, featured first. `eventIds`
  * null = every event. */
 export interface PublicReadOptions {

@@ -25,6 +25,10 @@ Reglas fijas (lib/reviews.ts):
 - **Correo del evento:** marcar "Solo a quienes asistieron" y usar
   "Insertar enlace de reseña" (`{{LINK_RESENA}}`).
 
+## Verla como la asistente
+
+En Reseñas del evento, arriba, "Cómo la ve la asistente: Formulario de reseña ↗ · Pantalla de gracias ↗". Abren `/resena/<token>?vista=formulario` o `?vista=gracias` con el token de una inscripción de muestra (si hay reseñas de muestra) o de la primera escaneada en puerta. Solo con sesión de ADMIN o COORDINADOR se respeta `?vista=`; para cualquier otra persona el enlace se comporta como siempre. En esa vista previa el formulario no envía nada: las fotos se quedan en el navegador y "Enviar mi reseña" solo muestra un aviso.
+
 ## Dónde se ve
 
 - Bloque de landing "Reseñas" (editor de bloques): este evento, la edición
