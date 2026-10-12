@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Fraunces } from "next/font/google";
 import { listPublicReviews, publicReviewCities, reviewAggregate } from "@/lib/reviews";
-import { optimizedSrc } from "@/lib/optimizedImage";
 import Stars from "@/components/reviews/Stars";
+import ReviewCard from "@/components/reviews/ReviewCard";
 import { viewerCanSeeSamples } from "@/lib/reviewsViewer";
 
 const fraunces = Fraunces({ subsets: ["latin"], weight: ["800", "900"] });
@@ -60,27 +60,7 @@ export default async function ReviewsIndexPage({ searchParams }: { searchParams:
       ) : (
         <div className="reviews-grid">
           {reviews.map((r) => (
-            <article className="review-card" key={r.id}>
-              {r.photos[0] && (
-                // eslint-disable-next-line @next/next/no-img-element -- attendee-uploaded Blob photo
-                <img className="review-card-photo" src={optimizedSrc(r.photos[0], 640)} alt="" loading="lazy" decoding="async" />
-              )}
-              <div className="review-card-body">
-                <Stars rating={r.rating} />
-                {r.comment && <p className="review-card-text">“{r.comment}”</p>}
-                <div className="review-card-meta">
-                  <div className="review-card-name">
-                    {r.name}
-                    {r.city ? ` · ${r.city}` : ""}
-                    {r.instagramHandle ? <span className="review-card-handle"> @{r.instagramHandle}</span> : null}
-                  </div>
-                  <span className="review-card-badge">
-                    <svg aria-hidden="true" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
-                    Asistió a {r.eventName}
-                  </span>
-                </div>
-              </div>
-            </article>
+            <ReviewCard review={r} key={r.id} />
           ))}
         </div>
       )}

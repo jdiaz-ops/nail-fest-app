@@ -2033,12 +2033,12 @@ button.primary:disabled {
   content: "▾ ";
 }
 
-/* ── Reseñas (components/reviews/ReviewsSection.tsx) ─────────────────── */
+/* ── Reseñas (components/reviews/ReviewsSection.tsx + ReviewCard.tsx) ─ */
 .reviews-section { display: flex; flex-direction: column; gap: 24px; margin: 40px 0; }
 /* On the home the section sits in the same column as the brand wall. */
-.homepage-reviews { max-width: 1280px; margin: 0 auto; padding: 24px 24px 8px; box-sizing: border-box; }
+.homepage-reviews { max-width: 1280px; margin: 0 auto; padding: 24px 24px 24px; box-sizing: border-box; }
 .homepage-reviews .reviews-section { margin: 0; }
-@media (min-width: 900px) { .homepage-reviews { padding: 40px 32px 16px; } }
+@media (min-width: 900px) { .homepage-reviews { padding: 40px 32px 24px; } }
 .reviews-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 28px; flex-wrap: wrap; }
 .reviews-head-text { display: flex; flex-direction: column; gap: 8px; max-width: 620px; flex: 1 1 320px; }
 .reviews-eyebrow { font-size: 12px; font-weight: 800; letter-spacing: 0.22em; text-transform: uppercase; color: var(--link); }
@@ -2048,6 +2048,9 @@ button.primary:disabled {
 .reviews-score-main { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .reviews-score-number { font-size: 52px; line-height: 1; font-weight: 900; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
 .reviews-score-count { font-size: 12px; color: var(--ink-muted); font-weight: 600; }
+/* "Ver desglose" only shows on a phone, where the five bars fold away
+   behind it (the max-width rules at the end of this block). */
+.reviews-score-toggle { display: none; align-items: center; gap: 4px; margin-left: auto; padding: 6px 0; border: 0; background: none; font: inherit; font-size: 12px; font-weight: 700; color: var(--link); cursor: pointer; }
 .reviews-bars { display: flex; flex-direction: column; gap: 5px; width: 170px; }
 .reviews-bar { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--ink-muted); }
 .reviews-bar-label { width: 10px; text-align: right; font-weight: 700; color: var(--ink); }
@@ -2055,23 +2058,54 @@ button.primary:disabled {
 .reviews-bar-fill { height: 100%; background: #f2b01e; border-radius: 999px; }
 .reviews-bar-pct { width: 34px; font-variant-numeric: tabular-nums; }
 .reviews-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
-/* Slider cards (home + landing block): one row, swipe or arrows, every
-   card the same height whether or not it has a photo. */
-.review-slide { flex: 0 0 auto; width: min(82vw, 320px); scroll-snap-align: start; display: flex; }
+/* Slider cards (home + landing block): one row, swipe or arrows. On a
+   phone a card is 78vw wide so the next one peeks out enough to say
+   "swipe"; every card is the same height, photo or not. */
+.review-slide { flex: 0 0 auto; width: min(78vw, 320px); scroll-snap-align: start; display: flex; }
 .review-slide .review-card { flex: 1 1 auto; }
 .reviews-section .scroll-carousel { margin: 0; }
 .reviews-section .scroll-carousel-track { gap: 16px; padding: 2px 2px 6px; }
-.review-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; }
-.review-card-photo { width: 100%; height: 180px; object-fit: cover; display: block; background: #f0efec; }
-.review-card-body { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 10px; }
-.review-card-text { margin: 0; font-size: 14.5px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }
-.review-card-meta { display: flex; flex-direction: column; gap: 6px; margin-top: auto; }
-.review-card-name { font-size: 13px; font-weight: 800; }
+/* The card: the quote first, then who said it, with the photo as a 48px
+   thumbnail beside the name (tap → lightbox) or the reviewer's initials
+   when there is none. */
+.review-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 18px 18px 16px; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px; }
+.review-card-top { display: flex; justify-content: space-between; align-items: center; }
+.review-card-quote-mark { font-size: 40px; line-height: 0.6; font-weight: 900; color: var(--accent-secondary); }
+.review-card-text { margin: 0; font-size: 15px; line-height: 1.5; flex: 1 1 auto; display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }
+.review-card-foot { display: flex; align-items: center; gap: 10px; margin-top: auto; }
+.review-card-thumb-btn { position: relative; flex: 0 0 auto; padding: 0; border: 0; background: none; border-radius: 12px; line-height: 0; cursor: pointer; }
+.review-card-thumb-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.review-card-thumb { width: 48px; height: 48px; border-radius: 12px; object-fit: cover; display: block; background: #f0efec; }
+.review-card-thumb-more { position: absolute; right: -5px; bottom: -5px; font-size: 10px; font-weight: 800; line-height: 1; color: #fff; background: var(--accent-ink); border: 2px solid var(--surface); border-radius: 999px; padding: 3px 5px; }
+.review-card-avatar { width: 48px; height: 48px; flex: 0 0 auto; border-radius: 50%; background: var(--accent-ink); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 800; letter-spacing: 0.02em; }
+.review-card-meta { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.review-card-name { font-size: 12.5px; font-weight: 800; }
 .review-card-handle { font-weight: 600; color: var(--link); }
 .review-card-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; color: var(--accent-ink); background: #e6f9f7; border-radius: 999px; padding: 4px 9px; align-self: flex-start; }
+/* "Leer todas las reseñas": a pill, full width on a phone. */
+.reviews-all-link { display: flex; }
+.reviews-all-button { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 22px; border-radius: 999px; border: 1.5px solid var(--accent-ink); background: var(--surface); color: var(--accent-ink); font-size: 14px; font-weight: 800; text-decoration: none; box-sizing: border-box; }
+.reviews-all-button:hover { background: var(--accent-ink); color: #fff; }
+/* The lightbox behind a thumbnail: every photo of that review; Esc, the
+   ✕ or a tap outside closes it. */
+.review-lightbox { border: 0; padding: 0; background: transparent; width: min(92vw, 720px); max-width: 92vw; max-height: 92vh; }
+.review-lightbox::backdrop { background: rgba(14, 10, 8, 0.82); }
+.review-lightbox-body { position: relative; display: flex; flex-direction: column; gap: 10px; max-height: 92vh; overflow: auto; padding: 44px 0 8px; }
+.review-lightbox-body img { width: 100%; max-height: 80vh; object-fit: contain; border-radius: 12px; display: block; background: #111; }
+.review-lightbox-close { position: absolute; top: 0; right: 0; width: 36px; height: 36px; border-radius: 999px; border: 0; background: var(--surface); color: var(--ink); font: inherit; font-size: 16px; font-weight: 700; cursor: pointer; }
+.review-lightbox-caption { font-size: 13px; font-weight: 600; color: #fff; text-align: center; }
 @media (max-width: 600px) {
-  .reviews-score { width: 100%; box-sizing: border-box; justify-content: space-between; }
-  .reviews-bars { width: auto; flex: 1 1 120px; }
+  .reviews-section { gap: 18px; }
+  /* One-line summary (number, stars, count); the bars fold behind
+     "Ver desglose" — ReviewsScore.tsx toggles .is-open. */
+  .reviews-score { width: 100%; box-sizing: border-box; flex-wrap: wrap; gap: 10px; padding: 10px 14px; border-radius: 14px; }
+  .reviews-score-main { flex-direction: row; gap: 10px; }
+  .reviews-score-number { font-size: 30px; }
+  .reviews-score-main svg { width: 16px; height: 16px; }
+  .reviews-score-toggle { display: inline-flex; }
+  .reviews-bars { display: none; width: 100%; flex: 1 1 100%; }
+  .reviews-score.is-open .reviews-bars { display: flex; }
+  .reviews-all-button { width: 100%; }
 }
 @media (max-width: 860px) {
   .reviews-admin-grid { grid-template-columns: minmax(0, 1fr) !important; }

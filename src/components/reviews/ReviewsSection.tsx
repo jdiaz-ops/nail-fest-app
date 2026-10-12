@@ -1,11 +1,11 @@
 import { Fraunces } from "next/font/google";
-import { optimizedSrc } from "@/lib/optimizedImage";
 import { listPublicReviews, resolveReviewScope, reviewAggregate, type ReviewScope } from "@/lib/reviews";
 import { publicEventName } from "@/lib/eventDisplayName";
 import { viewerCanSeeSamples } from "@/lib/reviewsViewer";
 import Link from "next/link";
 import ScrollCarousel from "@/components/ScrollCarousel";
-import Stars from "./Stars";
+import ReviewCard from "./ReviewCard";
+import ReviewsScore from "./ReviewsScore";
 
 const fraunces = Fraunces({ subsets: ["latin"], weight: ["800", "900"] });
 
@@ -21,11 +21,15 @@ export default async function ReviewsSection({
   event,
   title,
   limit = 6,
+  showAllLink = true,
 }: {
   scope: ReviewScope;
   event?: { id: string; name: string; publicName: string | null; city: string; startsAt: Date } | null;
   title?: string;
   limit?: number;
+  /** The "Leer todas las reseñas" button. Off on an event landing, where
+   * every link out is a visitor who may not come back to register. */
+  showAllLink?: boolean;
 }) {
   if (scope !== "global" && !event) return null;
   const opts = { includeSamples: await viewerCanSeeSamples() };
@@ -35,7 +39,8 @@ export default async function ReviewsSection({
 
   const sourceName = resolved.sourceEvent ? publicEventName(resolved.sourceEvent) : event ? publicEventName(event) : null;
   const heading = title?.trim() || (scope === "global" ? "Lo que dicen las que visitaron Nail Fest" : sourceName ? `Lo que dicen las que visitaron ${sourceName}` : "Lo que dicen las que visitaron Nail Fest");
-  const pct = (n: number) => (aggregate.count > 0 ? Math.round((n / aggregate.count) * 100) : 0);
+  // An event block links to its city's reviews; the home block to all.
+  const allHref = scope === "global" || !event ? "/resenas" : `/resenas?ciudad=${encodeURIComponent(event.city.toLowerCase())}`;
 
   return (
     <section className="reviews-section" aria-label={heading}>
@@ -44,58 +49,31 @@ export default async function ReviewsSection({
           <div className="reviews-eyebrow">Reseñas</div>
           <h2 className={`reviews-title ${fraunces.className}`}>{heading}</h2>
         </div>
-        <div className="reviews-score">
-          <div className="reviews-score-main">
-            <div className={`reviews-score-number ${fraunces.className}`}>{aggregate.average.toLocaleString("es-CO", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}</div>
-            <Stars rating={Math.round(aggregate.average)} size={18} />
-            <div className="reviews-score-count">{aggregate.count.toLocaleString("es-CO")} {aggregate.count === 1 ? "reseña" : "reseñas"}</div>
-          </div>
-          <div className="reviews-bars">
-            {([5, 4, 3, 2, 1] as const).map((n) => (
-              <div className="reviews-bar" key={n}>
-                <span className="reviews-bar-label">{n}</span>
-                <div className="reviews-bar-track">
-                  <div className="reviews-bar-fill" style={{ width: `${pct(aggregate.distribution[n])}%` }} />
-                </div>
-                <span className="reviews-bar-pct">{pct(aggregate.distribution[n])} %</span>
-              </div>
-            ))}
-          </div>
-        </div>
+        <ReviewsScore
+          average={aggregate.average.toLocaleString("es-CO", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+          rating={Math.round(aggregate.average)}
+          count={aggregate.count}
+          distribution={aggregate.distribution}
+          numberClassName={fraunces.className}
+        />
       </div>
 
       {reviews.length > 0 && (
         <ScrollCarousel>
           {reviews.map((r) => (
             <div className="review-slide" key={r.id}>
-            <article className="review-card">
-              {r.photos[0] && (
-                // eslint-disable-next-line @next/next/no-img-element -- attendee-uploaded Blob photo
-                <img className="review-card-photo" src={optimizedSrc(r.photos[0], 640)} alt="" loading="lazy" decoding="async" />
-              )}
-              <div className="review-card-body">
-                <Stars rating={r.rating} />
-                {r.comment && <p className="review-card-text">“{r.comment}”</p>}
-                <div className="review-card-meta">
-                  <div className="review-card-name">
-                    {r.name}
-                    {r.city ? ` · ${r.city}` : ""}
-                    {r.instagramHandle ? <span className="review-card-handle"> @{r.instagramHandle}</span> : null}
-                  </div>
-                  <span className="review-card-badge">
-                    <svg aria-hidden="true" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
-                    Asistió a {r.eventName}
-                  </span>
-                </div>
-              </div>
-            </article>
+              <ReviewCard review={r} />
             </div>
           ))}
         </ScrollCarousel>
       )}
-      <div className="reviews-all-link">
-        <Link href="/resenas">Leer todas las reseñas</Link>
-      </div>
+      {showAllLink && (
+        <div className="reviews-all-link">
+          <Link href={allHref} className="reviews-all-button">
+            Leer todas las reseñas ({aggregate.count.toLocaleString("es-CO")})
+          </Link>
+        </div>
+      )}
     </section>
   );
 }

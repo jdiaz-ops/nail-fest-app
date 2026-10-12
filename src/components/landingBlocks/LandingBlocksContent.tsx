@@ -46,8 +46,9 @@ export default function LandingBlocksContent({ blocks, venue, event }: { blocks:
         switch (block.type) {
           case "reviews":
             // Async server component: loads its own data and renders
-            // nothing below three approved reviews.
-            return <ReviewsSection key={i} scope={block.scope} event={event ?? null} title={block.title} limit={block.limit} />;
+            // nothing below three approved reviews. No "Leer todas" button
+            // here: a landing's job is the registration, not a tour.
+            return <ReviewsSection key={i} scope={block.scope} event={event ?? null} title={block.title} limit={block.limit} showAllLink={false} />;
 
           case "reviewsBadge":
             return (
