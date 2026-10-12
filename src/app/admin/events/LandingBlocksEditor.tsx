@@ -642,7 +642,7 @@ function ReviewsBlockEditor({
         <input type="number" min={1} max={12} value={block.limit} onChange={(e) => onChange({ ...block, limit: Math.max(1, Math.min(12, Number(e.target.value) || 6)) })} style={{ width: 70 }} />
       </label>
       <p style={{ fontSize: 12, color: "#8a8478", margin: 0 }}>
-        Solo salen reseñas aprobadas con permiso de publicar, verificadas en puerta. Con menos de 3 aprobadas el bloque no se muestra. Se moderan en Reseñas, dentro de cada evento.
+        Solo salen reseñas aprobadas con permiso de publicar, de asistentes escaneadas en puerta. Con menos de 3 aprobadas el bloque no se muestra. Se moderan en Reseñas, dentro de cada evento.
       </p>
     </div>
   );
@@ -663,7 +663,7 @@ function ReviewsBadgeBlockEditor({
         <option value="event">Este evento</option>
       </select>
       <p style={{ fontSize: 12, color: "#8a8478", margin: 0 }}>
-        Una sola línea: estrellas, promedio y número de reseñas verificadas en puerta. Al tocarla abre nailfest.lat/resenas. No se muestra con menos de 3 reseñas aprobadas.
+        Una sola línea: estrellas, promedio y número de reseñas. Al tocarla abre nailfest.lat/resenas. No se muestra con menos de 3 reseñas aprobadas.
       </p>
     </div>
   );

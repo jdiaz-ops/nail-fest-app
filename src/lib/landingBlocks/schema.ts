@@ -63,6 +63,14 @@ export const landingBlockSchema = z.discriminatedUnion("type", [
       z.object({ name: z.string(), handle: z.string(), tag: z.string(), photoUrl: z.string(), tone: z.enum(["teal", "pink", "peach"]) })
     ),
   }),
+  // Reseñas (lib/reviews.ts): the full block and the badge.
+  z.object({
+    type: z.literal("reviews"),
+    scope: z.enum(["event", "previous", "global"]).default("previous"),
+    title: z.string().default(""),
+    limit: z.number().int().min(1).max(12).default(6),
+  }),
+  z.object({ type: z.literal("reviewsBadge"), scope: z.enum(["event", "previous", "global"]).default("global") }),
 ])
   // "Oculto" in the editor — see LandingBlock's own hidden flag.
   .and(z.object({ hidden: z.boolean().optional() }));
