@@ -2035,6 +2035,10 @@ button.primary:disabled {
 
 /* ── Reseñas (components/reviews/ReviewsSection.tsx) ─────────────────── */
 .reviews-section { display: flex; flex-direction: column; gap: 24px; margin: 40px 0; }
+/* On the home the section sits in the same column as the brand wall. */
+.homepage-reviews { max-width: 1280px; margin: 0 auto; padding: 24px 24px 8px; box-sizing: border-box; }
+.homepage-reviews .reviews-section { margin: 0; }
+@media (min-width: 900px) { .homepage-reviews { padding: 40px 32px 16px; } }
 .reviews-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 28px; flex-wrap: wrap; }
 .reviews-head-text { display: flex; flex-direction: column; gap: 8px; max-width: 620px; flex: 1 1 320px; }
 .reviews-eyebrow { font-size: 12px; font-weight: 800; letter-spacing: 0.22em; text-transform: uppercase; color: var(--link); }
@@ -2050,11 +2054,11 @@ button.primary:disabled {
 .reviews-bar-track { flex: 1 1 auto; height: 6px; background: #ece8e1; border-radius: 999px; overflow: hidden; }
 .reviews-bar-fill { height: 100%; background: #f2b01e; border-radius: 999px; }
 .reviews-bar-pct { width: 34px; font-variant-numeric: tabular-nums; }
-.reviews-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }
-.review-card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; overflow: hidden; display: flex; flex-direction: column; }
-.review-card-photo { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: block; background: #f0efec; }
+.reviews-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+.review-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; }
+.review-card-photo { width: 100%; height: 180px; object-fit: cover; display: block; background: #f0efec; }
 .review-card-body { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 10px; }
-.review-card-text { margin: 0; font-size: 14.5px; line-height: 1.5; }
+.review-card-text { margin: 0; font-size: 14.5px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical; overflow: hidden; }
 .review-card-meta { display: flex; flex-direction: column; gap: 6px; margin-top: auto; }
 .review-card-name { font-size: 13px; font-weight: 800; }
 .review-card-handle { font-weight: 600; color: var(--link); }

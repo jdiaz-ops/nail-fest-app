@@ -34,7 +34,6 @@ export default async function ReviewsSection({
 
   const sourceName = resolved.sourceEvent ? publicEventName(resolved.sourceEvent) : event ? publicEventName(event) : null;
   const heading = title?.trim() || (scope === "global" ? "Lo que dicen las manicuristas" : sourceName ? `Lo que vivieron en ${sourceName}` : "Lo que dicen quienes fueron");
-  const intro = scope === "global" ? "Reseñas de quienes entraron a alguna edición, verificadas en puerta y publicadas con nombre." : "Opiniones de manicuristas que entraron al evento. Cada una lleva el sello de asistencia y su nombre real.";
   const pct = (n: number) => (aggregate.count > 0 ? Math.round((n / aggregate.count) * 100) : 0);
 
   return (
@@ -43,7 +42,6 @@ export default async function ReviewsSection({
         <div className="reviews-head-text">
           <div className="reviews-eyebrow">Reseñas verificadas en puerta</div>
           <h2 className={`reviews-title ${fraunces.className}`}>{heading}</h2>
-          <p className="reviews-intro">{intro}</p>
         </div>
         <div className="reviews-score">
           <div className="reviews-score-main">

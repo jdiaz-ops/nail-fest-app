@@ -188,7 +188,11 @@ export default async function HomePage() {
         made them (photo + caption baked in); this just lays them out.
         Empty array = section doesn't render, same as the hero above. */}
     {/* Reseñas, right under the hero — see OrgSettings.homepageReviews. */}
-    {orgSettings.homepageReviewsPosition === "after_hero" && orgSettings.homepageReviews === "block" && <ReviewsSection scope="global" />}
+    {orgSettings.homepageReviewsPosition === "after_hero" && orgSettings.homepageReviews === "block" && (
+      <div className="homepage-reviews">
+        <ReviewsSection scope="global" />
+      </div>
+    )}
     {orgSettings.homepageReviewsPosition === "after_hero" && orgSettings.homepageReviews === "badge" && (
       <div className="homepage-reviews-badge">
         <ReviewsBadge scope="global" />
@@ -218,7 +222,11 @@ export default async function HomePage() {
         aspect ratio and must never crop). */}
     {/* Reseñas above the brand wall — see OrgSettings.homepageReviews.
         Either form renders nothing below three approved reviews. */}
-    {orgSettings.homepageReviewsPosition === "before_logos" && orgSettings.homepageReviews === "block" && <ReviewsSection scope="global" />}
+    {orgSettings.homepageReviewsPosition === "before_logos" && orgSettings.homepageReviews === "block" && (
+      <div className="homepage-reviews">
+        <ReviewsSection scope="global" />
+      </div>
+    )}
     {orgSettings.homepageReviewsPosition === "before_logos" && orgSettings.homepageReviews === "badge" && (
       <div className="homepage-reviews-badge">
         <ReviewsBadge scope="global" />
