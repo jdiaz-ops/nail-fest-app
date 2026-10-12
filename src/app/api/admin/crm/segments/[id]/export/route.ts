@@ -7,6 +7,7 @@ import { bulkActiveConsent } from "@/lib/consent";
 import { getCheckoutQuestions } from "@/lib/checkoutForm";
 import { getOrgSettings } from "@/lib/settings";
 import { formatDateInTz } from "@/lib/dateFormat";
+import { dayKey } from "@/lib/eventStatsHelpers";
 import { ticketHolderName, ticketsCheckedIn, ticketsFor } from "@/lib/ticket";
 
 // Same audience a broadcast to this segment would actually reach —
@@ -101,6 +102,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   const scannedTokens = new Set(firstScans.map((s) => s.token));
 
   const date = (d: Date | null | undefined) => (d ? formatDateInTz(d, { dateStyle: "short", timeStyle: "short" }, orgSettings.timezone, orgSettings.language) : "");
+  // "Fecha de registro" (the contact's first day in the CRM) is a calendar
+  // date in the org timezone, like every other date here — it used to be
+  // the UTC date, so anything after 7 p.m. Bogotá landed on the next day.
   const yesNo = (v: boolean) => (v ? "Sí" : "No");
   const fields = (r: (typeof registrations)[number] | undefined): Record<string, unknown> =>
     r && r.customFields && typeof r.customFields === "object" && !Array.isArray(r.customFields) ? (r.customFields as Record<string, unknown>) : {};
@@ -186,7 +190,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       yesNo(marketing.has(p.id)),
       yesNo(whatsapp.has(p.id)),
       yesNo(advertising.has(p.id)),
-      p.createdAt.toISOString().slice(0, 10),
+      dayKey(p.createdAt, orgSettings.timezone),
       [...new Set(confirmed.map((r) => r.event.name))].join("; "),
       [...new Set(list.filter((r) => r.checkedInCount > 0).map((r) => r.event.name))].join("; "),
       ...orderColumns(0),
