@@ -4,6 +4,7 @@ import { requirePageUser } from "@/lib/auth/guard";
 import WhatsAppTemplateSyncButton from "@/components/WhatsAppTemplateSyncButton";
 import WhatsAppTemplateCreateForm from "@/components/WhatsAppTemplateCreateForm";
 import AttendancePollToggle from "@/components/AttendancePollToggle";
+import WhatsAppReopenTemplateSuggestion from "@/components/WhatsAppReopenTemplateSuggestion";
 import CrmPageHeader from "../../CrmPageHeader";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +30,7 @@ export default async function WhatsAppTemplatesPage() {
   // The domain the app actually serves /api/ticket-pdf from — what a "Ver
   // mi entrada" button's URL must start with.
   const appBaseUrl = (process.env.APP_BASE_URL ?? "").replace(/\/$/, "") || "https://nailfest.lat";
+  const hasReopenTemplate = templates.some((t) => t.name === "reabrir_chat");
 
   return (
     <div>
@@ -41,6 +43,8 @@ export default async function WhatsAppTemplatesPage() {
         <WhatsAppTemplateCreateForm appBaseUrl={appBaseUrl} />
         <WhatsAppTemplateSyncButton />
       </div>
+
+      {!hasReopenTemplate && <WhatsAppReopenTemplateSuggestion />}
 
       <p style={{ fontSize: 13, color: "#5b5f6b", maxWidth: 720, marginTop: 16 }}>
         ¿Tienes una plantilla de UTILIDAD con 2 botones de respuesta rápida tipo &quot;Sí voy&quot; /

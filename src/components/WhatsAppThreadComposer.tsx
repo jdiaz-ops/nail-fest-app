@@ -3,13 +3,24 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import WhatsAppReplyBox from "./WhatsAppReplyBox";
+import type { ReopenTemplateOption } from "./WhatsAppReopenTemplatePicker";
 
 // Reply / Note tabs on the same thread — WhatChimp's own pattern (see the
 // screenshots this was built from). A note never touches WhatsApp, it's
 // purely internal (WhatsAppNote, not a WhatsAppMessage) — kept as a
 // separate small composer here so WhatsAppReplyBox's own 24h-window logic
 // stays untouched.
-export default function WhatsAppThreadComposer({ conversationId, windowOpen }: { conversationId: string; windowOpen: boolean }) {
+export default function WhatsAppThreadComposer({
+  conversationId,
+  windowOpen,
+  reopenTemplates,
+  firstName,
+}: {
+  conversationId: string;
+  windowOpen: boolean;
+  reopenTemplates: ReopenTemplateOption[];
+  firstName: string;
+}) {
   const router = useRouter();
   const [tab, setTab] = useState<"reply" | "note">("reply");
   const [noteText, setNoteText] = useState("");
@@ -57,7 +68,7 @@ export default function WhatsAppThreadComposer({ conversationId, windowOpen }: {
       </div>
 
       {tab === "reply" ? (
-        <WhatsAppReplyBox conversationId={conversationId} windowOpen={windowOpen} />
+        <WhatsAppReplyBox conversationId={conversationId} windowOpen={windowOpen} reopenTemplates={reopenTemplates} firstName={firstName} />
       ) : (
         <form onSubmit={handleAddNote} style={{ display: "flex", gap: 8 }}>
           <input

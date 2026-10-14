@@ -170,6 +170,69 @@ interface WebhookMessage {
   // when they REMOVED a reaction they'd previously left (Meta sends that
   // as its own reaction event too, with no emoji).
   reaction?: { message_id: string; emoji?: string };
+  // Media, one key per `type` — Meta's id is what /api/admin/whatsapp/
+  // media/[mediaId] fetches on demand (the file itself never comes in the
+  // webhook). `voice` marks a recorded voice note vs. a forwarded audio
+  // file; `animated` a Lottie sticker.
+  image?: { id: string; mime_type?: string; sha256?: string; caption?: string };
+  audio?: { id: string; mime_type?: string; sha256?: string; voice?: boolean };
+  video?: { id: string; mime_type?: string; sha256?: string; caption?: string };
+  document?: { id: string; mime_type?: string; sha256?: string; filename?: string; caption?: string };
+  sticker?: { id: string; mime_type?: string; sha256?: string; animated?: boolean };
+  location?: { latitude: number; longitude: number; name?: string; address?: string };
+  contacts?: { name?: { formatted_name?: string }; phones?: { phone?: string; wa_id?: string }[] }[];
+}
+
+export interface InboundDescription {
+  body: string | null;
+  mediaType: string | null;
+  mediaId: string | null;
+  mediaMime: string | null;
+  mediaFilename: string | null;
+}
+
+/** What to store for one inbound message: the text itself, or for media
+ * the caption plus Meta's media id (fetched on demand later), or a short
+ * label for anything else — so the thread and the inbox list's one-line
+ * preview always have something readable. Exported for its test. */
+export function describeInbound(msg: WebhookMessage): InboundDescription {
+  const none = { mediaType: null, mediaId: null, mediaMime: null, mediaFilename: null };
+  switch (msg.type) {
+    case "text":
+      return { body: msg.text?.body ?? null, ...none };
+    case "button":
+      return { body: msg.button?.text ?? null, ...none };
+    case "reaction":
+      return { body: msg.reaction?.emoji ? `Reaccionó ${msg.reaction.emoji} a un mensaje` : "Quitó su reacción a un mensaje", ...none };
+    case "image":
+      return { body: msg.image?.caption?.trim() || "📷 Foto", mediaType: "image", mediaId: msg.image?.id ?? null, mediaMime: msg.image?.mime_type ?? null, mediaFilename: null };
+    case "audio":
+      return { body: msg.audio?.voice ? "🎤 Nota de voz" : "🎵 Audio", mediaType: "audio", mediaId: msg.audio?.id ?? null, mediaMime: msg.audio?.mime_type ?? null, mediaFilename: null };
+    case "video":
+      return { body: msg.video?.caption?.trim() || "🎬 Video", mediaType: "video", mediaId: msg.video?.id ?? null, mediaMime: msg.video?.mime_type ?? null, mediaFilename: null };
+    case "document":
+      return {
+        body: msg.document?.caption?.trim() || `📄 ${msg.document?.filename ?? "Documento"}`,
+        mediaType: "document",
+        mediaId: msg.document?.id ?? null,
+        mediaMime: msg.document?.mime_type ?? null,
+        mediaFilename: msg.document?.filename ?? null,
+      };
+    case "sticker":
+      return { body: "Sticker", mediaType: "sticker", mediaId: msg.sticker?.id ?? null, mediaMime: msg.sticker?.mime_type ?? null, mediaFilename: null };
+    case "location": {
+      const l = msg.location;
+      if (!l) return { body: "📍 Ubicación", ...none };
+      const where = [l.name, l.address].filter(Boolean).join(" · ");
+      return { body: `📍 Ubicación${where ? `: ${where}` : ""} https://maps.google.com/?q=${l.latitude},${l.longitude}`, ...none };
+    }
+    case "contacts": {
+      const list = (msg.contacts ?? []).map((c) => [c.name?.formatted_name, c.phones?.[0]?.phone ?? c.phones?.[0]?.wa_id].filter(Boolean).join(" ")).filter(Boolean);
+      return { body: `👤 Contacto${list.length === 1 ? "" : "s"}: ${list.join(", ") || "sin datos"}`, ...none };
+    }
+    default:
+      return { body: `[mensaje tipo ${msg.type}, no soportado aún]`, ...none };
+  }
 }
 
 interface WebhookStatus {
@@ -222,16 +285,8 @@ export async function processWebhookPayload(payload: WebhookPayload): Promise<vo
 async function handleInboundMessage(msg: WebhookMessage): Promise<void> {
   const phone = `+${digitsOnly(msg.from)}`;
   const conversation = await getOrCreateConversation(phone);
-  const body =
-    msg.type === "text"
-      ? msg.text?.body ?? null
-      : msg.type === "button"
-        ? msg.button?.text ?? null
-        : msg.type === "reaction"
-          ? msg.reaction?.emoji
-            ? `Reaccionó ${msg.reaction.emoji} a un mensaje`
-            : "Quitó su reacción a un mensaje"
-          : `[mensaje tipo ${msg.type}, no soportado aún]`;
+  const described = describeInbound(msg);
+  const body = described.body;
 
   await db.whatsAppMessage.create({
     data: {
@@ -239,6 +294,10 @@ async function handleInboundMessage(msg: WebhookMessage): Promise<void> {
       direction: "INBOUND",
       kind: "INBOUND",
       body,
+      mediaType: described.mediaType,
+      mediaId: described.mediaId,
+      mediaMime: described.mediaMime,
+      mediaFilename: described.mediaFilename,
       providerMessageId: msg.id,
       status: "DELIVERED",
     },

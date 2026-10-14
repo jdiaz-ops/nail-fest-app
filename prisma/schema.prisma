@@ -1300,6 +1300,15 @@ model WhatsAppMessage {
   // bot vs. a human) and internal audit. Never shown to the customer —
   // WhatsApp has no concept of this, it's an admin-only distinction.
   generatedByAi  Boolean                  @default(false)
+  // An INBOUND photo / voice note / audio / video / document / sticker:
+  // Meta's media id + mime type, fetched on demand (never stored here)
+  // through /api/admin/whatsapp/media/[mediaId] — Meta keeps the file for
+  // 30 days. `body` carries the caption, or a label ("📷 Foto") so the
+  // inbox list's preview still reads. All null for a text message.
+  mediaType      String?
+  mediaId        String?
+  mediaMime      String?
+  mediaFilename  String?
 
   @@index([conversationId, createdAt])
   @@index([broadcastId, status])

@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth/guard";
 import { whatsappProvider } from "@/lib/whatsapp";
 import { recordOutboundMessage } from "@/lib/whatsapp/inbox";
+import { describeWhatsAppSendError, extractMetaErrorCode } from "@/lib/whatsapp/failureCategories";
 
 const bodySchema = z.object({ text: z.string().min(1) });
 
@@ -53,14 +54,22 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     });
     return NextResponse.json({ ok: true });
   } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
     await recordOutboundMessage({
       phone: conversation.phone,
       kind: "FREEFORM",
       body: parsed.data.text,
       status: "FAILED",
-      errorMessage: err instanceof Error ? err.message : String(err),
+      errorMessage,
     });
     console.error("whatsapp inbox reply failed", err);
-    return NextResponse.json({ error: "send_failed" }, { status: 502 });
+    // Meta's own "the window is closed" (131047) — our clock said open
+    // (a reaction counted as their last message, or the window shut
+    // between page load and this click): same answer as the check above,
+    // so the composer switches to the template picker.
+    if (extractMetaErrorCode(errorMessage) === 131047) {
+      return NextResponse.json({ error: "window_closed", message: describeWhatsAppSendError(errorMessage) }, { status: 409 });
+    }
+    return NextResponse.json({ error: "send_failed", message: describeWhatsAppSendError(errorMessage) }, { status: 502 });
   }
 }

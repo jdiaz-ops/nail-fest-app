@@ -12,6 +12,10 @@ import WhatsAppPersonEditForm from "@/components/WhatsAppPersonEditForm";
 import WhatsAppSendTicketButton from "@/components/WhatsAppSendTicketButton";
 import WhatsAppSendZoomLinkButton from "@/components/WhatsAppSendZoomLinkButton";
 import WhatsAppAiToggle from "@/components/WhatsAppAiToggle";
+import WhatsAppMessageBubble, { toThreadMessage, type ThreadMessage } from "@/components/WhatsAppMessageBubble";
+import { listReopenTemplates } from "@/lib/whatsapp/reopenTemplates";
+import { chatTimeLabel } from "@/lib/chatTime";
+import { formatDateInTz } from "@/lib/dateFormat";
 
 export const dynamic = "force-dynamic";
 
@@ -21,18 +25,7 @@ const WINDOW_MS = 24 * 60 * 60 * 1000;
 // message or an internal note, so the thread reads top-to-bottom the way
 // the conversation (and the team's own commentary on it) actually
 // happened, instead of two disconnected lists.
-type TimelineItem =
-  | {
-      kind: "message";
-      id: string;
-      createdAt: Date;
-      direction: "INBOUND" | "OUTBOUND";
-      body: string | null;
-      messageKind: string;
-      status: string;
-      generatedByAi: boolean;
-    }
-  | { kind: "note"; id: string; createdAt: Date; text: string; authorName: string | null };
+type TimelineItem = ({ kind: "message" } & ThreadMessage) | { kind: "note"; id: string; createdAt: Date; text: string; authorName: string | null };
 
 // Renders inside bandeja/layout.tsx's right pane — no page header or
 // "← Bandeja" back link on desktop, since the conversation list stays
@@ -56,14 +49,17 @@ export default async function WhatsAppThreadPage({ params }: { params: { id: str
   });
   if (!conversation) notFound();
 
-  const [agents, orgSettings, lastRegistration, resendableRegistrations] = await Promise.all([
+  const [agents, orgSettings, lastRegistration, resendableRegistrations, reopenTemplates] = await Promise.all([
     db.adminUser.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
     getOrgSettings(),
     conversation.personId
       ? db.registration.findFirst({ where: { personId: conversation.personId }, orderBy: { createdAt: "desc" } })
       : null,
     listResendableRegistrations(conversation),
+    listReopenTemplates(),
   ]);
+  const { timezone, language } = orgSettings;
+  const when = (d: Date) => chatTimeLabel(d, timezone, language);
 
   const withinWindow = Boolean(conversation.lastInboundAt && Date.now() - conversation.lastInboundAt.getTime() < WINDOW_MS);
   const name = conversation.person
@@ -71,16 +67,7 @@ export default async function WhatsAppThreadPage({ params }: { params: { id: str
     : "Contacto sin identificar";
 
   const timeline: TimelineItem[] = [
-    ...conversation.messages.map((m) => ({
-      kind: "message" as const,
-      id: m.id,
-      createdAt: m.createdAt,
-      direction: m.direction,
-      body: m.body,
-      messageKind: m.kind,
-      status: m.status,
-      generatedByAi: m.generatedByAi,
-    })),
+    ...conversation.messages.map((m) => ({ kind: "message" as const, ...toThreadMessage(m) })),
     ...conversation.notes.map((n) => ({
       kind: "note" as const,
       id: n.id,
@@ -120,55 +107,18 @@ export default async function WhatsAppThreadPage({ params }: { params: { id: str
               <div key={item.id} style={{ alignSelf: "center", maxWidth: "85%", background: "#fdf6e3", border: "1px dashed #e0c477", borderRadius: 8, padding: "8px 12px" }}>
                 <div style={{ fontSize: 13, whiteSpace: "pre-wrap" }}>📝 {item.text}</div>
                 <div style={{ fontSize: 11, color: "#8a8478", marginTop: 2 }}>
-                  Nota interna{item.authorName ? ` · ${item.authorName}` : ""} · {new Date(item.createdAt).toLocaleString("es-CO")}
+                  Nota interna{item.authorName ? ` · ${item.authorName}` : ""} · {when(item.createdAt)}
                 </div>
               </div>
             ) : (
-              <div
-                key={item.id}
-                style={{
-                  alignSelf: item.direction === "OUTBOUND" ? "flex-end" : "flex-start",
-                  maxWidth: "70%",
-                  background: item.direction === "OUTBOUND" ? "#ffe4d1" : "#f6f5f2",
-                  borderRadius: 12,
-                  padding: "10px 14px",
-                }}
-              >
-                <div style={{ fontSize: 14, whiteSpace: "pre-wrap" }}>{item.body ?? "—"}</div>
-                <div style={{ fontSize: 11, color: "#8a8478", marginTop: 4, display: "flex", alignItems: "center", gap: 8 }}>
-                  <span>{new Date(item.createdAt).toLocaleString("es-CO")}</span>
-                  {item.direction === "OUTBOUND" && (
-                    <span>
-                      {item.messageKind === "TEMPLATE" ? "Plantilla" : "Respuesta"} · {item.status}
-                    </span>
-                  )}
-                  {item.generatedByAi && (
-                    <span
-                      title="Respondido automáticamente por el agente de IA"
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 3,
-                        fontSize: 10,
-                        fontWeight: 700,
-                        color: "#5b3fa8",
-                        background: "#ece7fb",
-                        borderRadius: 999,
-                        padding: "1px 7px",
-                      }}
-                    >
-                      🤖 IA
-                    </span>
-                  )}
-                </div>
-              </div>
+              <WhatsAppMessageBubble key={item.id} message={item} timezone={timezone} language={language} />
             )
           )}
           {timeline.length === 0 && <p style={{ color: "#5b5f6b" }}>Sin mensajes todavía.</p>}
         </div>
 
         <div style={{ borderTop: "1px solid var(--border)", padding: 12, flexShrink: 0 }}>
-          <WhatsAppThreadComposer conversationId={conversation.id} windowOpen={withinWindow} />
+          <WhatsAppThreadComposer conversationId={conversation.id} windowOpen={withinWindow} reopenTemplates={reopenTemplates} firstName={conversation.person?.firstName ?? ""} />
         </div>
       </div>
 
@@ -254,11 +204,8 @@ export default async function WhatsAppThreadPage({ params }: { params: { id: str
         )}
 
         <SidebarSection title="Datos del contacto">
-          <SnapshotRow label="Cliente desde" value={new Date(conversation.createdAt).toLocaleDateString("es-CO")} />
-          <SnapshotRow
-            label="Último mensaje suyo"
-            value={conversation.lastInboundAt ? new Date(conversation.lastInboundAt).toLocaleString("es-CO") : "—"}
-          />
+          <SnapshotRow label="Cliente desde" value={formatDateInTz(conversation.createdAt, { day: "numeric", month: "short", year: "numeric" }, timezone, language)} />
+          <SnapshotRow label="Último mensaje suyo" value={conversation.lastInboundAt ? when(conversation.lastInboundAt) : "—"} />
           <SnapshotRow label="Idioma" value={orgSettings.language === "es" ? "Español" : orgSettings.language} />
           <SnapshotRow label="País" value="Colombia" />
           <SnapshotRow label="Zona horaria" value={orgSettings.timezone} />

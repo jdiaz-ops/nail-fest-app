@@ -429,3 +429,10 @@ Graph API payload shape.
 - **Media replies from the AI agent** — same text-only constraint as
   the rest of Bandeja; it can't send images beyond the one hardcoded
   ticket-PDF attachment `resend_ticket_pdf` sends.
+
+## Bandeja: ventana cerrada, errores y adjuntos (oct 2026)
+
+- **Reabrir un chat.** Pasadas 24 h sin respuesta de la persona, el cuadro de respuesta se convierte en un selector de plantillas aprobadas (sin botón de enlace personal). Se elige la plantilla, se rellenan las variables ({{1}} arranca con el nombre) y se envía por `POST /api/admin/whatsapp/conversations/[id]/send-template`. En Plantillas hay una sugerida, `reabrir_chat`, lista para enviar a revisión a Meta.
+- **Por qué "no se enviaban" mensajes.** Un envío que Meta rechaza quedaba en el hilo con un "FAILED" diminuto. Ahora la burbuja sale en rojo con el motivo en español (`describeWhatsAppSendError`), y si Meta responde 131047 (ventana cerrada aunque el reloj local dijera abierta, por ejemplo tras una reacción) el cuadro pasa solo al selector de plantillas.
+- **Horas.** El hilo mostraba la hora UTC del servidor. Ahora usa la zona de la organización (`chatTimeLabel`: "2:32 p. m.", "ayer…", "12 oct, …").
+- **Fotos, notas de voz, videos, documentos y stickers.** El webhook guarda el id de medio de Meta (`WhatsAppMessage.mediaId`, `mediaType`, `mediaMime`, `mediaFilename`) y el hilo los muestra a través de `GET /api/admin/whatsapp/media/[mediaId]`, que pide el archivo a Meta con el token en el momento (solo con sesión de equipo; nunca se guarda una copia). Meta conserva los archivos 30 días; después el hilo lo dice en lugar del archivo. Ubicaciones y contactos compartidos llegan como texto con enlace a mapas.

@@ -279,6 +279,21 @@ async function getPhoneNumberStatus(): Promise<WhatsAppPhoneNumberStatus> {
 // before). Called right after saving a new connection, and re-callable
 // any time from the Conexión page in case the first attempt failed or an
 // already-saved connection predates this fix.
+/** One inbound media file (a photo, a voice note…) by Meta's media id —
+ * two hops, as the Cloud API requires: GET /{media-id} for a short-lived
+ * download URL, then that URL with the same bearer token. Null when Meta
+ * no longer has it (it keeps media for 30 days) or the id is unknown.
+ * Streams the body through, never buffers the whole file. */
+export async function fetchMedia(mediaId: string): Promise<{ body: ReadableStream<Uint8Array> | null; mime: string; size: number | null } | null> {
+  const conn = await getWhatsAppConnection();
+  const meta = (await graphFetch(encodeURIComponent(mediaId), conn.token).catch(() => null)) as { url?: string; mime_type?: string; file_size?: number } | null;
+  if (!meta?.url) return null;
+  // Meta's media host refuses requests without a User-Agent.
+  const res = await fetch(meta.url, { headers: { Authorization: `Bearer ${conn.token}`, "User-Agent": "nailfest-app/1.0" } });
+  if (!res.ok) return null;
+  return { body: res.body, mime: meta.mime_type ?? res.headers.get("content-type") ?? "application/octet-stream", size: meta.file_size ?? null };
+}
+
 export async function subscribeAppToWaba(wabaId: string, token: string): Promise<void> {
   const json = await graphFetch(`${wabaId}/subscribed_apps`, token, { method: "POST" });
   if (!json?.success) {

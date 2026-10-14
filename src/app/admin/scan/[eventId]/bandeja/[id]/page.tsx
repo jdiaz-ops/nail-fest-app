@@ -7,23 +7,16 @@ import WhatsAppThreadComposer from "@/components/WhatsAppThreadComposer";
 import WhatsAppMarkRead from "@/components/WhatsAppMarkRead";
 import WhatsAppWindowCountdown from "@/components/WhatsAppWindowCountdown";
 import WhatsAppSendTicketButton from "@/components/WhatsAppSendTicketButton";
+import WhatsAppMessageBubble, { toThreadMessage, type ThreadMessage } from "@/components/WhatsAppMessageBubble";
+import { getOrgSettings } from "@/lib/settings";
+import { listReopenTemplates } from "@/lib/whatsapp/reopenTemplates";
+import { chatTimeLabel } from "@/lib/chatTime";
 
 export const dynamic = "force-dynamic";
 
 const WINDOW_MS = 24 * 60 * 60 * 1000;
 
-type TimelineItem =
-  | {
-      kind: "message";
-      id: string;
-      createdAt: Date;
-      direction: "INBOUND" | "OUTBOUND";
-      body: string | null;
-      messageKind: string;
-      status: string;
-      generatedByAi: boolean;
-    }
-  | { kind: "note"; id: string; createdAt: Date; text: string; authorName: string | null };
+type TimelineItem = ({ kind: "message" } & ThreadMessage) | { kind: "note"; id: string; createdAt: Date; text: string; authorName: string | null };
 
 // Mobile counterpart to bandeja/[id]/page.tsx — same timeline + composer,
 // deliberately WITHOUT that page's 300px sidebar (agent assignment, AI
@@ -49,7 +42,8 @@ export default async function ScanWhatsAppThreadPage({ params }: { params: { eve
   });
   if (!conversation) notFound();
 
-  const resendableRegistrations = await listResendableRegistrations(conversation);
+  const [resendableRegistrations, orgSettings, reopenTemplates] = await Promise.all([listResendableRegistrations(conversation), getOrgSettings(), listReopenTemplates()]);
+  const { timezone, language } = orgSettings;
 
   const withinWindow = Boolean(conversation.lastInboundAt && Date.now() - conversation.lastInboundAt.getTime() < WINDOW_MS);
   const name = conversation.person
@@ -57,16 +51,7 @@ export default async function ScanWhatsAppThreadPage({ params }: { params: { eve
     : "Contacto sin identificar";
 
   const timeline: TimelineItem[] = [
-    ...conversation.messages.map((m) => ({
-      kind: "message" as const,
-      id: m.id,
-      createdAt: m.createdAt,
-      direction: m.direction,
-      body: m.body,
-      messageKind: m.kind,
-      status: m.status,
-      generatedByAi: m.generatedByAi,
-    })),
+    ...conversation.messages.map((m) => ({ kind: "message" as const, ...toThreadMessage(m) })),
     ...conversation.notes.map((n) => ({
       kind: "note" as const,
       id: n.id,
@@ -141,54 +126,18 @@ export default async function ScanWhatsAppThreadPage({ params }: { params: { eve
             <div key={item.id} style={{ alignSelf: "center", maxWidth: "90%", background: "#fdf6e3", border: "1px dashed #e0c477", borderRadius: 8, padding: "8px 12px" }}>
               <div style={{ fontSize: 13, whiteSpace: "pre-wrap" }}>📝 {item.text}</div>
               <div style={{ fontSize: 11, color: "#8a8478", marginTop: 2 }}>
-                Nota interna{item.authorName ? ` · ${item.authorName}` : ""} · {new Date(item.createdAt).toLocaleString("es-CO")}
+                Nota interna{item.authorName ? ` · ${item.authorName}` : ""} · {chatTimeLabel(item.createdAt, timezone, language)}
               </div>
             </div>
           ) : (
-            <div
-              key={item.id}
-              style={{
-                alignSelf: item.direction === "OUTBOUND" ? "flex-end" : "flex-start",
-                maxWidth: "82%",
-                background: item.direction === "OUTBOUND" ? "#ffe4d1" : "#f6f5f2",
-                borderRadius: 12,
-                padding: "10px 14px",
-              }}
-            >
-              <div style={{ fontSize: 14, whiteSpace: "pre-wrap" }}>{item.body ?? "—"}</div>
-              <div style={{ fontSize: 11, color: "#8a8478", marginTop: 4, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                <span>{new Date(item.createdAt).toLocaleString("es-CO")}</span>
-                {item.direction === "OUTBOUND" && (
-                  <span>
-                    {item.messageKind === "TEMPLATE" ? "Plantilla" : "Respuesta"} · {item.status}
-                  </span>
-                )}
-                {item.generatedByAi && (
-                  <span
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 3,
-                      fontSize: 10,
-                      fontWeight: 700,
-                      color: "#5b3fa8",
-                      background: "#ece7fb",
-                      borderRadius: 999,
-                      padding: "1px 7px",
-                    }}
-                  >
-                    🤖 IA
-                  </span>
-                )}
-              </div>
-            </div>
+            <WhatsAppMessageBubble key={item.id} message={item} timezone={timezone} language={language} maxWidth="82%" />
           )
         )}
         {timeline.length === 0 && <p style={{ color: "#5b5f6b" }}>Sin mensajes todavía.</p>}
       </div>
 
       <div style={{ borderTop: "1px solid #e3e1dc", padding: 12, flexShrink: 0 }}>
-        <WhatsAppThreadComposer conversationId={conversation.id} windowOpen={withinWindow} />
+        <WhatsAppThreadComposer conversationId={conversation.id} windowOpen={withinWindow} reopenTemplates={reopenTemplates} firstName={conversation.person?.firstName ?? ""} />
       </div>
     </div>
   );

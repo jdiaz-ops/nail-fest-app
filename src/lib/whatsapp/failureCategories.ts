@@ -86,3 +86,34 @@ export function categorizeWhatsAppFailure(errorMessage: string | null | undefine
   if (text.length === 0) return "unknown";
   return "unknown";
 }
+
+/** One plain sentence for the person who just hit "Enviar" in the inbox
+ * (or reads a failed bubble in the thread): what went wrong and what to
+ * do, by Meta's error code; the category's label when the code is one
+ * this file doesn't know. */
+export function describeWhatsAppSendError(errorMessage: string | null | undefined): string {
+  const code = extractMetaErrorCode(errorMessage);
+  switch (code) {
+    case 131047:
+      return "Han pasado más de 24 h desde su último mensaje: WhatsApp solo deja reabrir la conversación con una plantilla aprobada.";
+    case 131026:
+    case 131021:
+      return "El número no tiene WhatsApp o está mal escrito. Revisa el celular en la ficha.";
+    case 131049:
+    case 130472:
+      return "Meta frenó este mensaje para esta persona (límite de mensajes de marketing). No depende del número; prueba más tarde o con otra plantilla.";
+    case 131048:
+    case 130497:
+      return "Meta frenó el envío por la calidad de la cuenta de WhatsApp. Revisa el estado en Conexión.";
+    case 131056:
+      return "Se le envió el mismo mensaje demasiadas veces seguidas. Espera un rato antes de reintentar.";
+    case 130429:
+      return "Demasiados mensajes por segundo. Inténtalo de nuevo en un momento.";
+    case 131053:
+      return "No se pudo subir el archivo adjunto.";
+    case null:
+      return WHATSAPP_FAILURE_INFO[categorizeWhatsAppFailure(errorMessage)].label;
+    default:
+      return code >= 132000 && code < 133000 ? "La plantilla o sus variables no coinciden con lo que Meta aprobó." : WHATSAPP_FAILURE_INFO[categorizeWhatsAppFailure(errorMessage)].label;
+  }
+}
