@@ -61,16 +61,20 @@ function initials(name: string | null, phone: string): string {
 // base without changes.
 export default function WhatsAppInboxList({ basePath = "/admin/crm/whatsapp/bandeja" }: { basePath?: string } = {}) {
   const [filter, setFilter] = useState<Filter>("all");
+  const [query, setQuery] = useState("");
+  // What the list is actually filtered by — `query` debounced, so typing
+  // a phone number doesn't fire a request per digit.
+  const [search, setSearch] = useState("");
   const [rows, setRows] = useState<ConversationRow[] | null>(null);
   const pathname = usePathname();
   const activeId = pathname?.match(/\/bandeja\/([^/]+)/)?.[1] ?? null;
   const inFlight = useRef(false);
 
-  const load = useCallback(async (f: Filter) => {
+  const load = useCallback(async (f: Filter, q: string) => {
     if (inFlight.current) return;
     inFlight.current = true;
     try {
-      const res = await fetch(`/api/admin/whatsapp/conversations?filter=${f}`, { cache: "no-store" });
+      const res = await fetch(`/api/admin/whatsapp/conversations?filter=${f}${q ? `&q=${encodeURIComponent(q)}` : ""}`, { cache: "no-store" });
       if (res.ok) {
         const body = await res.json();
         setRows(body.conversations);
@@ -84,20 +88,25 @@ export default function WhatsAppInboxList({ basePath = "/admin/crm/whatsapp/band
   }, []);
 
   useEffect(() => {
-    load(filter);
+    const t = setTimeout(() => setSearch(query.trim()), 300);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  useEffect(() => {
+    load(filter, search);
     // 30s, not the original 12s — this poll runs the whole time the
     // Bandeja is open (often all day, every workday), and each request
     // hits Postgres; 12s was burning through Neon's monthly network-
     // transfer allowance for no real UX benefit (see the conversations
     // route's own comment on the matching payload trim).
-    const poll = setInterval(() => load(filter), 30000);
-    const onRefresh = () => load(filter);
+    const poll = setInterval(() => load(filter, search), 30000);
+    const onRefresh = () => load(filter, search);
     window.addEventListener("whatsapp-inbox-refresh", onRefresh);
     return () => {
       clearInterval(poll);
       window.removeEventListener("whatsapp-inbox-refresh", onRefresh);
     };
-  }, [filter, load]);
+  }, [filter, search, load]);
 
   // Instant local feedback the moment a thread is opened — matches
   // WhatChimp's own behavior of clearing the unread badge the moment you
@@ -110,7 +119,22 @@ export default function WhatsAppInboxList({ basePath = "/admin/crm/whatsapp/band
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      <div style={{ display: "flex", gap: 4, padding: "12px 12px 10px", borderBottom: "1px solid var(--border)" }}>
+      <div style={{ padding: "10px 12px 0", position: "relative" }}>
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Buscar nombre, correo o celular"
+          aria-label="Buscar conversación"
+          style={{ width: "100%", boxSizing: "border-box", padding: "8px 30px 8px 12px", border: "1px solid #e3e1dc", borderRadius: 999, fontSize: 13, background: "#fff" }}
+        />
+        {query && (
+          <button type="button" onClick={() => setQuery("")} aria-label="Borrar búsqueda" style={{ position: "absolute", right: 18, top: 15, width: 22, height: 22, borderRadius: "50%", border: "none", background: "#e3e1dc", color: "#17181c", fontSize: 13, lineHeight: 1, cursor: "pointer" }}>
+            ×
+          </button>
+        )}
+      </div>
+      <div style={{ display: "flex", gap: 4, padding: "8px 12px 10px", borderBottom: "1px solid var(--border)" }}>
         {TABS.map((tab) => {
           const active = filter === tab.key;
           return (
@@ -139,7 +163,7 @@ export default function WhatsAppInboxList({ basePath = "/admin/crm/whatsapp/band
         {rows === null && <p style={{ color: "#8a8478", fontSize: 13, padding: 16 }}>Cargando...</p>}
         {rows?.length === 0 && (
           <p style={{ color: "#8a8478", fontSize: 13, padding: 16 }}>
-            {filter === "all" ? "Aún no hay conversaciones." : "No hay conversaciones que coincidan con este filtro."}
+            {search ? `Nada coincide con "${search}".` : filter === "all" ? "Aún no hay conversaciones." : "No hay conversaciones que coincidan con este filtro."}
           </p>
         )}
         {rows?.map((c) => {

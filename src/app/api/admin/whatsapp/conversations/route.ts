@@ -15,12 +15,33 @@ export async function GET(req: NextRequest) {
   if ("response" in auth) return auth.response;
 
   const filter = req.nextUrl.searchParams.get("filter");
-  const where =
+  const tabWhere =
     filter === "unread"
       ? { unreadCount: { gt: 0 } }
       : filter === "mine"
       ? { assignedToId: auth.user.id }
-      : undefined;
+      : {};
+  // ?q= — a name, an email or a phone (any spelling: "+57 300…",
+  // "300 123 4567"; digits are compared on their own). A query with no
+  // digits searches the person's names and email; with digits, the phone
+  // too.
+  const q = (req.nextUrl.searchParams.get("q") ?? "").trim().slice(0, 80);
+  const digits = q.replace(/\D/g, "");
+  const searchWhere = q
+    ? {
+        OR: [
+          ...(digits.length >= 3 ? [{ phone: { contains: digits } }] : []),
+          { person: { firstName: { contains: q, mode: "insensitive" as const } } },
+          { person: { lastName: { contains: q, mode: "insensitive" as const } } },
+          { person: { email: { contains: q, mode: "insensitive" as const } } },
+          // "Karen Mora": first name + last name typed together
+          ...(q.includes(" ")
+            ? [{ person: { AND: [{ firstName: { contains: q.split(/\s+/)[0]!, mode: "insensitive" as const } }, { lastName: { contains: q.split(/\s+/).slice(1).join(" "), mode: "insensitive" as const } }] } }]
+            : []),
+        ],
+      }
+    : {};
+  const where = { ...tabWhere, ...searchWhere };
 
   // select, not include — this list only ever renders a handful of
   // fields per row, but this endpoint is polled every 30s the whole time
