@@ -7,20 +7,13 @@ import { sendDueEventBroadcasts } from "@/lib/broadcasts";
 // see lib/broadcastSchedule.ts) has arrived. POST also works for manual
 // testing: curl -X POST .../api/broadcasts/send-due -H "x-cron-secret: <INTERNAL_CRON_SECRET>"
 //
-// Scheduled once/day (0 5 * * *) in vercel.json, same as this app's other
-// two crons — see docs/DEPLOY.md, "Ongoing: the background crons". This
-// project is on Vercel's Hobby plan, which only allows daily cron
-// schedules; an earlier version of this file declared "*/15 * * * *" on
-// the assumption Vercel would just run it at whatever cadence it could —
-// instead Vercel REJECTS THE WHOLE DEPLOY when any cron in vercel.json
-// exceeds the plan's allowed frequency, which silently broke every deploy
-// after that commit. Don't repeat that: on Hobby, every cron in
-// vercel.json must be once/day or the deploy fails outright, not just
-// this one. A broadcast still never goes out early and never gets
-// silently dropped — it just isn't checked more than once a day, so
-// "2 hours before doors open" can land up to ~24h later than intended.
-// If this project moves to Vercel Pro, tighten this to something like
-// "*/15 * * * *" for real precision.
+// Every 5 minutes (*/5 * * * *) in vercel.json — the project is on
+// Vercel Pro, which allows per-minute crons (Hobby only allowed daily
+// ones, and Vercel rejects the whole deploy when any cron in vercel.json
+// exceeds the plan's limit — keep that in mind if the plan ever changes).
+// QStash still fires each armed send on its exact second; this cron arms
+// sends as they come within QStash's 7-day reach and is the fallback that
+// sends anything due whose callback never came.
 //
 // Each due broadcast now only sends its FIRST chunk here before handing
 // the rest to a QStash continuation (see sendEventBroadcast's own

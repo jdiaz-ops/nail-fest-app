@@ -10,7 +10,7 @@ import { buildUnsubscribeUrl } from "@/lib/unsubscribe";
 import { renderTicketPdfBuffer } from "@/lib/ticketPdf";
 import { confirmationCodeFor } from "@/lib/ticket";
 import { getOrgSettings } from "@/lib/settings";
-import { publishChunkContinuation, scheduleEventBroadcastSend, scheduleAutoRetry, AUTO_RETRY_DELAYS_SECONDS, QSTASH_MAX_DELAY_MS, CHUNK_WATCHDOG_SECONDS, CHUNK_LOCK_SECONDS } from "@/lib/qstash";
+import { publishChunkContinuation, scheduleEventBroadcastSend, scheduleAutoRetry, AUTO_RETRY_DELAYS_SECONDS, QSTASH_MAX_DELAY_MS, QSTASH_GRACE_MS, CHUNK_WATCHDOG_SECONDS, CHUNK_LOCK_SECONDS } from "@/lib/qstash";
 import { markEmailInvalid } from "@/lib/contactHygiene";
 import { REVIEW_LINK_TAG, reviewUrl } from "@/lib/reviews";
 import { tagOwnLinksInHtml, tagOwnLinksInText, slugifyForCampaign } from "@/lib/outboundLinkTagging";
@@ -585,11 +585,17 @@ export async function sendDueEventBroadcasts(now: Date = new Date()): Promise<{ 
   for (const b of candidates) {
     const dueAt = resolveDueAt(b, b.event);
     if (!dueAt) continue;
+    // Armed on QStash and due only minutes ago: QStash's turn (it fires
+    // on the exact second); this 5-minute cron is the fallback if that
+    // callback never came. The per-chunk lock and the "already handled"
+    // guards make a double start harmless anyway.
+    if (b.qstashMessageId && isDue(dueAt, now) && now.getTime() - dueAt.getTime() < QSTASH_GRACE_MS) continue;
     if (!isDue(dueAt, now)) {
       // Not due yet: make sure it has its exact-time ticket. QStash only
       // accepts a delay up to QSTASH_MAX_DELAY_MS, so a send created
-      // weeks ahead can't be armed at creation — this nightly pass arms
-      // it once it comes within reach (see /api/broadcasts/send-scheduled).
+      // weeks ahead can't be armed at creation — this pass (every 5
+      // minutes) arms it once it comes within reach (see
+      // /api/broadcasts/send-scheduled).
       if (!b.qstashMessageId && dueAt.getTime() - now.getTime() <= QSTASH_MAX_DELAY_MS) {
         const qstashMessageId = await scheduleEventBroadcastSend(b.id, dueAt);
         if (qstashMessageId) {

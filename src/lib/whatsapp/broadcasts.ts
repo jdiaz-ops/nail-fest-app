@@ -4,7 +4,7 @@ import { hasActiveConsent, bulkActiveConsent } from "@/lib/consent";
 import { getOrgSettings, type OrgSettingsValue } from "@/lib/settings";
 import { resolveSegment, type SegmentFilter } from "@/lib/segments/builder";
 import { resolveEventBroadcastRecipients } from "@/lib/broadcastRecipients";
-import { publishChunkContinuation, scheduleWhatsAppBroadcastSend, scheduleAutoRetry, AUTO_RETRY_DELAYS_SECONDS, QSTASH_MAX_DELAY_MS, CHUNK_WATCHDOG_SECONDS, CHUNK_LOCK_SECONDS } from "@/lib/qstash";
+import { publishChunkContinuation, scheduleWhatsAppBroadcastSend, scheduleAutoRetry, AUTO_RETRY_DELAYS_SECONDS, QSTASH_MAX_DELAY_MS, QSTASH_GRACE_MS, CHUNK_WATCHDOG_SECONDS, CHUNK_LOCK_SECONDS } from "@/lib/qstash";
 import { whatsappProvider } from "./index";
 import { recordOutboundMessage } from "./inbox";
 import { categorizeWhatsAppFailure, WHATSAPP_FAILURE_INFO, type WhatsAppFailureCategory } from "./failureCategories";
@@ -656,9 +656,14 @@ export async function sendDueWhatsAppBroadcasts(now: Date = new Date()): Promise
   for (const b of candidates) {
     const dueAt = resolveDueAt(b, b.event);
     if (!dueAt) continue;
+    // Armed on QStash and due only minutes ago: QStash's turn (it fires
+    // on the exact second); this 5-minute cron is the fallback if that
+    // callback never came. The per-chunk lock and the "already handled"
+    // guards make a double start harmless anyway.
+    if (b.qstashMessageId && isDue(dueAt, now) && now.getTime() - dueAt.getTime() < QSTASH_GRACE_MS) continue;
     if (!isDue(dueAt, now)) {
-      // Same nightly arming as sendDueEventBroadcasts (lib/broadcasts.ts):
-      // QStash can't be asked more than QSTASH_MAX_DELAY_MS ahead.
+      // Same arming as sendDueEventBroadcasts (lib/broadcasts.ts), every
+      // 5 minutes: QStash can't be asked more than QSTASH_MAX_DELAY_MS ahead.
       if (!b.qstashMessageId && dueAt.getTime() - now.getTime() <= QSTASH_MAX_DELAY_MS) {
         const qstashMessageId = await scheduleWhatsAppBroadcastSend(b.id, dueAt);
         if (qstashMessageId) {

@@ -103,21 +103,11 @@ as long as `CRON_SECRET` is set (see the env var table above):
   (from an event's "Correos del evento" section) whose real send time,
   fixed or relative to the event's own start/end, has arrived.
 
-Default schedule is once daily (`0 3 * * *` / `0 4 * * *` / `0 5 * * *`) —
-that's the fastest interval Vercel's free/Hobby tier allows for cron jobs.
-**Every cron in `vercel.json` has to respect that limit, not just one of
-them** — Vercel rejects the whole deploy if any single entry exceeds what
-the plan allows, it doesn't just skip or throttle that one cron. (This bit
-the `send-due` cron once already: it shipped as `*/15 * * * *` on the
-assumption an over-frequent schedule would just run slower, and instead it
-silently broke every deploy until it was caught and dropped back to
-once/day — if a deploy ever seems stuck on an old commit, check this file
-first.) **If you're on Vercel Pro**, tighten these in `vercel.json` for
-fresher data: `*/5 * * *` for `retry` (matches the backoff design),
-`0 */6 * * *` for `sync-audiences` (a full resync is cheap since Meta
-dedupes the hashed upload, so shorter is safe too, just not necessary), and
-something like `*/15 * * * *` for `send-due` if event broadcasts need to
-land closer to their exact scheduled time.
+The two `send-due` crons run every 5 minutes (`*/5 * * * *`) — the
+project is on Vercel Pro, which allows per-minute crons. The other crons
+stay daily. If the project ever goes back to Hobby, every cron in
+`vercel.json` must be once a day again: Vercel rejects the whole deploy if
+any single entry exceeds what the plan allows (that bit `send-due` once).
 
 All three routes still accept a manual `POST` for on-demand testing without
 waiting for the schedule:

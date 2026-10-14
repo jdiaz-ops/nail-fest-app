@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { isAuthorizedCronRequest } from "@/lib/cron";
 import { sendDueWhatsAppBroadcasts } from "@/lib/whatsapp/broadcasts";
 
-// Same cron shape as /api/broadcasts/send-due — see that route's own
-// comment for why this is checked once/day rather than more precisely
-// (Vercel Hobby plan's cron frequency cap). Add this route's path to
-// vercel.json's `crons` once a real send is scheduled non-IMMEDIATE; an
-// IMMEDIATE WhatsApp broadcast never needs this at all, same as email.
+// Same cron shape as /api/broadcasts/send-due — every 5 minutes on
+// Vercel Pro (see that route's own comment on the plan constraint).
+// QStash fires an armed send on its exact second; this arms sends as
+// they come within QStash's reach and is the fallback that sends anything
+// due whose callback never came. An IMMEDIATE WhatsApp broadcast never
+// needs this at all, same as email.
 //
 // Each due broadcast now only sends its FIRST chunk here before handing
 // the rest to a QStash continuation (see sendWhatsAppBroadcast's own

@@ -307,11 +307,11 @@ off the same Upstash account:
    TODAVÍA se completa (sigue mandando en la misma llamada, el
    comportamiento de siempre), solo sin esta red de seguridad extra.
 
-**Por qué la precisión de horario necesita esto:** this app's own daily
-cron (`/api/whatsapp/send-due`, `vercel.json`) is a Vercel **Hobby
-plan** constraint — cron jobs on that tier can only run once a day, so
-"programar para las 3pm" could otherwise mean anywhere from 3pm to 3pm
-the next day. [Upstash QStash](https://upstash.com/docs/qstash) fixes
+**Por qué la precisión de horario necesita esto:** this app's
+`/api/whatsapp/send-due` cron (`vercel.json`) ran once a day while the
+project was on Vercel Hobby; on Pro (since oct 2026) it runs every 5
+minutes, so a scheduled send goes out within 5 minutes even with no
+QStash at all. QStash still gives the exact minute. [Upstash QStash](https://upstash.com/docs/qstash) fixes
 this properly instead of just polling more often: you publish ONE
 message scheduled for an exact unix timestamp, and QStash calls this
 app back at that moment — no Vercel plan upgrade needed, since it's
