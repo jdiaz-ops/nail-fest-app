@@ -1381,7 +1381,13 @@ button.primary:disabled {
 .wa-thread-mobile-back {
   display: none;
 }
+.wa-thread-actions {
+  display: none;
+}
 @media (max-width: 899px) {
+  .wa-thread-actions {
+    display: block;
+  }
   .wa-bandeja-list-pane {
     width: 100%;
   }

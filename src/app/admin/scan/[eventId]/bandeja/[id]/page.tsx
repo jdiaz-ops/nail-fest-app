@@ -7,7 +7,7 @@ import WhatsAppThreadComposer from "@/components/WhatsAppThreadComposer";
 import WhatsAppMarkRead from "@/components/WhatsAppMarkRead";
 import ScrollToLatest from "@/components/ScrollToLatest";
 import WhatsAppWindowCountdown from "@/components/WhatsAppWindowCountdown";
-import WhatsAppSendTicketButton from "@/components/WhatsAppSendTicketButton";
+import WhatsAppTicketActions from "@/components/WhatsAppTicketActions";
 import WhatsAppMessageBubble, { toThreadMessage, type ThreadMessage } from "@/components/WhatsAppMessageBubble";
 import { getOrgSettings } from "@/lib/settings";
 import { listReopenTemplates } from "@/lib/whatsapp/reopenTemplates";
@@ -109,33 +109,6 @@ export default async function ScanWhatsAppThreadPage({ params, searchParams }: {
               </div>
               <WhatsAppWindowCountdown lastInboundAt={conversation.lastInboundAt?.toISOString() ?? null} />
             </div>
-            {resendableRegistrations.length > 0 && (
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 600, color: "#8a8478", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 4 }}>
-                  Entradas
-                </div>
-                {!withinWindow && (
-                  <p style={{ fontSize: 12, color: "#8a5a1f", margin: "0 0 8px" }}>
-                    Ventana cerrada — no se puede reenviar un PDF hasta que la persona vuelva a escribir.
-                  </p>
-                )}
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {resendableRegistrations.map((r) => (
-                    <div key={r.id} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                      <span style={{ fontSize: 12.5, fontWeight: 500 }}>{r.event.name}</span>
-                      <span style={{ fontSize: 11, color: "#8a8478" }}>
-                        {r.id.slice(-8).toUpperCase()}
-                        {r.ticketCount > 1 ? ` · ${r.ticketCount} boletas` : ""}
-                      </span>
-                      {r.personId !== conversation.personId && (
-                        <span style={{ fontSize: 11, color: "#8a5a1f" }}>A nombre de {r.person.email}</span>
-                      )}
-                      {withinWindow && <WhatsAppSendTicketButton conversationId={conversation.id} registrationId={r.id} />}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         </details>
       </div>
@@ -162,6 +135,19 @@ export default async function ScanWhatsAppThreadPage({ params, searchParams }: {
         {timeline.length === 0 && <p style={{ color: "#5b5f6b" }}>Sin mensajes todavía.</p>}
       </div>
 
+      <div style={{ flexShrink: 0 }}>
+        <WhatsAppTicketActions
+          conversationId={conversation.id}
+          withinWindow={withinWindow}
+          registrations={resendableRegistrations.map((r) => ({
+            id: r.id,
+            eventName: r.event.name,
+            ticketCount: r.ticketCount,
+            ownerEmail: r.personId !== conversation.personId ? r.person.email : null,
+            showZoomLink: r.event.format !== "IN_PERSON" && Boolean(r.event.zoomMeetingId),
+          }))}
+        />
+      </div>
       <div style={{ borderTop: "1px solid #e3e1dc", padding: 12, flexShrink: 0 }}>
         <WhatsAppThreadComposer conversationId={conversation.id} windowOpen={withinWindow} reopenTemplates={reopenTemplates} firstName={conversation.person?.firstName ?? ""} />
       </div>

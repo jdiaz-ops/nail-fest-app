@@ -13,6 +13,7 @@ import WhatsAppPersonEditForm from "@/components/WhatsAppPersonEditForm";
 import WhatsAppSendTicketButton from "@/components/WhatsAppSendTicketButton";
 import WhatsAppSendZoomLinkButton from "@/components/WhatsAppSendZoomLinkButton";
 import WhatsAppAiToggle from "@/components/WhatsAppAiToggle";
+import WhatsAppTicketActions from "@/components/WhatsAppTicketActions";
 import WhatsAppMessageBubble, { toThreadMessage, type ThreadMessage } from "@/components/WhatsAppMessageBubble";
 import { listReopenTemplates } from "@/lib/whatsapp/reopenTemplates";
 import { chatTimeLabel } from "@/lib/chatTime";
@@ -147,6 +148,22 @@ export default async function WhatsAppThreadPage({ params, searchParams }: { par
           {timeline.length === 0 && <p style={{ color: "#5b5f6b" }}>Sin mensajes todavía.</p>}
         </div>
 
+        {/* On a phone the sidebar (with its Entradas section) is hidden —
+            the resend buttons live here instead; .wa-thread-actions is
+            display:none on desktop so they don't show twice. */}
+        <div className="wa-thread-actions" style={{ flexShrink: 0 }}>
+          <WhatsAppTicketActions
+            conversationId={conversation.id}
+            withinWindow={withinWindow}
+            registrations={resendableRegistrations.map((r) => ({
+            id: r.id,
+            eventName: r.event.name,
+            ticketCount: r.ticketCount,
+            ownerEmail: r.personId !== conversation.personId ? r.person.email : null,
+            showZoomLink: r.event.format !== "IN_PERSON" && Boolean(r.event.zoomMeetingId),
+          }))}
+          />
+        </div>
         <div style={{ borderTop: "1px solid var(--border)", padding: 12, flexShrink: 0 }}>
           <WhatsAppThreadComposer conversationId={conversation.id} windowOpen={withinWindow} reopenTemplates={reopenTemplates} firstName={conversation.person?.firstName ?? ""} />
         </div>
