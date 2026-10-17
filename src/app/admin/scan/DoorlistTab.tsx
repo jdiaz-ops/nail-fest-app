@@ -44,18 +44,25 @@ export default function DoorlistTab() {
   const entries = useMemo(() => {
     void rosterVersion;
     return rosterEntries()
-      .map((e) => ({ ...e, code: codeOfToken(e.token), searchText: fold(e.personName ?? "") }))
+      .map((e) => ({ ...e, code: codeOfToken(e.token), searchText: fold([e.personName, e.email].filter(Boolean).join(" ")), digits: [e.phone, e.cedula].filter(Boolean).join(" ") }))
       .sort((a, b) => (a.personName ?? "").localeCompare(b.personName ?? "", "es"));
   }, [rosterEntries, rosterVersion]);
 
-  // Name in any order of words ("perez yakelin" finds "perez guía
-  // yakelin"), or the confirmation code with or without its "-2".
+  // Name or email in any order of words ("perez yakelin" finds "perez
+  // guía yakelin"), the confirmation code with or without its "-2", or
+  // at least four digits of the phone or the cédula in any spelling
+  // ("313 241", "+57 313…").
   const q = fold(query);
   const words = q.split(" ").filter(Boolean);
   const codeQuery = q.replace(/[^a-z0-9-]/g, "").toUpperCase();
+  const digitQuery = query.replace(/\D/g, "");
+  const byDigits = digitQuery.length >= 4;
   const matches = q
     ? entries.filter(
-        (e) => words.every((w) => e.searchText.includes(w)) || (codeQuery.length >= 4 && e.code.startsWith(codeQuery))
+        (e) =>
+          words.every((w) => e.searchText.includes(w)) ||
+          (codeQuery.length >= 4 && e.code.startsWith(codeQuery)) ||
+          (byDigits && e.digits.includes(digitQuery))
       )
     : entries;
   const filtered = matches.slice(0, MAX_ROWS);
@@ -103,7 +110,7 @@ export default function DoorlistTab() {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar por nombre o código…"
+          placeholder="Buscar por nombre, celular, cédula, correo o código…"
           style={{ width: "100%", padding: "10px 12px 10px 36px" }}
         />
       </div>
@@ -143,6 +150,11 @@ export default function DoorlistTab() {
                   {entry.code}
                   {entry.ticketTypeName ? ` · ${entry.ticketTypeName}` : ""}
                 </div>
+                {byDigits && entry.digits.includes(digitQuery) && (
+                  <div style={{ fontSize: 12, color: "#5b5f6b" }}>
+                    {[entry.phone ? `Cel. ${entry.phone}` : null, entry.cedula ? `Doc. ${entry.cedula}` : null].filter(Boolean).join(" · ")}
+                  </div>
+                )}
               </div>
               {busyToken === entry.token && <span style={{ fontSize: 12, color: "#5b5f6b" }}>…</span>}
             </button>
@@ -151,7 +163,7 @@ export default function DoorlistTab() {
       )}
       {roster && matches.length > filtered.length && (
         <p style={{ marginTop: 10, fontSize: 12, color: "#5b5f6b" }}>
-          Mostrando {filtered.length} de {matches.length} — escribe más del nombre o el código para encontrar a alguien.
+          Mostrando {filtered.length} de {matches.length} — escribe más del nombre, el celular o el código para encontrar a alguien.
         </p>
       )}
 

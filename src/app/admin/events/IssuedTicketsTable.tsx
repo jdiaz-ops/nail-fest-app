@@ -25,6 +25,9 @@ export interface TicketRow {
   ticketCount: number;
   checkedInCount: number;
   buyerFields: BuyerField[];
+  // Registration.customFields.cedula as typed at registration — searched
+  // by its digits, same as the phone.
+  cedula: string | null;
   person: { firstName: string | null; lastName: string | null; email: string; phone: string | null; city: string | null; profession: string | null };
   scans: ScanEntry[];
   emailStatus: string | null;
@@ -109,6 +112,9 @@ export default function IssuedTicketsTable({
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
+    // Four or more digits match the phone or the cédula in any spelling.
+    const digits = query.replace(/\D/g, "");
+    const byDigits = digits.length >= 4;
     return rows.filter((r) => {
       if (ticketTypeFilter && r.ticketTypeName !== ticketTypeFilter) return false;
       if (statusFilter === "cancelled" && r.status !== "CANCELLED") return false;
@@ -120,6 +126,8 @@ export default function IssuedTicketsTable({
       return (
         fullName(r.person).toLowerCase().includes(q) ||
         r.person.email.toLowerCase().includes(q) ||
+        (byDigits && (r.person.phone ?? "").replace(/\D/g, "").includes(digits)) ||
+        (byDigits && (r.cedula ?? "").replace(/\D/g, "").includes(digits)) ||
         r.id.toLowerCase().includes(q) ||
         (r.qrToken ?? "").toLowerCase().includes(q) ||
         ticketCodes(r).some((c) => c.toLowerCase().includes(q))
@@ -162,7 +170,7 @@ export default function IssuedTicketsTable({
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar por nombre, correo, id u orden…"
+          placeholder="Buscar por nombre, correo, celular, cédula, código u orden…"
           style={{ flex: "1 1 260px", padding: "8px 10px" }}
         />
         <select value={ticketTypeFilter} onChange={(e) => setTicketTypeFilter(e.target.value)} style={{ padding: "8px 10px" }}>

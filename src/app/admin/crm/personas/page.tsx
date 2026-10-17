@@ -26,11 +26,22 @@ export default async function PersonasPage({
   // just a fixed set of fields here rather than the full condition list.
   const where: Prisma.PersonWhereInput = {};
   if (q) {
+    // Digits of a phone in any spelling ("+57 313 241…"), the cédula as
+    // typed at registration (Registration.customFields.cedula), and
+    // "Nombre Apellido" typed together — on top of the single-field
+    // matches below.
+    const digits = q.replace(/\D/g, "");
+    const [firstWord = "", ...restWords] = q.split(/\s+/);
     where.OR = [
       { firstName: { contains: q, mode: "insensitive" } },
       { lastName: { contains: q, mode: "insensitive" } },
       { email: { contains: q, mode: "insensitive" } },
       { city: { contains: q, mode: "insensitive" } },
+      ...(digits.length >= 4 ? [{ phone: { contains: digits } }] : []),
+      ...(digits.length >= 4 ? [{ registrations: { some: { customFields: { path: ["cedula"], string_contains: digits } } } }] : []),
+      ...(restWords.length > 0
+        ? [{ AND: [{ firstName: { contains: firstWord, mode: "insensitive" as const } }, { lastName: { contains: restWords.join(" "), mode: "insensitive" as const } }] }]
+        : []),
     ];
   }
   if (cityFilter) where.city = cityFilter;
@@ -167,7 +178,7 @@ export default async function PersonasPage({
           type="search"
           name="q"
           defaultValue={q ?? ""}
-          placeholder="Buscar por nombre, correo o ciudad…"
+          placeholder="Buscar por nombre, correo, celular, cédula o ciudad…"
           style={{ padding: "8px 12px", border: "1px solid #e3e1dc", borderRadius: 8, width: 260, maxWidth: "100%" }}
         />
         <select name="city" defaultValue={cityFilter ?? ""} style={{ padding: "8px 12px", border: "1px solid #e3e1dc", borderRadius: 8 }}>

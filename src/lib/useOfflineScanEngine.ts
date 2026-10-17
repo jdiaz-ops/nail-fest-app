@@ -254,6 +254,9 @@ export function useOfflineScanEngine(eventId: string, scannerLabel: string) {
     return Object.entries(r.entries).map(([token, entry]) => ({
       token,
       personName: entry.personName,
+      phone: entry.phone,
+      email: entry.email,
+      cedula: entry.cedula,
       ticketTypeName: entry.ticketTypeName,
       checkedIn: entry.checkedInCount + entry.localCheckIns > 0,
     }));

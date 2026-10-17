@@ -42,7 +42,8 @@ export async function GET(req: NextRequest) {
         qrToken: true,
         ticketCount: true,
         checkedInCount: true,
-        person: { select: { firstName: true, lastName: true } },
+        customFields: true,
+        person: { select: { firstName: true, lastName: true, phone: true, email: true } },
         ticketType: { select: { name: true } },
       },
     }),
@@ -55,6 +56,13 @@ export async function GET(req: NextRequest) {
 
   const entries = registrations.flatMap((r) => {
     const titular = [r.person.firstName, r.person.lastName].filter(Boolean).join(" ");
+    // Digits only for the phone and the cédula (Registration.customFields
+    // .cedula, see checkoutForm.ts), so the door list matches "313 241
+    // 9210" and "+57 313…" alike without stripping on the phone.
+    const cedulaRaw = (r.customFields as Record<string, unknown> | null)?.cedula;
+    const phone = r.person.phone?.replace(/\D/g, "") || undefined;
+    const cedula = typeof cedulaRaw === "string" ? cedulaRaw.replace(/\D/g, "") || undefined : undefined;
+    const email = r.person.email.toLowerCase();
     // Ticket 1 is the stored token as-is (the one every ticket email
     // already carries); the others are derived — see lib/ticket.ts.
     const tickets = ticketsFor(r.id, r.ticketCount).map((t) => (t.ticketNumber === 1 ? { ...t, qrToken: r.qrToken as string } : t));
@@ -66,6 +74,9 @@ export async function GET(req: NextRequest) {
     return tickets.map((t, i) => ({
       token: t.qrToken,
       personName: titular ? ticketHolderName(titular, t.ticketNumber) : undefined,
+      phone,
+      email,
+      cedula,
       ticketTypeName: r.ticketType?.name,
       ticketCount: 1,
       checkedInCount: checked[i] ? 1 : 0,

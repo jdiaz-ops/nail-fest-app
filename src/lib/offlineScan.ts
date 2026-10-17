@@ -16,6 +16,12 @@ const QUEUE_KEY = "nf_scan_queue_v1";
 
 export interface RosterEntry {
   personName?: string;
+  // For the door list's search (DoorlistTab.tsx): digits only for phone
+  // and cédula, lowercase email. Absent on a roster downloaded before
+  // these existed — "Actualizar" brings them.
+  phone?: string;
+  email?: string;
+  cedula?: string;
   ticketTypeName?: string;
   ticketCount: number;
   checkedInCount: number;
@@ -81,12 +87,15 @@ function writeJson(key: string, value: unknown): boolean {
 export function saveRoster(input: {
   eventId: string;
   eventName: string;
-  entries: { token: string; personName?: string; ticketTypeName?: string; ticketCount: number; checkedInCount: number }[];
+  entries: { token: string; personName?: string; phone?: string; email?: string; cedula?: string; ticketTypeName?: string; ticketCount: number; checkedInCount: number }[];
 }): boolean {
   const entries: Record<string, RosterEntry> = {};
   for (const e of input.entries) {
     entries[e.token] = {
       personName: e.personName,
+      phone: e.phone,
+      email: e.email,
+      cedula: e.cedula,
       ticketTypeName: e.ticketTypeName,
       ticketCount: e.ticketCount,
       checkedInCount: e.checkedInCount,

@@ -61,6 +61,7 @@ export default async function IssuedTicketsPage({ params }: { params: { id: stri
       ticketCount: r.ticketCount,
       checkedInCount: r.checkedInCount,
       buyerFields: buildBuyerFields(questions, r.person, r),
+      cedula: typeof (r.customFields as Record<string, unknown> | null)?.cedula === "string" ? ((r.customFields as Record<string, unknown>).cedula as string) : null,
       person: {
         firstName: r.person.firstName,
         lastName: r.person.lastName,
