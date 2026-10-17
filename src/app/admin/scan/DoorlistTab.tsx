@@ -33,9 +33,12 @@ function codeOfToken(token: string): string {
 const MAX_ROWS = 60;
 
 export default function DoorlistTab() {
-  const { rosterEntries, rosterVersion, submitToken, roster } = useScanApp();
+  const { rosterEntries, rosterVersion, submitToken, undoCheckIn, roster } = useScanApp();
   const [query, setQuery] = useState("");
   const [busyToken, setBusyToken] = useState<string | null>(null);
+  // A checked-in row opens two choices instead of acting at once:
+  // register a re-entry, or undo the check-in (a test scan, a mistake).
+  const [actionsFor, setActionsFor] = useState<string | null>(null);
   const [toast, setToast] = useState<{ text: string; ok: boolean } | null>(null);
 
   // rosterVersion is read only to force this memo to recompute — the
@@ -68,8 +71,16 @@ export default function DoorlistTab() {
   const filtered = matches.slice(0, MAX_ROWS);
 
   async function handleTap(entry: (typeof entries)[number]) {
-    const verb = entry.checkedIn ? "registrar un reingreso para" : "marcar la entrada de";
-    if (!confirm(`¿Quieres ${verb} ${entry.personName || "esta persona"}?`)) return;
+    if (entry.checkedIn) {
+      setActionsFor((cur) => (cur === entry.token ? null : entry.token));
+      return;
+    }
+    if (!confirm(`¿Quieres marcar la entrada de ${entry.personName || "esta persona"}?`)) return;
+    await registerEntry(entry);
+  }
+
+  async function registerEntry(entry: (typeof entries)[number]) {
+    setActionsFor(null);
     setBusyToken(entry.token);
     const outcome = await submitToken(entry.token);
     setBusyToken(null);
@@ -83,6 +94,16 @@ export default function DoorlistTab() {
             ? "No se pudo verificar sin conexión"
             : "No se pudo registrar";
     setToast({ text: `${entry.personName ?? ""} — ${label}${outcome.offline ? " (sin conexión, pendiente)" : ""}`, ok: outcome.kind === "VALID_FIRST" || outcome.kind === "VALID_REENTRY" });
+    setTimeout(() => setToast(null), 4000);
+  }
+
+  async function handleUndo(entry: (typeof entries)[number]) {
+    if (!confirm(`¿Quitar el check-in de ${entry.personName || "esta persona"}? Quedará como no ingresada; si vuelve a escanear, cuenta como entrada nueva.`)) return;
+    setActionsFor(null);
+    setBusyToken(entry.token);
+    const result = await undoCheckIn(entry.token);
+    setBusyToken(null);
+    setToast({ text: `${entry.personName ?? ""} — ${result.message}`, ok: result.ok });
     setTimeout(() => setToast(null), 4000);
   }
 
@@ -157,6 +178,16 @@ export default function DoorlistTab() {
                 )}
               </div>
               {busyToken === entry.token && <span style={{ fontSize: 12, color: "#5b5f6b" }}>…</span>}
+              {actionsFor === entry.token && busyToken !== entry.token && (
+                <span style={{ display: "flex", gap: 6, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
+                  <span role="button" onClick={() => registerEntry(entry)} style={{ fontSize: 12, fontWeight: 700, padding: "6px 10px", borderRadius: 999, background: "#e3f4ec", color: "#1f7a5c" }}>
+                    Reingreso
+                  </span>
+                  <span role="button" onClick={() => handleUndo(entry)} style={{ fontSize: 12, fontWeight: 700, padding: "6px 10px", borderRadius: 999, background: "#fdeaea", color: "#a3251f" }}>
+                    Quitar check-in
+                  </span>
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -169,7 +200,8 @@ export default function DoorlistTab() {
 
       <p style={{ marginTop: 20, fontSize: 12, color: "#5b5f6b" }}>
         Toca a alguien para registrar su entrada manualmente — útil cuando su código QR no se puede escanear.
-        Funciona igual con o sin conexión, exactamente como el escáner.
+        Funciona igual con o sin conexión, exactamente como el escáner. Si alguien ya entró, al tocarla puedes
+        registrar un reingreso o quitar el check-in (una prueba, un error); quitarlo necesita conexión.
       </p>
     </div>
   );

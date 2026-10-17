@@ -63,6 +63,7 @@ function ticketCodes(r: Pick<TicketRow, "id" | "ticketCount">): string[] {
 
 const SCAN_RESULT_LABEL: Record<string, string> = {
   VALID_FIRST: "Entrada válida",
+  CHECKIN_UNDONE: "Check-in deshecho",
   VALID_REENTRY: "Reingreso",
   WRONG_EVENT: "Boleto de otro evento",
   INVALID_TOKEN: "Código inválido",

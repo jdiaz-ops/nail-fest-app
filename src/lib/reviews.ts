@@ -60,8 +60,14 @@ function raffleView(raffle: ReviewRaffle | null, now = new Date()): RaffleView |
  * older registration whose count was never written. */
 export async function registrationAttended(registration: { id: string; checkedInCount: number }): Promise<boolean> {
   if (registration.checkedInCount > 0) return true;
-  const scan = await db.scanLog.findFirst({ where: { registrationId: registration.id, result: { in: ["VALID_FIRST", "VALID_REENTRY"] } }, select: { id: true } });
-  return Boolean(scan);
+  // The latest valid/undo row decides — an undone check-in (lib/scan.ts's
+  // undoCheckIn) does not count as having been there.
+  const latest = await db.scanLog.findFirst({
+    where: { registrationId: registration.id, result: { in: ["VALID_FIRST", "VALID_REENTRY", "CHECKIN_UNDONE"] } },
+    orderBy: { scannedAt: "desc" },
+    select: { result: true },
+  });
+  return Boolean(latest && latest.result !== "CHECKIN_UNDONE");
 }
 
 export async function reviewEligibilityForToken(token: string): Promise<ReviewEligibility> {

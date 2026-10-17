@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { checkedInTokensForRegistrations } from "@/lib/scan";
 import { requireUser } from "@/lib/auth/guard";
 import { resolveSegment, type SegmentFilter } from "@/lib/segments/builder";
 import { findCountry } from "@/lib/worldCountries";
@@ -96,10 +97,8 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   // (the one whose details each row shows) — which of its tickets'
   // tokens have a first-entry scan. See ticketsCheckedIn in lib/ticket.ts.
   const latestIds = [...registrationsByPerson.values()].map((list) => list[0]!.id);
-  const firstScans = await inChunks(latestIds, (slice) =>
-    db.scanLog.findMany({ where: { registrationId: { in: slice }, result: "VALID_FIRST" }, select: { token: true } })
-  );
-  const scannedTokens = new Set(firstScans.map((s) => s.token));
+  const scannedTokens = new Set<string>();
+  for (const slice of chunk(latestIds, 500)) for (const t of await checkedInTokensForRegistrations(slice)) scannedTokens.add(t);
 
   const date = (d: Date | null | undefined) => (d ? formatDateInTz(d, { dateStyle: "short", timeStyle: "short" }, orgSettings.timezone, orgSettings.language) : "");
   // "Fecha de registro" (the contact's first day in the CRM) is a calendar
@@ -220,4 +219,10 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       "Content-Disposition": `attachment; filename="${safeName}.csv"`,
     },
   });
+}
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+  return out;
 }

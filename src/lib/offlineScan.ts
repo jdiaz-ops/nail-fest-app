@@ -136,6 +136,18 @@ export function bumpLocalCheckIn(eventId: string, token: string): void {
   writeJson(ROSTER_PREFIX + eventId, roster);
 }
 
+/** After the server undid a ticket's check-in (useOfflineScanEngine's
+ * undoCheckIn): the cached entry shows "not in" right away, without
+ * waiting for the next roster download. */
+export function clearRosterCheckIn(eventId: string, token: string): void {
+  const roster = loadRoster(eventId);
+  const entry = roster?.entries[token];
+  if (!roster || !entry) return;
+  entry.checkedInCount = 0;
+  entry.localCheckIns = 0;
+  writeJson(ROSTER_PREFIX + eventId, roster);
+}
+
 export function rosterInfo(eventId: string): { count: number; downloadedAt: string } | null {
   const roster = loadRoster(eventId);
   if (!roster) return null;

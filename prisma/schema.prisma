@@ -558,6 +558,10 @@ enum ScanResult {
   WRONG_EVENT // token is real, but for a different event than this scanner is set to
   INVALID_TOKEN // signature didn't verify, or wasn't shaped like our tokens
   NOT_FOUND // signature verified but no registration exists for that id (e.g. stale/deleted)
+  // The door undid this ticket's check-in (a test scan, a mistake) — see
+  // lib/scan.ts's undoCheckIn. The ticket counts as not entered until its
+  // next VALID_FIRST; the earlier rows stay, history is append-only.
+  CHECKIN_UNDONE
 }
 
 model ScanLog {

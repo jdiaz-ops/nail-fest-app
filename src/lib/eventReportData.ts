@@ -130,6 +130,7 @@ export async function loadVelocityData(eventId: string, timezone: string, langua
                  COUNT(*)::int AS count
           FROM "ScanLog" s JOIN "Event" e ON e.id = s."scannedForEventId"
           WHERE s.result = 'VALID_FIRST' AND s."scannedForEventId" = ANY(${pastIds})
+            AND NOT EXISTS (SELECT 1 FROM "ScanLog" u WHERE u.token = s.token AND u.result = 'CHECKIN_UNDONE' AND u."scannedAt" >= s."scannedAt")
           GROUP BY 1, 2, 3
         `
       : Promise.resolve([]),

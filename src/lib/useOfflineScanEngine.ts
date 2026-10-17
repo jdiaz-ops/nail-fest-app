@@ -11,8 +11,7 @@ import {
   enqueueScan,
   dequeueScans,
   queueLength,
-  type LocalPreview,
-} from "@/lib/offlineScan";
+  type LocalPreview, clearRosterCheckIn } from "@/lib/offlineScan";
 
 // Shared by every tab of the per-event scanner app (Escanear AND Lista —
 // both need to submit a check-in and both need to know the same
@@ -245,6 +244,33 @@ export function useOfflineScanEngine(eventId: string, scannerLabel: string) {
     }
   }, []);
 
+  /** "Quitar el check-in" (DoorlistTab): online only — an undo is rare
+   * and deliberate, not worth an offline queue of its own. The cached
+   * roster is updated on success so the row flips at once. */
+  const undoCheckIn = useCallback(async (token: string): Promise<{ ok: boolean; message: string; personName?: string }> => {
+    const currentEventId = eventIdRef.current;
+    const label = scannerLabelRef.current || undefined;
+    if (!currentEventId) return { ok: false, message: "Elige un evento primero." };
+    try {
+      const res = await fetchWithTimeout("/api/admin/scan/undo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, eventId: currentEventId, scannerLabel: label }),
+      }, LIVE_TIMEOUT_MS);
+      const body = (await res.json().catch(() => ({}))) as { ok?: boolean; reason?: string; personName?: string };
+      if (res.ok && body.ok) {
+        clearRosterCheckIn(currentEventId, token);
+        setRosterVersion((v) => v + 1);
+        return { ok: true, message: "Check-in quitado", personName: body.personName };
+      }
+      if (res.status === 401) setAuthError(true);
+      return { ok: false, message: body.reason === "not_checked_in" ? "Esta entrada no tiene check-in que quitar." : "No se pudo quitar el check-in." };
+    } catch {
+      setIsOnline(false);
+      return { ok: false, message: "Necesitas conexión para quitar un check-in." };
+    }
+  }, []);
+
   /** For Doorlist — the current effective (server + any not-yet-synced
    * local) checked-in state of every downloaded registration, for one
    * event. Re-derives on every rosterVersion bump. */
@@ -272,6 +298,7 @@ export function useOfflineScanEngine(eventId: string, scannerLabel: string) {
     downloadRoster,
     syncQueue,
     submitToken,
+    undoCheckIn,
     rosterEntries,
     rosterVersion,
   };

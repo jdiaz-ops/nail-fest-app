@@ -105,10 +105,17 @@ export async function getLifecycleStagesBulk(personIds: string[]): Promise<Map<s
       select: { personId: true, eventId: true, createdAt: true },
     }),
     db.scanLog.findMany({
-      where: { result: { in: ["VALID_FIRST", "VALID_REENTRY"] }, registration: { personId: { in: personIds } } },
-      select: { scannedForEventId: true, scannedAt: true, registration: { select: { personId: true } } },
+      where: { result: { in: ["VALID_FIRST", "VALID_REENTRY", "CHECKIN_UNDONE"] }, registration: { personId: { in: personIds } } },
+      orderBy: { scannedAt: "asc" },
+      select: { token: true, result: true, scannedForEventId: true, scannedAt: true, registration: { select: { personId: true } } },
     }),
-  ]);
+  ]).then(([regs, allScans]) => {
+    // A ticket whose latest row is an undo was not there (lib/scan.ts's
+    // undoCheckIn): drop every scan of such a token before counting.
+    const latestByToken = new Map<string, string>();
+    for (const s of allScans) latestByToken.set(s.token, s.result);
+    return [regs, allScans.filter((s) => s.result !== "CHECKIN_UNDONE" && latestByToken.get(s.token) !== "CHECKIN_UNDONE")] as const;
+  });
 
   const byPerson = new Map<
     string,
@@ -219,9 +226,11 @@ export async function getPersonProfile(personId: string): Promise<PersonProfile 
         ? "Escaneo de entrada"
         : s.result === "VALID_REENTRY"
           ? "Escaneo de re-ingreso"
-          : s.result === "WRONG_EVENT"
-            ? "Escaneo — boleto de otro evento"
-            : "Escaneo — código inválido";
+          : s.result === "CHECKIN_UNDONE"
+            ? "Check-in deshecho"
+            : s.result === "WRONG_EVENT"
+              ? "Escaneo — boleto de otro evento"
+              : "Escaneo — código inválido";
     timeline.push({
       type: "SCAN",
       at: s.scannedAt,

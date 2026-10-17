@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { entryScansForEvent } from "@/lib/scan";
 import { getOrgSettings } from "@/lib/settings";
 import { formatDateInTz, utcToZonedInputValue } from "@/lib/dateFormat";
 import { bucketDates, fillDayRange, bucketHours, channelKey, capitalize, topN, weekdayTotals, WEEKDAY_NAMES_ES } from "@/lib/eventStatsHelpers";
@@ -55,10 +56,7 @@ export default async function EventDecisionStats({ eventId }: { eventId: string 
         registrations: { where: { status: "CONFIRMED" }, select: { ticketCount: true, checkedInCount: true } },
       },
     }),
-    db.scanLog.findMany({
-      where: { scannedForEventId: eventId, result: { in: ["VALID_FIRST", "VALID_REENTRY"] } },
-      select: { scannedAt: true },
-    }),
+    entryScansForEvent(eventId),
     // Embudo de registro — every row ever created for this event counts,
     // regardless of current status (STARTED that never converted, or
     // CONFIRMED whether or not it ever passed through a STARTED draft

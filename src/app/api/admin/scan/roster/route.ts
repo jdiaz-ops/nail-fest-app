@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth/guard";
 import { ticketHolderName, ticketsCheckedIn, ticketsFor } from "@/lib/ticket";
+import { checkedInTokensForEvent } from "@/lib/scan";
 
 // What the scanner PWA downloads onto the phone BEFORE the event (or in
 // the background whenever it has a connection) so it can keep validating
@@ -34,7 +35,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "event_not_found" }, { status: 404 });
   }
 
-  const [registrations, firstScans] = await Promise.all([
+  const [registrations, scannedTokens] = await Promise.all([
     db.registration.findMany({
       where: { eventId, status: "CONFIRMED", qrToken: { not: null } },
       select: {
@@ -47,12 +48,9 @@ export async function GET(req: NextRequest) {
         ticketType: { select: { name: true } },
       },
     }),
-    db.scanLog.findMany({
-      where: { registration: { eventId }, result: "VALID_FIRST" },
-      select: { token: true },
-    }),
+    // Undo-aware: a token whose check-in was undone is not in.
+    checkedInTokensForEvent(eventId),
   ]);
-  const scannedTokens = new Set(firstScans.map((s) => s.token));
 
   const entries = registrations.flatMap((r) => {
     const titular = [r.person.firstName, r.person.lastName].filter(Boolean).join(" ");

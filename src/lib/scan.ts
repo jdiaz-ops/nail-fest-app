@@ -113,10 +113,13 @@ export async function recordScan(
   // is a first entry of its own, and counts toward checkedInCount. Look up
   // the most recent prior VALID_FIRST/VALID_REENTRY of this exact token so
   // the UI can show "ya había entrado a las HH:MM" instead of a checkmark.
-  const previousScan = await db.scanLog.findFirst({
-    where: { registrationId, token, result: { in: ["VALID_FIRST", "VALID_REENTRY"] } },
+  // An undo (CHECKIN_UNDONE, see undoCheckIn below) after the last valid
+  // scan means this ticket is NOT in: the next scan is a first entry again.
+  const latestRelevant = await db.scanLog.findFirst({
+    where: { registrationId, token, result: { in: ["VALID_FIRST", "VALID_REENTRY", "CHECKIN_UNDONE"] } },
     orderBy: { scannedAt: "desc" },
   });
+  const previousScan = latestRelevant && latestRelevant.result !== "CHECKIN_UNDONE" ? latestRelevant : null;
 
   if (previousScan) {
     // Real-world case caught in testing: a staff member holds the phone
@@ -158,4 +161,78 @@ export async function recordScan(
   ]);
 
   return { result: "VALID_FIRST", personName, eventName: registration.event.name };
+}
+
+export type UndoCheckInOutcome = { ok: true; personName?: string } | { ok: false; reason: "invalid_token" | "not_found" | "wrong_event" | "not_checked_in" };
+
+/**
+ * Undoes one ticket's check-in — a test scan by the team, a tap on the
+ * wrong person at the door — so the aforo numbers stay honest. Appends a
+ * CHECKIN_UNDONE row (nothing is deleted) and takes one off the
+ * registration's checkedInCount; the next scan of this ticket is a first
+ * entry again (see recordScan). Also undoes a count that came from an
+ * imported doorlist with no scan row behind it.
+ */
+export async function undoCheckIn(token: string, scannedForEventId: string, scannerLabel?: string): Promise<UndoCheckInOutcome> {
+  const { valid, registrationId, ticketNumber = 1 } = verifyQrToken(token);
+  if (!valid || !registrationId) return { ok: false, reason: "invalid_token" };
+  const registration = await db.registration.findUnique({ where: { id: registrationId }, include: { person: true } });
+  if (!registration || ticketNumber > registration.ticketCount) return { ok: false, reason: "not_found" };
+  if (registration.eventId !== scannedForEventId) return { ok: false, reason: "wrong_event" };
+
+  const latestRelevant = await db.scanLog.findFirst({
+    where: { registrationId, token, result: { in: ["VALID_FIRST", "VALID_REENTRY", "CHECKIN_UNDONE"] } },
+    orderBy: { scannedAt: "desc" },
+    select: { result: true },
+  });
+  const inByScan = Boolean(latestRelevant && latestRelevant.result !== "CHECKIN_UNDONE");
+  if (!inByScan && registration.checkedInCount <= 0) return { ok: false, reason: "not_checked_in" };
+
+  await db.$transaction([
+    db.scanLog.create({ data: { registrationId, token, result: "CHECKIN_UNDONE", scannedForEventId, scannerLabel } }),
+    db.registration.updateMany({ where: { id: registrationId, checkedInCount: { gt: 0 } }, data: { checkedInCount: { decrement: 1 } } }),
+  ]);
+  const personName = ticketHolderName(
+    [registration.person.firstName, registration.person.lastName].filter(Boolean).join(" ") || registration.person.email,
+    ticketNumber
+  );
+  return { ok: true, personName };
+}
+
+/** Tokens currently checked in: those whose latest VALID_FIRST /
+ * CHECKIN_UNDONE row is the former. One query, any number of tickets. */
+async function checkedInTokensWhere(where: { registration?: { eventId: string }; registrationId?: { in: string[] } }): Promise<Set<string>> {
+  const rows = await db.scanLog.findMany({
+    where: { ...where, result: { in: ["VALID_FIRST", "CHECKIN_UNDONE"] } },
+    orderBy: { scannedAt: "asc" },
+    select: { token: true, result: true },
+  });
+  const state = new Map<string, boolean>();
+  for (const r of rows) state.set(r.token, r.result === "VALID_FIRST");
+  return new Set([...state.entries()].filter(([, on]) => on).map(([t]) => t));
+}
+
+export function checkedInTokensForEvent(eventId: string): Promise<Set<string>> {
+  return checkedInTokensWhere({ registration: { eventId } });
+}
+
+export function checkedInTokensForRegistrations(registrationIds: string[]): Promise<Set<string>> {
+  if (registrationIds.length === 0) return Promise.resolve(new Set());
+  return checkedInTokensWhere({ registrationId: { in: registrationIds } });
+}
+
+/** Valid door scans (first entries and re-entries) of an event, leaving
+ * out any scan a later undo cancelled — what the hour-of-day charts
+ * should count. */
+export async function entryScansForEvent(eventId: string): Promise<{ scannedAt: Date; result: "VALID_FIRST" | "VALID_REENTRY" }[]> {
+  const rows = await db.scanLog.findMany({
+    where: { scannedForEventId: eventId, result: { in: ["VALID_FIRST", "VALID_REENTRY", "CHECKIN_UNDONE"] } },
+    orderBy: { scannedAt: "asc" },
+    select: { token: true, result: true, scannedAt: true },
+  });
+  const undoneAfter = new Map<string, Date[]>();
+  for (const r of rows) if (r.result === "CHECKIN_UNDONE") undoneAfter.set(r.token, [...(undoneAfter.get(r.token) ?? []), r.scannedAt]);
+  return rows
+    .filter((r) => r.result !== "CHECKIN_UNDONE" && !(undoneAfter.get(r.token) ?? []).some((u) => u.getTime() >= r.scannedAt.getTime()))
+    .map((r) => ({ scannedAt: r.scannedAt, result: r.result as "VALID_FIRST" | "VALID_REENTRY" }));
 }

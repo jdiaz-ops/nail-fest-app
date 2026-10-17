@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { entryScansForEvent } from "@/lib/scan";
 import { getOrgSettings } from "@/lib/settings";
 import { formatDateInTz } from "@/lib/dateFormat";
 import { bucketHours } from "@/lib/eventStatsHelpers";
@@ -26,6 +27,7 @@ const RESULT_LABEL: Record<string, string> = {
   WRONG_EVENT: "Boleto de otro evento",
   INVALID_TOKEN: "Código inválido",
   NOT_FOUND: "No existe",
+  CHECKIN_UNDONE: "Check-in deshecho",
 };
 
 export default async function EventStatsPanel({ eventId }: { eventId: string }) {
@@ -52,10 +54,7 @@ export default async function EventStatsPanel({ eventId }: { eventId: string }) 
     // count as real door traffic for staffing purposes, so both are
     // included (unlike the reentry stat card below, which cares about
     // re-entries specifically).
-    db.scanLog.findMany({
-      where: { scannedForEventId: eventId, result: { in: ["VALID_FIRST", "VALID_REENTRY"] } },
-      select: { scannedAt: true },
-    }),
+    entryScansForEvent(eventId),
   ]);
 
   if (!event) return null;
@@ -135,7 +134,7 @@ export default async function EventStatsPanel({ eventId }: { eventId: string }) 
 
       <h2 style={{ fontSize: 15 }}>Escaneos en la puerta</h2>
       <p style={{ fontSize: 12, color: "#5b5f6b", marginTop: -8 }}>
-        {(["VALID_FIRST", "VALID_REENTRY", "WRONG_EVENT", "INVALID_TOKEN", "NOT_FOUND"] as const)
+        {(["VALID_FIRST", "VALID_REENTRY", "CHECKIN_UNDONE", "WRONG_EVENT", "INVALID_TOKEN", "NOT_FOUND"] as const)
           .map((r) => `${RESULT_LABEL[r]}: ${scansByResult.get(r) ?? 0}`)
           .join(" · ")}
       </p>
