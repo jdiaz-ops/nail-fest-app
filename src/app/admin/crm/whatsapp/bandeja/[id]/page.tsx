@@ -5,6 +5,7 @@ import { getOrgSettings } from "@/lib/settings";
 import { listResendableRegistrations } from "@/lib/whatsapp/sendTicketPdf";
 import WhatsAppThreadComposer from "@/components/WhatsAppThreadComposer";
 import WhatsAppMarkRead from "@/components/WhatsAppMarkRead";
+import ScrollToLatest from "@/components/ScrollToLatest";
 import WhatsAppWindowCountdown from "@/components/WhatsAppWindowCountdown";
 import WhatsAppAssignAgent from "@/components/WhatsAppAssignAgent";
 import WhatsAppPersonLabels from "@/components/WhatsAppPersonLabels";
@@ -20,6 +21,11 @@ import { formatDateInTz } from "@/lib/dateFormat";
 export const dynamic = "force-dynamic";
 
 const WINDOW_MS = 24 * 60 * 60 * 1000;
+// A thread opens with its most recent messages only (the rest behind
+// "Ver los N mensajes anteriores") and scrolled to the last one — the
+// point of opening a chat is what the person just said, not the first
+// template ever sent to them.
+const RECENT_MESSAGES = 40;
 
 // One merged, chronological timeline entry — either a real WhatsApp
 // message or an internal note, so the thread reads top-to-bottom the way
@@ -37,17 +43,26 @@ type TimelineItem = ({ kind: "message" } & ThreadMessage) | { kind: "note"; id: 
 // width, not anything this server component knows. This fills the pane
 // at height: 100% with its own internal scroll for the message timeline,
 // composer pinned at the bottom, same as any real chat app.
-export default async function WhatsAppThreadPage({ params }: { params: { id: string } }) {
+export default async function WhatsAppThreadPage({ params, searchParams }: { params: { id: string }; searchParams: { todos?: string } }) {
+  const showAll = searchParams.todos === "1";
   const conversation = await db.whatsAppConversation.findUnique({
     where: { id: params.id },
     include: {
       person: { include: { labels: true } },
       assignedTo: true,
-      messages: { orderBy: { createdAt: "asc" } },
+      _count: { select: { messages: true } },
+      messages: { orderBy: { createdAt: "asc" }, ...(showAll ? {} : { take: -RECENT_MESSAGES }) },
       notes: { orderBy: { createdAt: "asc" }, include: { author: true } },
     },
   });
   if (!conversation) notFound();
+  const hiddenMessages = showAll ? 0 : Math.max(0, conversation._count.messages - conversation.messages.length);
+  // "Siguiente no leído →": triage without going back to the list.
+  const nextUnread = await db.whatsAppConversation.findFirst({
+    where: { unreadCount: { gt: 0 }, id: { not: conversation.id } },
+    orderBy: [{ lastInboundAt: "desc" }],
+    select: { id: true },
+  });
 
   const [agents, orgSettings, lastRegistration, resendableRegistrations, reopenTemplates] = await Promise.all([
     db.adminUser.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
@@ -94,14 +109,29 @@ export default async function WhatsAppThreadPage({ params }: { params: { id: str
           >
             ← Bandeja
           </Link>
-          <div style={{ fontWeight: 700, fontSize: 15 }}>{name}</div>
-          <div style={{ fontSize: 12.5, color: "#8a8478" }}>
-            {conversation.phone}
-            {!conversation.person && " — no coincide con ninguna persona del CRM"}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontWeight: 700, fontSize: 15 }}>{name}</div>
+              <div style={{ fontSize: 12.5, color: "#8a8478" }}>
+                {conversation.phone}
+                {!conversation.person && " — no coincide con ninguna persona del CRM"}
+              </div>
+            </div>
+            {nextUnread && (
+              <Link href={`/admin/crm/whatsapp/bandeja/${nextUnread.id}`} style={{ flexShrink: 0, fontSize: 12.5, fontWeight: 700, color: "var(--link)", textDecoration: "none", border: "1px solid var(--border)", borderRadius: 999, padding: "6px 12px", background: "#fff" }}>
+                Siguiente no leído →
+              </Link>
+            )}
           </div>
         </div>
 
-        <div style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: 16, display: "flex", flexDirection: "column", gap: 10 }}>
+        <ScrollToLatest containerId="wa-thread-timeline" dep={`${timeline[timeline.length - 1]?.id ?? ""}-${timeline.length}`} />
+        <div id="wa-thread-timeline" style={{ flex: 1, minHeight: 0, overflowY: "auto", padding: 16, display: "flex", flexDirection: "column", gap: 10 }}>
+          {hiddenMessages > 0 && (
+            <Link href={`/admin/crm/whatsapp/bandeja/${conversation.id}?todos=1`} style={{ alignSelf: "center", fontSize: 12.5, fontWeight: 600, color: "var(--link)", background: "#f6f5f2", borderRadius: 999, padding: "6px 14px", textDecoration: "none" }}>
+              Ver los {hiddenMessages} mensajes anteriores
+            </Link>
+          )}
           {timeline.map((item) =>
             item.kind === "note" ? (
               <div key={item.id} style={{ alignSelf: "center", maxWidth: "85%", background: "#fdf6e3", border: "1px dashed #e0c477", borderRadius: 8, padding: "8px 12px" }}>

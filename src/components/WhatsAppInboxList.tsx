@@ -66,6 +66,11 @@ export default function WhatsAppInboxList({ basePath = "/admin/crm/whatsapp/band
   // a phone number doesn't fire a request per digit.
   const [search, setSearch] = useState("");
   const [rows, setRows] = useState<ConversationRow[] | null>(null);
+  // Selection mode: tap rows to tick them, then "Marcar leídos" — or
+  // "Todos los no leídos" for everything with a badge in the list.
+  const [selecting, setSelecting] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(() => new Set());
+  const [marking, setMarking] = useState(false);
   const pathname = usePathname();
   const activeId = pathname?.match(/\/bandeja\/([^/]+)/)?.[1] ?? null;
   const inFlight = useRef(false);
@@ -107,6 +112,25 @@ export default function WhatsAppInboxList({ basePath = "/admin/crm/whatsapp/band
       window.removeEventListener("whatsapp-inbox-refresh", onRefresh);
     };
   }, [filter, search, load]);
+
+  async function markRead(ids: string[]) {
+    if (ids.length === 0) return;
+    setMarking(true);
+    try {
+      const res = await fetch("/api/admin/whatsapp/conversations/read", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids }) });
+      if (res.ok) {
+        const done = new Set(ids);
+        setRows((prev) => (prev ? prev.map((r) => (done.has(r.id) ? { ...r, unreadCount: 0 } : r)) : prev));
+        setSelected(new Set());
+        setSelecting(false);
+        window.dispatchEvent(new Event("whatsapp-inbox-refresh"));
+      }
+    } finally {
+      setMarking(false);
+    }
+  }
+  const unreadIds = (rows ?? []).filter((r) => r.unreadCount > 0).map((r) => r.id);
+  const pill = (active: boolean): React.CSSProperties => ({ padding: "5px 11px", borderRadius: 999, fontSize: 12, border: "1px solid var(--border)", cursor: "pointer", background: active ? "var(--accent-ink)" : "#fff", color: active ? "#fff" : "#17181c", fontWeight: 600 });
 
   // Instant local feedback the moment a thread is opened — matches
   // WhatChimp's own behavior of clearing the unread badge the moment you
@@ -159,6 +183,33 @@ export default function WhatsAppInboxList({ basePath = "/admin/crm/whatsapp/band
         })}
       </div>
 
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center", padding: "8px 12px", borderBottom: "1px solid var(--border)", background: selecting ? "#fff9f4" : "transparent" }}>
+        {selecting ? (
+          <>
+            <button type="button" onClick={() => markRead([...selected])} disabled={marking || selected.size === 0} style={pill(selected.size > 0)}>
+              {marking ? "Marcando…" : `Marcar leídos (${selected.size})`}
+            </button>
+            <button type="button" onClick={() => setSelected(new Set((rows ?? []).map((r) => r.id)))} style={pill(false)}>
+              Todos
+            </button>
+            <button type="button" onClick={() => { setSelecting(false); setSelected(new Set()); }} style={pill(false)}>
+              Cancelar
+            </button>
+          </>
+        ) : (
+          <>
+            <button type="button" onClick={() => setSelecting(true)} style={pill(false)}>
+              Seleccionar
+            </button>
+            {unreadIds.length > 0 && (
+              <button type="button" onClick={() => markRead(unreadIds)} disabled={marking} style={pill(false)} title="Quita el badge de no leído a todos los chats de esta lista">
+                {marking ? "Marcando…" : `Marcar los ${unreadIds.length} no leídos`}
+              </button>
+            )}
+          </>
+        )}
+      </div>
+
       <div style={{ flex: 1, overflowY: "auto" }}>
         {rows === null && <p style={{ color: "#8a8478", fontSize: 13, padding: 16 }}>Cargando...</p>}
         {rows?.length === 0 && (
@@ -173,6 +224,17 @@ export default function WhatsAppInboxList({ basePath = "/admin/crm/whatsapp/band
             <Link
               key={c.id}
               href={`${basePath}/${c.id}`}
+              onClick={(e) => {
+                if (!selecting) return;
+                e.preventDefault();
+                setSelected((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(c.id)) next.delete(c.id);
+                  else next.add(c.id);
+                  return next;
+                });
+              }}
+              aria-pressed={selecting ? selected.has(c.id) : undefined}
               style={{
                 display: "flex",
                 alignItems: "flex-start",
@@ -181,9 +243,14 @@ export default function WhatsAppInboxList({ basePath = "/admin/crm/whatsapp/band
                 textDecoration: "none",
                 color: "inherit",
                 borderBottom: "1px solid #f0efec",
-                background: isActive ? "#e3f4ec" : c.unreadCount > 0 ? "#fff9f4" : "transparent",
+                background: selecting && selected.has(c.id) ? "#e3f4ec" : isActive ? "#e3f4ec" : c.unreadCount > 0 ? "#fff9f4" : "transparent",
               }}
             >
+              {selecting && (
+                <span aria-hidden="true" style={{ width: 20, height: 20, borderRadius: 6, border: "2px solid #0b2e2c", background: selected.has(c.id) ? "#0b2e2c" : "#fff", color: "#fff", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, marginTop: 8 }}>
+                  {selected.has(c.id) ? "✓" : ""}
+                </span>
+              )}
               <div
                 style={{
                   width: 36,
