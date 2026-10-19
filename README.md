@@ -48,9 +48,6 @@ Full setup guides:
   Configuration Sets, production access request
 - [`docs/RESEND_SETUP.md`](docs/RESEND_SETUP.md) — Plan B if SES
   production access is denied or never answered
-- [`docs/MARCOLINI.md`](docs/MARCOLINI.md) — context on Marcolini, the
-  sister creator-commerce project (read it before answering questions
-  about it; that repo is read-only from here)
 
 ## How to test it end to end
 
