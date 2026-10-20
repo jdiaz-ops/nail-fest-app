@@ -21,6 +21,26 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="es">
       <body>
+        {/* Plan B for every image that goes through Next's optimizer
+            (/_next/image): since 2026-10-19 Vercel answers 404 to those
+            requests on this project, with the source files perfectly
+            reachable, so the event hero, the galleries and the admin
+            thumbnails all showed as broken images for anyone without a
+            cached copy. When an <img> whose source is an optimizer URL
+            fails, this swaps it to the original file (the `url` param)
+            and drops the srcset so the browser doesn't retry the
+            optimizer. Covers next/image and the hand-built
+            optimizedSrc() tags alike, runs in the capture phase so it
+            sees errors from images that render before React hydrates,
+            and is a no-op while the optimizer works. Inline and first in
+            <body> on purpose: it has to be registered before the first
+            image fails. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){function raw(s){try{var u=new URL(s,location.origin);if(u.pathname!=="/_next/image")return null;return u.searchParams.get("url")}catch(e){return null}}
+window.addEventListener("error",function(ev){var el=ev.target;if(!el||el.tagName!=="IMG"||el.dataset.nfRaw)return;var f=raw(el.currentSrc||el.src);if(!f)return;el.dataset.nfRaw="1";el.removeAttribute("srcset");el.removeAttribute("sizes");el.src=f},true)})();`,
+          }}
+        />
         {children}
         {cookieConsentEnabled && <CookieConsentBanner />}
         {/* Microsoft Clarity — see /admin/settings/analytics. Site-wide (not
