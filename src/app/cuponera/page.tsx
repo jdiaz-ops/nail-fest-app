@@ -6,7 +6,7 @@ import AllBrands from "@/components/cuponera/AllBrands";
 import CategoryTiles from "@/components/cuponera/CategoryTiles";
 import SearchSuggest from "@/components/cuponera/SearchSuggest";
 import { categoryTiles, suggestionIndex } from "@/lib/cuponera/browse";
-import { SAMPLE_BRANDS } from "@/lib/cuponera/sampleData";
+import { EXAMPLE_PANEL_BRANDS } from "@/lib/cuponera/sampleData";
 import { cuponeraRobots, loadCuponera } from "./load";
 import { fraunces } from "./fonts";
 import CuponeraShell from "./shell";
@@ -16,16 +16,17 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata(): Promise<Metadata> {
   return {
     title: "Cuponera · Nail Fest",
-    description: "Los descuentos de las marcas de Nail Fest, todo el año.",
+    description: "Ahorra todo el año con los descuentos de las marcas de Nail Fest: para manicuristas profesionales, estudiantes y educadoras.",
     robots: await cuponeraRobots(),
   };
 }
 
-// The coupons panel shows six brands at a glance. While there are fewer,
-// the team sees invented examples in the empty places (to judge the look —
-// asked on 2026-10-20) and visitors see "muy pronto": never a code that
-// doesn't exist.
-const PANEL_PLACES = 6;
+// The coupons panel shows six brands at a glance and slides for more. While
+// there are few real ones, the team sees invented examples up to eighteen —
+// enough to slide through, asked on 2026-10-20 — and visitors see "muy
+// pronto" up to six: never a code that doesn't exist.
+const PANEL_EXAMPLES_UP_TO = 18;
+const PANEL_SOON_UP_TO = 6;
 
 // "Precios de feria, todo el año": what follows the last comma gets the
 // accent color. A title without a comma stays in one color.
@@ -44,7 +45,9 @@ function titleParts(title: string): [string, string | null] {
 // way out is a store.
 export default async function CuponeraPage() {
   const { data, staff } = await loadCuponera();
-  const empty = data.heroStyle === "cupones" && !data.sample ? Math.max(0, PANEL_PLACES - data.panelBrands.length) : 0;
+  const filling = data.heroStyle === "cupones" && !data.sample;
+  const examples = filling && staff ? EXAMPLE_PANEL_BRANDS.slice(0, Math.max(0, PANEL_EXAMPLES_UP_TO - data.panelBrands.length)) : [];
+  const soon = filling && !staff ? Math.max(0, PANEL_SOON_UP_TO - data.panelBrands.length) : 0;
   const [titleStart, titleEnd] = titleParts(data.texts.heroTitle);
   const title = (
     <>
@@ -72,8 +75,8 @@ export default async function CuponeraPage() {
                 brands={data.panelBrands}
                 title={data.texts.panelTitle}
                 variant={data.heroStyle === "cupones" ? "coupons" : "rows"}
-                examples={staff ? SAMPLE_BRANDS.slice(0, empty) : []}
-                soon={staff ? 0 : empty}
+                examples={examples}
+                soon={soon}
                 displayClassName={fraunces.className}
               />
             )}

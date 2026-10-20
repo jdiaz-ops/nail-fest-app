@@ -6,12 +6,13 @@ import { formatPercent, type CuponeraBrandCard } from "@/lib/cuponera/shared";
 
 // The brands' discounts in the hero (Student Beans' "deals of the day"),
 // sliding sideways: "rows" packs three brands per column — title, name and
-// code, always whole —; "coupons" shows up to six small coupons at a glance,
-// three per row, two rows — logo, name, the % big and the code. Each brand
-// goes to its store; the arrows are for a mouse, the dots say where you are.
-// While there are fewer than six brands, the empty places show the team's
-// examples (`examples`, staff only, never a real offer) or, for visitors,
-// "muy pronto" (`soon`).
+// code, always whole —; "coupons" shows small coupons three per row, two
+// rows — logo, name, the % big, "con el código" and the code — with the next
+// column peeking in and "Desliza para ver más marcas" until the first slide,
+// so it's clear there's more. Each brand goes to its store; the arrows are
+// for a mouse, the dots say where you are. While there are few brands, the
+// empty places show the team's examples (`examples`, staff only, never a
+// real offer) or, for visitors, "muy pronto" (`soon`).
 export default function BrandsPanel({
   brands,
   title,
@@ -120,11 +121,20 @@ export default function BrandsPanel({
           ))}
         </div>
       )}
+      {pages > 1 && variant === "coupons" && (
+        <p className={page === 0 ? "cup-panel-hint" : "cup-panel-hint is-gone"} aria-hidden="true">
+          Desliza para ver más marcas
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M5 12h14M13 6l6 6-6 6" />
+          </svg>
+        </p>
+      )}
     </div>
   );
 }
 
-// A brand as a small coupon: logo, name, the discount big and the code. An
+// A brand as a small coupon: logo, name, the discount big, then "con el
+// código" and the code. An
 // example (invented, staff only) says so and opens no store.
 function MiniCoupon({ brand, example = false }: { brand: CuponeraBrandCard; example?: boolean }) {
   return (
@@ -133,6 +143,7 @@ function MiniCoupon({ brand, example = false }: { brand: CuponeraBrandCard; exam
       <BrandLogo brand={brand} size="sm" />
       <span className="cup-mini-name">{brand.name}</span>
       <span className="cup-mini-off">{formatPercent(brand.discountPercent)}</span>
+      <span className="cup-mini-with">con el código</span>
       <code className="cup-mini-code">{brand.code}</code>
     </BrandLink>
   );

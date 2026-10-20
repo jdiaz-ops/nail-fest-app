@@ -155,6 +155,22 @@ export const SAMPLE_BRANDS: CuponeraBrandCard[] = [
   sampleBrand("F", "peach", 15, "NAILFEST", { title: "2 × 1 en fresas" }),
 ];
 
+// The examples that fill the coupons panel for the team while there are
+// few real brands ("Marca A" to "Marca Q"): enough to slide through, none a
+// real offer — they open no store (storeUrl null).
+const EXAMPLE_TONES: CuponeraBrandCard["tone"][] = ["pink", "teal", "peach"];
+const EXAMPLE_OFFERS: [number, string][] = [
+  [15, "NAILFEST15"],
+  [10, "NAILFEST"],
+  [20, "NAILFEST20"],
+  [12, "NAILFEST12"],
+  [25, "NAILFEST25"],
+];
+export const EXAMPLE_PANEL_BRANDS: CuponeraBrandCard[] = "ABCDEFGHIJKLMNOPQ".split("").map((letter, i) => {
+  const [percent, code] = EXAMPLE_OFFERS[i % EXAMPLE_OFFERS.length]!;
+  return sampleBrand(letter, EXAMPLE_TONES[i % EXAMPLE_TONES.length]!, percent, code);
+});
+
 export const SAMPLE_COUPONS: CuponeraCoupon[] = [
   {
     id: "marca-a",

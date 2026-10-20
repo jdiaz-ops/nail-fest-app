@@ -4,14 +4,15 @@ import { db } from "@/lib/db";
 export const CUPONERA_SETTINGS_ID = "singleton";
 
 export const CUPONERA_DEFAULT_TEXTS = {
-  heroTitle: "Ahorra en tus compras de productos e insumos con la cuponera Nail Fest.",
-  heroLede: "Cuponera para manicuristas profesionales y estudiantes.",
+  heroTitle: "Ahorra todo el año en productos e insumos.",
+  heroLede: "Para manicuristas profesionales, estudiantes y educadoras.",
   panelTitle: "Descuentos de las marcas",
   categoriesTitle: "Explora ahorros por categoría",
   bestsellersTitle: "Lo más comprado por la comunidad",
   bestsellersSubtitle: "Con los códigos de Nail Fest, últimos 90 días",
   newTitle: "Lo nuevo de las marcas",
-  newSubtitle: "Lo último que llegó a las tiendas, con el descuento de Nail Fest.",
+  // Crossed out by the client on 2026-10-20, like the one under "Todas las marcas".
+  newSubtitle: "",
   allBrandsTitle: "Todas las marcas",
   // Crossed out by the client on 2026-10-20: no text under "Todas las
   // marcas" unless the admin writes one.

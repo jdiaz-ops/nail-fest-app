@@ -142,8 +142,7 @@ export default function SearchSuggest({ index }: { index: CuponeraSuggestion[] }
               })}
             </ul>
           ) : (
-            <div id={listId} className="cup-suggest-popular">
-              <span className="cup-suggest-group">Prueba con</span>
+            <div id={listId} className="cup-suggest-popular" aria-label="Sugerencias">
               <div className="cup-chips cup-chips--wrap">
                 {popular.map((s) => (
                   <Link key={s.href} href={s.href} className="cup-chip cup-chip--small">
