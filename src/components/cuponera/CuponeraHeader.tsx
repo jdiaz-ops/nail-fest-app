@@ -7,6 +7,10 @@ import { CODES_ONLY_ONLINE } from "./CuponeraFooter";
 import { collectionHref, type CuponeraCategoryLink } from "@/lib/cuponera/browse";
 import { normalizeText, type CuponeraBrandCard } from "@/lib/cuponera/shared";
 
+// The three steps and the codes-only-online note above the brands, crossed
+// out by the client on 2026-10-20 — the note stays in the footer.
+const SHOW_HOW_IT_WORKS = false;
+
 // The cuponera's header: the logo (back to the front page) and the ☰ menu
 // with two tabs — first every brand as a coupon (its %, its code, the way to
 // its store), then the categories and their types, each opening its
@@ -95,18 +99,22 @@ export default function CuponeraHeader({ brands, categories }: { brands: Cuponer
             </div>
           ) : (
             <div role="tabpanel">
-              <ol className="cup-steps">
-                <li>
-                  <b>Toca una marca:</b> copiamos su código y abrimos su tienda.
-                </li>
-                <li>
-                  <b>Elige tus productos</b> en la tienda de la marca.
-                </li>
-                <li>
-                  <b>Al pagar,</b> si el descuento no aparece solo, pega el código.
-                </li>
-              </ol>
-              <p className="cup-menu-note">{CODES_ONLY_ONLINE}</p>
+              {SHOW_HOW_IT_WORKS && (
+                <>
+                  <ol className="cup-steps">
+                    <li>
+                      <b>Toca una marca:</b> copiamos su código y abrimos su tienda.
+                    </li>
+                    <li>
+                      <b>Elige tus productos</b> en la tienda de la marca.
+                    </li>
+                    <li>
+                      <b>Al pagar,</b> si el descuento no aparece solo, pega el código.
+                    </li>
+                  </ol>
+                  <p className="cup-menu-note">{CODES_ONLY_ONLINE}</p>
+                </>
+              )}
               {sorted.length > 6 && (
                 <div className="cup-menu-search">
                   <label htmlFor="cup-brand-q" className="cup-sr">

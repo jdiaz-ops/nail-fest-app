@@ -4,8 +4,8 @@ import { db } from "@/lib/db";
 export const CUPONERA_SETTINGS_ID = "singleton";
 
 export const CUPONERA_DEFAULT_TEXTS = {
-  heroTitle: "Cuponera para manicuristas profesionales y estudiantes",
-  heroLede: "Ahorra en tus compras de productos e insumos con la cuponera Nail Fest.",
+  heroTitle: "Ahorra en tus compras de productos e insumos con la cuponera Nail Fest.",
+  heroLede: "Cuponera para manicuristas profesionales y estudiantes.",
   panelTitle: "Descuentos de las marcas",
   categoriesTitle: "Explora ahorros por categoría",
   bestsellersTitle: "Lo más comprado por la comunidad",
@@ -13,7 +13,9 @@ export const CUPONERA_DEFAULT_TEXTS = {
   newTitle: "Lo nuevo de las marcas",
   newSubtitle: "Lo último que llegó a las tiendas, con el descuento de Nail Fest.",
   allBrandsTitle: "Todas las marcas",
-  allBrandsSubtitle: "Las que tienen descuento con Nail Fest. Toca una para ir a su tienda.",
+  // Crossed out by the client on 2026-10-20: no text under "Todas las
+  // marcas" unless the admin writes one.
+  allBrandsSubtitle: "",
 };
 
 // What a fresh install reads before anyone saves anything — same "a missing

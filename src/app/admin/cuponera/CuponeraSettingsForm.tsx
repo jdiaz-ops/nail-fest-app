@@ -43,7 +43,7 @@ type SwitchKey = "showCoupons" | "showCategories" | "showBestsellers" | "showNew
 type Status = "idle" | "saving" | "saved" | "invalid" | "error";
 
 const HERO_STYLES = [
-  ["cupones", "Panel con cupones", "Cada marca como un cupón: descuento, código y botón a la tienda; se deslizan con el dedo (como Student Beans)."],
+  ["cupones", "Panel con cupones", "Seis marcas a la vista, tres por fila, cada una con su % grande y su código; se desliza con el dedo para ver más (como Student Beans)."],
   ["panel", "Panel con filas", "Tres marcas por columna, con su descuento y su código; se desliza con el dedo (como Student Beans)."],
   ["marcas", "Logos que se mueven solos", "Filas de logos que pasan hacia la izquierda, con el % y el código debajo (como Rakuten)."],
 ] as const;

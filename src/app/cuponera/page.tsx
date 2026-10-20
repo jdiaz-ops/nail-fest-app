@@ -6,6 +6,7 @@ import AllBrands from "@/components/cuponera/AllBrands";
 import CategoryTiles from "@/components/cuponera/CategoryTiles";
 import SearchSuggest from "@/components/cuponera/SearchSuggest";
 import { categoryTiles, suggestionIndex } from "@/lib/cuponera/browse";
+import { SAMPLE_BRANDS } from "@/lib/cuponera/sampleData";
 import { cuponeraRobots, loadCuponera } from "./load";
 import { fraunces } from "./fonts";
 import CuponeraShell from "./shell";
@@ -19,6 +20,12 @@ export async function generateMetadata(): Promise<Metadata> {
     robots: await cuponeraRobots(),
   };
 }
+
+// The coupons panel shows six brands at a glance. While there are fewer,
+// the team sees invented examples in the empty places (to judge the look —
+// asked on 2026-10-20) and visitors see "muy pronto": never a code that
+// doesn't exist.
+const PANEL_PLACES = 6;
 
 // "Precios de feria, todo el año": what follows the last comma gets the
 // accent color. A title without a comma stays in one color.
@@ -36,7 +43,8 @@ function titleParts(title: string): [string, string | null] {
 // hidden in Editar cuponera. The collections live in ./[...ruta]; the only
 // way out is a store.
 export default async function CuponeraPage() {
-  const { data } = await loadCuponera();
+  const { data, staff } = await loadCuponera();
+  const empty = data.heroStyle === "cupones" && !data.sample ? Math.max(0, PANEL_PLACES - data.panelBrands.length) : 0;
   const [titleStart, titleEnd] = titleParts(data.texts.heroTitle);
   const title = (
     <>
@@ -64,6 +72,8 @@ export default async function CuponeraPage() {
                 brands={data.panelBrands}
                 title={data.texts.panelTitle}
                 variant={data.heroStyle === "cupones" ? "coupons" : "rows"}
+                examples={staff ? SAMPLE_BRANDS.slice(0, empty) : []}
+                soon={staff ? 0 : empty}
                 displayClassName={fraunces.className}
               />
             )}
