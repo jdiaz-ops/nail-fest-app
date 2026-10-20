@@ -37,6 +37,14 @@ export const secondaryButtonStyle: CSSProperties = {
 
 export const mutedText: CSSProperties = { fontSize: 13, color: "#5b5f6b" };
 
+// Every save in these editors announces itself, so the live preview of the
+// page (CuponeraPreview) reloads and shows the change.
+export const CUPONERA_SAVED_EVENT = "cuponera:guardado";
+
+export function announceCuponeraSaved() {
+  window.dispatchEvent(new Event(CUPONERA_SAVED_EVENT));
+}
+
 export async function api<T = unknown>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
     ...init,
@@ -44,6 +52,7 @@ export async function api<T = unknown>(path: string, init?: RequestInit): Promis
   });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(typeof body?.error === "string" ? body.error : "request_failed");
+  if ((init?.method ?? "GET").toUpperCase() !== "GET") announceCuponeraSaved();
   return body as T;
 }
 

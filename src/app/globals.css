@@ -2527,3 +2527,13 @@ button.cup-card { width: 100%; padding: 0; font: inherit; text-align: left; curs
   .cup-sort { width: 100%; }
   .cup-sort select { flex: 1; }
 }
+
+/* Editar cuponera: the editors, and beside them — when the screen has room
+   — the live preview of the page (CuponeraPreview), always in view. */
+.cup-admin { display: grid; grid-template-columns: minmax(0, 1fr); gap: 32px; align-items: start; }
+.cup-admin-main { min-width: 0; }
+.cup-admin-preview { display: none; }
+@media (min-width: 1200px) {
+  .cup-admin { grid-template-columns: minmax(640px, 900px) minmax(430px, 1fr); }
+  .cup-admin-preview { display: block; position: sticky; top: 16px; height: calc(100vh - 112px); min-height: 520px; }
+}

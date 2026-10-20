@@ -134,7 +134,6 @@ export default function CuponeraSettingsForm({
         </div>
 
         <div style={{ fontSize: 13, fontWeight: 600, color: "#5b5f6b", margin: "4px 0 10px" }}>Secciones</div>
-        {checkbox("showDeal", "Robo del día", "Un producto con cuenta regresiva arriba, al lado del buscador.")}
         {checkbox("showCoupons", "Cupones de las marcas", "Una tarjeta por marca con su código para copiar.")}
         {checkbox("showBestsellers", "Lo más comprado", "Lo que más se ha comprado con los códigos de Nail Fest en los últimos 3 meses (sin mostrar cifras). Aparece cuando hay al menos 3 productos vendidos.")}
         {checkbox("showNew", "Lo nuevo", "Los productos que llegaron hace poco a las tiendas de las marcas.")}

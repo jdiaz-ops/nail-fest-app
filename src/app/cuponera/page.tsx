@@ -3,12 +3,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Fraunces } from "next/font/google";
 import { viewerCanSeeSamples } from "@/lib/reviewsViewer";
-import { getCuponeraView, nextBogotaMidnight, type CuponeraNewItem, type CuponeraView } from "@/lib/cuponera/data";
+import { getCuponeraView, type CuponeraNewItem, type CuponeraView } from "@/lib/cuponera/data";
 import { CUPONERA_DEFAULT_TEXTS, getCuponeraSettings } from "@/lib/cuponera/settings";
 import { discountPercent, formatCop } from "@/lib/cuponera/shared";
-import { SAMPLE_COUPONS, SAMPLE_DEAL, SAMPLE_DESIGN, SAMPLE_LISTS, SAMPLE_NEW, SAMPLE_PRODUCTS } from "@/lib/cuponera/sampleData";
+import { SAMPLE_COUPONS, SAMPLE_DESIGN, SAMPLE_LISTS, SAMPLE_NEW, SAMPLE_PRODUCTS } from "@/lib/cuponera/sampleData";
 import CuponeraOfertas from "@/components/cuponera/CuponeraOfertas";
-import DealOfTheDay from "@/components/cuponera/DealOfTheDay";
 import CouponCard from "@/components/cuponera/CouponCard";
 import ShopTheDesign from "@/components/cuponera/ShopTheDesign";
 import PreviewLink from "@/components/cuponera/PreviewLink";
@@ -29,10 +28,6 @@ export async function generateMetadata(): Promise<Metadata> {
     // Indexed only once it's public; the preview never is.
     robots: settings.published ? undefined : { index: false, follow: false },
   };
-}
-
-function secondsUntil(date: Date, now: Date): number {
-  return Math.max(0, Math.floor((date.getTime() - now.getTime()) / 1000));
 }
 
 function NewCard({ item: { product, moreInLine } }: { item: CuponeraNewItem }) {
@@ -70,12 +65,21 @@ function NewCard({ item: { product, moreInLine } }: { item: CuponeraNewItem }) {
 // as curated in /admin/cuponera; visitors only see it once it's published
 // there, staff always does (with a banner while it's hidden). Before the
 // first sync it's the sample mockup — staff-only, never public.
-export default async function CuponeraPage() {
+//
+// People come to explore deals: the only way out is to a store. No links
+// to the rest of nailfest.lat (events, reviews), and no "Robo del día" —
+// hidden on 2026-10-20 ("la única salida es clic a una tienda para
+// comprar"); DealOfTheDay and its admin form stay in the code, unused.
+export default async function CuponeraPage({ searchParams }: { searchParams: { vista?: string } }) {
   const [staff, view] = await Promise.all([viewerCanSeeSamples(), getCuponeraView()]);
   if (view ? !view.settings.published && !staff : !staff) notFound();
 
-  const now = new Date();
-  const hiddenNote = !view
+  // Inside Editar cuponera's preview the banner is noise: that screen
+  // already says whether the page is public.
+  const embedded = staff && searchParams.vista === "admin";
+  const hiddenNote = embedded
+    ? null
+    : !view
     ? "Datos de ejemplo: las marcas y los precios no son reales y los links todavía no abren tiendas."
     : !view.settings.published
       ? "La cuponera todavía no es pública: el resto de las personas ven «página no encontrada»."
@@ -94,43 +98,25 @@ export default async function CuponeraPage() {
 
       <header className="cup-header">
         <div className="cup-header-inner">
-          <Link href="/" className="cup-brand">
+          <div className="cup-brand">
             {/* eslint-disable-next-line @next/next/no-img-element -- fixed logo mark */}
             <img src="/logo.png" alt="Nail Fest" />
             <span>Cuponera</span>
-          </Link>
-          <Link href="/" className="cup-header-link">
-            Ver eventos
-          </Link>
+          </div>
         </div>
       </header>
 
-      <div className="cup-wrap">{view ? <RealSections view={view} now={now} /> : <SampleSections now={now} />}</div>
+      <div className="cup-wrap">{view ? <RealSections view={view} /> : <SampleSections />}</div>
 
       <PreviewToast />
     </main>
   );
 }
 
-function RealSections({ view, now }: { view: CuponeraView; now: Date }) {
-  const deal = view.deal;
+function RealSections({ view }: { view: CuponeraView }) {
   return (
     <>
-      <CuponeraOfertas
-        products={view.products}
-        title={view.texts.heroTitle}
-        lede={view.texts.heroLede}
-        displayClassName={fraunces.className}
-        deal={
-          deal ? (
-            <DealOfTheDay
-              product={deal.product}
-              endsAt={deal.endsAt?.toISOString() ?? null}
-              initialSeconds={deal.endsAt ? secondsUntil(deal.endsAt, now) : 0}
-            />
-          ) : null
-        }
-      />
+      <CuponeraOfertas products={view.products} title={view.texts.heroTitle} lede={view.texts.heroLede} displayClassName={fraunces.className} />
 
       {view.bestsellers.length > 0 && (
         <section className="cup-section">
@@ -175,8 +161,7 @@ function RealSections({ view, now }: { view: CuponeraView; now: Date }) {
   );
 }
 
-function SampleSections({ now }: { now: Date }) {
-  const endsAt = nextBogotaMidnight(now);
+function SampleSections() {
   return (
     <>
       <CuponeraOfertas
@@ -184,7 +169,6 @@ function SampleSections({ now }: { now: Date }) {
         title={CUPONERA_DEFAULT_TEXTS.heroTitle}
         lede={CUPONERA_DEFAULT_TEXTS.heroLede}
         displayClassName={fraunces.className}
-        deal={<DealOfTheDay product={SAMPLE_DEAL} endsAt={endsAt.toISOString()} initialSeconds={secondsUntil(endsAt, now)} sample />}
       />
 
       <div className="cup-duo">
@@ -256,11 +240,6 @@ function Footer() {
     <footer className="cup-footer">
       <p>Cada compra se hace en la tienda de la marca, con sus precios y condiciones. Nail Fest recibe una comisión por las compras hechas desde la cuponera.</p>
       <div className="cup-footer-side">
-        <div className="cup-footer-links">
-          <Link href="/">Eventos</Link>
-          <Link href="/resenas">Reseñas</Link>
-          <Link href="/privacidad">Privacidad</Link>
-        </div>
         <span className="cup-footer-tech">Tiendas con tecnología Marcolini</span>
       </div>
     </footer>

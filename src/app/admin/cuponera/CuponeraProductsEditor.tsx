@@ -37,7 +37,7 @@ const chipStyle = (on: boolean) => ({
 });
 
 // Every product of the visible brands: shown or hidden, featured (★ —
-// first in the offers and in the automatic Robo del día), its category,
+// first in the offers), its category,
 // who it's for ("Ofertas para lo que haces") and whether it counts as new.
 // Changes save on the spot, one product or the whole selection at once.
 export default function CuponeraProductsEditor({

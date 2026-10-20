@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { api, CardTitle, cardStyle, mutedText, Pill, primaryButtonStyle } from "./ui";
+import { announceCuponeraSaved, CardTitle, cardStyle, mutedText, Pill, primaryButtonStyle } from "./ui";
 
 type SyncResult =
   | { ok: true; brands: number; products: number; brandsAdded: number; productsAdded: number; productsGone: number; servedFrom?: string }
@@ -50,6 +50,7 @@ export default function CuponeraSyncCard(props: {
             result.servedFrom && result.servedFrom !== props.marcoliniHost ? ` Marcolini respondió desde ${result.servedFrom}.` : ""
           }`,
         });
+        announceCuponeraSaved();
       } else {
         setMessage({ ok: false, text: result.error });
       }

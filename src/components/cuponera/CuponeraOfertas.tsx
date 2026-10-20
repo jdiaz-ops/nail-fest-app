@@ -40,7 +40,8 @@ export default function CuponeraOfertas({
   displayClassName,
 }: {
   products: CuponeraProduct[];
-  deal: ReactNode;
+  /** Beside the search at the start (the "Robo del día", hidden for now). */
+  deal?: ReactNode;
   title: string;
   lede: string;
   displayClassName: string;
