@@ -2234,3 +2234,234 @@ button.primary:disabled {
 .reviews-badge-link { font-weight: 700; color: var(--link); white-space: nowrap; }
 .reviews-badge-dark .reviews-badge-link { color: #9ef0ea; }
 .homepage-reviews-badge { display: flex; justify-content: center; padding: 24px 16px 0; }
+
+/* ---------- Cuponera (nailfest.lat/cuponera) ----------
+   Mobile first, from the canvas mockup "Cuponera Nail Fest". Two columns
+   from 900px (hero + deal of the day, design + coupons). */
+.cup-page { background: var(--bg); color: var(--ink); min-height: 100vh; }
+.cup-page :focus-visible { outline: 3px solid var(--link); outline-offset: 2px; }
+.cup-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.cup-mono { font-family: ui-monospace, Menlo, Consolas, monospace; }
+.cup-preview { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 14px; padding: 10px 16px; background: var(--ink); color: #fff; font-size: 13px; line-height: 1.4; text-align: center; }
+.cup-preview a { color: #9ff0ea; font-weight: 700; }
+.cup-header { background: var(--surface); border-bottom: 1px solid var(--border); }
+.cup-header-inner { max-width: 1200px; margin: 0 auto; padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.cup-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.cup-brand img { height: 36px; width: auto; display: block; }
+.cup-brand span { font-size: 12px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--link); }
+.cup-header-link { font-size: 14px; font-weight: 700; color: var(--link); text-decoration: none; }
+.cup-wrap { max-width: 1200px; margin: 0 auto; padding: 24px 20px 40px; display: flex; flex-direction: column; gap: 40px; }
+
+.cup-eyebrow { font-size: 12px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: var(--link); }
+.cup-eyebrow--pink { color: #b0225c; }
+.cup-title { margin: 0; font-size: clamp(36px, 5.2vw, 68px); line-height: 1.02; font-weight: 900; letter-spacing: -0.02em; text-wrap: balance; }
+.cup-lede { margin: 0; max-width: 540px; font-size: 15px; line-height: 1.5; color: var(--ink-muted); }
+.cup-hero { display: flex; flex-wrap: wrap; align-items: center; gap: 28px 40px; }
+.cup-hero-main { flex: 1 1 520px; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+.cup-hero-side { flex: 1 1 340px; max-width: 440px; min-width: 0; }
+.cup-search { display: flex; align-items: center; gap: 10px; height: 52px; max-width: 620px; padding: 0 10px 0 16px; box-sizing: border-box; background: var(--surface); border: 1.5px solid var(--ink); border-radius: 14px; }
+.cup-search:focus-within { box-shadow: 0 0 0 3px rgba(0, 190, 181, 0.35); }
+.cup-search input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; color: var(--ink); font: inherit; font-size: 16px; }
+.cup-search input::-webkit-search-cancel-button { display: none; }
+.cup-search-clear { flex: none; width: 32px; height: 32px; border: 0; border-radius: 999px; background: #f3f1ee; color: var(--ink); font: inherit; font-weight: 700; cursor: pointer; }
+.cup-chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.cup-chips::-webkit-scrollbar { display: none; }
+.cup-chips--wrap { flex-wrap: wrap; overflow: visible; }
+.cup-chip { flex: none; height: 40px; padding: 0 16px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--ink); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.cup-chip.is-on { background: var(--ink); border-color: var(--ink); color: #fff; font-weight: 700; }
+.cup-chip--prof { padding: 0 14px; }
+.cup-chip--prof.is-on { background: #e6f9f7; border: 1.5px solid var(--link); color: var(--accent-ink); font-weight: 800; }
+
+.cup-deal { display: flex; flex-direction: column; gap: 12px; padding: 16px; background: #fff3ea; border: 1px solid var(--accent-secondary); border-radius: 20px; }
+.cup-deal-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.cup-deal-label { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #a5471a; }
+.cup-countdown { display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.cup-countdown-label { margin-right: 2px; font-size: 12px; font-weight: 600; color: var(--ink-muted); }
+.cup-countdown b { padding: 4px 6px; border-radius: 6px; background: var(--ink); color: #fff; font-weight: 700; }
+.cup-deal-body { display: flex; flex-direction: column; gap: 12px; padding: 14px; background: var(--surface); border-radius: 16px; }
+.cup-deal-photo { position: relative; height: 180px; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+.cup-deal-info { display: flex; flex-direction: column; gap: 4px; }
+.cup-deal-name { font-size: 17px; font-weight: 700; line-height: 1.3; }
+.cup-off { position: absolute; top: 8px; left: 8px; padding: 3px 8px; border-radius: 999px; background: #c2185b; color: #fff; font-size: 12px; font-weight: 800; }
+.cup-off--big { top: 10px; left: 10px; padding: 4px 10px; font-size: 14px; }
+.cup-new { position: absolute; top: 6px; left: 6px; padding: 2px 8px; border-radius: 999px; background: #0f7d76; color: #fff; font-size: 11px; font-weight: 800; }
+.cup-brandname { font-size: 12px; color: var(--ink-muted); }
+.cup-prices { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 8px; font-variant-numeric: tabular-nums; }
+.cup-price { font-weight: 800; }
+.cup-before { color: var(--ink-muted); text-decoration: line-through; }
+.cup-prices--big .cup-price { font-size: 28px; letter-spacing: -0.01em; }
+.cup-prices--big .cup-before { font-size: 15px; }
+.cup-stock { display: flex; flex-direction: column; gap: 6px; }
+.cup-stock-bar { height: 8px; border-radius: 999px; background: #f6dfe8; overflow: hidden; }
+.cup-stock-bar span { display: block; height: 100%; border-radius: 999px; background: #c2185b; }
+.cup-stock-text { font-size: 12px; font-weight: 700; color: #b0225c; }
+.cup-btn { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 50px; padding: 0 16px; border: 0; border-radius: 12px; background: var(--accent); color: var(--accent-ink); font: inherit; font-size: 16px; font-weight: 800; text-align: center; text-decoration: none; cursor: pointer; box-sizing: border-box; }
+.cup-btn:hover { color: var(--accent-ink); filter: brightness(0.96); }
+.cup-btn--small { min-height: 44px; font-size: 14px; border-radius: 10px; }
+.cup-note { font-size: 12px; line-height: 1.4; color: var(--ink-muted); text-align: center; }
+
+.cup-section { display: flex; flex-direction: column; gap: 14px; }
+.cup-section-head { display: flex; flex-direction: column; gap: 4px; }
+.cup-section-head--split { flex-direction: row; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 16px; }
+.cup-h2 { margin: 0; font-size: clamp(26px, 3vw, 34px); line-height: 1.08; font-weight: 800; letter-spacing: -0.01em; text-wrap: balance; }
+.cup-sub { margin: 0; font-size: 14px; line-height: 1.45; color: var(--ink-muted); }
+.cup-more { align-self: flex-start; font-size: 15px; font-weight: 700; color: var(--link); text-decoration: none; }
+.cup-empty { margin: 0; padding: 24px; border: 1px dashed var(--border); border-radius: 16px; color: var(--ink-muted); text-align: center; }
+.cup-linkbtn { align-self: flex-start; padding: 0; border: 0; background: none; color: var(--link); font: inherit; font-size: 15px; font-weight: 700; text-decoration: underline; cursor: pointer; }
+
+.cup-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.cup-card { display: flex; flex-direction: column; overflow: hidden; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; color: var(--ink); text-decoration: none; transition: transform 0.15s ease, box-shadow 0.15s ease; }
+.cup-card:hover { color: var(--ink); transform: translateY(-2px); box-shadow: 0 8px 20px rgba(23, 24, 28, 0.08); }
+.cup-card-photo { position: relative; aspect-ratio: 1 / 1; display: flex; align-items: center; justify-content: center; }
+.cup-card-body { flex: 1; display: flex; flex-direction: column; gap: 3px; padding: 10px 10px 12px; }
+.cup-card-name { min-height: 34px; font-size: 13px; font-weight: 600; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.cup-card .cup-price { font-size: 17px; }
+.cup-card .cup-before { font-size: 12px; }
+.cup-card-code { margin-bottom: 8px; font-size: 11px; color: var(--link); }
+.cup-card-cta { display: flex; align-items: center; justify-content: center; height: 34px; margin-top: auto; border-radius: 999px; background: #e6f9f7; color: var(--accent-ink); font-size: 12px; font-weight: 700; }
+@media (prefers-reduced-motion: reduce) {
+  .cup-card { transition: none; }
+  .cup-card:hover { transform: none; }
+}
+
+.cup-duo { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 40px; }
+.cup-duo-main { flex: 1 1 520px; min-width: 0; }
+.cup-duo-side { flex: 1 1 360px; min-width: 0; }
+
+.cup-design { display: flex; flex-wrap: wrap; gap: 14px; }
+.cup-design-art { flex: 1 1 280px; position: relative; display: flex; align-items: center; justify-content: center; min-height: 270px; padding-bottom: 40px; box-sizing: border-box; border-radius: 20px; background: #fde8ef; overflow: hidden; }
+.cup-nails { position: relative; width: 302px; height: 156px; flex: none; }
+.cup-nail { position: absolute; bottom: 0; box-sizing: border-box; border: 2px solid var(--ink); overflow: hidden; }
+.cup-nail::before { content: ""; position: absolute; }
+.cup-nail-1 { left: 0; width: 50px; height: 118px; border-radius: 25px 25px 16px 16px; background: #f48fb1; }
+.cup-nail-1::before { left: 0; right: 0; top: 0; height: 30px; background: #00beb5; }
+.cup-nail-2 { left: 62px; width: 52px; height: 142px; border-radius: 26px 26px 16px 16px; background: #00beb5; }
+.cup-nail-2::before { left: 13px; top: 46px; width: 22px; height: 40px; border-radius: 22px 0; background: #0f7d76; transform: rotate(18deg); }
+.cup-nail-3 { left: 126px; width: 54px; height: 156px; border-radius: 27px 27px 16px 16px; background: #ffc5a8; }
+.cup-nail-3::before { left: 10px; top: 30px; width: 12px; height: 12px; border-radius: 50%; background: #f2b01e; box-shadow: 18px 28px 0 -1px #c2185b, 4px 56px 0 0 #00beb5; }
+.cup-nail-4 { left: 192px; width: 52px; height: 138px; border-radius: 26px 26px 16px 16px; background: #f2b01e; }
+.cup-nail-4::before { left: 0; right: 0; top: 0; height: 30px; background: #f48fb1; }
+.cup-nail-5 { left: 256px; width: 46px; height: 104px; border-radius: 23px 23px 16px 16px; background: #00beb5; }
+.cup-nail-5::before { left: 11px; top: 30px; width: 20px; height: 34px; border-radius: 20px 0; background: #f48fb1; transform: rotate(-20deg); }
+.cup-pin { position: absolute; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 50%; background: var(--surface); color: var(--ink); box-shadow: 0 0 0 2px var(--ink); font: inherit; font-size: 14px; font-weight: 800; cursor: pointer; }
+.cup-pin.is-on { background: var(--ink); color: #fff; box-shadow: 0 0 0 3px #fff; }
+.cup-design-hint { position: absolute; left: 12px; bottom: 10px; padding: 5px 10px; border-radius: 999px; background: #fff; font-size: 12px; font-weight: 700; }
+.cup-design-list { flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.cup-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 12px; box-sizing: border-box; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
+.cup-row-n { flex: none; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: #f3f1ee; font-size: 13px; font-weight: 800; }
+.cup-row-swatch { flex: none; width: 34px; height: 34px; box-sizing: border-box; border: 1.5px solid var(--ink); border-radius: 50%; }
+.cup-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.cup-row-name { font-size: 14px; font-weight: 600; }
+.cup-row-brand { font-size: 12px; color: var(--ink-muted); }
+.cup-row-prices { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; font-variant-numeric: tabular-nums; }
+.cup-row-prices .cup-price { font-size: 15px; }
+.cup-row-prices .cup-before { font-size: 11px; }
+.cup-row-open { display: flex; flex-direction: column; gap: 10px; padding: 12px; background: var(--surface); border: 2px solid var(--accent); border-radius: 14px; }
+.cup-row-open .cup-row { padding: 0; border: 0; cursor: default; }
+.cup-row-open .cup-row-n { background: var(--ink); color: #fff; }
+.cup-row-open .cup-row-name { font-weight: 700; }
+.cup-total { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-radius: 14px; background: #e6f9f7; color: var(--accent-ink); font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.cup-total-amounts { display: flex; flex-direction: column; align-items: flex-end; }
+.cup-total-amounts b { font-size: 17px; font-weight: 800; }
+.cup-total-amounts span { font-size: 12px; font-weight: 700; color: var(--link); }
+.cup-credit { font-size: 12px; line-height: 1.45; color: var(--ink-muted); }
+
+.cup-coupons { display: flex; flex-direction: column; gap: 12px; }
+.cup-coupon { display: flex; flex-direction: column; gap: 12px; padding: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; }
+.cup-coupon-top { display: flex; align-items: center; gap: 12px; }
+.cup-coupon-text { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.cup-avatar { flex: none; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 17px; font-weight: 800; }
+.cup-avatar--pink { background: #fde8ef; color: #b0225c; }
+.cup-avatar--teal { background: #e6f9f7; color: var(--link); }
+.cup-avatar--peach { background: #fff3ea; color: #a5471a; }
+.cup-coupon-brandline { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 13px; color: var(--ink-muted); }
+.cup-exclusive { align-self: flex-start; padding: 2px 8px; border-radius: 999px; background: #fde8ef; color: #b0225c; font-size: 11px; font-weight: 800; }
+.cup-coupon-title { margin: 0; font-size: 19px; font-weight: 800; line-height: 1.2; }
+.cup-coupon-conds { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--ink-muted); }
+.cup-coupon-cut { border-top: 1.5px dashed var(--border); }
+.cup-coupon-foot { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.cup-verified { display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; color: var(--link); }
+.cup-reveal { display: flex; align-items: stretch; height: 44px; padding: 0; overflow: hidden; border: 1.5px solid var(--accent); border-radius: 10px; background: none; font: inherit; cursor: pointer; }
+.cup-reveal-label { display: flex; align-items: center; padding: 0 14px; background: var(--accent); color: var(--accent-ink); font-size: 14px; font-weight: 800; }
+.cup-reveal-peek { display: flex; align-items: center; padding: 0 10px; background: #e6f9f7; color: var(--accent-ink); font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 14px; font-weight: 700; letter-spacing: 0.06em; }
+
+.cup-sheet { width: 100%; max-width: 100%; max-height: 92vh; margin: auto 0 0; padding: 0; border: 0; border-radius: 24px 24px 0 0; background: var(--surface); color: var(--ink); }
+.cup-sheet::backdrop { background: rgba(23, 24, 28, 0.55); }
+.cup-sheet-body { display: flex; flex-direction: column; gap: 16px; padding: 12px 20px 28px; }
+.cup-sheet-handle { align-self: center; width: 44px; height: 5px; border-radius: 999px; background: var(--border); }
+.cup-sheet-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.cup-sheet-brand { font-size: 15px; font-weight: 700; }
+.cup-sheet-close { flex: none; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 50%; background: #f3f1ee; cursor: pointer; }
+.cup-sheet-title { margin: 0; font-size: 32px; line-height: 1.04; font-weight: 900; letter-spacing: -0.02em; }
+.cup-code { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 12px 12px 18px; border: 2px dashed var(--accent); border-radius: 14px; background: #e6f9f7; }
+.cup-code-text { min-width: 0; overflow-wrap: anywhere; color: var(--accent-ink); font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 22px; font-weight: 800; letter-spacing: 0.06em; }
+.cup-copy { flex: none; height: 44px; padding: 0 16px; border: 0; border-radius: 10px; background: var(--accent); color: var(--accent-ink); font: inherit; font-size: 14px; font-weight: 800; cursor: pointer; }
+.cup-copy.is-done { background: #0f7d76; color: #fff; }
+.cup-sheet-note { margin: 0; font-size: 13px; line-height: 1.45; color: var(--ink-muted); }
+.cup-conds { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 14px 16px; list-style: none; border-radius: 14px; background: var(--bg); }
+.cup-conds li { display: flex; align-items: center; gap: 10px; font-size: 14px; line-height: 1.35; }
+.cup-sheet-help { align-self: center; padding: 6px; border: 0; background: none; color: var(--link); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
+
+.cup-lists { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(220px, 1fr); gap: 12px; overflow-x: auto; scrollbar-width: none; }
+.cup-lists::-webkit-scrollbar { display: none; }
+.cup-list { display: flex; flex-direction: column; gap: 8px; color: var(--ink); text-decoration: none; }
+.cup-list:hover { color: var(--ink); }
+.cup-list-cover { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; height: 160px; overflow: hidden; border-radius: 16px; }
+.cup-list-title { font-size: 15px; font-weight: 700; line-height: 1.25; }
+.cup-list-meta { font-size: 12px; color: var(--ink-muted); }
+
+.cup-news { display: grid; grid-template-columns: 1fr; gap: 12px; }
+.cup-newcard { display: flex; gap: 14px; padding: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; color: var(--ink); text-decoration: none; }
+.cup-newcard:hover { color: var(--ink); }
+.cup-newcard-photo { position: relative; flex: none; width: 112px; height: 112px; display: flex; align-items: center; justify-content: center; border-radius: 12px; }
+.cup-newcard-body { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.cup-newcard-name { font-size: 15px; font-weight: 700; line-height: 1.3; }
+.cup-newcard .cup-price { font-size: 18px; }
+.cup-newcard .cup-before { font-size: 12px; }
+.cup-newcard-cta { margin-top: auto; font-size: 12px; font-weight: 700; color: var(--link); }
+
+.cup-week { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 28px; padding: 24px 20px; border-radius: 22px; background: #0f7d76; color: #fff; }
+.cup-week-text { flex: 1 1 420px; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.cup-week-eyebrow { font-size: 12px; font-weight: 800; letter-spacing: 0.2em; text-transform: uppercase; color: #fff; }
+.cup-week-title { margin: 0; font-size: clamp(36px, 4vw, 48px); line-height: 1; font-weight: 900; letter-spacing: -0.02em; color: #fff; }
+.cup-week-lede { margin: 0; max-width: 520px; font-size: 15px; line-height: 1.5; color: #e6f9f7; }
+.cup-week-form { flex: 1 1 320px; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.cup-week-row { display: flex; flex-wrap: wrap; gap: 10px; }
+.cup-week-row input { flex: 1 1 200px; min-width: 0; height: 50px; padding: 0 14px; border: 0; border-radius: 12px; color: var(--ink); font: inherit; font-size: 16px; }
+.cup-week-row button { flex: 1 0 auto; height: 50px; padding: 0 22px; border: 0; border-radius: 12px; background: var(--accent-secondary); color: var(--accent-secondary-ink); font: inherit; font-size: 16px; font-weight: 800; cursor: pointer; }
+.cup-week-legal { font-size: 11px; line-height: 1.45; color: #fff; }
+.cup-week-msg { min-height: 1em; font-size: 13px; font-weight: 700; color: #fff; }
+
+.cup-footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 24px; }
+.cup-footer p { margin: 0; max-width: 640px; font-size: 12px; line-height: 1.5; color: var(--ink-muted); }
+.cup-footer-side { display: flex; flex-direction: column; gap: 8px; }
+.cup-footer-links { display: flex; gap: 18px; font-size: 13px; font-weight: 700; }
+.cup-footer-links a { color: var(--link); }
+.cup-footer-tech { font-size: 11px; color: var(--ink-muted); }
+
+.cup-toast-slot { position: fixed; left: 0; right: 0; bottom: 20px; z-index: 60; display: flex; justify-content: center; padding: 0 16px; pointer-events: none; }
+.cup-toast { max-width: 460px; padding: 12px 16px; border-radius: 12px; background: var(--ink); color: #fff; font-size: 14px; line-height: 1.4; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); }
+
+@media (min-width: 700px) {
+  .cup-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+  .cup-card-body { padding: 12px 14px 14px; gap: 4px; }
+  .cup-card-name { min-height: 39px; font-size: 15px; }
+  .cup-card .cup-price { font-size: 20px; }
+  .cup-card .cup-before { font-size: 13px; }
+  .cup-card-code { font-size: 12px; }
+  .cup-card-cta { height: 40px; font-size: 14px; }
+  .cup-news { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+  .cup-sheet { width: min(440px, 92vw); margin: auto; border-radius: 24px; }
+}
+@media (min-width: 1000px) {
+  .cup-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (min-width: 900px) {
+  .cup-wrap { padding-top: 40px; gap: 56px; }
+  .cup-lede { font-size: 18px; line-height: 1.55; }
+  .cup-search { height: 56px; }
+  .cup-lists { grid-auto-flow: row; grid-template-columns: repeat(3, minmax(0, 1fr)); overflow: visible; }
+  .cup-list-cover { height: 180px; }
+  .cup-week { padding: 36px; border-radius: 26px; }
+  .cup-brand img { height: 42px; }
+}
