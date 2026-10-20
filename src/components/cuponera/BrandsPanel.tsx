@@ -134,12 +134,11 @@ export default function BrandsPanel({
 }
 
 // A brand as a small coupon: logo, name, the discount big, then "con el
-// código" and the code. An
-// example (invented, staff only) says so and opens no store.
+// código" and the code. An example (invented, staff only) looks the same —
+// its "Ejemplo" tag came off on 2026-10-20 — and opens no store.
 function MiniCoupon({ brand, example = false }: { brand: CuponeraBrandCard; example?: boolean }) {
   return (
     <BrandLink brand={brand} className={example ? "cup-mini cup-mini--example" : "cup-mini"}>
-      {example && <span className="cup-mini-tag">Ejemplo</span>}
       <BrandLogo brand={brand} size="sm" />
       <span className="cup-mini-name">{brand.name}</span>
       <span className="cup-mini-off">{formatPercent(brand.discountPercent)}</span>
