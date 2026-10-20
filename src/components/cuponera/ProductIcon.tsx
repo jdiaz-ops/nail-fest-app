@@ -1,4 +1,4 @@
-import type { ProductIconKind } from "@/lib/cuponera/sampleData";
+import type { ProductIconKind } from "@/lib/cuponera/shared";
 
 // Stand-in for a product photo in the preview: a line drawing in the
 // product's own color. Real products bring their photo instead.

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import PreviewLink from "./PreviewLink";
-import { discountPercent, formatCop, type CuponeraDesign } from "@/lib/cuponera/sampleData";
+import { discountPercent, formatCop, type CuponeraDesign } from "@/lib/cuponera/shared";
 
 // Where each numbered pin sits on the drawn tips (px inside .cup-nails).
 const PINS = [

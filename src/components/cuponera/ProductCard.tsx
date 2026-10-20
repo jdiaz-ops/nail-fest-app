@@ -1,6 +1,6 @@
-import ProductIcon from "./ProductIcon";
+import ProductPhoto from "./ProductPhoto";
 import PreviewLink from "./PreviewLink";
-import { discountPercent, formatCop, type CuponeraProduct } from "@/lib/cuponera/sampleData";
+import { discountPercent, formatCop, type CuponeraProduct } from "@/lib/cuponera/shared";
 
 // The cuponera's product card: Marcolini's vitrina card (brand, name, the
 // creator's code, "Ver en la tienda") plus the before/now price and the
@@ -10,22 +10,25 @@ export default function ProductCard({ product }: { product: CuponeraProduct }) {
   return (
     <PreviewLink
       href={product.url}
-      preview={`Vista previa: aquí se abriría ${product.name} en la tienda de ${product.brand}, con el código NAILFEST.`}
+      preview={`Vista previa: aquí se abriría ${product.name} en la tienda de ${product.brand}, con el código ${product.code}.`}
       className="cup-card"
     >
       <div className="cup-card-photo" style={{ background: product.tint }}>
         {off > 0 && <span className="cup-off">−{off} %</span>}
-        <ProductIcon kind={product.icon} color={product.color} size={66} />
+        <ProductPhoto product={product} size={66} />
       </div>
       <div className="cup-card-body">
         <span className="cup-brandname">{product.brand}</span>
         <span className="cup-card-name">{product.name}</span>
         <span className="cup-prices">
-          <span className="cup-price">{formatCop(product.price)}</span>
+          <span className="cup-price">
+            {product.priceFrom && <span className="cup-from">Desde </span>}
+            {formatCop(product.price)}
+          </span>
           {off > 0 && <span className="cup-before">{formatCop(product.before)}</span>}
         </span>
         <span className="cup-card-code">
-          con el código <b className="cup-mono">NAILFEST</b>
+          con el código <b className="cup-mono">{product.code}</b>
         </span>
         <span className="cup-card-cta">Ver en la tienda</span>
       </div>

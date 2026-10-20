@@ -2,18 +2,20 @@
 
 import { useMemo, useState, type ReactNode } from "react";
 import ProductCard from "./ProductCard";
-import PreviewLink from "./PreviewLink";
 import {
   CUPONERA_CATEGORIES,
   CUPONERA_PROFESSIONS,
   type CuponeraCategory,
   type CuponeraProduct,
   type CuponeraProfession,
-} from "@/lib/cuponera/sampleData";
+} from "@/lib/cuponera/shared";
 
 function normalize(text: string) {
   return text.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 }
+
+// How many offers the profession grid shows before "Ver todas".
+const PROFESSION_PREVIEW = 8;
 
 // The top of the cuponera: the promise, the search box and the category
 // chips, then either the search results or the deal of the day plus the
@@ -22,15 +24,20 @@ function normalize(text: string) {
 export default function CuponeraOfertas({
   products,
   deal,
+  title,
+  lede,
   displayClassName,
 }: {
   products: CuponeraProduct[];
   deal: ReactNode;
+  title: string;
+  lede: string;
   displayClassName: string;
 }) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<"todo" | CuponeraCategory>("todo");
   const [profession, setProfession] = useState<CuponeraProfession>("mani");
+  const [showAll, setShowAll] = useState(false);
 
   const filtering = query.trim() !== "" || category !== "todo";
   const results = useMemo(() => {
@@ -39,7 +46,9 @@ export default function CuponeraOfertas({
       (p) => (category === "todo" || p.category === category) && (!q || normalize(`${p.name} ${p.brand}`).includes(q)),
     );
   }, [products, query, category]);
-  const forProfession = products.filter((p) => p.professions.includes(profession));
+  // A product with no professions picked is for everyone.
+  const forProfession = products.filter((p) => p.professions.length === 0 || p.professions.includes(profession));
+  const professionShown = showAll ? forProfession : forProfession.slice(0, PROFESSION_PREVIEW);
   const professionPlural = CUPONERA_PROFESSIONS.find((p) => p.key === profession)?.plural ?? "manicuristas";
   const categoryLabel = CUPONERA_CATEGORIES.find((c) => c.key === category)?.label ?? "";
   const resultsTitle = query.trim() ? `Resultados para «${query.trim()}»` : categoryLabel;
@@ -49,8 +58,8 @@ export default function CuponeraOfertas({
       <section className="cup-hero">
         <div className="cup-hero-main">
           <div className="cup-eyebrow">Cuponera Nail Fest</div>
-          <h1 className={`cup-title ${displayClassName}`}>Precios de feria, todo el año</h1>
-          <p className="cup-lede">Los descuentos de las marcas de Nail Fest, para comprar desde tu casa cuando lo necesites.</p>
+          <h1 className={`cup-title ${displayClassName}`}>{title}</h1>
+          <p className="cup-lede">{lede}</p>
           <form className="cup-search" role="search" onSubmit={(e) => e.preventDefault()}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#17181c" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
               <circle cx="11" cy="11" r="7" />
@@ -87,7 +96,7 @@ export default function CuponeraOfertas({
             ))}
           </div>
         </div>
-        {!filtering && <div className="cup-hero-side">{deal}</div>}
+        {!filtering && deal && <div className="cup-hero-side">{deal}</div>}
       </section>
 
       {filtering ? (
@@ -130,7 +139,10 @@ export default function CuponeraOfertas({
                   type="button"
                   className={p.key === profession ? "cup-chip cup-chip--prof is-on" : "cup-chip cup-chip--prof"}
                   aria-pressed={p.key === profession}
-                  onClick={() => setProfession(p.key)}
+                  onClick={() => {
+                    setProfession(p.key);
+                    setShowAll(false);
+                  }}
                 >
                   {p.label}
                 </button>
@@ -138,17 +150,15 @@ export default function CuponeraOfertas({
             </div>
           </div>
           <div className="cup-grid">
-            {forProfession.map((p) => (
+            {professionShown.map((p) => (
               <ProductCard key={p.id} product={p} />
             ))}
           </div>
-          <PreviewLink
-            href={null}
-            preview={`Vista previa: aquí se verían todas las ofertas para ${professionPlural}.`}
-            className="cup-more"
-          >
-            Ver todas las ofertas para {professionPlural} →
-          </PreviewLink>
+          {forProfession.length > professionShown.length && (
+            <button type="button" className="cup-linkbtn" onClick={() => setShowAll(true)}>
+              Ver todas las ofertas para {professionPlural} ({forProfession.length})
+            </button>
+          )}
         </section>
       )}
     </>

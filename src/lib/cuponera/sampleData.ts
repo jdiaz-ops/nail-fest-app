@@ -3,82 +3,15 @@
 // "Marca A, B, C…" on purpose: nothing here is a real offer, and the page
 // that shows it is staff-only (see src/app/cuponera/page.tsx).
 
-export type ProductIconKind = "bottle" | "drop" | "tips" | "lamp" | "brush" | "kit" | "file" | "star" | "drill";
-export type CuponeraCategory = "geles" | "acrilico" | "lamparas" | "herramientas" | "cuidado" | "nailart";
-export type CuponeraProfession = "mani" | "est" | "salon" | "casa";
-
-export interface CuponeraProduct {
-  id: string;
-  brand: string;
-  name: string;
-  /** Price with Nail Fest's discount, whole COP. */
-  price: number;
-  /** Store price before the discount, whole COP. */
-  before: number;
-  icon: ProductIconKind;
-  /** Product color drawn inside the icon. */
-  color: string;
-  /** Photo background. */
-  tint: string;
-  category: CuponeraCategory;
-  professions: CuponeraProfession[];
-  /** Brand store link carrying Nail Fest's code; null in the preview. */
-  url: string | null;
-}
-
-export interface CuponeraCoupon {
-  id: string;
-  brand: string;
-  initial: string;
-  tone: "pink" | "teal" | "peach";
-  title: string;
-  code: string;
-  /** The first two show on the card; all of them in the sheet. */
-  conditions: string[];
-  exclusive: boolean;
-  url: string | null;
-}
-
-export interface CuponeraDesignItem {
-  name: string;
-  brand: string;
-  price: number;
-  before: number;
-  color: string;
-  url: string | null;
-}
-
-export interface CuponeraDesign {
-  title: string;
-  headline: string;
-  credit: string;
-  items: CuponeraDesignItem[];
-}
-
-export interface CuponeraList {
-  id: string;
-  title: string;
-  author: string;
-  count: number;
-  swatches: [string, string, string, string];
-}
-
-export const CUPONERA_CATEGORIES: { key: "todo" | CuponeraCategory; label: string }[] = [
-  { key: "todo", label: "Todo" },
-  { key: "geles", label: "Geles" },
-  { key: "acrilico", label: "Acrílico" },
-  { key: "lamparas", label: "Lámparas" },
-  { key: "herramientas", label: "Herramientas" },
-  { key: "cuidado", label: "Cuidado" },
-  { key: "nailart", label: "Nail art" },
-];
-
-export const CUPONERA_PROFESSIONS: { key: CuponeraProfession; label: string; plural: string }[] = [
-  { key: "mani", label: "Manicurista", plural: "manicuristas" },
-  { key: "est", label: "Estudiante", plural: "estudiantes" },
-  { key: "salon", label: "Salón", plural: "salones" },
-  { key: "casa", label: "Me pinto en casa", plural: "las que se pintan en casa" },
-];
+import type {
+  CuponeraCategory,
+  CuponeraCoupon,
+  CuponeraDesign,
+  CuponeraList,
+  CuponeraProduct,
+  CuponeraProfession,
+  ProductIconKind,
+} from "./shared";
 
 const p = (
   id: string,
@@ -91,7 +24,22 @@ const p = (
   tint: string,
   category: CuponeraCategory,
   professions: CuponeraProfession[],
-): CuponeraProduct => ({ id, brand, name, price, before, icon, color, tint, category, professions, url: null });
+): CuponeraProduct => ({
+  id,
+  brand,
+  name,
+  price,
+  before,
+  priceFrom: false,
+  code: "NAILFEST",
+  imageUrl: null,
+  icon,
+  color,
+  tint,
+  category,
+  professions,
+  url: null,
+});
 
 export const SAMPLE_PRODUCTS: CuponeraProduct[] = [
   p("gel-rosa", "Marca A", "Gel semipermanente Rosa chicle 15 ml", 27200, 32000, "bottle", "#f48fb1", "#fde8ef", "geles", ["mani"]),
@@ -135,6 +83,7 @@ export const SAMPLE_COUPONS: CuponeraCoupon[] = [
     id: "marca-a",
     brand: "Marca A",
     initial: "A",
+    logoUrl: null,
     tone: "pink",
     title: "15 % en toda la tienda",
     code: "NAILFEST15",
@@ -151,6 +100,7 @@ export const SAMPLE_COUPONS: CuponeraCoupon[] = [
     id: "marca-b",
     brand: "Marca B",
     initial: "B",
+    logoUrl: null,
     tone: "teal",
     title: "Envío gratis desde $120.000",
     code: "NAILFESTENVIOGRATIS",
@@ -162,6 +112,7 @@ export const SAMPLE_COUPONS: CuponeraCoupon[] = [
     id: "marca-c",
     brand: "Marca C",
     initial: "C",
+    logoUrl: null,
     tone: "peach",
     title: "2 × 1 en limas y buffers",
     code: "NAILFEST2X1",
@@ -188,11 +139,3 @@ export const SAMPLE_LISTS: CuponeraList[] = [
   { id: "demo-selva", title: "Todo lo de la demo Selva Pop", author: "[educadora]", count: 6, swatches: ["#fde8ef", "#00beb5", "#f2b01e", "#ffc5a8"] },
   { id: "cabina", title: "Esenciales de cabina", author: "[educadora]", count: 10, swatches: ["#e6f9f7", "#f3f1ee", "#fff3ea", "#fde8ef"] },
 ];
-
-export function formatCop(value: number): string {
-  return `$${value.toLocaleString("es-CO")}`;
-}
-
-export function discountPercent(price: number, before: number): number {
-  return before > 0 ? Math.round((1 - price / before) * 100) : 0;
-}

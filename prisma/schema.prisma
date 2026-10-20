@@ -1911,3 +1911,124 @@ model ReviewRaffleWinner {
 
   @@unique([raffleId, reviewId])
 }
+
+// ── Cuponera ─────────────────────────────────────────────────────────────
+//
+// nailfest.lat/cuponera — the year-round coupon book. Its catalog comes from
+// Marcolini's catalog API: only the brands that accepted Nail Fest as a
+// creator there (lib/cuponera/marcolini.ts). lib/cuponera/sync.ts copies
+// brands and products into these tables, and /admin/cuponera ("Editar
+// cuponera") curates them. A sync only overwrites what comes from Marcolini;
+// what the admin decides (visible, order, category, professions, coupon
+// texts…) is never touched by it.
+
+model CuponeraBrand {
+  id                String   @id @default(cuid())
+  // BrandProfile.id in Marcolini.
+  marcoliniId       String   @unique
+  name              String
+  logoUrl           String?
+  // Store link carrying Nail Fest's code when the platform allows it.
+  storeUrl          String?
+  // "MARCOLINI" | "SHOPIFY" | "WOOCOMMERCE" | "OTHER", as Marcolini sends it.
+  storeKind         String
+  // true = the link applies the code by itself; false = the buyer types it.
+  codeAppliedByLink Boolean  @default(false)
+  discountCode      String
+  // Today's % for the buyer — already raised while a Marcolini campaign is on.
+  discountPercent   Decimal  @db.Decimal(5, 2)
+  commissionPercent Decimal  @db.Decimal(5, 2)
+  // {name, discountPercent, commissionPercent, startsAt, endsAt} while a
+  // Marcolini flash sale is on; null otherwise.
+  campaign          Json?
+  // false once the brand stops coming in the sync (it dropped Nail Fest, or
+  // Marcolini stopped promoting it): kept with its curation, off the public
+  // page, back on its own if it returns.
+  available         Boolean  @default(true)
+  lastSyncedAt      DateTime
+
+  // Curation — never touched by the sync.
+  visible          Boolean  @default(true)
+  order            Int      @default(0)
+  showCoupon       Boolean  @default(true)
+  // Coupon card title; null = "<discount> % en toda la tienda".
+  couponTitle      String?
+  couponConditions String[] @default([])
+  couponExclusive  Boolean  @default(false)
+
+  products CuponeraProduct[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CuponeraProduct {
+  id                 String        @id @default(cuid())
+  // Product.id in Marcolini.
+  marcoliniId        String        @unique
+  brandId            String
+  brand              CuponeraBrand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  name               String
+  imageUrl           String?
+  // Whole COP: the store's own price, before Nail Fest's code. priceMax is
+  // set when variants cost different ("Desde $X"); compareAtPrice is the
+  // store's crossed-out price, kept for reference.
+  price              Int
+  priceMax           Int?
+  compareAtPrice     Int?
+  // Product link that credits the sale to Nail Fest.
+  url                String
+  // Marcolini's hints for the automatic category.
+  sourceCategory     String?
+  collections        String[]      @default([])
+  // "PHYSICAL" | "SERVICE" | "DIGITAL".
+  type               String        @default("PHYSICAL")
+  // false once it stops coming in the sync (sold out, unpublished, brand gone).
+  available          Boolean       @default(true)
+  marcoliniCreatedAt DateTime
+  lastSyncedAt       DateTime
+
+  // Curation — never touched by the sync (autoCategory is the sync's guess).
+  visible      Boolean  @default(true)
+  featured     Boolean  @default(false)
+  // Category key from lib/cuponera/shared.ts; null = use autoCategory.
+  category     String?
+  autoCategory String?
+  // Profession keys; empty = shows for every profession.
+  professions  String[] @default([])
+  // null = automatic: created in Marcolini within CuponeraSettings.newDays.
+  isNew        Boolean?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([brandId])
+}
+
+// One row ("singleton"), same as OrgSettings.
+model CuponeraSettings {
+  id               String    @id
+  // false = staff-only preview (404 for visitors) — the state until launch.
+  published        Boolean   @default(false)
+  heroTitle        String?
+  heroLede         String?
+  showDeal         Boolean   @default(true)
+  showCoupons      Boolean   @default(true)
+  showNew          Boolean   @default(true)
+  newTitle         String?
+  newSubtitle      String?
+  newDays          Int       @default(30)
+  // Robo del día: a product the admin pins (with an optional end), or null =
+  // automatic, a different featured product each day.
+  dealProductId    String?
+  dealEndsAt       DateTime?
+  // Last sync with Marcolini, written by lib/cuponera/sync.ts.
+  lastSyncAt       DateTime?
+  lastSyncOk       Boolean?
+  lastSyncError    String?
+  lastSyncBrands   Int?
+  lastSyncProducts Int?
+  creatorName      String?
+  creatorSlug      String?
+  updatedAt        DateTime  @updatedAt
+}

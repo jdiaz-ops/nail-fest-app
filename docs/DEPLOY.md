@@ -13,14 +13,16 @@ just where to click.
    `vercel.json` already overrides the build command to run
    `prisma migrate deploy` before `next build`, so your database schema
    applies automatically on every deploy, no manual migration step.
-   That command also runs `next build` with `NEXT_DEPLOYMENT_ID` blanked
-   on purpose. Vercel sets that variable when the project's Skew
-   Protection is on, and Next 14.2 then percent-encodes the `[id]` folders
-   in chunk URLs and tags them with `?dpl=`; on this project those
-   requests came back 404 (2026-10-19), which crashed every page under a
-   dynamic segment (`/admin/events/[id]`, `/admin/scan/[eventId]`, the
-   WhatsApp threads). Blanking it restores the plain URLs that always
-   worked. Don't remove it unless that combination has been re-tested.
+   Two workarounds for one Vercel incident (2026-10-19), both still in
+   place: from that day Vercel answered 404 for any `/_next/static` file
+   whose path has a percent-encoded bracket (`/app/admin/events/%5Bid%5D/…`),
+   which crashed every page under a dynamic segment (`/admin/events/[id]`,
+   `/admin/scan/[eventId]`, the WhatsApp threads). The fix that worked is in
+   `next.config.js`: client chunks are named without brackets (`_id_`).
+   The command above also builds with `NEXT_DEPLOYMENT_ID` blanked — Skew
+   Protection sets it and Next 14.2 then adds `?dpl=` to every chunk URL;
+   blanking it was the first attempt, and it keeps the URLs plain. Don't
+   remove either one without re-testing a dynamic page after deploying.
 
 ## 2. Environment variables
 
@@ -39,6 +41,8 @@ below):
 | `ADMIN_USERNAME` / `ADMIN_PASSWORD` | Whatever you want — used ONCE, by step 4 below, to create your first real admin login. Not checked on every request the way it used to be (see the real login system in `/admin/settings/users`) — safe to leave set afterward. |
 | `INTERNAL_CRON_SECRET` | Any random string — gates the cron routes (manual `curl` testing) and the one-time seed endpoint below |
 | `CRON_SECRET` | Same value as `INTERNAL_CRON_SECRET` (simplest) — Vercel auto-attaches this as a Bearer token when it triggers the crons declared in `vercel.json`, see below |
+| `MARCOLINI_API_KEY` | The cuponera's catalog key (`/admin/cuponera`) — the same key set for Nail Fest's creator account on the Marcolini side. Empty = the cuponera stays on its sample preview. |
+| `MARCOLINI_API_URL` | Optional — defaults to `https://marcolini.lat` |
 
 Meta (`META_*`) and SES (`AWS_*`, `SES_*`) vars can stay empty for this
 first deploy — the app degrades gracefully without them (registration still
