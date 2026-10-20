@@ -21,20 +21,22 @@ function unwrap(value: string): string {
   return value.trim().replace(/^["'`]+|["'`]+$/g, "").trim();
 }
 
-/** What gets pasted into Vercel, cleaned: quotes around it, stray spaces or
- * line breaks, or the whole Marcolini-side entry ("nailfest:llave") instead
- * of just the key — the key is what comes after the colon. */
+/** What gets pasted into Vercel, cleaned: quotes or asterisks around it,
+ * the period of the sentence it was copied from, stray spaces or line
+ * breaks, "MARCOLINI_API_KEY=" in front, or the whole Marcolini-side entry
+ * ("nailfest:llave") instead of just the key — the key is what comes after
+ * the last colon. A key starts and ends with a letter or digit; Marcolini
+ * trims its own copy the same way, so the two still compare equal. */
 export function cleanMarcoliniKey(raw: string | undefined): string {
-  let key = unwrap(raw ?? "");
-  const colon = key.indexOf(":");
-  if (colon >= 0) key = unwrap(key.slice(colon + 1));
-  return key.replace(/\s+/g, "");
+  let key = (raw ?? "").trim().replace(/^MARCOLINI_API_KEY\s*=\s*/i, "").replace(/^bearer\s+/i, "");
+  key = key.slice(key.lastIndexOf(":") + 1);
+  return key.replace(/\s+/g, "").replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9]+$/g, "");
 }
 
-/** The last characters of the key, to compare it with Marcolini's without
- * showing it. */
+/** The key's first and last characters and its length — enough to compare
+ * it with Marcolini's without showing it. */
 export function keyHint(apiKey: string): string {
-  return `…${apiKey.slice(-4)}`;
+  return `${apiKey.slice(0, 4)}…${apiKey.slice(-4)} (${apiKey.length} caracteres)`;
 }
 
 export function marcoliniConfig(): MarcoliniConfig | null {
@@ -111,7 +113,7 @@ export interface MarcoliniCatalog {
 }
 
 async function errorMessage(res: Response, config: MarcoliniConfig): Promise<string> {
-  const body = (await res.json().catch(() => null)) as { error?: unknown; reason?: unknown } | null;
+  const body = (await res.json().catch(() => null)) as { error?: unknown; reason?: unknown; keyLengths?: unknown } | null;
   const reason = typeof body?.error === "string" ? body.error : null;
   switch (res.status) {
     case 401:
@@ -121,7 +123,22 @@ async function errorMessage(res: Response, config: MarcoliniConfig): Promise<str
         return "Marcolini todavía no tiene la llave: en Vercel, proyecto de Marcolini, revisa que CATALOG_API_KEYS exista para Production con el formato nailfest:llave, y vuelve a desplegar Marcolini.";
       }
       if (body?.reason === "mismatch") {
-        return `La llave de Nail Fest no coincide con la de Marcolini. Nail Fest envía una que termina en ${keyHint(config.apiKey)}: revisa que lo que va después de los dos puntos en CATALOG_API_KEYS (Marcolini) termine igual.`;
+        const lengths = Array.isArray(body.keyLengths) ? body.keyLengths.filter((n): n is number => typeof n === "number") : [];
+        const ours = config.apiKey.length;
+        const ends = `${config.apiKey.slice(0, 4)}…${config.apiKey.slice(-4)}`;
+        if (lengths.length === 0) return `La llave de Nail Fest (${ends}, ${ours} caracteres) no coincide con la de Marcolini.`;
+        if (lengths.includes(ours)) {
+          return `Las dos llaves tienen ${ours} caracteres pero son distintas (la de Nail Fest es ${ends}). Copia la misma llave otra vez en los dos proyectos de Vercel: después de «nailfest:» en CATALOG_API_KEYS (Marcolini) y en MARCOLINI_API_KEY (Nail Fest).`;
+        }
+        // A key from `openssl rand -hex 32` has 64 characters: the side that
+        // doesn't is the one to fix.
+        const fix =
+          ours === 64
+            ? "Revisa CATALOG_API_KEYS en el proyecto de Marcolini."
+            : lengths.includes(64)
+              ? "Revisa MARCOLINI_API_KEY en el proyecto de Nail Fest."
+              : "Revisa la llave en los dos proyectos.";
+        return `La llave de Marcolini tiene ${lengths.join(" o ")} caracteres y la de Nail Fest ${ours} (${ends}): a una de las dos le sobra o le falta algo. ${fix}`;
       }
       if (!body) {
         return `${config.baseUrl} respondió «no autorizado» sin ser el catálogo de Marcolini. Revisa MARCOLINI_API_URL (o bórrala para usar https://marcolini.lat).`;

@@ -87,7 +87,7 @@ export default function CuponeraSyncCard(props: {
             </span>
           )}
           <span>
-            Se conecta a <b style={{ color: "#17181c" }}>{props.marcoliniHost}</b> con la llave que termina en{" "}
+            Se conecta a <b style={{ color: "#17181c" }}>{props.marcoliniHost}</b> con la llave{" "}
             <b style={{ color: "#17181c", fontFamily: "ui-monospace, Menlo, monospace" }}>{props.keyHint}</b>
           </span>
           {props.lastSyncLabel && (

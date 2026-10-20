@@ -96,7 +96,17 @@ describe("fetchMarcoliniCatalog", () => {
     const fail = (status: number, body: unknown) => fakeFetch({ "": { status, body } }).impl;
     await expect(fetchMarcoliniCatalog(config, fail(401, { error: "x" }))).rejects.toThrow(/no reconoce la llave/);
     await expect(fetchMarcoliniCatalog(config, fail(401, { error: "x", reason: "no_keys" }))).rejects.toThrow(/Marcolini todavía no tiene la llave/);
-    await expect(fetchMarcoliniCatalog(config, fail(401, { error: "x", reason: "mismatch" }))).rejects.toThrow(/termina en …kkkk/);
+    await expect(fetchMarcoliniCatalog(config, fail(401, { error: "x", reason: "mismatch" }))).rejects.toThrow(/kkkk…kkkk, 40 caracteres/);
+    const hexConfig = { ...config, apiKey: "ab12".repeat(16) };
+    await expect(fetchMarcoliniCatalog(hexConfig, fail(401, { error: "x", reason: "mismatch", keyLengths: [65] }))).rejects.toThrow(
+      /tiene 65 caracteres y la de Nail Fest 64 \(ab12…ab12\).*Revisa CATALOG_API_KEYS en el proyecto de Marcolini/,
+    );
+    await expect(fetchMarcoliniCatalog(config, fail(401, { error: "x", reason: "mismatch", keyLengths: [41] }))).rejects.toThrow(
+      /La llave de Marcolini tiene 41 caracteres y la de Nail Fest 40/,
+    );
+    await expect(fetchMarcoliniCatalog(config, fail(401, { error: "x", reason: "mismatch", keyLengths: [40] }))).rejects.toThrow(
+      /tienen 40 caracteres pero son distintas/,
+    );
     const html401 = (async () => new Response("<html>Vercel login</html>", { status: 401, headers: { "content-type": "text/html" } })) as typeof fetch;
     await expect(fetchMarcoliniCatalog(config, html401)).rejects.toThrow(/Revisa MARCOLINI_API_URL/);
     await expect(fetchMarcoliniCatalog(config, fail(404, { error: "La llave apunta a una vitrina que no existe en Marcolini." }))).rejects.toThrow(
@@ -150,6 +160,11 @@ describe("the key as pasted in Vercel", () => {
     [`nailfest:${key}`, key],
     [`"nailfest: ${key}"`, key],
     [`${key.slice(0, 32)}\n${key.slice(32)}`, key],
+    [`${key}.`, key],
+    [`**${key}**`, key],
+    [`MARCOLINI_API_KEY = ${key}`, key],
+    [`Bearer ${key}`, key],
+    [`nailfest:nailfest:${key}`, key],
   ])("%j → the bare key", (pasted, expected) => {
     expect(cleanMarcoliniKey(pasted)).toBe(expected);
   });
