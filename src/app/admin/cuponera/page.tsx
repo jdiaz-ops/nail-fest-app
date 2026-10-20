@@ -1,7 +1,7 @@
 import { requirePageUser } from "@/lib/auth/guard";
 import { getCuponeraAdminData } from "@/lib/cuponera/admin";
 import { getCuponeraView } from "@/lib/cuponera/data";
-import { marcoliniConfig } from "@/lib/cuponera/marcolini";
+import { keyHint, marcoliniConfig } from "@/lib/cuponera/marcolini";
 import { CUPONERA_DEFAULT_TEXTS, getCuponeraSettings } from "@/lib/cuponera/settings";
 import CuponeraSyncCard from "./CuponeraSyncCard";
 import CuponeraSettingsForm from "./CuponeraSettingsForm";
@@ -48,6 +48,7 @@ export default async function AdminCuponeraPage() {
       <CuponeraSyncCard
         configured={Boolean(config)}
         marcoliniHost={config ? new URL(config.baseUrl).host : null}
+        keyHint={config ? keyHint(config.apiKey) : null}
         lastSyncLabel={settings.lastSyncAt ? syncDateFormatter.format(settings.lastSyncAt) : null}
         lastSyncOk={settings.lastSyncOk}
         lastSyncError={settings.lastSyncError}

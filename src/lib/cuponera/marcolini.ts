@@ -17,10 +17,30 @@ export interface MarcoliniConfig {
   apiKey: string;
 }
 
+function unwrap(value: string): string {
+  return value.trim().replace(/^["'`]+|["'`]+$/g, "").trim();
+}
+
+/** What gets pasted into Vercel, cleaned: quotes around it, stray spaces or
+ * line breaks, or the whole Marcolini-side entry ("nailfest:llave") instead
+ * of just the key — the key is what comes after the colon. */
+export function cleanMarcoliniKey(raw: string | undefined): string {
+  let key = unwrap(raw ?? "");
+  const colon = key.indexOf(":");
+  if (colon >= 0) key = unwrap(key.slice(colon + 1));
+  return key.replace(/\s+/g, "");
+}
+
+/** The last characters of the key, to compare it with Marcolini's without
+ * showing it. */
+export function keyHint(apiKey: string): string {
+  return `…${apiKey.slice(-4)}`;
+}
+
 export function marcoliniConfig(): MarcoliniConfig | null {
-  const apiKey = process.env.MARCOLINI_API_KEY?.trim();
+  const apiKey = cleanMarcoliniKey(process.env.MARCOLINI_API_KEY);
   if (!apiKey) return null;
-  const baseUrl = (process.env.MARCOLINI_API_URL?.trim() || DEFAULT_BASE_URL).replace(/\/+$/, "");
+  const baseUrl = (unwrap(process.env.MARCOLINI_API_URL ?? "") || DEFAULT_BASE_URL).replace(/\/+$/, "");
   return { baseUrl, apiKey };
 }
 
@@ -90,11 +110,22 @@ export interface MarcoliniCatalog {
   skipped: number;
 }
 
-async function errorMessage(res: Response): Promise<string> {
-  const body = (await res.json().catch(() => null)) as { error?: unknown } | null;
+async function errorMessage(res: Response, config: MarcoliniConfig): Promise<string> {
+  const body = (await res.json().catch(() => null)) as { error?: unknown; reason?: unknown } | null;
   const reason = typeof body?.error === "string" ? body.error : null;
   switch (res.status) {
     case 401:
+      // Marcolini says which side is wrong (see its /api/v1/catalogo); no
+      // JSON at all means the address isn't Marcolini's catalog.
+      if (body?.reason === "no_keys") {
+        return "Marcolini todavía no tiene la llave: en Vercel, proyecto de Marcolini, revisa que CATALOG_API_KEYS exista para Production con el formato nailfest:llave, y vuelve a desplegar Marcolini.";
+      }
+      if (body?.reason === "mismatch") {
+        return `La llave de Nail Fest no coincide con la de Marcolini. Nail Fest envía una que termina en ${keyHint(config.apiKey)}: revisa que lo que va después de los dos puntos en CATALOG_API_KEYS (Marcolini) termine igual.`;
+      }
+      if (!body) {
+        return `${config.baseUrl} respondió «no autorizado» sin ser el catálogo de Marcolini. Revisa MARCOLINI_API_URL (o bórrala para usar https://marcolini.lat).`;
+      }
       return "Marcolini no reconoce la llave. Revisa que MARCOLINI_API_KEY en Vercel sea la misma llave que tiene Marcolini.";
     case 403:
       return reason ?? "Marcolini rechazó la conexión: la cuenta de creadora de Nail Fest está suspendida.";
@@ -133,7 +164,7 @@ export async function fetchMarcoliniCatalog(config: MarcoliniConfig, fetchImpl: 
       const what = err instanceof Error && err.name === "TimeoutError" ? "Marcolini no respondió a tiempo" : "No se pudo conectar con Marcolini";
       throw new MarcoliniError(`${what} (${config.baseUrl}). Vuelve a intentarlo en un rato.`);
     }
-    if (!res.ok) throw new MarcoliniError(await errorMessage(res));
+    if (!res.ok) throw new MarcoliniError(await errorMessage(res, config));
 
     const parsed = pageSchema.safeParse(await res.json().catch(() => null));
     if (!parsed.success) throw new MarcoliniError("Marcolini respondió algo que no es el catálogo. Revisa MARCOLINI_API_URL.");

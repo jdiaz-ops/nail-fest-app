@@ -17,6 +17,8 @@ function plural(n: number, one: string, many: string) {
 export default function CuponeraSyncCard(props: {
   configured: boolean;
   marcoliniHost: string | null;
+  /** Last characters of the key Nail Fest sends, to compare with Marcolini's. */
+  keyHint: string | null;
   /** Already formatted on the server: Node's and the browser's date
    * formatting differ in small ways and would break hydration. */
   lastSyncLabel: string | null;
@@ -81,9 +83,13 @@ export default function CuponeraSyncCard(props: {
           {props.creatorName && (
             <span>
               Cuenta de creadora: <b style={{ color: "#17181c" }}>{props.creatorName}</b>
-              {props.creatorSlug ? ` (${props.creatorSlug})` : ""} en {props.marcoliniHost}
+              {props.creatorSlug ? ` (${props.creatorSlug})` : ""}
             </span>
           )}
+          <span>
+            Se conecta a <b style={{ color: "#17181c" }}>{props.marcoliniHost}</b> con la llave que termina en{" "}
+            <b style={{ color: "#17181c", fontFamily: "ui-monospace, Menlo, monospace" }}>{props.keyHint}</b>
+          </span>
           {props.lastSyncLabel && (
             <span>
               Última sincronización: {props.lastSyncLabel}

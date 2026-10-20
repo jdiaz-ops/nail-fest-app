@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fetchMarcoliniCatalog, MarcoliniError } from "./marcolini";
+import { cleanMarcoliniKey, fetchMarcoliniCatalog, marcoliniConfig, MarcoliniError } from "./marcolini";
 import { guessCategory, priceWithCode } from "./shared";
 
 const config = { baseUrl: "https://marcolini.test", apiKey: "k".repeat(40) };
@@ -95,6 +95,10 @@ describe("fetchMarcoliniCatalog", () => {
   it("explains each failure in words the admin can act on", async () => {
     const fail = (status: number, body: unknown) => fakeFetch({ "": { status, body } }).impl;
     await expect(fetchMarcoliniCatalog(config, fail(401, { error: "x" }))).rejects.toThrow(/no reconoce la llave/);
+    await expect(fetchMarcoliniCatalog(config, fail(401, { error: "x", reason: "no_keys" }))).rejects.toThrow(/Marcolini todavía no tiene la llave/);
+    await expect(fetchMarcoliniCatalog(config, fail(401, { error: "x", reason: "mismatch" }))).rejects.toThrow(/termina en …kkkk/);
+    const html401 = (async () => new Response("<html>Vercel login</html>", { status: 401, headers: { "content-type": "text/html" } })) as typeof fetch;
+    await expect(fetchMarcoliniCatalog(config, html401)).rejects.toThrow(/Revisa MARCOLINI_API_URL/);
     await expect(fetchMarcoliniCatalog(config, fail(404, { error: "La llave apunta a una vitrina que no existe en Marcolini." }))).rejects.toThrow(
       /vitrina que no existe/,
     );
@@ -133,5 +137,30 @@ describe("priceWithCode", () => {
     expect(priceWithCode(45000, 15)).toBe(38250);
     expect(priceWithCode(39990, 12.5)).toBe(34991);
     expect(priceWithCode(45000, 0)).toBe(45000);
+  });
+});
+
+describe("the key as pasted in Vercel", () => {
+  const key = "aa4b009c08123e82b9f919c62dfe46a8528b99aace942c217cd823d11efd6452";
+
+  it.each([
+    [key, key],
+    [`"${key}"`, key],
+    [`  ${key}\n`, key],
+    [`nailfest:${key}`, key],
+    [`"nailfest: ${key}"`, key],
+    [`${key.slice(0, 32)}\n${key.slice(32)}`, key],
+  ])("%j → the bare key", (pasted, expected) => {
+    expect(cleanMarcoliniKey(pasted)).toBe(expected);
+  });
+
+  it("reads MARCOLINI_API_KEY cleaned, and defaults the address", () => {
+    const before = { ...process.env };
+    process.env.MARCOLINI_API_KEY = `'nailfest:${key}'`;
+    delete process.env.MARCOLINI_API_URL;
+    expect(marcoliniConfig()).toEqual({ baseUrl: "https://marcolini.lat", apiKey: key });
+    process.env.MARCOLINI_API_KEY = '""';
+    expect(marcoliniConfig()).toBeNull();
+    process.env = before;
   });
 });
