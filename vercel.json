@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npx prisma generate && npx prisma migrate deploy && npm run build",
+  "buildCommand": "npx prisma generate && npx prisma migrate deploy && NEXT_DEPLOYMENT_ID= npm run build",
   "crons": [
     {
       "path": "/api/meta/retry",

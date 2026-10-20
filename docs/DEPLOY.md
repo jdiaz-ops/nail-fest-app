@@ -13,6 +13,14 @@ just where to click.
    `vercel.json` already overrides the build command to run
    `prisma migrate deploy` before `next build`, so your database schema
    applies automatically on every deploy, no manual migration step.
+   That command also runs `next build` with `NEXT_DEPLOYMENT_ID` blanked
+   on purpose. Vercel sets that variable when the project's Skew
+   Protection is on, and Next 14.2 then percent-encodes the `[id]` folders
+   in chunk URLs and tags them with `?dpl=`; on this project those
+   requests came back 404 (2026-10-19), which crashed every page under a
+   dynamic segment (`/admin/events/[id]`, `/admin/scan/[eventId]`, the
+   WhatsApp threads). Blanking it restores the plain URLs that always
+   worked. Don't remove it unless that combination has been re-tested.
 
 ## 2. Environment variables
 
