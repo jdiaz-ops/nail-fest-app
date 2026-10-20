@@ -51,6 +51,29 @@ const nextConfig = {
       "/api/**": ["./node_modules/pdfkit/**/*"],
     },
   },
+  // Keep "[" and "]" out of the client chunk file names. Next names each
+  // route's browser bundle after its folder — app/admin/events/[id]/
+  // layout-<hash>.js, app/[eventSlug]/page-<hash>.js — and since
+  // 2026-10-19 Vercel answers 404 to every request for a file inside one
+  // of those bracketed folders (the browser asks for %5Bid%5D, which had
+  // worked for weeks). Every page under a dynamic segment died with a
+  // ChunkLoadError, the public event landing included. Replacing the
+  // brackets with "_" in the emitted names sidesteps whatever Vercel is
+  // doing with them; Next reads the real file names back from its own
+  // manifests, so nothing else has to know. Production builds only — dev
+  // serves from memory and never hit this.
+  webpack(config, { isServer, dev }) {
+    if (!isServer && !dev) {
+      const safeName = (chunk) => String(chunk.name ?? chunk.id).replace(/[[\]()@]/g, "_");
+      for (const key of ["filename", "chunkFilename"]) {
+        const template = config.output[key];
+        if (typeof template === "string" && template.includes("[name]")) {
+          config.output[key] = (pathData) => template.replace("[name]", safeName(pathData.chunk));
+        }
+      }
+    }
+    return config;
+  },
 };
 
 module.exports = nextConfig;
