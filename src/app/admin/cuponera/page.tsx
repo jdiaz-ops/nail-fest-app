@@ -30,15 +30,17 @@ const syncDateFormatter = new Intl.DateTimeFormat("es-CO", {
 // under which category, and when the page goes public.
 export default async function AdminCuponeraPage() {
   await requirePageUser(["ADMIN"]);
-  const [settings, data, lastMapping, lists] = await Promise.all([
+  const [settings, data, lastMapping, lastProductChange, lists] = await Promise.all([
     getCuponeraSettings(),
     getCuponeraAdminData(),
     db.cuponeraCollectionMap.aggregate({ _max: { updatedAt: true }, _count: { _all: true } }),
+    db.cuponeraProduct.aggregate({ where: { available: true }, _max: { lastSyncedAt: true }, _count: { _all: true } }),
     getCuponeraLists(),
   ]);
-  // The products editor keeps its own copy while editing; a new sync or a
+  // The products editor keeps its own copy while editing; a sync that
+  // changed products (not every minute's sync — most change nothing) or a
   // collection mapped in the unifier changes this key and reloads it.
-  const productsVersion = `${settings.lastSyncAt?.toISOString() ?? "never"}|${lastMapping._max.updatedAt?.toISOString() ?? ""}|${lastMapping._count._all}`;
+  const productsVersion = `${lastProductChange._max.lastSyncedAt?.toISOString() ?? "never"}|${lastProductChange._count._all}|${lastMapping._max.updatedAt?.toISOString() ?? ""}|${lastMapping._count._all}`;
   const config = marcoliniConfig();
   // What the public page needs to show the real catalog (getCuponeraView).
   const showing = data.products.filter((p) => p.available && p.visible && p.brandVisible);
@@ -86,9 +88,17 @@ export default async function AdminCuponeraPage() {
             showNew: settings.showNew,
             showBestsellers: settings.showBestsellers,
             heroStyle: settings.heroStyle,
+            panelTitle: settings.panelTitle,
+            showCategories: settings.showCategories,
+            categoriesTitle: settings.categoriesTitle,
+            bestsellersTitle: settings.bestsellersTitle,
+            bestsellersSubtitle: settings.bestsellersSubtitle,
             newTitle: settings.newTitle,
             newSubtitle: settings.newSubtitle,
             newDays: settings.newDays,
+            showAllBrands: settings.showAllBrands,
+            allBrandsTitle: settings.allBrandsTitle,
+            allBrandsSubtitle: settings.allBrandsSubtitle,
           }}
           defaults={CUPONERA_DEFAULT_TEXTS}
           hasProducts={hasProducts}

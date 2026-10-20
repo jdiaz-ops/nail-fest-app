@@ -19,7 +19,15 @@ const patchSchema = z
     showCoupons: z.boolean(),
     showNew: z.boolean(),
     showBestsellers: z.boolean(),
-    heroStyle: z.enum(["marcas", "panel"]),
+    heroStyle: z.enum(["marcas", "panel", "cupones"]),
+    panelTitle: optionalText,
+    showCategories: z.boolean(),
+    categoriesTitle: optionalText,
+    bestsellersTitle: optionalText,
+    bestsellersSubtitle: optionalText,
+    showAllBrands: z.boolean(),
+    allBrandsTitle: optionalText,
+    allBrandsSubtitle: optionalText,
     // Only https images, only for real category keys.
     categoryImages: z
       .record(z.string(), z.string().url().max(600).startsWith("https://"))

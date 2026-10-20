@@ -1,7 +1,7 @@
 // Shapes and helpers the cuponera (nailfest.lat/cuponera) shares between the
 // public page, its admin (/admin/cuponera) and the Marcolini sync.
 
-export type ProductIconKind = "bottle" | "drop" | "tips" | "lamp" | "brush" | "kit" | "file" | "star" | "drill";
+export type ProductIconKind = "bottle" | "drop" | "tips" | "lamp" | "brush" | "kit" | "file" | "star" | "drill" | "flame" | "sparkle" | "tag" | "grid";
 export type CuponeraProfession = "mani" | "est" | "salon" | "casa";
 
 // ── Categories ─────────────────────────────────────────────────────────────

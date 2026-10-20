@@ -16,12 +16,15 @@ export interface CuponeraPageData {
   published: boolean;
   texts: typeof CUPONERA_DEFAULT_TEXTS;
   /** How the brands show under the title: logos sliding by on their own
-   * ("marcas", like Rakuten) or a panel slid by hand ("panel"). */
-  heroStyle: "marcas" | "panel";
+   * ("marcas", like Rakuten), a panel slid by hand ("panel", like Student
+   * Beans) or that panel with each brand as a coupon ("cupones"). */
+  heroStyle: CuponeraHeroStyle;
   /** The brands under the title (empty when that section is off). */
   panelBrands: CuponeraBrandCard[];
-  /** "Descubre por categoría": a picture per category key, uploaded in the admin. */
+  /** "Explora ahorros por categoría": a picture per category key, uploaded in the admin. */
   categoryImages: Record<string, string>;
+  showCategories: boolean;
+  showAllBrands: boolean;
   brands: CuponeraBrandCard[];
   categories: CuponeraCategoryLink[];
   rows: CuponeraRow[];
@@ -57,12 +60,14 @@ function sampleData(): CuponeraPageData {
     sample: true,
     published: false,
     texts: CUPONERA_DEFAULT_TEXTS,
-    heroStyle: "marcas",
+    heroStyle: "cupones",
     panelBrands: SAMPLE_BRANDS,
     categoryImages: {},
+    showCategories: true,
+    showAllBrands: true,
     brands: SAMPLE_BRANDS,
     categories: categoryTree(products),
-    rows: frontPageRows({ bestsellers: [], lists, newProducts: SAMPLE_NEW, newTitle: CUPONERA_DEFAULT_TEXTS.newTitle, newSubtitle: CUPONERA_DEFAULT_TEXTS.newSubtitle }),
+    rows: frontPageRows({ bestsellers: [], lists, newProducts: SAMPLE_NEW, ...CUPONERA_DEFAULT_TEXTS }),
     products,
     bestsellers: [],
     newProducts: SAMPLE_NEW,
@@ -80,8 +85,10 @@ export async function loadCuponera(): Promise<{ data: CuponeraPageData; staff: b
       sample: false,
       published: view.settings.published,
       texts: view.texts,
-      heroStyle: view.settings.heroStyle === "panel" ? "panel" : "marcas",
+      heroStyle: heroStyleOf(view.settings.heroStyle),
       categoryImages: imagesOf(view.settings.categoryImages),
+      showCategories: view.settings.showCategories,
+      showAllBrands: view.settings.showAllBrands,
       panelBrands: view.settings.showCoupons ? view.brands.filter((b) => b.inPanel) : [],
       brands: view.brands,
       categories: view.categories,
@@ -92,6 +99,12 @@ export async function loadCuponera(): Promise<{ data: CuponeraPageData; staff: b
       lists: view.lists,
     },
   };
+}
+
+export type CuponeraHeroStyle = "marcas" | "panel" | "cupones";
+
+function heroStyleOf(value: string): CuponeraHeroStyle {
+  return value === "panel" || value === "marcas" ? value : "cupones";
 }
 
 function imagesOf(value: unknown): Record<string, string> {

@@ -57,6 +57,9 @@ export default function BrandsMarquee({ brands }: { brands: CuponeraBrandCard[] 
                       )}
                     </span>
                     <span className="cup-mcard-offer">{formatPercent(b.discountPercent)} de descuento</span>
+                    <span className="cup-mcard-code">
+                      con el código <code>{b.code}</code>
+                    </span>
                   </BrandLink>
                 );
               })}

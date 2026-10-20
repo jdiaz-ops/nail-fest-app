@@ -6,8 +6,14 @@ export const CUPONERA_SETTINGS_ID = "singleton";
 export const CUPONERA_DEFAULT_TEXTS = {
   heroTitle: "Cuponera para manicuristas profesionales y estudiantes",
   heroLede: "Ahorra en tus compras de productos e insumos con la cuponera Nail Fest.",
+  panelTitle: "Descuentos de las marcas",
+  categoriesTitle: "Explora ahorros por categoría",
+  bestsellersTitle: "Lo más comprado por la comunidad",
+  bestsellersSubtitle: "Con los códigos de Nail Fest, últimos 90 días",
   newTitle: "Lo nuevo de las marcas",
   newSubtitle: "Lo último que llegó a las tiendas, con el descuento de Nail Fest.",
+  allBrandsTitle: "Todas las marcas",
+  allBrandsSubtitle: "Las que tienen descuento con Nail Fest. Toca una para ir a su tienda.",
 };
 
 // What a fresh install reads before anyone saves anything — same "a missing
@@ -22,11 +28,19 @@ const DEFAULTS: CuponeraSettings = {
   showCoupons: true,
   showNew: true,
   showBestsellers: true,
-  heroStyle: "marcas",
+  heroStyle: "cupones",
+  panelTitle: null,
   categoryImages: {},
+  showCategories: true,
+  categoriesTitle: null,
+  bestsellersTitle: null,
+  bestsellersSubtitle: null,
   newTitle: null,
   newSubtitle: null,
   newDays: 30,
+  showAllBrands: true,
+  allBrandsTitle: null,
+  allBrandsSubtitle: null,
   dealProductId: null,
   dealEndsAt: null,
   lastSyncAt: null,
@@ -36,6 +50,7 @@ const DEFAULTS: CuponeraSettings = {
   lastSyncProducts: null,
   creatorName: null,
   creatorSlug: null,
+  syncLockUntil: null,
   updatedAt: new Date(0),
 };
 
@@ -54,9 +69,17 @@ export type CuponeraSettingsPatch = Partial<
     | "showNew"
     | "showBestsellers"
     | "heroStyle"
+    | "panelTitle"
+    | "showCategories"
+    | "categoriesTitle"
+    | "bestsellersTitle"
+    | "bestsellersSubtitle"
     | "newTitle"
     | "newSubtitle"
     | "newDays"
+    | "showAllBrands"
+    | "allBrandsTitle"
+    | "allBrandsSubtitle"
     | "dealProductId"
     | "dealEndsAt"
     | "lastSyncAt"
@@ -68,7 +91,7 @@ export type CuponeraSettingsPatch = Partial<
     | "creatorSlug"
   >
 > & {
-  /** Category key → picture URL ("Descubre por categoría"). */
+  /** Category key → picture URL ("Explora ahorros por categoría"). */
   categoryImages?: Record<string, string>;
 };
 

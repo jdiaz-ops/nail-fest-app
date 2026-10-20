@@ -5,7 +5,7 @@ import { requireUser } from "@/lib/auth/guard";
 
 // Same shape as /api/admin/uploads/links-page-image — its own route so the
 // Blob pathname prefix stays organized. Backs the cuponera's category
-// pictures ("Descubre por categoría", CuponeraSettings.categoryImages).
+// pictures ("Explora ahorros por categoría", CuponeraSettings.categoryImages).
 const MAX_BYTES = 5 * 1024 * 1024;
 
 export async function POST(req: NextRequest) {

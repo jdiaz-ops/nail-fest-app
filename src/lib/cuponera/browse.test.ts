@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  categoryTiles,
   categoryTree,
+  highlightParts,
+  popularSuggestions,
+  rankSuggestions,
+  suggestionIndex,
+  suggestionScore,
   colorsPresent,
   combinedRating,
   frontPageRows,
@@ -16,7 +22,7 @@ import {
   toneName,
   type CuponeraLine,
 } from "./browse";
-import { variantsLabelOf, type CuponeraProduct } from "./shared";
+import { variantsLabelOf, type CuponeraBrandCard, type CuponeraProduct } from "./shared";
 
 function product(id: string, extra: Partial<CuponeraProduct> = {}): CuponeraProduct {
   return {
@@ -207,7 +213,7 @@ describe("categoryTree", () => {
 
 describe("frontPageRows", () => {
   const gel = (id: string) => product(id, { category: "esmaltes", subcategory: "semipermanente", line: "Gel Polish" });
-  const base = { bestsellers: [], lists: [], newProducts: [], newTitle: "Lo nuevo", newSubtitle: "Recién llegado" };
+  const base = { bestsellers: [], lists: [], newProducts: [], bestsellersTitle: "Lo más comprado", bestsellersSubtitle: "Últimos 90 días", newTitle: "Lo nuevo", newSubtitle: "Recién llegado" };
 
   it("puts what sells first, the lists in order, what's new last", () => {
     const rows = frontPageRows({
@@ -250,3 +256,104 @@ describe("frontPageRows", () => {
   });
 });
 
+
+describe("categoryTiles", () => {
+  const cats = (...keys: ("esmaltes" | "herramientas" | "cuidado" | "stamping" | "kits")[]) =>
+    categoryTree(keys.flatMap((key, i) => [product(`${key}-1`, { category: key }), ...(i === 0 ? [product(`${key}-2`, { category: key })] : [])]));
+  const base = { images: {}, bestsellers: [], newProducts: [], lists: [], brandCount: 1, productCount: 24 };
+
+  it("closes a short last row with what's new and «Todo»", () => {
+    const tiles = categoryTiles({ ...base, categories: cats("esmaltes", "herramientas", "cuidado", "stamping"), newProducts: [product("n")] });
+    expect(tiles.map((t) => t.key)).toEqual(["esmaltes", "herramientas", "cuidado", "stamping", "lo-nuevo", "todo"]);
+    expect(tiles.map((t) => t.count)).toEqual(["2 productos", "1 producto", "1 producto", "1 producto", "1 producto", "24 productos"]);
+    expect(tiles.at(-1)!.href).toBe("/cuponera/todo");
+  });
+
+  it("uses the brands when there's nothing else, and adds nothing to a full row", () => {
+    expect(categoryTiles({ ...base, categories: cats("kits") }).map((t) => [t.key, t.count, t.href])).toEqual([
+      ["kits", "2 productos", "/cuponera/kits"],
+      ["marcas", "1 marca", "#marcas"],
+      ["todo", "24 productos", "/cuponera/todo"],
+    ]);
+    expect(categoryTiles({ ...base, categories: cats("esmaltes", "cuidado") }).map((t) => t.key)).toEqual(["esmaltes", "cuidado", "todo"]);
+    expect(categoryTiles({ ...base, categories: cats("esmaltes", "cuidado", "kits") }).map((t) => t.key)).toEqual(["esmaltes", "cuidado", "kits"]);
+  });
+
+  it("takes what sells and the admin's product lists before the brands", () => {
+    const tiles = categoryTiles({
+      ...base,
+      categories: cats("esmaltes"),
+      bestsellers: groupByLine([product("x"), product("y")]),
+      lists: [{ slug: "acrilico", title: "Para empezar en acrílico", subtitle: null, kind: "products", category: null, subcategory: null, products: [product("p")] }],
+    });
+    expect(tiles.map((t) => t.key)).toEqual(["esmaltes", "lo-mas-comprado", "todo"]);
+    expect(tiles[1]!.count).toBe("2 productos");
+  });
+});
+
+describe("search suggestions", () => {
+  const brand = (name: string, code: string): CuponeraBrandCard => ({
+    id: name,
+    name,
+    initial: name.charAt(0),
+    logoUrl: null,
+    tone: "pink",
+    discountPercent: 10,
+    code,
+    storeUrl: null,
+    title: "10 % de descuento",
+    exclusive: false,
+    shipping: null,
+    inPanel: true,
+  });
+  const products = [
+    product("e1", { brand: "H la Cosedora", name: "Esmalte tradicional Rojo", category: "esmaltes", subcategory: "tradicional" }),
+    product("e2", { brand: "H la Cosedora", name: "Esmalte tradicional Negro", category: "esmaltes", subcategory: "tradicional" }),
+    product("l1", { brand: "H la Cosedora", name: "Lima 100/180", category: "herramientas", subcategory: "limas" }),
+    product("g1", { brand: "Lumière", name: "Gel Polish – Rubí", line: "Gel Polish", colorFamily: "Rojo" }),
+    product("g2", { brand: "Lumière", name: "Gel Polish – Arena", line: "Gel Polish", colorFamily: "Nude" }),
+  ];
+  const index = suggestionIndex(products, [brand("H la Cosedora", "NAILFEST"), brand("Lumière", "NF15")], categoryTree(products));
+
+  it("scores the start of the label, the start of its words, then the inside", () => {
+    expect(suggestionScore("H la Cosedora", "h la")).toBe(3);
+    expect(suggestionScore("Esmalte tradicional Rojo", "rojo esm")).toBe(2);
+    expect(suggestionScore("H la Cosedora", "osedo")).toBe(1);
+    expect(suggestionScore("Lámpara UV", "la")).toBe(3);
+    expect(suggestionScore("Gel Polish", "la")).toBe(0);
+    expect(suggestionScore("Cualquier cosa", "  ")).toBe(0);
+  });
+
+  it("suggests the brand with its code, then categories, then products", () => {
+    const found = rankSuggestions(index, "h la");
+    expect(found.map((s) => [s.kind, s.label])).toEqual([["marca", "H la Cosedora"]]);
+    expect(found[0]!.detail).toBe("10 % de descuento con el código NAILFEST");
+    expect(found[0]!.href).toBe("/cuponera/buscar?q=H%20la%20Cosedora");
+    const esm = rankSuggestions(index, "esm");
+    expect(esm.map((s) => [s.kind, s.label])).toEqual([
+      ["categoria", "Esmaltes"],
+      ["categoria", "Esmalte tradicional"],
+      ["producto", "Esmalte tradicional Rojo"],
+      ["producto", "Esmalte tradicional Negro"],
+    ]);
+    expect(esm.map((s) => s.href).slice(0, 2)).toEqual(["/cuponera/esmaltes", "/cuponera/esmaltes/tradicional"]);
+    // A line comes once, with its tones.
+    expect(rankSuggestions(index, "gel").map((s) => [s.label, s.detail])).toEqual([["Gel Polish", "Lumière · 2 tonos"]]);
+  });
+
+  it("bolds what matched, accents and all", () => {
+    expect(highlightParts("Lumière", "lumie")).toEqual([
+      ["Lumiè", true],
+      ["re", false],
+    ]);
+    expect(highlightParts("Esmalte tradicional Rojo", "rojo")).toEqual([
+      ["Esmalte tradicional ", false],
+      ["Rojo", true],
+    ]);
+    expect(highlightParts("Lima 100/180", "")).toEqual([["Lima 100/180", false]]);
+  });
+
+  it("offers the biggest brands and categories before typing", () => {
+    expect(popularSuggestions(index).map((s) => s.label).slice(0, 3)).toEqual(["H la Cosedora", "Lumière", "Esmaltes"]);
+  });
+});

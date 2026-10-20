@@ -2,18 +2,18 @@
 
 import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import BrandLink, { BrandLogo } from "./BrandLink";
+import BrandCoupon from "./BrandCoupon";
 import { CODES_ONLY_ONLINE } from "./CuponeraFooter";
 import { collectionHref, type CuponeraCategoryLink } from "@/lib/cuponera/browse";
-import { formatPercent, normalizeText, type CuponeraBrandCard } from "@/lib/cuponera/shared";
+import { normalizeText, type CuponeraBrandCard } from "@/lib/cuponera/shared";
 
 // The cuponera's header: the logo (back to the front page) and the ☰ menu
-// with two tabs — the categories and their types, each opening its
-// collection, and every brand with its % and code, each going to its store.
-// Nothing here leads to the rest of nailfest.lat.
+// with two tabs — first every brand as a coupon (its %, its code, the way to
+// its store), then the categories and their types, each opening its
+// collection. Nothing here leads to the rest of nailfest.lat.
 export default function CuponeraHeader({ brands, categories }: { brands: CuponeraBrandCard[]; categories: CuponeraCategoryLink[] }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const [tab, setTab] = useState<"categorias" | "marcas">("categorias");
+  const [tab, setTab] = useState<"marcas" | "categorias">("marcas");
   const [query, setQuery] = useState("");
 
   const sorted = useMemo(() => [...brands].sort((a, b) => a.name.localeCompare(b.name, "es")), [brands]);
@@ -30,7 +30,7 @@ export default function CuponeraHeader({ brands, categories }: { brands: Cuponer
           <img src="/logo.png" alt="Nail Fest" />
           <span>Cuponera</span>
         </Link>
-        <button type="button" className="cup-burger" aria-label="Abrir el menú: categorías y marcas" aria-haspopup="dialog" onClick={() => dialogRef.current?.showModal()}>
+        <button type="button" className="cup-burger" aria-label="Abrir el menú: marcas y categorías" aria-haspopup="dialog" onClick={() => dialogRef.current?.showModal()}>
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
             <path d="M4 7h16M4 12h16M4 17h16" />
           </svg>
@@ -59,11 +59,11 @@ export default function CuponeraHeader({ brands, categories }: { brands: Cuponer
         </div>
         <div className="cup-menu-body">
           <div className="cup-tabs" role="tablist" aria-label="Ver">
-            <button type="button" role="tab" aria-selected={tab === "categorias"} className={tab === "categorias" ? "cup-tab is-on" : "cup-tab"} onClick={() => setTab("categorias")}>
-              Categorías
-            </button>
             <button type="button" role="tab" aria-selected={tab === "marcas"} className={tab === "marcas" ? "cup-tab is-on" : "cup-tab"} onClick={() => setTab("marcas")}>
               Marcas
+            </button>
+            <button type="button" role="tab" aria-selected={tab === "categorias"} className={tab === "categorias" ? "cup-tab is-on" : "cup-tab"} onClick={() => setTab("categorias")}>
+              Categorías
             </button>
           </div>
 
@@ -95,7 +95,18 @@ export default function CuponeraHeader({ brands, categories }: { brands: Cuponer
             </div>
           ) : (
             <div role="tabpanel">
-              <p className="cup-menu-intro">{CODES_ONLY_ONLINE}</p>
+              <ol className="cup-steps">
+                <li>
+                  <b>Toca una marca:</b> copiamos su código y abrimos su tienda.
+                </li>
+                <li>
+                  <b>Elige tus productos</b> en la tienda de la marca.
+                </li>
+                <li>
+                  <b>Al pagar,</b> si el descuento no aparece solo, pega el código.
+                </li>
+              </ol>
+              <p className="cup-menu-note">{CODES_ONLY_ONLINE}</p>
               {sorted.length > 6 && (
                 <div className="cup-menu-search">
                   <label htmlFor="cup-brand-q" className="cup-sr">
@@ -105,28 +116,19 @@ export default function CuponeraHeader({ brands, categories }: { brands: Cuponer
                 </div>
               )}
               {shown.length === 0 && <p className="cup-menu-intro">Ninguna marca se llama así.</p>}
-              {shown.map((b, i) => {
-                const letter = b.name.trim().charAt(0).toUpperCase();
-                const prev = shown[i - 1]?.name.trim().charAt(0).toUpperCase();
-                return (
-                  <div key={b.id}>
-                    {letter !== prev && <div className="cup-menu-letter">{letter}</div>}
-                    <BrandLink brand={b} className="cup-menu-brand">
-                      <BrandLogo brand={b} size="sm" />
-                      <span className="cup-menu-brand-text">
-                        <b>{b.name}</b>
-                        <small>
-                          <strong>{formatPercent(b.discountPercent)} de descuento</strong> · <code className="cup-code-chip">{b.code}</code>
-                        </small>
-                        {b.shipping && <small>{b.shipping}</small>}
-                      </span>
-                      <span className="cup-menu-go" aria-hidden="true">
-                        ↗
-                      </span>
-                    </BrandLink>
-                  </div>
-                );
-              })}
+              <div className="cup-menu-coupons">
+                {shown.map((b, i) => {
+                  // Letters only help once the list is long.
+                  const letter = b.name.trim().charAt(0).toUpperCase();
+                  const prev = shown[i - 1]?.name.trim().charAt(0).toUpperCase();
+                  return (
+                    <div key={b.id} className="cup-menu-coupon">
+                      {sorted.length > 8 && letter !== prev && <div className="cup-menu-letter">{letter}</div>}
+                      <BrandCoupon brand={b} />
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>

@@ -2,11 +2,12 @@ import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { fetchMarcoliniCatalog, marcoliniConfig, MarcoliniError, type MarcoliniProduct } from "./marcolini";
 import { classifyProduct, isColorFamily, sizeOf } from "./shared";
-import { updateCuponeraSettings } from "./settings";
+import { CUPONERA_SETTINGS_ID, updateCuponeraSettings } from "./settings";
 
 // Copies Nail Fest's Marcolini catalog into CuponeraBrand/CuponeraProduct.
-// Runs from "Sincronizar ahora" in /admin/cuponera and once a day from the
-// cron (/api/cuponera/sync). Only the fields that come from Marcolini are
+// Runs every minute from the cron (/api/cuponera/sync) — so a change in
+// Marcolini shows here within about a minute — and from "Sincronizar ahora"
+// in /admin/cuponera, one at a time. Only the fields that come from Marcolini are
 // written; the admin's curation (visible, order, category, professions,
 // coupon texts…) is never touched. A brand or product that stops coming is
 // marked unavailable, never deleted — its curation is still there if it
@@ -14,6 +15,11 @@ import { updateCuponeraSettings } from "./settings";
 
 export const NOT_CONFIGURED_MESSAGE =
   "Falta la llave de Marcolini: agrega MARCOLINI_API_KEY en Vercel (Settings → Environment Variables) y vuelve a desplegar.";
+export const SYNC_BUSY_MESSAGE = "Ya se está sincronizando en este momento; en unos segundos queda al día.";
+
+// Longer than any real sync (the routes stop at 60 s); a sync that died
+// frees the next one after this.
+const SYNC_LOCK_MS = 2 * 60_000;
 
 export type CuponeraSyncResult =
   | {
@@ -27,7 +33,7 @@ export type CuponeraSyncResult =
       skipped: number;
       servedFrom: string;
     }
-  | { ok: false; error: string };
+  | { ok: false; error: string; busy?: true };
 
 type SyncedProductFields = {
   brandId: string;
@@ -142,14 +148,34 @@ async function recordFailure(error: string, now: Date): Promise<CuponeraSyncResu
   return { ok: false, error };
 }
 
+/** Takes the one-sync-at-a-time lock: a single UPDATE that only matches
+ * when nobody holds it (or the holder died), so two can't both get it. */
+async function takeSyncLock(now: Date): Promise<boolean> {
+  await db.cuponeraSettings.upsert({ where: { id: CUPONERA_SETTINGS_ID }, update: {}, create: { id: CUPONERA_SETTINGS_ID } });
+  const taken = await db.cuponeraSettings.updateMany({
+    where: { id: CUPONERA_SETTINGS_ID, OR: [{ syncLockUntil: null }, { syncLockUntil: { lt: now } }] },
+    data: { syncLockUntil: new Date(now.getTime() + SYNC_LOCK_MS) },
+  });
+  return taken.count === 1;
+}
+
 export async function syncCuponera(options: { fetchImpl?: typeof fetch; now?: Date } = {}): Promise<CuponeraSyncResult> {
   const now = options.now ?? new Date();
+  if (!(await takeSyncLock(now))) return { ok: false, error: SYNC_BUSY_MESSAGE, busy: true };
+  try {
+    return await runSync(options.fetchImpl, now);
+  } finally {
+    await db.cuponeraSettings.update({ where: { id: CUPONERA_SETTINGS_ID }, data: { syncLockUntil: null } });
+  }
+}
+
+async function runSync(fetchImpl: typeof fetch | undefined, now: Date): Promise<CuponeraSyncResult> {
   const config = marcoliniConfig();
   if (!config) return recordFailure(NOT_CONFIGURED_MESSAGE, now);
 
   let catalog;
   try {
-    catalog = await fetchMarcoliniCatalog(config, options.fetchImpl);
+    catalog = await fetchMarcoliniCatalog(config, fetchImpl);
   } catch (err) {
     if (err instanceof MarcoliniError) return recordFailure(err.message, now);
     console.error("cuponera sync: unexpected error reading Marcolini", err);

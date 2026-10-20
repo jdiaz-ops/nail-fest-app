@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import CollectionView, { type CollectionType } from "@/components/cuponera/CollectionView";
-import CuponeraFooter from "@/components/cuponera/CuponeraFooter";
 import { collectionHref, listHref, tileProducts } from "@/lib/cuponera/browse";
 import { getCuponeraLists } from "@/lib/cuponera/lists";
 import { categoryLabel, isCategory, isSubcategoryOf, subcategoryLabel, type CuponeraProduct } from "@/lib/cuponera/shared";
@@ -120,7 +119,6 @@ export default async function CuponeraCollectionPage({ params, searchParams }: P
           emptyText={collection.emptyText}
           displayClassName={fraunces.className}
         />
-        <CuponeraFooter />
       </div>
     </CuponeraShell>
   );

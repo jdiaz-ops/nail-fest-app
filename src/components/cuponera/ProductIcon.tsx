@@ -78,5 +78,34 @@ export default function ProductIcon({ kind, color, size = 66 }: { kind: ProductI
           <path d="M15.5 12h4.5M20 10.5v3" />
         </svg>
       );
+    case "flame":
+      return (
+        <svg {...common}>
+          <path d="M12 2.5c.6 3.2 5 5.6 5 10.6a5 5 0 0 1-10 0c0-2.5 1.3-4.2 2.7-5.3.2 1.8 1 2.9 2.2 3.3-.5-3-.3-5.8.1-8.6z" fill={color} />
+        </svg>
+      );
+    case "sparkle":
+      return (
+        <svg {...common}>
+          <path d="m11 3.5 1.9 5.6 5.6 1.9-5.6 1.9L11 18.5l-1.9-5.6L3.5 11l5.6-1.9z" fill={color} />
+          <path d="m18.5 15 .8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z" fill={color} />
+        </svg>
+      );
+    case "tag":
+      return (
+        <svg {...common}>
+          <path d="M3.5 12.4V4.5a1 1 0 0 1 1-1h7.9a1 1 0 0 1 .7.3l7.4 7.4a1 1 0 0 1 0 1.4l-7.9 7.9a1 1 0 0 1-1.4 0l-7.4-7.4a1 1 0 0 1-.3-.7z" fill={color} />
+          <circle cx="8.2" cy="8.2" r="1.6" fill="#ffffff" />
+        </svg>
+      );
+    case "grid":
+      return (
+        <svg {...common}>
+          <rect x="3.5" y="3.5" width="7" height="7" rx="2" fill={color} />
+          <rect x="13.5" y="3.5" width="7" height="7" rx="2" fill={color} />
+          <rect x="3.5" y="13.5" width="7" height="7" rx="2" fill={color} />
+          <rect x="13.5" y="13.5" width="7" height="7" rx="2" fill={color} />
+        </svg>
+      );
   }
 }

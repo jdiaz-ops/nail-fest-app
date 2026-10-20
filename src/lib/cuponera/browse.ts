@@ -10,9 +10,11 @@ import {
   SHADE_CATEGORIES,
   categoryLabel,
   discountPercent,
+  formatPercent,
   normalizeText,
   subcategoriesOf,
   subcategoryLabel,
+  type CuponeraBrandCard,
   type CuponeraCategory,
   type CuponeraProduct,
   type CuponeraSubcategory,
@@ -222,6 +224,8 @@ export function frontPageRows(input: {
   bestsellers: CuponeraTile[];
   lists: CuponeraListPage[];
   newProducts: CuponeraProduct[];
+  bestsellersTitle: string;
+  bestsellersSubtitle: string;
   newTitle: string;
   newSubtitle: string;
 }): CuponeraRow[] {
@@ -229,8 +233,8 @@ export function frontPageRows(input: {
   if (input.bestsellers.length > 0) {
     rows.push({
       key: "lo-mas-comprado",
-      title: "Lo más comprado por la comunidad",
-      subtitle: "Con los códigos de Nail Fest, últimos 90 días",
+      title: input.bestsellersTitle,
+      subtitle: input.bestsellersSubtitle,
       href: "/cuponera/lo-mas-comprado",
       tiles: input.bestsellers.slice(0, BESTSELLER_TILES),
       ranked: true,
@@ -254,6 +258,216 @@ export function frontPageRows(input: {
     });
   }
   return rows;
+}
+
+/** A tile of "Explora ahorros por categoría": a category, or another way
+ * into the products when the categories leave the last row short. */
+export interface CuponeraCategoryTile {
+  key: string;
+  /** Which drawing it shows (components/cuponera/categoryArt.ts). */
+  art: CuponeraCategory | "lo-mas-comprado" | "lo-nuevo" | "lista" | "marcas" | "todo";
+  label: string;
+  count: string;
+  href: string;
+  /** The admin's picture, for a category that has one. */
+  image?: string;
+}
+
+const productCountLabel = (n: number) => (n === 1 ? "1 producto" : `${n} productos`);
+const tileProductCount = (tiles: CuponeraTile[]) => tiles.reduce((sum, t) => sum + (t.kind === "line" ? t.line.members.length : 1), 0);
+
+/** The tiles under the search: every category with products; then, when
+ * they leave the last row of three short, other ways in (what sells, what's
+ * new, the admin's product lists, the brands) and "Todo" to close it. */
+export function categoryTiles(
+  input: {
+    categories: CuponeraCategoryLink[];
+    images: Record<string, string>;
+    bestsellers: CuponeraTile[];
+    newProducts: CuponeraProduct[];
+    lists: CuponeraListPage[];
+    /** 0 when "Todas las marcas" isn't on the page to jump to. */
+    brandCount: number;
+    productCount: number;
+  },
+  columns = 3,
+): CuponeraCategoryTile[] {
+  const tiles: CuponeraCategoryTile[] = input.categories.map((c) => ({
+    key: c.key,
+    art: c.key,
+    label: c.chip,
+    count: productCountLabel(c.count),
+    href: collectionHref(c.key),
+    image: input.images[c.key],
+  }));
+  const missing = (columns - (tiles.length % columns)) % columns;
+  if (missing === 0) return tiles;
+  const extras: CuponeraCategoryTile[] = [];
+  if (input.bestsellers.length > 0) {
+    extras.push({ key: "lo-mas-comprado", art: "lo-mas-comprado", label: "Lo más comprado", count: productCountLabel(tileProductCount(input.bestsellers)), href: "/cuponera/lo-mas-comprado" });
+  }
+  if (input.newProducts.length > 0) {
+    extras.push({ key: "lo-nuevo", art: "lo-nuevo", label: "Lo nuevo", count: productCountLabel(input.newProducts.length), href: "/cuponera/lo-nuevo" });
+  }
+  for (const list of input.lists) {
+    if (list.kind === "products" && list.products.length > 0) {
+      extras.push({ key: `lista-${list.slug}`, art: "lista", label: list.title, count: productCountLabel(list.products.length), href: listHref(list) });
+    }
+  }
+  if (input.brandCount > 0) {
+    extras.push({ key: "marcas", art: "marcas", label: "Marcas", count: input.brandCount === 1 ? "1 marca" : `${input.brandCount} marcas`, href: "#marcas" });
+  }
+  const todo: CuponeraCategoryTile = { key: "todo", art: "todo", label: "Todo", count: productCountLabel(input.productCount), href: "/cuponera/todo" };
+  return [...tiles, ...extras.slice(0, missing - 1), todo];
+}
+
+// ── Search suggestions ─────────────────────────────────────────────────────
+
+/** Something the front page's search box offers while typing. */
+export interface CuponeraSuggestion {
+  kind: "marca" | "categoria" | "producto";
+  label: string;
+  detail: string;
+  href: string;
+  /** How much is behind it (products): the bigger, the higher. */
+  weight: number;
+  /** A category's (or its type's) key, for its drawing. */
+  category?: CuponeraCategory;
+  /** A brand's logo. */
+  logo?: Pick<CuponeraBrandCard, "logoUrl" | "initial" | "tone">;
+}
+
+const searchHref = (text: string) => `/cuponera/buscar?q=${encodeURIComponent(text)}`;
+
+/** Everything the search box can suggest, all of it real: the brands (with
+ * their discount and code), the categories and their types, the products
+ * (a line once). */
+export function suggestionIndex(products: CuponeraProduct[], brands: CuponeraBrandCard[], categories: CuponeraCategoryLink[]): CuponeraSuggestion[] {
+  const perBrand = new Map<string, number>();
+  for (const p of products) perBrand.set(p.brand, (perBrand.get(p.brand) ?? 0) + 1);
+  const index: CuponeraSuggestion[] = brands.map((b) => ({
+    kind: "marca",
+    label: b.name,
+    detail: `${formatPercent(b.discountPercent)} de descuento con el código ${b.code}`,
+    href: searchHref(b.name),
+    weight: perBrand.get(b.name) ?? 0,
+    logo: { logoUrl: b.logoUrl, initial: b.initial, tone: b.tone },
+  }));
+  for (const c of categories) {
+    index.push({ kind: "categoria", label: c.label, detail: productCountLabel(c.count), href: collectionHref(c.key), weight: c.count, category: c.key });
+    for (const sub of c.subcategories) {
+      index.push({ kind: "categoria", label: sub.label, detail: `${c.chip} · ${productCountLabel(sub.count)}`, href: collectionHref(c.key, sub.key), weight: sub.count, category: c.key });
+    }
+  }
+  for (const tile of groupByLine(products)) {
+    const label = tile.kind === "line" ? tile.line.name : tile.product.name;
+    const detail = tile.kind === "line" ? `${tile.line.brand} · ${lineCountLabel(tile.line)}` : tile.product.brand;
+    index.push({ kind: "producto", label, detail, href: searchHref(label), weight: tile.kind === "line" ? tile.line.members.length : 1 });
+  }
+  return index;
+}
+
+/** A label folded like normalizeText, remembering which character of the
+ * original each one came from — so a match can be bolded there. */
+export function foldLabel(label: string): { text: string; from: number[] } {
+  let text = "";
+  const from: number[] = [];
+  for (let i = 0; i < label.length; i++) {
+    for (const ch of label[i]!.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()) {
+      if (/[a-z0-9]/.test(ch)) {
+        text += ch;
+        from.push(i);
+      } else if (text && !text.endsWith(" ")) {
+        text += " ";
+        from.push(i);
+      }
+    }
+  }
+  if (text.endsWith(" ")) {
+    text = text.slice(0, -1);
+    from.pop();
+  }
+  return { text, from };
+}
+
+// Where a search word starts a word of the folded label, or -1.
+function wordAt(text: string, word: string): number {
+  if (text.startsWith(word)) return 0;
+  const at = text.indexOf(` ${word}`);
+  return at < 0 ? -1 : at + 1;
+}
+
+/** 3 = the label starts with what's typed, 2 = every word typed starts a
+ * word of the label, 1 = it's inside the label (from four letters on, so
+ * "la" doesn't bring up every "lámpara"), 0 = no. */
+export function suggestionScore(label: string, query: string): number {
+  const q = normalizeText(query);
+  if (!q) return 0;
+  const { text } = foldLabel(label);
+  if (text.startsWith(q)) return 3;
+  if (q.split(" ").every((w) => wordAt(text, w) >= 0)) return 2;
+  return q.length >= 4 && text.includes(q) ? 1 : 0;
+}
+
+const SUGGESTION_KINDS = { marca: 0, categoria: 1, producto: 2 } as const;
+const SUGGESTION_LIMITS = { marca: 3, categoria: 3, producto: 4 } as const;
+
+/** The suggestions for what's typed: brands, then categories, then
+ * products, each by how well it matches and how much is behind it. */
+export function rankSuggestions(index: CuponeraSuggestion[], query: string): CuponeraSuggestion[] {
+  const scored = index.map((s) => ({ s, score: suggestionScore(s.label, query) })).filter((e) => e.score > 0);
+  scored.sort(
+    (a, b) =>
+      SUGGESTION_KINDS[a.s.kind] - SUGGESTION_KINDS[b.s.kind] || b.score - a.score || b.s.weight - a.s.weight || a.s.label.length - b.s.label.length,
+  );
+  const taken = { marca: 0, categoria: 0, producto: 0 };
+  const seen = new Set<string>();
+  return scored
+    .filter(({ s }) => {
+      if (taken[s.kind] >= SUGGESTION_LIMITS[s.kind] || seen.has(s.href)) return false;
+      taken[s.kind]++;
+      seen.add(s.href);
+      return true;
+    })
+    .map((e) => e.s);
+}
+
+/** A label cut in pieces, true = what matched the search (in bold). */
+export function highlightParts(label: string, query: string): [string, boolean][] {
+  const q = normalizeText(query);
+  const bold = new Array<boolean>(label.length).fill(false);
+  if (q) {
+    const { text, from } = foldLabel(label);
+    const mark = (start: number, length: number) => {
+      for (let k = start; k < start + length && k < from.length; k++) bold[from[k]!] = true;
+    };
+    if (text.startsWith(q)) mark(0, q.length);
+    else {
+      for (const w of q.split(" ")) {
+        const at = wordAt(text, w);
+        const inside = at >= 0 ? at : text.indexOf(w);
+        if (inside >= 0) mark(inside, w.length);
+      }
+    }
+  }
+  const parts: [string, boolean][] = [];
+  for (let i = 0; i < label.length; i++) {
+    const last = parts[parts.length - 1];
+    if (last && last[1] === bold[i]) last[0] += label[i];
+    else parts.push([label[i]!, bold[i]!]);
+  }
+  return parts;
+}
+
+/** Before typing: real things to search for — the brands with the most
+ * products, then the biggest categories and types. */
+export function popularSuggestions(index: CuponeraSuggestion[]): CuponeraSuggestion[] {
+  const top = (kind: CuponeraSuggestion["kind"], n: number) =>
+    index
+      .filter((s) => s.kind === kind)
+      .sort((a, b) => b.weight - a.weight)
+      .slice(0, n);
+  return [...top("marca", 3), ...top("categoria", 6)];
 }
 
 // ── Filters ────────────────────────────────────────────────────────────────

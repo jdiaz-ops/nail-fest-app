@@ -251,12 +251,10 @@ export async function getCuponeraView(now: Date = new Date()): Promise<CuponeraV
       return { slug: l.slug, title: l.title, subtitle: l.subtitle, kind: category ? "category" : "products", category, subcategory, products: listProducts };
     });
 
-  const texts = {
-    heroTitle: settings.heroTitle?.trim() || CUPONERA_DEFAULT_TEXTS.heroTitle,
-    heroLede: settings.heroLede?.trim() || CUPONERA_DEFAULT_TEXTS.heroLede,
-    newTitle: settings.newTitle?.trim() || CUPONERA_DEFAULT_TEXTS.newTitle,
-    newSubtitle: settings.newSubtitle?.trim() || CUPONERA_DEFAULT_TEXTS.newSubtitle,
-  };
+  // Each text the admin left empty is the usual one.
+  const texts = Object.fromEntries(
+    (Object.keys(CUPONERA_DEFAULT_TEXTS) as (keyof typeof CUPONERA_DEFAULT_TEXTS)[]).map((key) => [key, settings[key]?.trim() || CUPONERA_DEFAULT_TEXTS[key]]),
+  ) as typeof CUPONERA_DEFAULT_TEXTS;
 
   return {
     settings,
@@ -265,7 +263,7 @@ export async function getCuponeraView(now: Date = new Date()): Promise<CuponeraV
     deal,
     brands: brands.map(toBrandCard),
     categories: categoryTree(products),
-    rows: frontPageRows({ bestsellers, lists: listPages, newProducts, newTitle: texts.newTitle, newSubtitle: texts.newSubtitle }),
+    rows: frontPageRows({ bestsellers, lists: listPages, newProducts, ...texts }),
     bestsellers,
     newProducts,
     lists: listPages,

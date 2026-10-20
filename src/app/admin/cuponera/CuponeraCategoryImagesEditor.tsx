@@ -9,7 +9,7 @@ import { api, CardTitle, cardStyle, mutedText, secondaryButtonStyle } from "./ui
 
 const CATEGORIES = CUPONERA_CATEGORIES.filter((c) => c.key !== "todo") as { key: CuponeraCategory; label: string; chip: string }[];
 
-// The pictures of "Descubre por categoría", the tiles under the search on
+// The pictures of "Explora ahorros por categoría", the tiles under the search on
 // the front page. Without one, a category shows its drawing; a category
 // with no products doesn't show at all.
 export default function CuponeraCategoryImagesEditor({ images, counts }: { images: Record<string, string>; counts: Record<string, number> }) {
@@ -66,7 +66,7 @@ export default function CuponeraCategoryImagesEditor({ images, counts }: { image
     <div style={cardStyle}>
       <CardTitle>Categorías de la portada</CardTitle>
       <p style={{ ...mutedText, marginTop: 0 }}>
-        Los cuadros de «Descubre por categoría», debajo de la búsqueda; cada uno abre la colección con los productos de todas las marcas. Sube
+        Los cuadros de categorías, debajo de la búsqueda; cada uno abre la colección con los productos de todas las marcas. Sube
         una imagen cuadrada por categoría (el nombre se pone encima, abajo a la izquierda); sin imagen se ve el dibujo. Las categorías sin
         productos no salen.
       </p>

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import CuponeraHeader from "@/components/cuponera/CuponeraHeader";
+import CuponeraFooter from "@/components/cuponera/CuponeraFooter";
 import PreviewToast from "@/components/cuponera/PreviewToast";
 import { staffNote, type CuponeraPageData } from "./load";
 
@@ -10,7 +11,8 @@ import { staffNote, type CuponeraPageData } from "./load";
 const FRAME_SCRIPT = `if (window.self !== window.top) document.documentElement.classList.add("cup-in-frame");`;
 
 // What every cuponera page shares: the staff banner while it isn't public,
-// the header with the ☰ menu, and the note that confirms a copied code.
+// the header with the ☰ menu, the footer, and the note that confirms a
+// copied code.
 export default function CuponeraShell({ data, children }: { data: CuponeraPageData; children: ReactNode }) {
   const note = staffNote(data);
   return (
@@ -26,6 +28,7 @@ export default function CuponeraShell({ data, children }: { data: CuponeraPageDa
       )}
       <CuponeraHeader brands={data.brands} categories={data.categories} />
       {children}
+      <CuponeraFooter />
       <PreviewToast />
     </main>
   );

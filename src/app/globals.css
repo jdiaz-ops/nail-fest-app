@@ -2688,7 +2688,7 @@ button.cup-card { width: 100%; padding: 0; font: inherit; text-align: left; curs
   .cup-tool--sort { flex: 0 1 320px; }
 }
 
-/* "Descubre por categoría": the tiles under the search. */
+/* "Explora ahorros por categoría": the tiles under the search. */
 .cup-cats { display: flex; flex-direction: column; gap: 12px; }
 .cup-cats-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 .cup-cat { position: relative; aspect-ratio: 1 / 1; display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden; padding: 10px; border-radius: 16px; color: var(--ink); text-decoration: none; isolation: isolate; transition: transform 0.15s ease, box-shadow 0.15s ease; }
@@ -2742,3 +2742,115 @@ button.cup-card { width: 100%; padding: 0; font: inherit; text-align: left; curs
 .cup-brandchip:hover { color: var(--ink); border-color: var(--ink); }
 .cup-brandchip b { font-size: 13px; font-weight: 800; color: var(--danger); }
 
+
+/* ---------- Cuponera, 2026-10-21: coupons, suggestions, footer ---------- */
+
+/* A brand as a coupon of the book (BrandCoupon): who, how much and where;
+   past the perforation, the code and the way to the store. The holes take
+   the color of what's behind the coupon (--cup-ticket-hole). */
+.cup-ticket { --cup-ticket-hole: var(--bg); position: relative; display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--border); border-radius: 18px; background: var(--surface); color: var(--ink); text-decoration: none; transition: transform 0.15s ease, box-shadow 0.15s ease; }
+.cup-ticket:hover { color: var(--ink); transform: translateY(-2px); box-shadow: 0 10px 24px rgba(23, 24, 28, 0.1); }
+.cup-ticket-main { display: flex; align-items: center; gap: 14px; padding: 16px 16px 14px; }
+.cup-ticket-info { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.cup-ticket-brand { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; font-size: 15px; font-weight: 700; line-height: 1.25; }
+.cup-ticket-offer { display: flex; align-items: baseline; gap: 6px; font-size: 15px; font-weight: 700; color: var(--danger); }
+.cup-ticket-offer { flex-wrap: wrap; row-gap: 0; }
+.cup-ticket-offer b { font-size: 30px; line-height: 1; font-weight: 900; letter-spacing: -0.02em; white-space: nowrap; }
+.cup-ticket-where { font-size: 13px; line-height: 1.35; color: var(--ink-muted); overflow-wrap: anywhere; }
+.cup-ticket-stub { position: relative; display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; padding: 14px 16px 16px; border-top: 2px dashed var(--border); background: #fffaf6; }
+.cup-ticket-stub::before, .cup-ticket-stub::after { content: ""; position: absolute; top: -11px; width: 20px; height: 20px; border: 1px solid var(--border); border-radius: 50%; background: var(--cup-ticket-hole); }
+.cup-ticket-stub::before { left: -11px; }
+.cup-ticket-stub::after { right: -11px; }
+.cup-ticket-code { min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.cup-ticket-code small { font-size: 10px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-muted); }
+.cup-ticket-code code { padding: 6px 12px; border: 1.5px dashed var(--link); border-radius: 10px; background: #e6f9f7; color: var(--accent-ink); font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 16px; font-weight: 800; letter-spacing: 0.08em; white-space: nowrap; }
+.cup-ticket-go { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 16px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-size: 14px; font-weight: 800; white-space: nowrap; }
+.cup-ticket-ship { padding: 0 16px 14px; background: #fffaf6; font-size: 12px; font-weight: 600; color: var(--ink-muted); }
+@media (prefers-reduced-motion: reduce) {
+  .cup-ticket { transition: none; }
+  .cup-ticket:hover { transform: none; }
+}
+
+/* The menu's brands: how it works, then a coupon per brand. */
+.cup-steps { display: flex; flex-direction: column; gap: 6px; margin: 16px 0 0; padding: 14px 16px 14px 36px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); font-size: 13px; line-height: 1.45; color: var(--ink-muted); }
+.cup-steps li::marker { font-weight: 800; color: var(--link); }
+.cup-steps b { color: var(--ink); }
+.cup-menu-note { margin: 10px 2px 0; font-size: 12px; line-height: 1.45; color: var(--ink-muted); }
+.cup-menu-coupons { display: flex; flex-direction: column; gap: 14px; margin-top: 16px; }
+.cup-menu-coupon .cup-menu-letter { padding: 4px 0 8px; }
+
+/* The hero's panel: the code on its own line, never cut; a head with the
+   arrows; the coupons variant. */
+.cup-panel-code { font-size: 13px; color: var(--ink-muted); white-space: nowrap; }
+.cup-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 16px 10px; }
+.cup-panel-head .cup-panel-title { padding: 0; }
+.cup-panel-arrows { display: flex; gap: 6px; }
+.cup-panel-arrows button { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border); border-radius: 50%; background: var(--surface); color: var(--ink); cursor: pointer; }
+.cup-panel-arrows button:disabled { opacity: 0.35; cursor: default; }
+.cup-panel--coupons .cup-panel-track { grid-template-rows: auto; grid-auto-columns: 86%; gap: 12px; padding-bottom: 6px; }
+.cup-panel--coupons .cup-panel-track.is-single { grid-auto-columns: 100%; }
+.cup-panel--coupons .cup-ticket { --cup-ticket-hole: var(--surface); scroll-snap-align: start; }
+@media (min-width: 900px) {
+  .cup-panel--coupons .cup-panel-track { grid-auto-columns: 86%; }
+  .cup-panel--coupons .cup-panel-track.is-single { grid-auto-columns: 100%; }
+  .cup-hero2--coupons .cup-hero2-inner { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 480px); align-items: center; gap: 48px; padding-top: 44px; padding-bottom: 44px; }
+  .cup-hero2--coupons .cup-hero2-lede { margin-bottom: 0; }
+}
+
+/* The code goes with the discount, everywhere. */
+.cup-mcard-code { padding: 0 2px; font-size: 12px; color: var(--ink-muted); }
+.cup-mcard-code code { padding: 0 5px; border-radius: 5px; background: #e6f9f7; color: var(--accent-ink); font-family: ui-monospace, Menlo, Consolas, monospace; font-weight: 700; letter-spacing: 0.04em; }
+.cup-brandchip { padding: 8px 16px 8px 8px; }
+.cup-brandchip-text { min-width: 0; display: flex; flex-direction: column; gap: 2px; line-height: 1.25; }
+.cup-brandchip .cup-brandchip-text b { font-size: 14px; font-weight: 700; color: var(--ink); }
+.cup-brandchip-text small { font-size: 12px; font-weight: 500; color: var(--ink-muted); }
+.cup-brandchip-text strong { font-weight: 800; color: var(--danger); }
+
+/* The category tiles always end in a full row: three on a phone; from a
+   tablet up, six or nine in one row, three no bigger than on a tablet. */
+@media (min-width: 700px) {
+  .cup-cats-grid--n3, .cup-cats-grid--n9 { grid-template-columns: repeat(3, minmax(0, 1fr)); max-width: 640px; }
+  .cup-cats-grid--n6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}
+@media (min-width: 1100px) {
+  .cup-cats-grid--n9 { grid-template-columns: repeat(9, minmax(0, 1fr)); max-width: none; }
+}
+
+/* A long name ("Lo más comprado") takes two lines without covering the drawing. */
+.cup-cat-label--long b { font-size: 12px; }
+@media (min-width: 420px) {
+  .cup-cat-label--long b { font-size: 13px; }
+}
+@media (min-width: 700px) {
+  .cup-cat-label--long b { font-size: 15px; }
+}
+
+/* The search box's suggestions. The box itself shows the focus ring. */
+.cup-search input:focus-visible { outline: none; }
+.cup-search--suggest { position: relative; }
+.cup-suggest { position: absolute; top: calc(100% + 8px); left: -1.5px; right: -1.5px; z-index: 30; max-height: min(62vh, 440px); overflow-y: auto; padding: 8px; border: 1px solid var(--border); border-radius: 16px; background: var(--surface); box-shadow: 0 18px 40px rgba(23, 24, 28, 0.16); }
+.cup-suggest ul { margin: 0; padding: 0; list-style: none; }
+.cup-suggest-group { display: block; padding: 8px 10px 4px; font-size: 11px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-muted); }
+.cup-suggest-item { display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 12px; cursor: pointer; }
+.cup-suggest-item:hover, .cup-suggest-item.is-on { background: #f3f1ee; }
+.cup-suggest-icon { flex: none; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border-radius: 9px; background: #f3f1ee; color: var(--ink-muted); }
+.cup-suggest-text { min-width: 0; display: flex; flex-direction: column; line-height: 1.3; }
+.cup-suggest-label { overflow: hidden; font-size: 15px; color: var(--ink); white-space: nowrap; text-overflow: ellipsis; }
+.cup-suggest-label b { font-weight: 800; }
+.cup-suggest-text small { overflow: hidden; font-size: 12px; color: var(--ink-muted); white-space: nowrap; text-overflow: ellipsis; }
+.cup-suggest-popular { padding: 4px 6px 8px; }
+.cup-suggest-popular .cup-chips { margin-top: 4px; }
+.cup-suggest-popular .cup-chip { display: inline-flex; align-items: center; text-decoration: none; }
+
+/* The footer: a dark band that closes every page, where the codes work
+   set apart in its own box. */
+.cup-footer { display: block; background: #17181c; color: #e9eaee; }
+.cup-footer-inner { max-width: 1200px; margin: 0 auto; padding: 32px 20px 28px; display: flex; flex-direction: column; gap: 18px; }
+.cup-footer-brand img { height: 32px; }
+.cup-footer-brand span { color: #5fe0d8; }
+.cup-footer .cup-footer-codes { display: flex; align-items: flex-start; gap: 12px; max-width: 720px; padding: 16px; border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 16px; background: rgba(255, 255, 255, 0.06); color: #ffc5a8; font-weight: 400; }
+.cup-footer .cup-footer-codes svg { flex: none; margin-top: 1px; }
+.cup-footer .cup-footer-codes p { margin: 0; max-width: none; font-size: 14px; line-height: 1.5; color: #c9ccd3; }
+.cup-footer .cup-footer-codes b { font-weight: 700; color: #ffffff; }
+.cup-footer .cup-footer-small { margin: 0; max-width: 640px; font-size: 13px; line-height: 1.55; color: #a3a7b0; }
+.cup-footer .cup-footer-tech { padding-top: 14px; border-top: 1px solid rgba(255, 255, 255, 0.1); font-size: 12px; color: #8b8f99; }

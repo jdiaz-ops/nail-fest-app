@@ -23,12 +23,12 @@ datasource db {
 // profile" the whole plan is built around — registrations, consents and
 // audience segments all hang off this, not off a per-event record.
 model Person {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  phone     String? // E.164, e.g. +57...
-  firstName String?
-  lastName  String?
-  city      String?
+  id         String  @id @default(cuid())
+  email      String  @unique
+  phone      String? // E.164, e.g. +57...
+  firstName  String?
+  lastName   String?
+  city       String?
   // Free-form categorical field (e.g. "manicurista", "estudiante").
   // Kept as a plain string + a lookup table of known options (ProfessionOption)
   // rather than true text so it stays usable as a segment filter — see
@@ -42,7 +42,7 @@ model Person {
   // rows imported before this field existed have no value to backfill.
   // A real column (not decorative) so it's usable as a segment filter
   // and a Personas filter, same as city/profession.
-  country   String?
+  country    String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -68,11 +68,11 @@ model Person {
   // or "same_phone_same_name" — see lib/dedupe/personDedupe.ts.
   mergeReason  String?
 
-  registrations Registration[]
-  consents      Consent[]
+  registrations         Registration[]
+  consents              Consent[]
   whatsappConversations WhatsAppConversation[]
-  labels        Label[]
-  reviews       Review[]
+  labels                Label[]
+  reviews               Review[]
 
   @@index([phone])
   @@index([city])
@@ -123,29 +123,29 @@ enum EventFormat {
 }
 
 model Event {
-  id           String      @id @default(cuid())
-  slug         String      @unique // used in the landing URL, e.g. /bogota-2026
-  name         String
+  id                        String      @id @default(cuid())
+  slug                      String      @unique // used in the landing URL, e.g. /bogota-2026
+  name                      String
   // What people see (public page, emails, ticket, WhatsApp) when it
   // differs from `name`, which stays the admin's own internal label.
   // Null/empty = people see `name` — see lib/eventDisplayName.ts.
-  publicName   String?
+  publicName                String?
   // Decision targets for the report page (see EventDecisionStats and
   // lib/eventDecisions.ts): how many confirmed registrations / people at
   // the door this event is aiming for, and which past event the admin
   // thinks it will most resemble (the "base" scenario). All optional —
   // without a goal the report still compares against past events, it
   // just can't say "a este ritmo llegas".
-  goalRegistrations Int?
-  goalAttendance    Int?
-  referenceEventId  String?
+  goalRegistrations         Int?
+  goalAttendance            Int?
+  referenceEventId          String?
   // Optional one-line tagline shown on the public page between the
   // event's name (h1) and its venue/address line — see
   // [eventSlug]/page.tsx. Null means "don't show anything there", same
   // as every other optional text field on this model.
-  subtitle     String?
-  city         String
-  format       EventFormat @default(IN_PERSON)
+  subtitle                  String?
+  city                      String
+  format                    EventFormat @default(IN_PERSON)
   // Shown on the public page and in the confirmation email INSTEAD OF
   // venue/address for a VIRTUAL event (and alongside it for HYBRID) —
   // plain text the admin writes themselves (e.g. "el link de acceso
@@ -158,28 +158,28 @@ model Event {
   // event" (a HYBRID event might still be in-person-only if the admin
   // never filled this in). The numeric Zoom meeting/webinar id, as a
   // string (Zoom's ids exceed JS's safe integer range in rare cases).
-  zoomMeetingId String?
+  zoomMeetingId             String?
   // Whether zoomMeetingId is a Webinar (needs the paid Zoom Webinars
   // add-on, scales past 100/500 depending on plan) instead of a plain
   // Meeting (works on any Pro+ plan with "Registration" turned on,
   // capped by the account's own participant limit) — picks which of
   // Zoom's near-identical registrant endpoints lib/zoom.ts calls.
-  zoomIsWebinar Boolean @default(false)
+  zoomIsWebinar             Boolean     @default(false)
   // Shown on the public event page and in the confirmation email, not
   // just admin-internal — attendees need to know where to physically go,
   // not only which city (see /admin/events' own screenshots comparison).
-  venueName    String?
-  venueAddress String?
+  venueName                 String?
+  venueAddress              String?
   // Shown on the public event page above the registration form. Sanitized
   // HTML from the real rich-text editor (RichTextEditor.tsx, TipTap) —
   // sanitized server-side (lib/sanitizeHtml.ts) before it's ever stored,
   // since it renders back out via dangerouslySetInnerHTML on a public,
   // unauthenticated page.
-  description  String?
+  description               String?
   // Vercel Blob URL (see /api/admin/uploads/event-image) — null until an
   // admin uploads one; the public page and EventForm's preview both just
   // skip the hero image when this is null instead of showing a broken img.
-  imageUrl     String?
+  imageUrl                  String?
   // A horizontally-scrollable carousel on the public page, just below the
   // inline CTA and before the description/landing-blocks content — see
   // EventGalleryCarousel.tsx. Same shape and same "pre-designed, we don't
@@ -187,31 +187,31 @@ model Event {
   // (captions are baked into the image itself, not a separate field).
   // Empty means the whole section doesn't render at all, same as the
   // homepage's own gallery.
-  galleryImageUrls String[] @default([])
+  galleryImageUrls          String[]    @default([])
   // Optional heading shown right above galleryImageUrls's carousel on the
   // public page ("Lo que vas a vivir") — null/empty means no heading,
   // the carousel just starts.
-  galleryTitle     String?
+  galleryTitle              String?
   // Optional one-liner under the inline CTA button on the public page
   // ("Para manicuristas, estudiantes de manos y pies…") — who the event
   // is for, as a nudge right at the point of decision. Null/empty means
   // nothing renders there.
-  ctaNote          String?
+  ctaNote                   String?
   // The headline of the closing band at the very end of the public page
   // ("Nos vemos el 7 y 8 de noviembre en Cúcuta."). Null/empty means the
   // page builds that sentence itself from the dates and city.
-  closingText      String?
+  closingText               String?
   // The public page's registration submit button — our previous ticketing
   // platform's own "Select tickets button label" field, renamed here since we have no
   // ticket-selection step (RegistrationForm.tsx just submits straight to
   // /api/register). Defaults to "Registrarme GRATIS" on create, not at
   // the DB level, so existing events keep whatever they already show
   // (see lib/events.ts's createEvent) instead of silently changing.
-  registerButtonLabel String?
-  status       EventStatus @default(PUBLISHED)
-  startsAt     DateTime
-  endsAt       DateTime?
-  capacity     Int?
+  registerButtonLabel       String?
+  status                    EventStatus @default(PUBLISHED)
+  startsAt                  DateTime
+  endsAt                    DateTime?
+  capacity                  Int?
   // Real per-day open/close times (see lib/eventSchedule.ts) — a
   // multi-day event's startsAt–endsAt alone reads as ONE continuous span
   // ("sábado 10am – domingo 5pm" looks like you're there overnight),
@@ -223,7 +223,7 @@ model Event {
   // table — this is display config, never independently queried/filtered,
   // same reasoning as Registration.customFields. Shape: an array of
   // { opensAt: ISO string, closesAt: ISO string }, one entry per real day.
-  scheduleDays Json?
+  scheduleDays              Json?
   // Raw count of "abrió el formulario de registro" (EventRegistration.tsx's
   // openModal — fire-and-forget POST to /api/funnel/open, same pattern as
   // LinkPageLink.clickCount) — the one real top-of-funnel number this app
@@ -232,13 +232,13 @@ model Event {
   // way to show "cuántos abrieron vs. cuántos llegaron a escribir su
   // correo vs. cuántos confirmaron" on one report page. See
   // EventDecisionStats.tsx's "Embudo de registro" section.
-  checkoutOpenedCount Int @default(0)
+  checkoutOpenedCount       Int         @default(0)
   // Per-event override of the confirmation email — see OrgSettings.
   // confirmationEmailHtml's own comment for the full fallback chain
   // (this -> the account-wide template -> the original hand-built
   // design). Null (the default) means this event just uses whatever the
   // account-wide template resolves to.
-  confirmationEmailHtml String?
+  confirmationEmailHtml     String?
   // Same fallback chain as confirmationEmailHtml, but for the SUBJECT
   // line — these were never actually configurable before (the subject
   // was hardcoded to "Tu entrada para <evento>" in code), which is why
@@ -246,7 +246,7 @@ model Event {
   // {{EVENTO_NOMBRE}}/{{EVENTO_FECHA_RANGO}}/{{EVENTO_FORMATO}} merge
   // tags as the body — see lib/confirmationTemplate.ts's
   // renderSubjectFromTemplate.
-  confirmationEmailSubject String?
+  confirmationEmailSubject  String?
   // A richer, structured alternative to `description` for an event that
   // wants a real sales-script landing (hero/story/value-stack table/
   // schedule/speakers/FAQ/etc. — see lib/salesPage/types.ts) instead of
@@ -260,37 +260,37 @@ model Event {
   // modules (e.g. manicuristasImparables.ts) via the one-tap admin
   // action, not hand-typed — same reasoning as Registration.customFields
   // for why this is JSON and not a pile of new columns.
-  salesPageContent Json?
+  salesPageContent          Json?
   // Self-service alternative to `description` — an ordered array of typed
   // blocks (text/image/gallery/faq) the admin builds themselves from
   // LandingBlocksEditor.tsx on the same event form, instead of one long
   // rich-text field. See lib/landingBlocks/types.ts for the block shapes.
   // Unlike salesPageContent above, this one IS hand-authored through a
   // real admin UI, on purpose — that's the whole point of it.
-  landingBlocks Json @default("[]")
+  landingBlocks             Json        @default("[]")
   // Per-event switch, default false: every existing and new event keeps
   // rendering `description` exactly as before until this is flipped on
   // for it. [eventSlug]/page.tsx picks the render path from this flag —
   // description/salesPageContent/landingBlocks never render together.
-  useLandingBlocks Boolean @default(false)
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  useLandingBlocks          Boolean     @default(false)
+  createdAt                 DateTime    @default(now())
+  updatedAt                 DateTime    @updatedAt
 
-  registrations Registration[]
-  scans         ScanLog[]
-  zoomAttendance ZoomAttendanceLog[]
-  ticketTypes   TicketType[]
-  broadcasts    EmailBroadcast[]
-  reviews       Review[]
-  reviewRaffle  ReviewRaffle?
+  registrations      Registration[]
+  scans              ScanLog[]
+  zoomAttendance     ZoomAttendanceLog[]
+  ticketTypes        TicketType[]
+  broadcasts         EmailBroadcast[]
+  reviews            Review[]
+  reviewRaffle       ReviewRaffle?
   // Cached "de qué hablan los comentarios" (lib/reviews.ts's
   // summarizeReviews) — regenerated on demand from the admin, never on
   // page load, so a Claude call is a deliberate click, not a side effect.
-  reviewSummary   Json?
-  reviewSummaryAt DateTime?
+  reviewSummary      Json?
+  reviewSummaryAt    DateTime?
   whatsappBroadcasts WhatsAppBroadcast[]
-  landingViews  LandingView[]
-  infoPages     InfoPage[]
+  landingViews       LandingView[]
+  infoPages          InfoPage[]
 
   @@index([city])
   @@index([status])
@@ -345,32 +345,32 @@ enum TicketIssuance {
 }
 
 model TicketType {
-  id          String           @id @default(cuid())
-  event       Event            @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  eventId     String
-  name        String
-  quantity    Int
+  id                  String           @id @default(cuid())
+  event               Event            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId             String
+  name                String
+  quantity            Int
   // Whole units of DEFAULT_CURRENCY (COP has no everyday sub-unit) — 0 for
   // every Nail Fest event today since there's no payment processor wired
   // up, but the field is real, not hardcoded, so it's ready the day that
   // changes.
-  price       Int              @default(0)
-  bookingFee  Int              @default(0)
-  description String?
-  status      TicketTypeStatus @default(ON_SALE)
-  minPerOrder Int              @default(1)
-  maxPerOrder Int              @default(20)
-  issuance    TicketIssuance   @default(INDIVIDUAL)
-  hideUntil   DateTime?
-  hideAfter   DateTime?
-  hideWhenSoldOut        Boolean @default(false)
-  showRemainingOnPage    Boolean @default(false)
-  order       Int              @default(0)
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  price               Int              @default(0)
+  bookingFee          Int              @default(0)
+  description         String?
+  status              TicketTypeStatus @default(ON_SALE)
+  minPerOrder         Int              @default(1)
+  maxPerOrder         Int              @default(20)
+  issuance            TicketIssuance   @default(INDIVIDUAL)
+  hideUntil           DateTime?
+  hideAfter           DateTime?
+  hideWhenSoldOut     Boolean          @default(false)
+  showRemainingOnPage Boolean          @default(false)
+  order               Int              @default(0)
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
 
-  registrations Registration[]
-  broadcasts    EmailBroadcast[]
+  registrations      Registration[]
+  broadcasts         EmailBroadcast[]
   whatsappBroadcasts WhatsAppBroadcast[]
 
   @@index([eventId])
@@ -403,12 +403,12 @@ enum AttendanceIntent {
 }
 
 model Registration {
-  id        String             @id @default(cuid())
-  event     Event              @relation(fields: [eventId], references: [id])
-  eventId   String
-  person    Person             @relation(fields: [personId], references: [id])
-  personId  String
-  status    RegistrationStatus @default(STARTED)
+  id       String             @id @default(cuid())
+  event    Event              @relation(fields: [eventId], references: [id])
+  eventId  String
+  person   Person             @relation(fields: [personId], references: [id])
+  personId String
+  status   RegistrationStatus @default(STARTED)
 
   // Which TicketType this order was for (the "Entradas" step of the
   // public registration modal — see EventRegistration.tsx) — nullable
@@ -440,8 +440,8 @@ model Registration {
   ttclid      String?
   gclid       String?
 
-  qrToken   String?  @unique // signed token encoded in the ticket QR
-  createdAt DateTime @default(now())
+  qrToken     String?   @unique // signed token encoded in the ticket QR
+  createdAt   DateTime  @default(now())
   confirmedAt DateTime?
 
   // This registrant's own personal Zoom join link (see lib/zoom.ts's
@@ -483,12 +483,12 @@ model Registration {
   ticketCount    Int @default(1)
   checkedInCount Int @default(0)
 
-  consents  Consent[]
-  metaEvents MetaEvent[]
-  scans      ScanLog[]
-  payments   Payment[]
+  consents       Consent[]
+  metaEvents     MetaEvent[]
+  scans          ScanLog[]
+  payments       Payment[]
   zoomAttendance ZoomAttendanceLog[]
-  review     Review?
+  review         Review?
 
   @@unique([personId, eventId])
   @@index([eventId, status])
@@ -520,28 +520,28 @@ enum PaymentStatus {
 // Wompi once one exists. Never deleted: this is the audit trail for
 // "the customer says they paid, what actually happened."
 model Payment {
-  id             String          @id @default(cuid())
-  registration   Registration    @relation(fields: [registrationId], references: [id])
-  registrationId String
-  provider       PaymentProvider @default(WOMPI)
+  id                String          @id @default(cuid())
+  registration      Registration    @relation(fields: [registrationId], references: [id])
+  registrationId    String
+  provider          PaymentProvider @default(WOMPI)
   // Wompi's own transaction id — null until the checkout redirect or the
   // webhook first reports one (this row's OWN id is what's sent to Wompi
   // as `reference` before that point, see wompi.ts's buildCheckoutUrl).
-  providerReference String?      @unique
+  providerReference String?         @unique
   // Whole cents of `currency` (Wompi's own unit — COP has no sub-unit in
   // practice, so this is ticketType.price * 100), not
   // TicketType.price's own whole-COP convention — kept in the provider's
   // own unit here specifically so a raw amount from a webhook payload
   // can be compared directly with no conversion bug in between.
-  amountInCents  Int
-  currency       String          @default("COP")
-  status         PaymentStatus   @default(PENDING)
+  amountInCents     Int
+  currency          String          @default("COP")
+  status            PaymentStatus   @default(PENDING)
   // Last webhook/status payload received, verbatim — for support ("el
   // cliente dice que le cobraron, ¿qué dice Wompi de verdad?") without
   // needing to go dig through Wompi's own dashboard.
-  rawPayload     Json?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  rawPayload        Json?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
 
   @@index([registrationId])
   @@index([status])
@@ -565,20 +565,20 @@ enum ScanResult {
 }
 
 model ScanLog {
-  id             String        @id @default(cuid())
-  registration   Registration? @relation(fields: [registrationId], references: [id])
-  registrationId String?
+  id                String        @id @default(cuid())
+  registration      Registration? @relation(fields: [registrationId], references: [id])
+  registrationId    String?
   // Raw scanned token, kept even on failure — the only way to debug "the
   // scanner says invalid" complaints after the fact.
-  token          String
-  result         ScanResult
+  token             String
+  result            ScanResult
   // Which event the *scanner* was set to at scan time — not necessarily the
   // registration's own event (that mismatch is exactly what WRONG_EVENT is).
   scannedForEventId String?
-  scannedForEvent   Event?   @relation(fields: [scannedForEventId], references: [id])
+  scannedForEvent   Event?        @relation(fields: [scannedForEventId], references: [id])
   // Free-text, e.g. "Puerta 1 - celular de Juan" — no device auth for the
   // MVP, just enough to tell scanners apart in the log.
-  scannerLabel   String?
+  scannerLabel      String?
   // The real/claimed moment of the physical scan — for an offline scan
   // (see lib/offlineScan.ts) this is the phone's own clock at scan time,
   // NOT when it reached the server. recordedAt below is the complement:
@@ -586,15 +586,15 @@ model ScanLog {
   // live scan and diverge only for something synced late — that gap is
   // itself useful signal ("this check-in was recorded 40 minutes after
   // the fact", visible on /admin/scan/stats).
-  scannedAt      DateTime      @default(now())
-  recordedAt     DateTime      @default(now())
+  scannedAt         DateTime      @default(now())
+  recordedAt        DateTime      @default(now())
   // Idempotency key, generated client-side per scan attempt (both the
   // live path and the offline queue use it) — a dropped connection can
   // mean the client never learns whether its request actually landed
   // before retrying/syncing it; matching on this instead of blindly
   // re-inserting is what stops that from double-counting a check-in.
   // Null for anything scanned before this existed.
-  clientScanId   String?       @unique
+  clientScanId      String?       @unique
 
   @@index([registrationId])
   @@index([scannedForEventId, scannedAt])
@@ -611,25 +611,25 @@ model ScanLog {
 // real attendance duration — the door-scanner's live panel, for a
 // congreso virtual instead of a physical door.
 model ZoomAttendanceLog {
-  id             String        @id @default(cuid())
-  event          Event         @relation(fields: [eventId], references: [id])
-  eventId        String
+  id                String        @id @default(cuid())
+  event             Event         @relation(fields: [eventId], references: [id])
+  eventId           String
   // Matched by the participant's email against Person/Registration — null
   // when Zoom didn't include an email (an anonymous/unmatched joiner) or
   // no Registration exists for that person+event. Kept even when null,
   // same "log everything, match what you can" reasoning as
   // WhatsAppConversation.personId.
-  registration   Registration? @relation(fields: [registrationId], references: [id])
-  registrationId String?
-  participantEmail String?
+  registration      Registration? @relation(fields: [registrationId], references: [id])
+  registrationId    String?
+  participantEmail  String?
   // Zoom's own per-join-session participant id — stable for one
   // join-to-leave session, a NEW one on every rejoin. This (not the
   // person's email) is what ties a participant_left event back to the
   // right row when there's no leftAt yet.
   zoomParticipantId String
-  joinedAt       DateTime
-  leftAt         DateTime?
-  createdAt      DateTime      @default(now())
+  joinedAt          DateTime
+  leftAt            DateTime?
+  createdAt         DateTime      @default(now())
 
   @@index([eventId])
   @@index([registrationId])
@@ -673,14 +673,14 @@ model Consent {
 // Singleton-ish: one row per Ad Account + Pixel pair. Kept as a table (not a
 // single config row) so a future token rotation has an audit trail.
 model MetaConnection {
-  id                String   @id @default(cuid())
-  adAccountId       String
-  pixelId           String
+  id                 String   @id @default(cuid())
+  adAccountId        String
+  pixelId            String
   // Encrypted at the application layer before it ever reaches this column —
   // see lib/crypto.ts. Never store the System User token in plaintext.
   systemUserTokenEnc String
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 }
 
 enum MetaEventName {
@@ -742,9 +742,9 @@ model SegmentDefinition {
   filter    Json
   createdAt DateTime @default(now())
 
-  broadcasts EmailBroadcast[]
+  broadcasts         EmailBroadcast[]
   whatsappBroadcasts WhatsAppBroadcast[]
-  metaSync   SegmentMetaSync?
+  metaSync           SegmentMetaSync?
 }
 
 enum SyncStatus {
@@ -758,17 +758,17 @@ enum SyncStatus {
 // a Meta Custom Audience that a cron keeps in sync automatically. No manual
 // "sync now" step — see /api/meta/sync-audiences and syncAllSegmentAudiences().
 model SegmentMetaSync {
-  id             String     @id @default(cuid())
-  segment        SegmentDefinition @relation(fields: [segmentId], references: [id])
-  segmentId      String     @unique
+  id                  String            @id @default(cuid())
+  segment             SegmentDefinition @relation(fields: [segmentId], references: [id])
+  segmentId           String            @unique
   // Filled in on first successful sync — ensureCustomerListAudience() looks
   // audiences up by name too, but caching the id here saves a lookup call
   // per segment per cron run.
-  metaAudienceId String?
-  status         SyncStatus @default(PENDING)
-  lastError      String?
-  lastSyncedAt   DateTime?
-  createdAt      DateTime   @default(now())
+  metaAudienceId      String?
+  status              SyncStatus        @default(PENDING)
+  lastError           String?
+  lastSyncedAt        DateTime?
+  createdAt           DateTime          @default(now())
   // Person ids actually uploaded to Meta on the last successful sync — the
   // baseline syncSegmentAudience diffs against to know who dropped out
   // since (revoked ADVERTISING consent, no longer matches the segment
@@ -800,15 +800,15 @@ enum BroadcastScheduleKind {
 }
 
 model EmailBroadcast {
-  id          String            @id @default(cuid())
+  id                    String                @id @default(cuid())
   // Nullable now — an event-scoped broadcast (see eventId below) targets
   // "everyone who registered for this event" directly, with no need for a
   // named, reusable SegmentDefinition; that mechanism stays exactly as it
   // was for the original /admin/crm/broadcasts flow, which still requires
   // one (see BroadcastComposer.tsx's own comment on why a raw filter is
   // never accepted there).
-  segment     SegmentDefinition? @relation(fields: [segmentId], references: [id])
-  segmentId   String?
+  segment               SegmentDefinition?    @relation(fields: [segmentId], references: [id])
+  segmentId             String?
   // Set only for a broadcast created from an event's own "Correos del
   // evento" page — recipients resolve directly from this event's real
   // registrations (see lib/broadcastRecipients.ts), optionally narrowed
@@ -816,38 +816,38 @@ model EmailBroadcast {
   // segmentId/eventId set, never both, never neither — enforced in
   // application code (lib/broadcasts.ts), not the DB, same pattern as
   // the rest of this schema's optional-relation pairs.
-  event       Event?            @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  eventId     String?
+  event                 Event?                @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId               String?
   // "Ticket buyers who bought a specific ticket type" — our previous
   // ticketing platform's own recipient-narrowing option. Null = every confirmed registration
   // for the event, regardless of type.
-  ticketType   TicketType?      @relation(fields: [ticketTypeId], references: [id], onDelete: SetNull)
-  ticketTypeId String?
+  ticketType            TicketType?           @relation(fields: [ticketTypeId], references: [id], onDelete: SetNull)
+  ticketTypeId          String?
   // Per-broadcast, unlike OrgSettings.attachTicketPdf (which is the
   // account-wide default for the original confirmation email only) — a
   // marketing broadcast is usually just an announcement, not a ticket
   // resend, so this defaults OFF and the admin opts in per send from
   // EventBroadcastComposer.tsx when they actually want recipients to get
   // their entrada attached again (e.g. a reminder broadcast).
-  attachTicketPdf Boolean       @default(false)
+  attachTicketPdf       Boolean               @default(false)
   // Event broadcasts only: send to the registrants who were scanned at the
   // door (Registration.checkedInCount > 0) instead of everyone CONFIRMED —
   // the "ask attendees for a review" send, see lib/reviews.ts.
-  onlyCheckedIn Boolean         @default(false)
-  subject     String
+  onlyCheckedIn         Boolean               @default(false)
+  subject               String
   // Plain text — the original /admin/crm/broadcasts flow (escaped +
   // newline-to-<br/> at send time, see lib/email/templates.ts's
   // broadcastEmail). Exactly one of bodyText/bodyHtml is set, matching
   // which composer created the row.
-  bodyText    String?
+  bodyText              String?
   // Rich-text HTML from the same TipTap editor as the event confirmation
   // and event description (RichTextEditor.tsx) — sanitized server-side
   // before storage, same as those, since it renders in a real inbox.
-  bodyHtml    String?
-  status      BroadcastStatus   @default(DRAFT)
-  scheduleKind BroadcastScheduleKind @default(IMMEDIATE)
+  bodyHtml              String?
+  status                BroadcastStatus       @default(DRAFT)
+  scheduleKind          BroadcastScheduleKind @default(IMMEDIATE)
   // AT_DATETIME's fixed target instant.
-  scheduledAt DateTime?
+  scheduledAt           DateTime?
   // BEFORE_EVENT_START / AFTER_EVENT_END's offset from the event's own
   // startsAt/endsAt — see this enum's own comment on why this is an
   // offset, not a frozen instant.
@@ -860,16 +860,16 @@ model EmailBroadcast {
   // that gains/loses members between chunks can't skip or double-count
   // anyone. `cursor` is how many of that list have been processed (sent,
   // skipped, or failed) so far; both null/0 until the first chunk runs.
-  recipientPersonIds Json?
-  cursor      Int               @default(0)
+  recipientPersonIds    Json?
+  cursor                Int                   @default(0)
   // How many automatic retries (lib/autoRetry.ts) have run for this send —
   // stops at MAX_AUTO_RETRIES.
-  autoRetryCount Int            @default(0)
+  autoRetryCount        Int                   @default(0)
   // Set for the duration of a retry pass (retryFailedEmailBroadcast): the
   // send loop walks THIS list instead of recipientPersonIds, so a retry of
   // 40 people costs one chunk, not a re-walk of the whole frozen list.
   // Cleared when the pass completes.
-  retryPersonIds Json?
+  retryPersonIds        Json?
   // Set while one function invocation is working a chunk of this send —
   // claimed atomically at each chunk's start (see the send loops'
   // updateMany) so a second invocation (the admin's "Reanudar envío", a
@@ -877,14 +877,14 @@ model EmailBroadcast {
   // instead of sending the same chunk in parallel. Expires on its own
   // (lib/qstash.ts's CHUNK_LOCK_SECONDS) so a crashed invocation never
   // leaves the send locked for good.
-  lockedUntil DateTime?
+  lockedUntil           DateTime?
   // QStash message that will call /api/broadcasts/send-scheduled at the
   // exact due time (see lib/qstash.ts's scheduleEventBroadcastSend) —
   // kept to cancel it if the broadcast is edited or deleted first. Null
   // = not scheduled with QStash; the daily send-due cron still covers it.
-  qstashMessageId String?
-  createdAt   DateTime          @default(now())
-  sentAt      DateTime?
+  qstashMessageId       String?
+  createdAt             DateTime              @default(now())
+  sentAt                DateTime?
 
   logs EmailLog[]
 
@@ -905,12 +905,12 @@ enum EmailLogStatus {
 // Per-recipient send record for both transactional and broadcast email —
 // this is the data the "panel de salud de email" reads from.
 model EmailLog {
-  id          String          @id @default(cuid())
-  kind        EmailKind
-  broadcast   EmailBroadcast? @relation(fields: [broadcastId], references: [id])
-  broadcastId String?
-  personId    String?
-  toEmail     String
+  id                String          @id @default(cuid())
+  kind              EmailKind
+  broadcast         EmailBroadcast? @relation(fields: [broadcastId], references: [id])
+  broadcastId       String?
+  personId          String?
+  toEmail           String
   // Provider-agnostic on purpose (renamed from sesMessageId once a second
   // provider — Resend — existed): whichever EmailProvider actually sent
   // this (src/lib/email/index.ts) writes its own message id here, and the
@@ -927,20 +927,20 @@ model EmailLog {
   // docs/SES_EVENT_TRACKING.md / docs/RESEND_SETUP.md) — null until that
   // event destination exists, at which point existing rows just start
   // filling in going forward.
-  status      EmailLogStatus  @default(QUEUED)
+  status            EmailLogStatus  @default(QUEUED)
   // Why it FAILED (the provider's refusal, verbatim) or BOUNCED/COMPLAINED
   // (bounce type + diagnostic from the webhook, when the provider gives
   // one) — what lib/email/failureCategories.ts turns into a plan of
   // action. Null for a healthy row, and for failures logged before this
   // existed (2026-10-07).
-  errorMessage String?
-  deliveredAt    DateTime?
-  openedAt       DateTime?
-  firstClickedAt DateTime?
-  bouncedAt      DateTime?
-  complainedAt   DateTime?
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  errorMessage      String?
+  deliveredAt       DateTime?
+  openedAt          DateTime?
+  firstClickedAt    DateTime?
+  bouncedAt         DateTime?
+  complainedAt      DateTime?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
 
   @@index([broadcastId, status])
   @@index([toEmail])
@@ -962,23 +962,23 @@ model EmailLog {
 // recent wins) rather than a true singleton — a future token rotation
 // gets an audit trail instead of silently overwriting.
 model WhatsAppConnection {
-  id             String   @id @default(cuid())
-  wabaId         String // WhatsApp Business Account ID
-  phoneNumberId  String // the Cloud API "Phone number ID", not the phone number itself
+  id                 String   @id @default(cuid())
+  wabaId             String // WhatsApp Business Account ID
+  phoneNumberId      String // the Cloud API "Phone number ID", not the phone number itself
   // Cached from Meta on save/sync, display-only — lets the Conexión page
   // show "conectado como +57 3xx..." without decrypting the token to ask.
   displayPhoneNumber String?
   // Encrypted at the application layer — see lib/crypto.ts. Same posture
   // as MetaConnection.systemUserTokenEnc: never stored in plaintext.
-  accessTokenEnc String
+  accessTokenEnc     String
   // Shared secret for the webhook GET verification handshake (Meta's
   // hub.verify_token challenge) — set here, then pasted into the same
   // field in the Meta App dashboard's Webhooks config. Not itself
   // sensitive enough to need encryption (it authorizes nothing on its
   // own, same posture as SES_WEBHOOK_SECRET), just needs to match.
   webhookVerifyToken String
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 }
 
 // Meta's own real template categories/statuses — mirrored exactly so
@@ -1013,20 +1013,20 @@ enum WhatsAppTemplateHeaderType {
 }
 
 model WhatsAppTemplate {
-  id            String                   @id @default(cuid())
-  metaTemplateId String                  @unique // Meta's own template id
-  name          String
-  language      String // Meta's language code, e.g. "es" or "es_CO"
-  category      WhatsAppTemplateCategory
-  status        WhatsAppTemplateStatus
-  headerType    WhatsAppTemplateHeaderType @default(NONE)
-  headerText    String?
+  id               String                     @id @default(cuid())
+  metaTemplateId   String                     @unique // Meta's own template id
+  name             String
+  language         String // Meta's language code, e.g. "es" or "es_CO"
+  category         WhatsAppTemplateCategory
+  status           WhatsAppTemplateStatus
+  headerType       WhatsAppTemplateHeaderType @default(NONE)
+  headerText       String?
   // The approved body text, placeholders and all (e.g. "Hola {{1}}, tu
   // entrada para {{2}} ya está confirmada.") — shown in the composer so
   // an admin can see what they're mapping variables into.
-  bodyText      String?
-  variableCount Int                      @default(0)
-  footerText    String?
+  bodyText         String?
+  variableCount    Int                        @default(0)
+  footerText       String?
   // Meta's real button component shape, kept exactly as sent/received —
   // e.g. [{"type":"QUICK_REPLY","text":"Sí, voy"}] or
   // [{"type":"URL","text":"Ver evento","url":"https://..."}]. A URL
@@ -1034,7 +1034,7 @@ model WhatsAppTemplate {
   // stored `urlExample` alongside it) for the one dynamic case this app
   // builds — a per-recipient link (see WhatsAppTemplateButton in
   // lib/whatsapp/provider.ts) — everything else here stays static.
-  buttons       Json?
+  buttons          Json?
   // Admin-only flag (toggled from Plantillas, never touched by
   // syncTemplates()'s upsert — see that function's own comment) marking
   // this as THE pre-event "¿vienes este fin de semana?" quick-reply poll.
@@ -1044,14 +1044,14 @@ model WhatsAppTemplate {
   // `context.id` on the reply) to a broadcast that used a template with
   // this set — every other quick-reply template still just logs a plain
   // inbound message, unchanged.
-  isAttendancePoll Boolean               @default(false)
-  lastSyncedAt  DateTime                 @default(now())
-  createdAt     DateTime                 @default(now())
-  updatedAt     DateTime                 @updatedAt
+  isAttendancePoll Boolean                    @default(false)
+  lastSyncedAt     DateTime                   @default(now())
+  createdAt        DateTime                   @default(now())
+  updatedAt        DateTime                   @updatedAt
 
-  broadcasts   WhatsAppBroadcast[]
-  messages     WhatsAppMessage[]
-  automations  WhatsAppAutomation[]
+  broadcasts  WhatsAppBroadcast[]
+  messages    WhatsAppMessage[]
+  automations WhatsAppAutomation[]
 
   @@unique([name, language])
 }
@@ -1100,11 +1100,11 @@ enum AutomationFormatScope {
 // disable the old one and edit its template instead of creating a
 // second row within the same scope.
 model WhatsAppAutomation {
-  id          String                    @id @default(cuid())
-  trigger     WhatsAppAutomationTrigger
-  formatScope AutomationFormatScope     @default(DEFAULT)
-  template    WhatsAppTemplate          @relation(fields: [templateId], references: [id])
-  templateId  String
+  id              String                    @id @default(cuid())
+  trigger         WhatsAppAutomationTrigger
+  formatScope     AutomationFormatScope     @default(DEFAULT)
+  template        WhatsAppTemplate          @relation(fields: [templateId], references: [id])
+  templateId      String
   // Which merge tag (lib/whatsapp/mergeTags.ts's WHATSAPP_MERGE_TAGS)
   // fills each numbered {{1}}, {{2}}, ... placeholder in the template
   // body — e.g. {"1": "EVENTO_NOMBRE", "2": "EVENTO_FECHA_RANGO"}. Same
@@ -1115,31 +1115,31 @@ model WhatsAppAutomation {
   // Null means the OLD fixed convention still applies — every
   // automation configured before this existed keeps working unchanged.
   variableMapping Json?
-  enabled     Boolean                   @default(true)
-  createdAt   DateTime                  @default(now())
-  updatedAt   DateTime                  @updatedAt
+  enabled         Boolean                   @default(true)
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
 
   @@unique([trigger, formatScope])
 }
 
 model WhatsAppBroadcast {
-  id           String                @id @default(cuid())
+  id                    String                @id @default(cuid())
   // Same "exactly one of segmentId/eventId, never both, never neither"
   // convention as EmailBroadcast, enforced in application code
   // (lib/whatsapp/broadcasts.ts), not the DB.
-  segment      SegmentDefinition?    @relation(fields: [segmentId], references: [id])
-  segmentId    String?
-  event        Event?                @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  eventId      String?
-  ticketType   TicketType?           @relation(fields: [ticketTypeId], references: [id], onDelete: SetNull)
-  ticketTypeId String?
-  template     WhatsAppTemplate      @relation(fields: [templateId], references: [id])
-  templateId   String
+  segment               SegmentDefinition?    @relation(fields: [segmentId], references: [id])
+  segmentId             String?
+  event                 Event?                @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId               String?
+  ticketType            TicketType?           @relation(fields: [ticketTypeId], references: [id], onDelete: SetNull)
+  ticketTypeId          String?
+  template              WhatsAppTemplate      @relation(fields: [templateId], references: [id])
+  templateId            String
   // Which merge tag fills each numbered placeholder in the template body
   // — e.g. {"1": "firstName", "2": "eventName"}. See
   // lib/whatsapp/mergeTags.ts for the fixed set of tags this can reference
   // (mirrors lib/confirmationTemplate.ts's merge-tag approach for email).
-  variableMapping Json               @default("{}")
+  variableMapping       Json                  @default("{}")
   // Which event's entrada a dynamic URL button ("Ver mi entrada",
   // https://…/api/ticket-pdf/{{1}}) opens — filled per recipient at send
   // time with THEIR confirmed registration's own qrToken for this event
@@ -1148,16 +1148,16 @@ model WhatsAppBroadcast {
   // Event already relates to this model via eventId, and this is only
   // ever read to look up registrations. Null = the template has no such
   // button (or, for an event-scoped broadcast, eventId is used instead).
-  ticketEventId   String?
+  ticketEventId         String?
   // Tagged onto every Person who was actually SENT to (not skipped for
   // consent/phone, not FAILED) once the send completes — WhatChimp's own
   // "Assign label after broadcast", useful for excluding this batch from
   // a future round. Null = don't tag anyone.
-  assignLabel  Label?                @relation(fields: [assignLabelId], references: [id])
-  assignLabelId String?
-  status       BroadcastStatus       @default(DRAFT)
-  scheduleKind BroadcastScheduleKind @default(IMMEDIATE)
-  scheduledAt  DateTime?
+  assignLabel           Label?                @relation(fields: [assignLabelId], references: [id])
+  assignLabelId         String?
+  status                BroadcastStatus       @default(DRAFT)
+  scheduleKind          BroadcastScheduleKind @default(IMMEDIATE)
+  scheduledAt           DateTime?
   scheduleOffsetMinutes Int?
   // Set when an AT_DATETIME broadcast got a QStash message scheduled for
   // its exact scheduledAt (see lib/qstash.ts) — the daily
@@ -1169,14 +1169,14 @@ model WhatsAppBroadcast {
   // still covers it as a fallback, just without the precise timing.
   // Used to cancel the pending QStash message if this broadcast gets
   // deleted before it fires.
-  qstashMessageId String?
+  qstashMessageId       String?
   // Chunked sending — same mechanism and same reasoning as EmailBroadcast.
   // recipientPersonIds/cursor's own schema comment.
-  recipientPersonIds Json?
-  cursor       Int                   @default(0)
+  recipientPersonIds    Json?
+  cursor                Int                   @default(0)
   // How many automatic retries (lib/autoRetry.ts) have run for this send —
   // stops at MAX_AUTO_RETRIES.
-  autoRetryCount Int                 @default(0)
+  autoRetryCount        Int                   @default(0)
   // Set while one function invocation is working a chunk of this send —
   // claimed atomically at each chunk's start (see the send loops'
   // updateMany) so a second invocation (the admin's "Reanudar envío", a
@@ -1184,9 +1184,9 @@ model WhatsAppBroadcast {
   // instead of sending the same chunk in parallel. Expires on its own
   // (lib/qstash.ts's CHUNK_LOCK_SECONDS) so a crashed invocation never
   // leaves the send locked for good.
-  lockedUntil  DateTime?
-  createdAt    DateTime              @default(now())
-  sentAt       DateTime?
+  lockedUntil           DateTime?
+  createdAt             DateTime              @default(now())
+  sentAt                DateTime?
 
   messages WhatsAppMessage[]
 
@@ -1223,22 +1223,22 @@ enum WhatsAppMessageStatus {
 // contact reaching out is never silently dropped for not matching CRM
 // data — see lib/whatsapp/inbox.ts.
 model WhatsAppConversation {
-  id             String    @id @default(cuid())
-  person         Person?   @relation(fields: [personId], references: [id])
-  personId       String?
-  phone          String    @unique // E.164
+  id                 String     @id @default(cuid())
+  person             Person?    @relation(fields: [personId], references: [id])
+  personId           String?
+  phone              String     @unique // E.164
   // The 24h "customer service window" Meta enforces for FREEFORM sends —
   // always recomputed from this, never cached as a boolean, so it can
   // never go stale mid-conversation.
-  lastInboundAt  DateTime?
-  lastOutboundAt DateTime?
-  unreadCount    Int       @default(0)
+  lastInboundAt      DateTime?
+  lastOutboundAt     DateTime?
+  unreadCount        Int        @default(0)
   // Which staff member owns replying to this thread — WhatChimp's own
   // "Assigned Agent", useful once more than one admin works the inbox.
   // Null = unassigned, visible to everyone (today's default behavior
   // unchanged).
-  assignedTo     AdminUser? @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
-  assignedToId   String?
+  assignedTo         AdminUser? @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
+  assignedToId       String?
   // The WhatsApp LLM agent (lib/whatsapp/aiAgent.ts) auto-replies to a new
   // inbound message on this thread only while this stays true. Flips to
   // false the moment the agent itself decides to hand off (the customer
@@ -1248,9 +1248,9 @@ model WhatsAppConversation {
   // project itself is on hold for now (2026-09-02), so a newly-created
   // conversation starts "en manos de un humano" until someone opts a
   // specific thread in via WhatsAppAiToggle, not the other way around.
-  aiAutoReplyEnabled Boolean @default(false)
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  aiAutoReplyEnabled Boolean    @default(false)
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
 
   messages WhatsAppMessage[]
   notes    WhatsAppNote[]
@@ -1277,42 +1277,42 @@ model WhatsAppNote {
 }
 
 model WhatsAppMessage {
-  id             String                   @id @default(cuid())
-  conversation   WhatsAppConversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  conversationId String
-  direction      WhatsAppMessageDirection
-  kind           WhatsAppMessageKind
+  id                String                   @id @default(cuid())
+  conversation      WhatsAppConversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId    String
+  direction         WhatsAppMessageDirection
+  kind              WhatsAppMessageKind
   // Set only for an OUTBOUND TEMPLATE message sent from a broadcast — this
   // doubles as that broadcast's own EmailLog-equivalent send log.
-  broadcast      WhatsAppBroadcast?       @relation(fields: [broadcastId], references: [id])
-  broadcastId    String?
-  template       WhatsAppTemplate?        @relation(fields: [templateId], references: [id])
-  templateId     String?
+  broadcast         WhatsAppBroadcast?       @relation(fields: [broadcastId], references: [id])
+  broadcastId       String?
+  template          WhatsAppTemplate?        @relation(fields: [templateId], references: [id])
+  templateId        String?
   // The rendered text: the template body with variables filled in for
   // TEMPLATE, the plain text for FREEFORM/INBOUND.
-  body           String?
-  providerMessageId String?               @unique
-  status         WhatsAppMessageStatus    @default(QUEUED)
-  errorMessage   String?
-  sentAt         DateTime?
-  deliveredAt    DateTime?
-  readAt         DateTime?
-  createdAt      DateTime                 @default(now())
+  body              String?
+  providerMessageId String?                  @unique
+  status            WhatsAppMessageStatus    @default(QUEUED)
+  errorMessage      String?
+  sentAt            DateTime?
+  deliveredAt       DateTime?
+  readAt            DateTime?
+  createdAt         DateTime                 @default(now())
   // Marks an OUTBOUND FREEFORM message as written by the LLM agent
   // instead of a staff member — purely for the Bandeja thread UI (a
   // small "IA" badge, so staff can tell at a glance what came from the
   // bot vs. a human) and internal audit. Never shown to the customer —
   // WhatsApp has no concept of this, it's an admin-only distinction.
-  generatedByAi  Boolean                  @default(false)
+  generatedByAi     Boolean                  @default(false)
   // An INBOUND photo / voice note / audio / video / document / sticker:
   // Meta's media id + mime type, fetched on demand (never stored here)
   // through /api/admin/whatsapp/media/[mediaId] — Meta keeps the file for
   // 30 days. `body` carries the caption, or a label ("📷 Foto") so the
   // inbox list's preview still reads. All null for a text message.
-  mediaType      String?
-  mediaId        String?
-  mediaMime      String?
-  mediaFilename  String?
+  mediaType         String?
+  mediaId           String?
+  mediaMime         String?
+  mediaFilename     String?
 
   @@index([conversationId, createdAt])
   @@index([broadcastId, status])
@@ -1349,7 +1349,7 @@ model OrgSettings {
   // confirmations, broadcasts) should land. Wired into email/ses.ts's
   // `send()` as the Reply-To header; null means "reply goes to the From
   // address", same as today's behavior before this existed.
-  replyToEmail String?
+  replyToEmail   String?
   // Who gets the Monday "briefing semanal" email per upcoming event (see
   // lib/weeklyBriefing.ts). Empty = falls back to replyToEmail; none = no
   // briefing is sent.
@@ -1400,7 +1400,7 @@ model OrgSettings {
   // override this falls back to when THAT is also unset — see
   // lib/confirmationTemplate.ts for the merge-tag substitution and the
   // real fallback chain (event -> global -> hand-built default).
-  confirmationEmailHtml String?
+  confirmationEmailHtml    String?
   // See Event.confirmationEmailSubject's own comment — same fallback
   // chain, just for the subject line. Null means the hardcoded default
   // ("Tu entrada para {{EVENTO_NOMBRE}}") exactly as before this existed.
@@ -1458,10 +1458,10 @@ model OrgSettings {
   // clears the one it isn't using on save. Video wins if somehow both are
   // set (see src/app/page.tsx) — the two are meant to be mutually
   // exclusive from the UI, but the DB itself doesn't enforce that.
-  homepageImageUrl String?
-  homepageVideoUrl String?
-  homepageTagline  String?
-  homepageCtaLabel String  @default("Conseguir entrada gratis")
+  homepageImageUrl         String?
+  homepageVideoUrl         String?
+  homepageTagline          String?
+  homepageCtaLabel         String   @default("Conseguir entrada gratis")
   // A second, optional section below the hero — a grid of square photos
   // (4-across on desktop, 2x2 on mobile; see src/app/page.tsx). Ordered
   // (upload order = display order), admin-managed from the same
@@ -1483,7 +1483,7 @@ model OrgSettings {
   // brand wall runs into the dozens, uploaded many at once, so this
   // isn't a "just re-upload in the right order" situation the way a
   // 4-photo gallery is).
-  homepageBrandLogos Json @default("[]")
+  homepageBrandLogos      Json    @default("[]")
   // Optional heading shown above the logo grid on the public page (e.g.
   // "Marcas que confían en nosotros") — null/empty means no heading,
   // same as every other optional homepage text field here.
@@ -1554,36 +1554,36 @@ enum NameFormat {
 // lib/checkoutForm.ts's own comment on why this needed a real table
 // instead of the static list this used to be.
 model CheckoutQuestion {
-  id        String               @id @default(cuid())
+  id           String               @id @default(cuid())
   // Stable key — for locked rows this is one of "fullName" | "email" |
   // "phone" | "cedula" | "city" | "profession" and also the key under
   // Registration.customFields the answer is read from for "cedula" (the
   // other locked ones map to real Person columns instead). For unlocked
   // rows it's a generated slug, and customFields is always where the
   // answer lives.
-  key       String               @unique
-  label     String
-  type      CheckoutQuestionType @default(TEXT)
-  required  Boolean              @default(false)
+  key          String               @unique
+  label        String
+  type         CheckoutQuestionType @default(TEXT)
+  required     Boolean              @default(false)
   // Only meaningful for SELECT/RADIO/CHECKBOX (see TYPES_WITH_OPTIONS in
   // lib/checkoutForm.ts) — always empty on the locked "profession" row,
   // whose real, admin-editable choices live in ProfessionOption instead
   // (lib/checkoutForm.ts's getCheckoutQuestions overlays that live list
   // onto this field at read time so the admin editor still edits "the
   // question's options" from its point of view).
-  options    String[]             @default([])
-  order      Int
-  locked     Boolean              @default(false)
+  options      String[]             @default([])
+  order        Int
+  locked       Boolean              @default(false)
   // Only meaningful for the locked "fullName" row — see the NameFormat
   // enum's own comment.
-  nameFormat NameFormat           @default(FULL)
+  nameFormat   NameFormat           @default(FULL)
   // Only meaningful for the locked "email" row — our previous ticketing
   // platform's own "Customers have to enter their email twice to avoid typos" toggle.
   // When true, RegistrationForm renders a second confirm-email input and
   // /api/register rejects the submission if the two don't match.
-  confirmEmail Boolean            @default(false)
-  createdAt  DateTime             @default(now())
-  updatedAt  DateTime             @updatedAt
+  confirmEmail Boolean              @default(false)
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
 
   @@index([order])
 }
@@ -1610,18 +1610,18 @@ enum AdminRole {
 }
 
 model AdminUser {
-  id           String    @id @default(cuid())
-  username     String    @unique
-  passwordHash String
-  role         AdminRole
-  name         String?
+  id                    String                 @id @default(cuid())
+  username              String                 @unique
+  passwordHash          String
+  role                  AdminRole
+  name                  String?
   // Soft-disable instead of deleting — keeps ScanLog/etc. history
   // attributable to a real name instead of "deleted user", and lets an
   // admin instantly cut off someone who left without losing their record.
-  active       Boolean   @default(true)
-  createdAt    DateTime  @default(now())
-  lastLoginAt  DateTime?
-  sessions     AdminSession[]
+  active                Boolean                @default(true)
+  createdAt             DateTime               @default(now())
+  lastLoginAt           DateTime?
+  sessions              AdminSession[]
   assignedConversations WhatsAppConversation[]
   whatsappNotes         WhatsAppNote[]
   comprobantes          Comprobante[]
@@ -1730,11 +1730,11 @@ model Label {
 // into the scanner app, it stays logged in" was an explicit ask, not an
 // oversight.
 model AdminSession {
-  id        String   @id @default(cuid())
-  tokenHash String   @unique
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
   user      AdminUser @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    String
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
   expiresAt DateTime
   userAgent String?
 
@@ -1758,28 +1758,28 @@ enum LinkTextAlign {
 // integer order, swapped pairwise via /api/admin/links/[id]/move, no drag-
 // and-drop library.
 model LinkPageLink {
-  id        String   @id @default(cuid())
-  title     String
-  url       String
+  id         String        @id @default(cuid())
+  title      String
+  url        String
   // Horizontal alignment of the title text inside the pill on the public
   // page — CENTER matches the original look. Plain CSS text-align, see
   // TrackedLink.tsx in src/app/links/page.tsx.
-  textAlign LinkTextAlign @default(CENTER)
+  textAlign  LinkTextAlign @default(CENTER)
   // Hidden links stay in the list (and keep their spot in `order`) without
   // being deleted — same "soft off-switch" reasoning as other enabled
   // flags in this schema, e.g. Event.published. Toggled directly from the
   // row in LinksEditor.tsx (a real switch, matching the Linktree reference)
   // rather than only inside the edit modal.
-  enabled    Boolean  @default(true)
+  enabled    Boolean       @default(true)
   // Bumped by the public POST /api/links/[id]/click beacon (see
   // TrackedLink.tsx) every time someone actually clicks the link on
   // nailfest.co/links — a raw counter, not deduped per visitor, same
   // "good enough, not analytics-grade" scope as Event.viewCount if that
   // ever existed. Shown in the admin list, same as Linktree's own count.
-  clickCount Int      @default(0)
-  order      Int      @default(0)
-  createdAt  DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  clickCount Int           @default(0)
+  order      Int           @default(0)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
 }
 
 // A standalone page about one topic of an event — the cronograma, the
@@ -1789,27 +1789,27 @@ model LinkPageLink {
 // used to point to: same brand, loads fast, and carries a "Quiero mi
 // entrada" button back to the event's registration form.
 model InfoPage {
-  id      String @id @default(cuid())
-  eventId String
-  event   Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  id                    String   @id @default(cuid())
+  eventId               String
+  event                 Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   // URL segment under the event: nailfest.lat/<event.slug>/<slug>.
-  slug    String
-  title   String
+  slug                  String
+  title                 String
   // Optional short paragraph under the title.
-  intro   String @default("")
+  intro                 String   @default("")
   // Same JSON shape as Event.landingBlocks — parseLandingBlocks reads it.
-  blocks  Json   @default("[]")
+  blocks                Json     @default("[]")
   // Unpublished pages 404 for visitors; a logged-in admin still sees them,
   // with a "Borrador" banner, to check before publishing.
-  published          Boolean  @default(false)
+  published             Boolean  @default(false)
   // The green closing band at the bottom, with its "Quiero mi entrada"
   // button back to the event's registration form.
-  showRegisterButton Boolean  @default(true)
+  showRegisterButton    Boolean  @default(true)
   // A second "Quiero mi entrada" button right under the title — off by
   // default (the admin prefers only the one at the bottom).
-  showTopRegisterButton Boolean @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  showTopRegisterButton Boolean  @default(false)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
   @@unique([eventId, slug])
 }
@@ -1830,32 +1830,32 @@ enum ReviewStatus {
 }
 
 model Review {
-  id             String       @id @default(cuid())
-  event          Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  eventId        String
-  registration   Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
-  registrationId String       @unique
-  person         Person       @relation(fields: [personId], references: [id], onDelete: Cascade)
-  personId       String
-  rating         Int // 1..5
-  comment        String?
-  instagramHandle String?
-  publishConsent   Boolean   @default(false)
+  id               String       @id @default(cuid())
+  event            Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId          String
+  registration     Registration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  registrationId   String       @unique
+  person           Person       @relation(fields: [personId], references: [id], onDelete: Cascade)
+  personId         String
+  rating           Int // 1..5
+  comment          String?
+  instagramHandle  String?
+  publishConsent   Boolean      @default(false)
   publishConsentAt DateTime?
-  raffleOptIn    Boolean      @default(false)
-  status         ReviewStatus @default(PENDING)
+  raffleOptIn      Boolean      @default(false)
+  status           ReviewStatus @default(PENDING)
   // Hand-picked by an admin for landings, difusiones and the Instagram
   // card. Only an APPROVED review with publishConsent can be featured.
-  featured       Boolean      @default(false)
-  moderatedAt    DateTime?
-  moderatedBy    String?
+  featured         Boolean      @default(false)
+  moderatedAt      DateTime?
+  moderatedBy      String?
   // Created by "Crear reseñas de muestra" on the admin page (lib/reviews.ts's
   // createSampleReviews) to see what the blocks look like before any real
   // review exists. Public pages show them only to a logged-in admin or
   // coordinator; one click deletes them with their sample people.
-  isSample       Boolean      @default(false)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  isSample         Boolean      @default(false)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
 
   photos     ReviewPhoto[]
   raffleWins ReviewRaffleWinner[]
@@ -1948,18 +1948,18 @@ model CuponeraBrand {
   lastSyncedAt      DateTime
 
   // Curation — never touched by the sync.
-  visible          Boolean  @default(true)
-  order            Int      @default(0)
-  showCoupon       Boolean  @default(true)
+  visible              Boolean  @default(true)
+  order                Int      @default(0)
+  showCoupon           Boolean  @default(true)
   // Coupon card title; null = "<discount> % en toda la tienda".
-  couponTitle      String?
-  couponConditions String[] @default([])
-  couponExclusive  Boolean  @default(false)
+  couponTitle          String?
+  couponConditions     String[] @default([])
+  couponExclusive      Boolean  @default(false)
   // From Marcolini's shipping zones: free shipping from this subtotal (COP;
   // 0 = always), and whether that holds in every zone. null = not offered
   // or unknown (Shopify/WooCommerce stores).
   freeShippingFrom     Int?
-  freeShippingAllZones Boolean @default(false)
+  freeShippingAllZones Boolean  @default(false)
 
   products CuponeraProduct[]
 
@@ -2019,19 +2019,19 @@ model CuponeraProduct {
   lastSyncedAt       DateTime
 
   // Curation — never touched by the sync (autoCategory is the sync's guess).
-  visible      Boolean  @default(true)
-  featured     Boolean  @default(false)
+  visible         Boolean  @default(true)
+  featured        Boolean  @default(false)
   // Category and subcategory keys from lib/cuponera/shared.ts, picked by
   // the admin; null = the collection mapping (CuponeraCollectionMap) or,
   // failing that, the sync's guess in autoCategory/autoSubcategory.
-  category           String?
-  subcategory        String?
-  autoCategory       String?
-  autoSubcategory    String?
+  category        String?
+  subcategory     String?
+  autoCategory    String?
+  autoSubcategory String?
   // Profession keys; empty = shows for every profession.
-  professions  String[] @default([])
+  professions     String[] @default([])
   // null = automatic: created in Marcolini within CuponeraSettings.newDays.
-  isNew        Boolean?
+  isNew           Boolean?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2041,38 +2041,52 @@ model CuponeraProduct {
 
 // One row ("singleton"), same as OrgSettings.
 model CuponeraSettings {
-  id               String    @id
+  id                  String    @id
   // false = staff-only preview (404 for visitors) — the state until launch.
-  published        Boolean   @default(false)
-  heroTitle        String?
-  heroLede         String?
-  showDeal         Boolean   @default(true)
-  showCoupons      Boolean   @default(true)
-  showNew          Boolean   @default(true)
-  showBestsellers  Boolean   @default(true)
-  // The top of the front page: "marcas" = the brands' logos sliding by on
-  // their own (like Rakuten), "panel" = the brands' discounts in a panel that
-  // slides by hand (like Student Beans).
-  heroStyle        String    @default("marcas")
-  // "Descubre por categoría": an image per category key, uploaded in the
-  // admin; a category without one shows its drawing.
-  categoryImages   Json      @default("{}")
-  newTitle         String?
-  newSubtitle      String?
-  newDays          Int       @default(30)
+  published           Boolean   @default(false)
+  heroTitle           String?
+  heroLede            String?
+  showDeal            Boolean   @default(true)
+  showCoupons         Boolean   @default(true)
+  showNew             Boolean   @default(true)
+  showBestsellers     Boolean   @default(true)
+  // The top of the front page: "cupones" = the brands' discounts in a panel
+  // slid by hand (like Student Beans), each brand as a coupon — chosen on
+  // 2026-10-20 —, "panel" = the same panel in rows, "marcas" = the brands'
+  // logos sliding by on their own (like Rakuten).
+  heroStyle           String    @default("cupones")
+  // The panel's title (null = "Descuentos de las marcas").
+  panelTitle          String?
+  // "Explora ahorros por categoría": an image per category key, uploaded in
+  // the admin; a category without one shows its drawing.
+  categoryImages      Json      @default("{}")
+  showCategories      Boolean   @default(true)
+  categoriesTitle     String?
+  bestsellersTitle    String?
+  bestsellersSubtitle String?
+  newTitle            String?
+  newSubtitle         String?
+  newDays             Int       @default(30)
+  // "Todas las marcas", at the end of the front page.
+  showAllBrands       Boolean   @default(true)
+  allBrandsTitle      String?
+  allBrandsSubtitle   String?
   // Robo del día: a product the admin pins (with an optional end), or null =
   // automatic, a different featured product each day.
-  dealProductId    String?
-  dealEndsAt       DateTime?
+  dealProductId       String?
+  dealEndsAt          DateTime?
   // Last sync with Marcolini, written by lib/cuponera/sync.ts.
-  lastSyncAt       DateTime?
-  lastSyncOk       Boolean?
-  lastSyncError    String?
-  lastSyncBrands   Int?
-  lastSyncProducts Int?
-  creatorName      String?
-  creatorSlug      String?
-  updatedAt        DateTime  @updatedAt
+  lastSyncAt          DateTime?
+  lastSyncOk          Boolean?
+  lastSyncError       String?
+  lastSyncBrands      Int?
+  lastSyncProducts    Int?
+  creatorName         String?
+  creatorSlug         String?
+  // One sync at a time (the every-minute cron and "Sincronizar ahora" can
+  // meet): set while one runs; a sync that died leaves it to expire.
+  syncLockUntil       DateTime?
+  updatedAt           DateTime  @updatedAt
 }
 
 // The unifier in /admin/cuponera: a brand collection, by its normalized name
