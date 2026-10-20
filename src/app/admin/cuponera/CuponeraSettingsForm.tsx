@@ -11,6 +11,7 @@ interface SettingsValue {
   showCoupons: boolean;
   showNew: boolean;
   showBestsellers: boolean;
+  heroStyle: string;
   newTitle: string | null;
   newSubtitle: string | null;
   newDays: number;
@@ -39,6 +40,7 @@ export default function CuponeraSettingsForm({
     showCoupons: initial.showCoupons,
     showNew: initial.showNew,
     showBestsellers: initial.showBestsellers,
+    heroStyle: initial.heroStyle === "panel" ? "panel" : "marcas",
     newTitle: initial.newTitle ?? "",
     newSubtitle: initial.newSubtitle ?? "",
     newDays: String(initial.newDays),
@@ -77,6 +79,7 @@ export default function CuponeraSettingsForm({
           showCoupons: form.showCoupons,
           showNew: form.showNew,
           showBestsellers: form.showBestsellers,
+          heroStyle: form.heroStyle,
           newTitle: form.newTitle,
           newSubtitle: form.newSubtitle,
           newDays,
@@ -134,7 +137,25 @@ export default function CuponeraSettingsForm({
         </div>
 
         <div style={{ fontSize: 13, fontWeight: 600, color: "#5b5f6b", margin: "4px 0 10px" }}>Secciones</div>
-        {checkbox("showCoupons", "Cupones de las marcas", "Una tarjeta por marca con su código para copiar.")}
+        {checkbox("showCoupons", "Las marcas, arriba", "Debajo del título, cada marca con su descuento; al tocarla se copia el código y se abre su tienda.")}
+        {form.showCoupons && (
+          <div role="radiogroup" aria-label="Cómo se ven las marcas arriba" style={{ borderLeft: "3px solid #e6f9f7", paddingLeft: 14, margin: "-2px 0 12px" }}>
+            {(
+              [
+                ["marcas", "Logos que se mueven solos", "Filas de logos que pasan hacia la izquierda, con el % debajo (como Rakuten)."],
+                ["panel", "Panel que se desliza con el dedo", "Tres marcas por columna, con su descuento y su código (como Student Beans)."],
+              ] as const
+            ).map(([value, label, hint]) => (
+              <label key={value} style={{ display: "flex", gap: 10, alignItems: "flex-start", cursor: "pointer", marginBottom: 8 }}>
+                <input type="radio" name="cup-hero-style" checked={form.heroStyle === value} onChange={() => set("heroStyle", value)} style={{ marginTop: 3 }} />
+                <span>
+                  <span style={{ fontWeight: 600, fontSize: 14 }}>{label}</span>
+                  <span style={{ display: "block", ...mutedText, fontSize: 12 }}>{hint}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+        )}
         {checkbox("showBestsellers", "Lo más comprado", "Lo que más se ha comprado con los códigos de Nail Fest en los últimos 3 meses (sin mostrar cifras). Aparece cuando hay al menos 3 productos vendidos.")}
         {checkbox("showNew", "Lo nuevo", "Los productos que llegaron hace poco a las tiendas de las marcas.")}
 

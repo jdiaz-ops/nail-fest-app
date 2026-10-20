@@ -14,7 +14,17 @@ const MAX_DOTS = 6;
 // Every tone of a line in one card ("Gel Polish · 24 tonos", Sephora's
 // shade count): the cheapest price, the line's reviews together and its
 // colors. Opening it lists the tones, each one to its own store page.
-export default function LineCard({ line, rank, displayClassName = "" }: { line: CuponeraLine; rank?: number; displayClassName?: string }) {
+export default function LineCard({
+  line,
+  rank,
+  isNew = false,
+  displayClassName = "",
+}: {
+  line: CuponeraLine;
+  rank?: number;
+  isNew?: boolean;
+  displayClassName?: string;
+}) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const first = line.members[0]!;
@@ -32,7 +42,7 @@ export default function LineCard({ line, rank, displayClassName = "" }: { line: 
     <>
       <button type="button" className="cup-card cup-card--line" aria-haspopup="dialog" onClick={() => dialogRef.current?.showModal()}>
         <span className="cup-card-photo" style={{ background: first.tint }}>
-          {off > 0 && <span className="cup-off">−{off} %</span>}
+          {isNew && <span className="cup-new">Nuevo</span>}
           {rank != null && <RankBadge rank={rank} />}
           <ProductPhoto product={first} size={66} />
         </span>
@@ -50,17 +60,28 @@ export default function LineCard({ line, rank, displayClassName = "" }: { line: 
             <span>{count}</span>
             {rating && <Rating rating={rating} />}
           </span>
-          <span className="cup-prices">
-            <span className="cup-price">
-              {priceFrom && <span className="cup-from">Desde </span>}
-              {formatCop(low.price)}
+          <span className="cup-card-foot">
+            <span className="cup-prices">
+              <span className="cup-price">
+                {priceFrom && <span className="cup-from">Desde </span>}
+                {formatCop(low.price)}
+              </span>
+              {lowOff > 0 && <span className="cup-before">{formatCop(low.before)}</span>}
             </span>
-            {lowOff > 0 && <span className="cup-before">{formatCop(low.before)}</span>}
+            <span className="cup-card-code">
+              con el código{" "}
+              <span className="cup-card-codeoff">
+                <b className="cup-mono">{first.code}</b>
+                {off > 0 && (
+                  <>
+                    {" · "}
+                    <strong className="cup-card-off">−{off} %</strong>
+                  </>
+                )}
+              </span>
+            </span>
+            <span className="cup-card-cta">Ver los {count}</span>
           </span>
-          <span className="cup-card-code">
-            con el código <b className="cup-mono">{first.code}</b>
-          </span>
-          <span className="cup-card-cta">Ver los {count}</span>
         </span>
       </button>
 

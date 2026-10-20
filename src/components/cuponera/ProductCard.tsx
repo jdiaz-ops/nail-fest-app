@@ -22,11 +22,13 @@ export function RankBadge({ rank }: { rank: number }) {
   );
 }
 
-// The cuponera's product card: Marcolini's vitrina card (brand, name, the
-// creator's code, "Ver en la tienda") plus the before/now price and the
-// discount badge it never showed, its reviews, its variants and — when the
-// store tracks stock — the last units.
-export default function ProductCard({ product, rank }: { product: CuponeraProduct; rank?: number }) {
+// The cuponera's product card: Marcolini's vitrina card (brand, name, "con
+// el código NAILFEST · −10 %", "Ver en tienda") plus the before/now price,
+// its reviews, its variants and — when the store tracks stock — the last
+// units. No badge on the photo (asked on 2026-10-21): the discount goes
+// with the code. Price, code and button sit at the bottom, level across a
+// row of cards.
+export default function ProductCard({ product, rank, isNew = false }: { product: CuponeraProduct; rank?: number; isNew?: boolean }) {
   const off = discountPercent(product.price, product.before);
   const lastUnits = lastUnitsText(product.unitsLeft);
   return (
@@ -36,7 +38,7 @@ export default function ProductCard({ product, rank }: { product: CuponeraProduc
       className="cup-card"
     >
       <div className="cup-card-photo" style={{ background: product.tint }}>
-        {off > 0 && <span className="cup-off">−{off} %</span>}
+        {isNew && <span className="cup-new">Nuevo</span>}
         {rank != null && <RankBadge rank={rank} />}
         <ProductPhoto product={product} size={66} />
       </div>
@@ -49,18 +51,29 @@ export default function ProductCard({ product, rank }: { product: CuponeraProduc
             {product.variantsLabel && <span>{product.variantsLabel}</span>}
           </span>
         )}
-        <span className="cup-prices">
-          <span className="cup-price">
-            {product.priceFrom && <span className="cup-from">Desde </span>}
-            {formatCop(product.price)}
+        <span className="cup-card-foot">
+          <span className="cup-prices">
+            <span className="cup-price">
+              {product.priceFrom && <span className="cup-from">Desde </span>}
+              {formatCop(product.price)}
+            </span>
+            {off > 0 && <span className="cup-before">{formatCop(product.before)}</span>}
           </span>
-          {off > 0 && <span className="cup-before">{formatCop(product.before)}</span>}
+          {lastUnits && <span className="cup-last">{lastUnits}</span>}
+          <span className="cup-card-code">
+            con el código{" "}
+            <span className="cup-card-codeoff">
+              <b className="cup-mono">{product.code}</b>
+              {off > 0 && (
+                <>
+                  {" · "}
+                  <strong className="cup-card-off">−{off} %</strong>
+                </>
+              )}
+            </span>
+          </span>
+          <span className="cup-card-cta">Ver en tienda →</span>
         </span>
-        {lastUnits && <span className="cup-last">{lastUnits}</span>}
-        <span className="cup-card-code">
-          con el código <b className="cup-mono">{product.code}</b>
-        </span>
-        <span className="cup-card-cta">Ver en la tienda</span>
       </div>
     </PreviewLink>
   );

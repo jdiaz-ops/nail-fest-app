@@ -24,6 +24,9 @@ type StatusFilter = "available" | "visible" | "hidden" | "featured" | "gone";
 const PAGE_SIZE = 50;
 const CATEGORY_OPTIONS = CUPONERA_CATEGORIES.filter((c) => c.key !== "todo") as { key: CuponeraCategory; label: string }[];
 const SHORT_PROFESSION: Record<CuponeraProfession, string> = { mani: "Manicurista", est: "Estudiante", salon: "Salón", casa: "En casa" };
+// Who a product is for fed "Ofertas para lo que haces", gone from the page
+// since the 2026-10-21 redesign: the picks stay saved, the chips hidden.
+const SHOW_PROFESSIONS = false;
 
 const chipStyle = (on: boolean) => ({
   padding: "3px 10px",
@@ -131,7 +134,7 @@ export default function CuponeraProductsEditor({
       <p style={{ ...mutedText, marginTop: 0 }}>
         Los que las marcas tienen a la venta en Marcolini (sin agotados ni borradores). El precio con código es el de la tienda menos el
         descuento de la marca. La categoría sale sola (del nombre, o de la colección si la asignaste arriba); cámbiala aquí si quedó mal y
-        esa elección gana. Sin profesiones elegidas, el producto sale para todas.
+        esa elección gana. ★ = sale primero.
       </p>
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
@@ -222,26 +225,28 @@ export default function CuponeraProductsEditor({
               Quitar selección
             </button>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", fontSize: 13 }}>
-            <span>Para:</span>
-            {CUPONERA_PROFESSIONS.map((p) => {
-              const on = bulkProfessions.includes(p.key);
-              return (
-                <button
-                  key={p.key}
-                  type="button"
-                  aria-pressed={on}
-                  style={chipStyle(on)}
-                  onClick={() => setBulkProfessions((list) => (on ? list.filter((k) => k !== p.key) : [...list, p.key]))}
-                >
-                  {SHORT_PROFESSION[p.key]}
-                </button>
-              );
-            })}
-            <button type="button" style={secondaryButtonStyle} onClick={() => update(selectedIds, { professions: bulkProfessions })}>
-              {bulkProfessions.length === 0 ? "Aplicar «para todas»" : "Aplicar"}
-            </button>
-          </div>
+          {SHOW_PROFESSIONS && (
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", fontSize: 13 }}>
+              <span>Para:</span>
+              {CUPONERA_PROFESSIONS.map((p) => {
+                const on = bulkProfessions.includes(p.key);
+                return (
+                  <button
+                    key={p.key}
+                    type="button"
+                    aria-pressed={on}
+                    style={chipStyle(on)}
+                    onClick={() => setBulkProfessions((list) => (on ? list.filter((k) => k !== p.key) : [...list, p.key]))}
+                  >
+                    {SHORT_PROFESSION[p.key]}
+                  </button>
+                );
+              })}
+              <button type="button" style={secondaryButtonStyle} onClick={() => update(selectedIds, { professions: bulkProfessions })}>
+                {bulkProfessions.length === 0 ? "Aplicar «para todas»" : "Aplicar"}
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -412,23 +417,27 @@ function ProductRow({
         <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
           {!p.available && <Pill tone="grey">Ya no está en Marcolini</Pill>}
           {p.available && !p.brandVisible && <Pill tone="grey">Marca oculta</Pill>}
-          <span style={{ fontSize: 12, color: "#8a8478" }}>Para:</span>
-          {CUPONERA_PROFESSIONS.map((prof) => {
-            const on = p.professions.includes(prof.key);
-            return (
-              <button
-                key={prof.key}
-                type="button"
-                aria-pressed={on}
-                disabled={saving}
-                style={chipStyle(on)}
-                onClick={() => onChange({ professions: on ? p.professions.filter((k) => k !== prof.key) : [...p.professions, prof.key] })}
-              >
-                {SHORT_PROFESSION[prof.key]}
-              </button>
-            );
-          })}
-          {p.professions.length === 0 && <span style={{ fontSize: 12, color: "#8a8478" }}>(todas)</span>}
+          {SHOW_PROFESSIONS && (
+            <>
+              <span style={{ fontSize: 12, color: "#8a8478" }}>Para:</span>
+              {CUPONERA_PROFESSIONS.map((prof) => {
+                const on = p.professions.includes(prof.key);
+                return (
+                  <button
+                    key={prof.key}
+                    type="button"
+                    aria-pressed={on}
+                    disabled={saving}
+                    style={chipStyle(on)}
+                    onClick={() => onChange({ professions: on ? p.professions.filter((k) => k !== prof.key) : [...p.professions, prof.key] })}
+                  >
+                    {SHORT_PROFESSION[prof.key]}
+                  </button>
+                );
+              })}
+              {p.professions.length === 0 && <span style={{ fontSize: 12, color: "#8a8478" }}>(todas)</span>}
+            </>
+          )}
           <span style={{ flex: 1 }} />
           <label style={{ fontSize: 12, color: "#5b5f6b", display: "flex", alignItems: "center", gap: 6 }}>
             Nuevo:

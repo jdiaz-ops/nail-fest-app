@@ -6,6 +6,7 @@
 import {
   CATEGORY_KEYS,
   COLOR_FAMILIES,
+  CUPONERA_CATEGORIES,
   SHADE_CATEGORIES,
   categoryLabel,
   discountPercent,
@@ -146,6 +147,113 @@ export function searchScore(p: CuponeraProduct, words: string[]): number {
   const { main, all } = productTexts(p);
   if (words.every((w) => hasWord(main, w))) return 2;
   return all !== main && words.every((w) => hasWord(all, w)) ? 1 : 0;
+}
+
+// ── Navigation ─────────────────────────────────────────────────────────────
+
+export interface CuponeraCategoryLink {
+  key: CuponeraCategory;
+  label: string;
+  chip: string;
+  count: number;
+  subcategories: (CuponeraSubcategory & { count: number })[];
+}
+
+/** The categories and types that have products (the menu, the chips). */
+export function categoryTree(products: CuponeraProduct[]): CuponeraCategoryLink[] {
+  return CATEGORY_KEYS.map((key) => {
+    const inCategory = products.filter((p) => p.category === key);
+    return {
+      key,
+      label: categoryLabel(key),
+      chip: CUPONERA_CATEGORIES.find((c) => c.key === key)?.chip ?? categoryLabel(key),
+      count: inCategory.length,
+      subcategories: subcategoriesOf(key)
+        .map((s) => ({ ...s, count: inCategory.filter((p) => p.subcategory === s.key).length }))
+        .filter((s) => s.count > 0),
+    };
+  }).filter((c) => c.count > 0);
+}
+
+/** A collection's address: /cuponera/esmaltes, /cuponera/esmaltes/semipermanente. */
+export function collectionHref(category: CuponeraCategory, subcategory?: string | null): string {
+  return subcategory ? `/cuponera/${category}/${subcategory}` : `/cuponera/${category}`;
+}
+
+/** A sliding row of the front page. */
+export interface CuponeraRow {
+  key: string;
+  title: string;
+  subtitle: string | null;
+  /** "Ver todo". */
+  href: string | null;
+  tiles: CuponeraTile[];
+  ranked?: boolean;
+  /** "Nuevo" instead of the discount on the photo. */
+  isNew?: boolean;
+}
+
+/** One of the admin's lists, with its products (lib/cuponera/lists.ts). */
+export interface CuponeraListPage {
+  slug: string;
+  title: string;
+  subtitle: string | null;
+  kind: "category" | "products";
+  category: CuponeraCategory | null;
+  subcategory: string | null;
+  products: CuponeraProduct[];
+}
+
+/** Where a list's "Ver todo" goes: its category's collection, or its own page. */
+export function listHref(list: Pick<CuponeraListPage, "slug" | "category" | "subcategory">): string {
+  return list.category ? collectionHref(list.category, list.subcategory) : `/cuponera/lista/${list.slug}`;
+}
+
+const ROW_TILES = 12;
+const BESTSELLER_TILES = 8;
+// A category row with fewer products than this would look broken.
+const CATEGORY_ROW_MIN = 2;
+
+/** The front page below the search: what the community buys most, the
+ * admin's lists in their order, what's new. Rows with nothing to show are
+ * left out. A category list groups the tones of a line in one card; chosen
+ * products stay one by one, as the admin picked them. */
+export function frontPageRows(input: {
+  bestsellers: CuponeraTile[];
+  lists: CuponeraListPage[];
+  newProducts: CuponeraProduct[];
+  newTitle: string;
+  newSubtitle: string;
+}): CuponeraRow[] {
+  const rows: CuponeraRow[] = [];
+  if (input.bestsellers.length > 0) {
+    rows.push({
+      key: "lo-mas-comprado",
+      title: "Lo más comprado por la comunidad",
+      subtitle: "Con los códigos de Nail Fest, últimos 90 días",
+      href: "/cuponera/lo-mas-comprado",
+      tiles: input.bestsellers.slice(0, BESTSELLER_TILES),
+      ranked: true,
+    });
+  }
+  for (const list of input.lists) {
+    const enough = list.kind === "category" ? list.products.length >= CATEGORY_ROW_MIN : list.products.length > 0;
+    if (!enough) continue;
+    const tiles: CuponeraTile[] =
+      list.kind === "category" ? groupByLine(list.products) : list.products.map((product) => ({ kind: "product", key: product.id, product }));
+    rows.push({ key: `lista-${list.slug}`, title: list.title, subtitle: list.subtitle, href: listHref(list), tiles: tiles.slice(0, ROW_TILES) });
+  }
+  if (input.newProducts.length > 0) {
+    rows.push({
+      key: "lo-nuevo",
+      title: input.newTitle,
+      subtitle: input.newSubtitle,
+      href: "/cuponera/lo-nuevo",
+      tiles: groupByLine(input.newProducts).slice(0, ROW_TILES),
+      isNew: true,
+    });
+  }
+  return rows;
 }
 
 // ── Filters ────────────────────────────────────────────────────────────────

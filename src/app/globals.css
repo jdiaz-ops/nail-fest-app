@@ -2537,3 +2537,208 @@ button.cup-card { width: 100%; padding: 0; font: inherit; text-align: left; curs
   .cup-admin { grid-template-columns: minmax(640px, 900px) minmax(430px, 1fr); }
   .cup-admin-preview { display: block; position: sticky; top: 16px; height: calc(100vh - 112px); min-height: 520px; }
 }
+
+/* ── Cuponera, 2026-10-21 redesign ─────────────────────────────────────────
+   Header with the ☰ menu (categories, brands), the brands under the title
+   (logos drifting by, or a panel), the sliding rows, "Todas las marcas",
+   the collection pages and the vitrina-style card. */
+.cup-in-frame .cup-preview { display: none; }
+.cup-header { position: sticky; top: 0; z-index: 30; }
+.cup-burger { flex: none; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 12px; background: transparent; color: var(--ink); cursor: pointer; }
+.cup-burger:hover { background: #f3f1ee; }
+.cup-code-chip { padding: 0 5px; border-radius: 5px; background: #e6f9f7; color: var(--accent-ink); font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; }
+
+.cup-logo { flex: none; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid var(--border); font-weight: 900; letter-spacing: -0.02em; }
+.cup-logo img { width: 100%; height: 100%; object-fit: contain; background: #fff; }
+.cup-logo--md { width: 54px; height: 54px; border-radius: 14px; font-size: 18px; }
+.cup-logo--sm { width: 42px; height: 42px; border-radius: 12px; font-size: 15px; }
+.cup-logo--pink { background: #fde8ef; color: #b0225c; }
+.cup-logo--teal { background: #e6f9f7; color: var(--link); }
+.cup-logo--peach { background: #fff3ea; color: #a5471a; }
+
+/* The ☰ menu: the whole screen on a phone, a drawer on a computer. */
+.cup-menu { width: 100%; max-width: 100%; height: 100%; max-height: 100%; margin: 0; padding: 0; border: 0; background: var(--bg); color: var(--ink); overflow-y: auto; }
+.cup-menu::backdrop { background: rgba(23, 24, 28, 0.55); }
+.cup-menu-top { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 60px; padding: 0 12px 0 20px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.cup-menu-close { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border: 0; border-radius: 50%; background: #f3f1ee; color: var(--ink); cursor: pointer; }
+.cup-menu-body { padding: 16px 20px 36px; }
+.cup-tabs { display: flex; padding: 4px; border-radius: 999px; background: #efece7; }
+.cup-tab { flex: 1; height: 40px; border: 0; border-radius: 999px; background: none; color: var(--ink-muted); font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
+.cup-tab.is-on { background: var(--surface); color: var(--ink); box-shadow: 0 1px 4px rgba(23, 24, 28, 0.12); }
+.cup-menu-intro { margin: 14px 0 4px; font-size: 14px; color: var(--ink-muted); }
+.cup-menu-cat { padding: 14px 0; border-bottom: 1px solid var(--border); }
+.cup-menu-cat-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.cup-menu-cat-name { font-size: 17px; font-weight: 800; color: var(--ink); text-decoration: none; }
+.cup-menu-all { flex: none; font-size: 13px; font-weight: 700; color: var(--link); text-decoration: none; }
+.cup-menu-subs { display: flex; flex-wrap: wrap; gap: 8px; }
+.cup-menu-subs .cup-chip { display: inline-flex; align-items: center; text-decoration: none; }
+.cup-menu-search { display: flex; align-items: center; height: 46px; margin: 14px 0 4px; padding: 0 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.cup-menu-search input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; color: var(--ink); font: inherit; font-size: 16px; }
+.cup-menu-letter { padding: 14px 0 2px; font-size: 12px; font-weight: 800; letter-spacing: 0.14em; color: var(--ink-muted); }
+.cup-menu-brand { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-bottom: 1px solid #efece7; color: var(--ink); text-decoration: none; }
+.cup-menu-brand:hover { color: var(--ink); }
+.cup-menu-brand-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.cup-menu-brand-text b { font-size: 15px; }
+.cup-menu-brand-text small { font-size: 13px; color: var(--ink-muted); }
+.cup-menu-brand-text strong { color: var(--danger); }
+.cup-menu-go { flex: none; font-size: 18px; color: var(--link); }
+@media (min-width: 700px) {
+  .cup-menu { width: 440px; margin: 0 0 0 auto; }
+}
+
+/* Under the title, Rakuten style: rows of logos drifting left on their own. */
+.cup-hero3 { padding: 30px 0 26px; background: var(--surface); border-bottom: 1px solid var(--border); text-align: center; }
+.cup-hero3-title { margin: 0 auto; max-width: 780px; padding: 0 16px; font-size: clamp(32px, 6vw, 58px); line-height: 1.04; font-weight: 900; letter-spacing: -0.02em; text-wrap: balance; }
+.cup-hero3-title em { font-style: normal; color: var(--link); }
+.cup-hero3-lede { margin: 12px auto 24px; max-width: 540px; padding: 0 16px; font-size: 16px; line-height: 1.5; color: var(--ink-muted); text-wrap: balance; }
+.cup-marquee { display: flex; flex-direction: column; gap: 14px; text-align: left; }
+.cup-marquee-row { overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent, #000 3%, #000 97%, transparent); mask-image: linear-gradient(90deg, transparent, #000 3%, #000 97%, transparent); }
+.cup-marquee-track { display: flex; gap: 12px; width: max-content; padding: 2px 0; animation: cup-marquee linear infinite; }
+.cup-marquee-row:hover .cup-marquee-track, .cup-marquee-row:focus-within .cup-marquee-track { animation-play-state: paused; }
+@keyframes cup-marquee { from { transform: translateX(0); } to { transform: translateX(calc(-50% - 6px)); } }
+.cup-mcard { flex: none; width: 150px; display: flex; flex-direction: column; gap: 6px; color: var(--ink); text-decoration: none; }
+.cup-mcard:hover { color: var(--ink); }
+.cup-mcard-logo { height: 78px; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 10px; border: 1px solid var(--border); border-radius: 16px; background: #fff; transition: transform 0.15s ease, box-shadow 0.15s ease; }
+.cup-mcard:hover .cup-mcard-logo { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(23, 24, 28, 0.1); }
+.cup-mcard-logo img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.cup-mcard-logo--pink { background: #fde8ef; color: #b0225c; }
+.cup-mcard-logo--teal { background: #e6f9f7; color: var(--link); }
+.cup-mcard-logo--peach { background: #fff3ea; color: #a5471a; }
+.cup-mcard-name { font-size: 15px; font-weight: 900; line-height: 1.15; text-align: center; overflow-wrap: anywhere; }
+.cup-mcard-offer { padding: 0 2px; font-size: 13px; font-weight: 800; color: var(--danger); }
+@media (prefers-reduced-motion: reduce) {
+  .cup-marquee-track { animation: none; }
+  .cup-marquee-row { overflow-x: auto; -webkit-mask-image: none; mask-image: none; padding: 0 16px; }
+  .cup-mcard-logo { transition: none; }
+}
+@media (min-width: 900px) {
+  .cup-mcard { width: 180px; }
+  .cup-mcard-logo { height: 92px; }
+}
+
+/* Under the title, Student Beans style: a panel slid by hand. */
+.cup-hero2 { background: radial-gradient(120% 80% at 100% 0%, #13968d 0%, #0f7d76 45%, #0b5c57 100%); color: #fff; }
+.cup-hero2-inner { max-width: 1200px; margin: 0 auto; padding: 26px 16px 20px; }
+.cup-hero2-title { margin: 0; font-size: clamp(34px, 5vw, 56px); line-height: 1.02; font-weight: 900; letter-spacing: -0.02em; text-wrap: balance; color: #fff; }
+.cup-hero2-title em { font-style: normal; color: var(--accent-secondary); }
+.cup-hero2-lede { margin: 10px 0 20px; max-width: 560px; font-size: 15px; line-height: 1.45; color: #d9f4f1; }
+.cup-panel { padding: 16px 0 12px; border-radius: 22px; background: var(--surface); color: var(--ink); box-shadow: 0 16px 34px rgba(5, 40, 38, 0.28); }
+.cup-panel-title { margin: 0; padding: 0 16px 10px; font-size: 21px; font-weight: 800; letter-spacing: -0.01em; }
+.cup-panel-track { display: grid; grid-auto-flow: column; grid-template-rows: repeat(3, auto); grid-auto-columns: 84%; gap: 4px 12px; padding: 0 16px 4px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding: 0 16px; scrollbar-width: none; }
+.cup-panel-track::-webkit-scrollbar { display: none; }
+.cup-panel-row { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 9px 4px; border-radius: 12px; color: var(--ink); text-decoration: none; scroll-snap-align: start; }
+.cup-panel-row:hover { color: var(--ink); background: var(--bg); }
+.cup-panel-text { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.cup-panel-offer { display: flex; align-items: center; flex-wrap: wrap; gap: 2px 8px; font-size: 16px; font-weight: 800; line-height: 1.2; }
+.cup-panel-brand { font-size: 13px; color: var(--ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cup-pager { display: flex; justify-content: center; gap: 6px; padding-top: 8px; }
+.cup-pager i { width: 6px; height: 6px; border-radius: 999px; background: var(--border); transition: width 0.2s ease; }
+.cup-pager i.is-on { width: 18px; background: var(--ink); }
+@media (min-width: 900px) {
+  .cup-panel-track { grid-auto-columns: calc((100% - 24px) / 3); }
+}
+
+/* The front page under the brands. */
+.cup-wrap--home { gap: 30px; padding-top: 22px; }
+.cup-find { display: flex; flex-direction: column; gap: 12px; }
+.cup-find .cup-search { max-width: none; }
+.cup-find .cup-chips .cup-chip, .cup-collection .cup-chips .cup-chip { display: inline-flex; align-items: center; text-decoration: none; }
+.cup-shelf { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.cup-shelf-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.cup-shelf-all { flex: none; font-size: 14px; font-weight: 700; color: var(--link); text-decoration: none; }
+.cup-shelf-track { display: flex; gap: 12px; margin: 0 -20px; padding: 2px 20px 6px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding: 0 20px; scrollbar-width: none; }
+.cup-shelf-track::-webkit-scrollbar { display: none; }
+.cup-shelf-track > .cup-card { flex: none; width: 168px; scroll-snap-align: start; }
+@media (min-width: 900px) {
+  .cup-shelf-track > .cup-card { width: 214px; }
+}
+
+/* "Todas las marcas", the store directory at the end. */
+.cup-allbrands { display: flex; flex-direction: column; gap: 4px; }
+.cup-allbrands-title { margin: 0; font-size: 14px; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase; }
+.cup-allbrands-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 18px; margin-top: 8px; }
+.cup-allbrands-item { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 10px 0; border-bottom: 1px solid #efece7; color: var(--ink); font-size: 14px; text-decoration: none; }
+.cup-allbrands-item:hover { color: var(--link); }
+.cup-allbrands-item b { flex: none; font-size: 13px; color: var(--danger); }
+@media (min-width: 900px) {
+  .cup-allbrands-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0 28px; }
+}
+
+/* The vitrina-style card: price, code and button at the bottom, level. */
+.cup-card { border-radius: 18px; }
+.cup-card-foot { margin-top: auto; display: flex; flex-direction: column; gap: 3px; padding-top: 6px; }
+.cup-card .cup-card-code { margin: 0; color: var(--ink-muted); }
+.cup-card .cup-card-code b { color: var(--link); }
+.cup-card .cup-card-cta { margin-top: 6px; }
+
+/* Collection pages. */
+.cup-wrap--collection { gap: 18px; padding-top: 16px; }
+.cup-coll-head { display: flex; flex-direction: column; gap: 4px; }
+.cup-back { align-self: flex-start; font-size: 14px; font-weight: 700; color: var(--link); text-decoration: none; }
+.cup-coll-title { margin: 2px 0 0; font-size: clamp(30px, 5vw, 48px); line-height: 1.02; font-weight: 900; letter-spacing: -0.02em; text-wrap: balance; }
+.cup-collection { display: flex; flex-direction: column; gap: 12px; }
+.cup-collection .cup-search { max-width: none; }
+.cup-toolbar { display: flex; gap: 8px; }
+.cup-tool { height: 40px; display: flex; align-items: center; gap: 8px; padding: 0 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--ink); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
+.cup-tool-count { min-width: 20px; height: 20px; padding: 0 6px; display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; background: var(--ink); color: #fff; font-size: 11px; }
+.cup-tool--sort { flex: 1; justify-content: space-between; font-weight: 600; cursor: default; }
+.cup-tool--sort select { flex: 1; min-width: 0; border: 0; background: transparent; color: var(--ink); font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
+.cup-collection-count { margin: 2px 0 0; }
+@media (min-width: 700px) {
+  .cup-tool--sort { flex: 0 1 320px; }
+}
+
+/* "Descubre por categoría": the tiles under the search. */
+.cup-cats { display: flex; flex-direction: column; gap: 12px; }
+.cup-cats-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.cup-cat { position: relative; aspect-ratio: 1 / 1; display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden; padding: 10px; border-radius: 16px; color: var(--ink); text-decoration: none; isolation: isolate; transition: transform 0.15s ease, box-shadow 0.15s ease; }
+.cup-cat:hover { color: var(--ink); transform: translateY(-2px); box-shadow: 0 10px 22px rgba(23, 24, 28, 0.12); }
+.cup-cat-art { position: absolute; inset: 0 0 26% 0; z-index: -1; display: flex; align-items: center; justify-content: center; }
+.cup-cat-art::before { content: ""; position: absolute; width: 62%; aspect-ratio: 1; border-radius: 50%; background: rgba(255, 255, 255, 0.65); }
+.cup-cat-art svg { position: relative; transform: rotate(-8deg); }
+.cup-cat-label { display: flex; flex-direction: column; line-height: 1.1; }
+.cup-cat-label b { font-size: 16px; font-weight: 900; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.cup-cat-label small { font-size: 11px; color: var(--ink-muted); }
+.cup-cat--photo { padding: 8px; }
+.cup-cat-img { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; object-fit: cover; }
+.cup-cat--photo .cup-cat-label { align-self: flex-start; padding: 5px 9px; border-radius: 10px; background: rgba(255, 255, 255, 0.92); }
+.cup-cat--photo .cup-cat-label b { font-size: 13px; font-weight: 800; }
+@media (min-width: 700px) {
+  .cup-cats-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+  .cup-cat-label b { font-size: 18px; }
+}
+@media (min-width: 1100px) {
+  .cup-cats-grid { grid-template-columns: repeat(9, minmax(0, 1fr)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cup-cat { transition: none; }
+  .cup-cat:hover { transform: none; }
+}
+
+/* Where the codes work, first thing in the footer. */
+.cup-footer-text { display: flex; flex-direction: column; gap: 8px; max-width: 640px; }
+.cup-footer .cup-footer-codes { color: var(--ink); font-weight: 600; }
+
+/* The discount goes with the code, not on the photo. */
+.cup-card .cup-card-off { color: var(--danger); font-weight: 800; white-space: nowrap; }
+/* Long category names ("Herramientas") fit a phone's three columns. */
+.cup-cat { padding: 8px; }
+.cup-cat-label b { font-size: 13px; hyphens: auto; overflow-wrap: normal; }
+@media (min-width: 420px) {
+  .cup-cat-label b { font-size: 15px; }
+}
+@media (min-width: 700px) {
+  .cup-cat { padding: 10px; }
+  .cup-cat-label b { font-size: 18px; }
+}
+/* "NAILFEST · −15 %" stays together; on a narrow card it moves down whole. */
+.cup-card-codeoff { white-space: nowrap; }
+
+/* "Todas las marcas" as chips: logo, name, discount (like iGraal's). */
+.cup-logo--xs { width: 34px; height: 34px; border-radius: 9px; font-size: 13px; }
+.cup-allbrands { gap: 6px; }
+.cup-brandchips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.cup-brandchip { display: inline-flex; align-items: center; gap: 10px; min-width: 0; padding: 6px 14px 6px 6px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); color: var(--ink); font-size: 14px; font-weight: 600; text-decoration: none; }
+.cup-brandchip:hover { color: var(--ink); border-color: var(--ink); }
+.cup-brandchip b { font-size: 13px; font-weight: 800; color: var(--danger); }
+

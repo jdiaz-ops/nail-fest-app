@@ -147,7 +147,7 @@ export default function CuponeraOfertas({
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Busca gel, lámpara, un tono…"
+              placeholder="Busca marcas, productos o categorías"
               autoComplete="off"
             />
             {query && (

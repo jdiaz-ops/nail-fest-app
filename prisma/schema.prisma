@@ -2050,6 +2050,13 @@ model CuponeraSettings {
   showCoupons      Boolean   @default(true)
   showNew          Boolean   @default(true)
   showBestsellers  Boolean   @default(true)
+  // The top of the front page: "marcas" = the brands' logos sliding by on
+  // their own (like Rakuten), "panel" = the brands' discounts in a panel that
+  // slides by hand (like Student Beans).
+  heroStyle        String    @default("marcas")
+  // "Descubre por categoría": an image per category key, uploaded in the
+  // admin; a category without one shows its drawing.
+  categoryImages   Json      @default("{}")
   newTitle         String?
   newSubtitle      String?
   newDays          Int       @default(30)
@@ -2082,6 +2089,28 @@ model CuponeraCollectionMap {
   category    String?
   subcategory String?
   ignored     Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// The rows that slide on nailfest.lat/cuponera's front page, below the
+// search ("Esmaltes semipermanentes", "Para empezar en acrílico"), in
+// position order, each with its own page (/cuponera/lista/<slug>). A list
+// is either a category (it fills itself from the catalog) or products the
+// admin picks, in their order. "Lo más comprado" and "Lo nuevo" aren't
+// lists: they come from the catalog (CuponeraSettings switches).
+model CuponeraList {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  subtitle    String?
+  // "category" | "products"
+  kind        String   @default("category")
+  category    String?
+  subcategory String?
+  productIds  String[] @default([])
+  position    Int      @default(0)
+  visible     Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }

@@ -1,7 +1,17 @@
 import type { CuponeraBrand, CuponeraCollectionMap, CuponeraProduct as ProductRow, CuponeraSettings } from "@prisma/client";
 import { db } from "@/lib/db";
 import { CUPONERA_DEFAULT_TEXTS, getCuponeraSettings } from "./settings";
-import { groupByLine, sortTiles, type CuponeraTile } from "./browse";
+import { getCuponeraLists } from "./lists";
+import {
+  categoryTree,
+  frontPageRows,
+  groupByLine,
+  sortTiles,
+  type CuponeraCategoryLink,
+  type CuponeraListPage,
+  type CuponeraRow,
+  type CuponeraTile,
+} from "./browse";
 import {
   collectionKey,
   formatCop,
@@ -10,27 +20,25 @@ import {
   isProfession,
   isSubcategoryOf,
   lookFor,
-  normalizeText,
   priceWithCode,
   subcategoryWithin,
   variantsLabelOf,
+  type CuponeraBrandCard,
   type CuponeraCategory,
-  type CuponeraCoupon,
   type CuponeraProduct,
 } from "./shared";
 
 // What nailfest.lat/cuponera shows once Marcolini's catalog is in: the
 // visible products of visible brands (both still coming in the sync), with
-// Nail Fest's code applied to the price, plus the deal of the day, the brand
-// coupons, what's new and what the community buys most. null = nothing to
-// show yet (the page falls back to the sample preview).
+// Nail Fest's code applied to the price; the brands with their codes; the
+// front page's rows (what the community buys most, the admin's lists, what's
+// new) and what the collection pages need. null = nothing to show yet (the
+// page falls back to the sample preview).
 
 const DAY_MS = 86_400_000;
 // Colombia has no DST: Bogotá is always UTC−5.
 const BOGOTA_OFFSET_MS = 5 * 3_600_000;
-const COUPON_TONES: CuponeraCoupon["tone"][] = ["pink", "teal", "peach"];
-const NEW_LIMIT = 6;
-const BESTSELLERS_LIMIT = 8;
+const BRAND_TONES: CuponeraBrandCard["tone"][] = ["pink", "teal", "peach"];
 // Fewer than this many products sold with the code isn't a ranking yet.
 const BESTSELLERS_MIN = 3;
 
@@ -140,19 +148,21 @@ export function defaultCouponConditions(brand: CuponeraBrand): string[] {
   return conditions;
 }
 
-function toCoupon(brand: CuponeraBrand, index: number): CuponeraCoupon {
+function toBrandCard(brand: CuponeraBrand, index: number): CuponeraBrandCard {
   const discount = Number(brand.discountPercent);
   return {
     id: brand.id,
-    brand: brand.name,
+    name: brand.name,
     initial: brand.name.trim().charAt(0).toUpperCase() || "·",
     logoUrl: brand.logoUrl,
-    tone: COUPON_TONES[index % COUPON_TONES.length]!,
-    title: brand.couponTitle?.trim() || `${formatPercent(discount)} de descuento`,
+    tone: BRAND_TONES[index % BRAND_TONES.length]!,
+    discountPercent: discount,
     code: brand.discountCode,
-    conditions: brand.couponConditions.length > 0 ? brand.couponConditions : defaultCouponConditions(brand),
+    storeUrl: brand.storeUrl,
+    title: brand.couponTitle?.trim() || `${formatPercent(discount)} de descuento`,
     exclusive: brand.couponExclusive,
-    url: brand.storeUrl,
+    shipping: freeShippingLine(brand),
+    inPanel: brand.showCoupon,
   };
 }
 
@@ -163,26 +173,28 @@ export interface CuponeraDeal {
   endsAt: Date | null;
 }
 
-export interface CuponeraNewItem {
-  product: CuponeraProduct;
-  /** Other new products of the same line (one card per line). */
-  moreInLine: number;
-}
-
 export interface CuponeraView {
   settings: CuponeraSettings;
   texts: typeof CUPONERA_DEFAULT_TEXTS;
   products: CuponeraProduct[];
+  /** The "Robo del día" — hidden from the page since 2026-10-20. */
   deal: CuponeraDeal | null;
-  coupons: CuponeraCoupon[];
-  news: CuponeraNewItem[];
+  /** In the admin's order; the panel shows the ones with inPanel. */
+  brands: CuponeraBrandCard[];
+  categories: CuponeraCategoryLink[];
+  /** The front page's sliding rows, in order. */
+  rows: CuponeraRow[];
   /** Most bought with Nail Fest's codes, first to last; the tones of a line
-   * count together, in one card. */
+   * count together, in one card. Empty when off or not a ranking yet. */
   bestsellers: CuponeraTile[];
+  /** Newest first; empty when "Lo nuevo" is off. */
+  newProducts: CuponeraProduct[];
+  /** The admin's visible lists with their products (/cuponera/lista/…). */
+  lists: CuponeraListPage[];
 }
 
 export async function getCuponeraView(now: Date = new Date()): Promise<CuponeraView | null> {
-  const [settings, brands, mappings] = await Promise.all([
+  const [settings, brands, mappings, lists] = await Promise.all([
     getCuponeraSettings(),
     db.cuponeraBrand.findMany({
       where: { visible: true, available: true },
@@ -190,6 +202,7 @@ export async function getCuponeraView(now: Date = new Date()): Promise<CuponeraV
       include: { products: { where: { visible: true, available: true }, orderBy: { marcoliniCreatedAt: "desc" } } },
     }),
     getCollectionMappings(),
+    getCuponeraLists(),
   ]);
 
   const rows = brands.flatMap((brand) => brand.products.map((row) => ({ row, brand })));
@@ -214,47 +227,47 @@ export async function getCuponeraView(now: Date = new Date()): Promise<CuponeraV
     }
   }
 
-  const coupons = settings.showCoupons ? brands.filter((b) => b.showCoupon).map(toCoupon) : [];
-
-  // Newest first, one card per line: a brand launching 12 tones at once
-  // shows its newest one and "y 11 tonos más", not twelve cards.
-  const news: CuponeraNewItem[] = [];
-  if (settings.showNew) {
-    const byLine = new Map<string, CuponeraNewItem>();
-    const fresh = rows
-      .filter(({ row }) => isNewProduct(row, settings.newDays, now))
-      .sort((a, b) => b.row.marcoliniCreatedAt.getTime() - a.row.marcoliniCreatedAt.getTime());
-    for (const { row, brand } of fresh) {
-      const line = row.line?.trim();
-      const key = line ? `${brand.id}|${normalizeText(line)}` : row.id;
-      const seen = byLine.get(key);
-      if (seen) {
-        seen.moreInLine += 1;
-        continue;
-      }
-      const item = { product: cards.get(row.id)!, moreInLine: 0 };
-      byLine.set(key, item);
-      news.push(item);
-    }
-    news.splice(NEW_LIMIT);
-  }
+  const newProducts = settings.showNew
+    ? rows
+        .filter(({ row }) => isNewProduct(row, settings.newDays, now))
+        .sort((a, b) => b.row.marcoliniCreatedAt.getTime() - a.row.marcoliniCreatedAt.getTime())
+        .map(({ row }) => cards.get(row.id)!)
+    : [];
 
   const sold = products.filter((p) => p.soldWithCode > 0).sort((a, b) => b.soldWithCode - a.soldWithCode);
-  const soldTiles = sortTiles(groupByLine(sold), "vendidos").slice(0, BESTSELLERS_LIMIT);
+  const soldTiles = sortTiles(groupByLine(sold), "vendidos");
   const bestsellers = settings.showBestsellers && soldTiles.length >= BESTSELLERS_MIN ? soldTiles : [];
+
+  // A category list takes the category's products, in the page's order; a
+  // products list the admin's picks still showing, in the admin's order.
+  const listPages: CuponeraListPage[] = lists
+    .filter((l) => l.visible)
+    .map((l) => {
+      const category = l.kind === "category" && isCategory(l.category) ? l.category : null;
+      const subcategory = category && isSubcategoryOf(category, l.subcategory) ? l.subcategory : null;
+      const listProducts = category
+        ? products.filter((p) => p.category === category && (!subcategory || p.subcategory === subcategory))
+        : l.productIds.map((id) => cards.get(id)).filter((p): p is CuponeraProduct => Boolean(p));
+      return { slug: l.slug, title: l.title, subtitle: l.subtitle, kind: category ? "category" : "products", category, subcategory, products: listProducts };
+    });
+
+  const texts = {
+    heroTitle: settings.heroTitle?.trim() || CUPONERA_DEFAULT_TEXTS.heroTitle,
+    heroLede: settings.heroLede?.trim() || CUPONERA_DEFAULT_TEXTS.heroLede,
+    newTitle: settings.newTitle?.trim() || CUPONERA_DEFAULT_TEXTS.newTitle,
+    newSubtitle: settings.newSubtitle?.trim() || CUPONERA_DEFAULT_TEXTS.newSubtitle,
+  };
 
   return {
     settings,
-    texts: {
-      heroTitle: settings.heroTitle?.trim() || CUPONERA_DEFAULT_TEXTS.heroTitle,
-      heroLede: settings.heroLede?.trim() || CUPONERA_DEFAULT_TEXTS.heroLede,
-      newTitle: settings.newTitle?.trim() || CUPONERA_DEFAULT_TEXTS.newTitle,
-      newSubtitle: settings.newSubtitle?.trim() || CUPONERA_DEFAULT_TEXTS.newSubtitle,
-    },
+    texts,
     products,
     deal,
-    coupons,
-    news,
+    brands: brands.map(toBrandCard),
+    categories: categoryTree(products),
+    rows: frontPageRows({ bestsellers, lists: listPages, newProducts, newTitle: texts.newTitle, newSubtitle: texts.newSubtitle }),
     bestsellers,
+    newProducts,
+    lists: listPages,
   };
 }

@@ -82,7 +82,7 @@ const CATEGORY_DEFS: CategoryDef[] = [
     chip: "Tips",
     look: { icon: "tips", color: "#ffffff", tint: "#e6f9f7" },
     subcategories: [
-      { key: "press-on", label: "Press on", rule: words("press ?on|presson|postizas?") },
+      { key: "press-on", label: "Press On", rule: words("press ?on|presson|postizas?") },
       { key: "soft-gel", label: "Soft gel", rule: words("soft ?gel|softgel|acrysoft|gel ?x") },
       { key: "tips", label: "Tips", rule: words("tips?|full cover|extension(?:es)?") },
     ],
@@ -95,7 +95,7 @@ const CATEGORY_DEFS: CategoryDef[] = [
     look: { icon: "tips", color: "#fde8ef", tint: "#e6f9f7" },
     subcategories: [
       { key: "polvos", label: "Polvos acrílicos", rule: words("polvos?|polimeros?|powders?") },
-      { key: "monomero", label: "Monómero", rule: words("monomeros?|liquidos?") },
+      { key: "monomero", label: "Líquidos", rule: words("monomeros?|liquidos?") },
     ],
     rule: words("acrilicos?|acrylics?|polimeros?|monomeros?"),
   },
@@ -402,6 +402,27 @@ export interface CuponeraProduct {
   soldWithCode: number;
   /** Short plain text, only for the search box. */
   description: string | null;
+}
+
+/** A brand as the page shows it: in the panel at the top, in the menu and
+ * in "Todas las marcas" — always a link to its store, with the code. */
+export interface CuponeraBrandCard {
+  id: string;
+  name: string;
+  initial: string;
+  logoUrl: string | null;
+  tone: "pink" | "teal" | "peach";
+  discountPercent: number;
+  code: string;
+  /** Its store with Nail Fest's code; null in the sample preview. */
+  storeUrl: string | null;
+  /** The admin's coupon title, or "15 % de descuento". */
+  title: string;
+  exclusive: boolean;
+  /** "Envío gratis desde $150.000", from its Marcolini shipping zones. */
+  shipping: string | null;
+  /** Shown in the panel at the top ("Descuentos de las marcas"). */
+  inPanel: boolean;
 }
 
 export interface CuponeraCoupon {

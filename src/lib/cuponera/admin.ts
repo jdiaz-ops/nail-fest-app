@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import type { CuponeraList } from "@prisma/client";
 import { getCollectionMappings, resolveCategory, type ResolvedCategory } from "./data";
 import { classifyProduct, collectionKey, isCategory, isProfession, isSubcategoryOf, type CuponeraCategory, type CuponeraProfession } from "./shared";
 
@@ -278,3 +279,47 @@ export async function saveCollectionMapping(
   };
   await db.cuponeraCollectionMap.upsert({ where: { key }, update: data, create: { key, ...data } });
 }
+
+/** One of the front page's lists, as Editar cuponera shows it. */
+export interface AdminCuponeraList {
+  id: string;
+  slug: string;
+  title: string;
+  subtitle: string | null;
+  kind: "category" | "products";
+  category: CuponeraCategory | null;
+  subcategory: string | null;
+  productIds: string[];
+  visible: boolean;
+  /** Products it shows today (visible products of visible brands). */
+  productCount: number;
+  /** Whether the front page shows it: a category needs two products, a
+   * products list one. */
+  shows: boolean;
+}
+
+export function adminListRows(lists: CuponeraList[], products: AdminCuponeraProduct[]): AdminCuponeraList[] {
+  const showing = products.filter((p) => p.available && p.visible && p.brandVisible);
+  const showingIds = new Set(showing.map((p) => p.id));
+  return lists.map((l) => {
+    const category = l.kind === "category" && isCategory(l.category) ? l.category : null;
+    const subcategory = category && isSubcategoryOf(category, l.subcategory) ? l.subcategory : null;
+    const productCount = category
+      ? showing.filter((p) => p.resolved.category === category && (!subcategory || p.resolved.subcategory === subcategory)).length
+      : l.productIds.filter((id) => showingIds.has(id)).length;
+    return {
+      id: l.id,
+      slug: l.slug,
+      title: l.title,
+      subtitle: l.subtitle,
+      kind: category ? "category" : "products",
+      category,
+      subcategory,
+      productIds: l.productIds,
+      visible: l.visible,
+      productCount,
+      shows: l.visible && (category ? productCount >= 2 : productCount > 0),
+    };
+  });
+}
+

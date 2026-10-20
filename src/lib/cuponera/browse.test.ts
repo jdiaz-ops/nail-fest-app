@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  categoryTree,
   colorsPresent,
   combinedRating,
+  frontPageRows,
   groupByLine,
+  listHref,
   lineCountLabel,
   searchScore,
   searchWords,
@@ -183,3 +186,67 @@ describe("variantsLabelOf", () => {
     expect(variantsLabelOf(count, [...names], category)).toBe(label);
   });
 });
+
+describe("categoryTree", () => {
+  it("lists the categories and types that have products, with their counts", () => {
+    const tree = categoryTree([
+      product("a", { category: "esmaltes", subcategory: "semipermanente" }),
+      product("b", { category: "esmaltes", subcategory: "semipermanente" }),
+      product("c", { category: "esmaltes" }),
+      product("d", { category: "acrilico", subcategory: "monomero" }),
+      product("e"),
+    ]);
+    expect(tree.map((c) => [c.key, c.chip, c.count])).toEqual([
+      ["esmaltes", "Esmaltes", 3],
+      ["acrilico", "Acrílico", 1],
+    ]);
+    expect(tree[0]!.subcategories).toEqual([{ key: "semipermanente", label: "Semipermanente", count: 2 }]);
+    expect(tree[1]!.subcategories).toEqual([{ key: "monomero", label: "Líquidos", count: 1 }]);
+  });
+});
+
+describe("frontPageRows", () => {
+  const gel = (id: string) => product(id, { category: "esmaltes", subcategory: "semipermanente", line: "Gel Polish" });
+  const base = { bestsellers: [], lists: [], newProducts: [], newTitle: "Lo nuevo", newSubtitle: "Recién llegado" };
+
+  it("puts what sells first, the lists in order, what's new last", () => {
+    const rows = frontPageRows({
+      ...base,
+      bestsellers: groupByLine([product("x"), product("y"), product("z")]),
+      lists: [
+        { slug: "semis", title: "Semis", subtitle: null, kind: "category", category: "esmaltes", subcategory: "semipermanente", products: [gel("g1"), gel("g2"), product("p")] },
+        { slug: "acrilico", title: "Acrílico", subtitle: "Una lista de Nail Fest", kind: "products", category: null, subcategory: null, products: [gel("g2"), gel("g1")] },
+      ],
+      newProducts: [product("n1"), product("n2")],
+    });
+    expect(rows.map((r) => [r.key, r.href])).toEqual([
+      ["lo-mas-comprado", "/cuponera/lo-mas-comprado"],
+      ["lista-semis", "/cuponera/esmaltes/semipermanente"],
+      ["lista-acrilico", "/cuponera/lista/acrilico"],
+      ["lo-nuevo", "/cuponera/lo-nuevo"],
+    ]);
+    expect(rows[0]!.ranked).toBe(true);
+    expect(rows[3]!.isNew).toBe(true);
+    // A category groups the tones of a line; chosen products stay one by one.
+    expect(rows[1]!.tiles.map((t) => t.kind)).toEqual(["line", "product"]);
+    expect(rows[2]!.tiles.map((t) => (t.kind === "product" ? t.product.id : ""))).toEqual(["g2", "g1"]);
+  });
+
+  it("leaves out rows that would look empty", () => {
+    const rows = frontPageRows({
+      ...base,
+      lists: [
+        { slug: "uno", title: "Uno", subtitle: null, kind: "category", category: "kits", subcategory: null, products: [product("k")] },
+        { slug: "vacia", title: "Vacía", subtitle: null, kind: "products", category: null, subcategory: null, products: [] },
+        { slug: "una", title: "Una", subtitle: null, kind: "products", category: null, subcategory: null, products: [product("p")] },
+      ],
+    });
+    expect(rows.map((r) => r.key)).toEqual(["lista-una"]);
+  });
+
+  it("knows where each list's «Ver todo» goes", () => {
+    expect(listHref({ slug: "x", category: "herramientas", subcategory: null })).toBe("/cuponera/herramientas");
+    expect(listHref({ slug: "para-empezar", category: null, subcategory: null })).toBe("/cuponera/lista/para-empezar");
+  });
+});
+

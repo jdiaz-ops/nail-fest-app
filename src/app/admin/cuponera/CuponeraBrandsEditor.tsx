@@ -6,6 +6,8 @@ import type { AdminCuponeraBrand } from "@/lib/cuponera/admin";
 import { formatPercent } from "@/lib/cuponera/shared";
 import { api, BrandMark, CardTitle, cardStyle, cop, IconButton, Modal, mutedText, Pill, primaryButtonStyle, secondaryButtonStyle, Switch } from "./ui";
 
+const SHOW_CONDITIONS = false;
+
 const STORE_LABELS: Record<string, string> = {
   MARCOLINI: "Tienda en Marcolini",
   SHOPIFY: "Shopify",
@@ -84,7 +86,7 @@ export default function CuponeraBrandsEditor({ brands }: { brands: AdminCuponera
             <span style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
               <b style={{ fontSize: 14 }}>{b.name}</b>
               {b.campaignName && <Pill tone="amber">Campaña: {b.campaignName}</Pill>}
-              {!b.showCoupon && <Pill tone="grey">Sin cupón</Pill>}
+              {!b.showCoupon && <Pill tone="grey">No sale arriba</Pill>}
             </span>
             <span style={{ display: "block", fontSize: 12, color: "#5b5f6b" }}>
               Código <b style={{ fontFamily: "ui-monospace, Menlo, monospace", color: "#17181c" }}>{b.discountCode}</b> · {formatPercent(b.discountPercent)} de descuento ·
@@ -173,26 +175,30 @@ function CouponForm({
     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
       <label style={{ display: "flex", alignItems: "center", gap: 10, fontWeight: 600, cursor: "pointer", marginBottom: 12 }}>
         <input type="checkbox" checked={showCoupon} onChange={(e) => setShowCoupon(e.target.checked)} />
-        Mostrar su cupón en «Cupones de las marcas»
+        Mostrar la marca arriba, en la portada
       </label>
       <div className="field">
         <label htmlFor="cup-coupon-title">Título del cupón</label>
         <input id="cup-coupon-title" value={title} maxLength={120} placeholder={`${formatPercent(brand.discountPercent)} de descuento`} onChange={(e) => setTitle(e.target.value)} />
       </div>
-      <div className="field">
-        <label htmlFor="cup-coupon-conds">Condiciones (una por línea)</label>
-        <textarea
-          id="cup-coupon-conds"
-          rows={4}
-          value={conditions}
-          placeholder={[defaultCondition, shippingCondition ?? "Compra mínima $80.000"].join("\n")}
-          onChange={(e) => setConditions(e.target.value)}
-        />
-        <span style={{ ...mutedText, fontSize: 12 }}>
-          Vacío = «{defaultCondition}»{shippingCondition ? ` y «${shippingCondition}» (de sus zonas de envío en Marcolini)` : ""}. La tarjeta
-          muestra las dos primeras; todas se ven al abrir el código. Escribe solo lo que la marca confirmó.
-        </span>
-      </div>
+      {/* The conditions showed in the coupon sheet, gone since the 2026-10-21
+          redesign (a brand now goes straight to its store): kept, hidden. */}
+      {SHOW_CONDITIONS && (
+        <div className="field">
+          <label htmlFor="cup-coupon-conds">Condiciones (una por línea)</label>
+          <textarea
+            id="cup-coupon-conds"
+            rows={4}
+            value={conditions}
+            placeholder={[defaultCondition, shippingCondition ?? "Compra mínima $80.000"].join("\n")}
+            onChange={(e) => setConditions(e.target.value)}
+          />
+          <span style={{ ...mutedText, fontSize: 12 }}>
+            Vacío = «{defaultCondition}»{shippingCondition ? ` y «${shippingCondition}» (de sus zonas de envío en Marcolini)` : ""}. La tarjeta
+            muestra las dos primeras; todas se ven al abrir el código. Escribe solo lo que la marca confirmó.
+          </span>
+        </div>
+      )}
       <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", marginBottom: 16 }}>
         <input type="checkbox" checked={exclusive} onChange={(e) => setExclusive(e.target.checked)} />
         Etiqueta «Exclusivo Nail Fest»

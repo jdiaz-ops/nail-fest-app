@@ -4,6 +4,7 @@
 // that shows it is staff-only (see src/app/cuponera/page.tsx).
 
 import type {
+  CuponeraBrandCard,
   CuponeraCategory,
   CuponeraCoupon,
   CuponeraDesign,
@@ -121,6 +122,37 @@ export const SAMPLE_DEAL: CuponeraProduct = p(
 export const SAMPLE_NEW: CuponeraProduct[] = [
   p("coleccion-selva", "Marca A", "Colección Selva Pop, 6 geles", 163200, 192000, "bottle", "#00beb5", "#e6f9f7", "esmaltes/semipermanente", ["mani", "salon"]),
   p("torno-bolsillo", "Marca F", "Torno inalámbrico de bolsillo", 178500, 210000, "drill", "#ffc5a8", "#fff3ea", "herramientas/tornos", ["mani", "salon"]),
+];
+
+const sampleBrand = (
+  letter: string,
+  tone: CuponeraBrandCard["tone"],
+  discountPercent: number,
+  code: string,
+  extra: Partial<CuponeraBrandCard> = {},
+): CuponeraBrandCard => ({
+  id: `marca-${letter.toLowerCase()}`,
+  name: `Marca ${letter}`,
+  initial: letter,
+  logoUrl: null,
+  tone,
+  discountPercent,
+  code,
+  storeUrl: null,
+  title: `${discountPercent} % de descuento`,
+  exclusive: false,
+  shipping: null,
+  inPanel: true,
+  ...extra,
+});
+
+export const SAMPLE_BRANDS: CuponeraBrandCard[] = [
+  sampleBrand("A", "pink", 15, "NAILFEST15", { title: "15 % en toda la tienda", exclusive: true, shipping: "Envío gratis desde $150.000" }),
+  sampleBrand("B", "teal", 15, "NAILFEST", { title: "Envío gratis desde $120.000" }),
+  sampleBrand("C", "peach", 20, "NAILFEST20"),
+  sampleBrand("D", "pink", 15, "NAILFEST"),
+  sampleBrand("E", "teal", 10, "NAILFEST"),
+  sampleBrand("F", "peach", 15, "NAILFEST", { title: "2 × 1 en fresas" }),
 ];
 
 export const SAMPLE_COUPONS: CuponeraCoupon[] = [

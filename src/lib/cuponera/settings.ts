@@ -4,8 +4,8 @@ import { db } from "@/lib/db";
 export const CUPONERA_SETTINGS_ID = "singleton";
 
 export const CUPONERA_DEFAULT_TEXTS = {
-  heroTitle: "Precios de feria, todo el año",
-  heroLede: "Los descuentos de las marcas de Nail Fest, para comprar desde tu casa cuando lo necesites.",
+  heroTitle: "Cuponera para manicuristas profesionales y estudiantes",
+  heroLede: "Ahorra en tus compras de productos e insumos con la cuponera Nail Fest.",
   newTitle: "Lo nuevo de las marcas",
   newSubtitle: "Lo último que llegó a las tiendas, con el descuento de Nail Fest.",
 };
@@ -22,6 +22,8 @@ const DEFAULTS: CuponeraSettings = {
   showCoupons: true,
   showNew: true,
   showBestsellers: true,
+  heroStyle: "marcas",
+  categoryImages: {},
   newTitle: null,
   newSubtitle: null,
   newDays: 30,
@@ -51,6 +53,7 @@ export type CuponeraSettingsPatch = Partial<
     | "showCoupons"
     | "showNew"
     | "showBestsellers"
+    | "heroStyle"
     | "newTitle"
     | "newSubtitle"
     | "newDays"
@@ -64,7 +67,10 @@ export type CuponeraSettingsPatch = Partial<
     | "creatorName"
     | "creatorSlug"
   >
->;
+> & {
+  /** Category key → picture URL ("Descubre por categoría"). */
+  categoryImages?: Record<string, string>;
+};
 
 export async function updateCuponeraSettings(patch: CuponeraSettingsPatch): Promise<CuponeraSettings> {
   return db.cuponeraSettings.upsert({
