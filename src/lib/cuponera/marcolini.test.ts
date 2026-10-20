@@ -121,6 +121,54 @@ describe("fetchMarcoliniCatalog", () => {
   });
 });
 
+describe("redirects", () => {
+  // A fake web: each URL answers what the map says; records the key it got.
+  function web(routes: Record<string, { status: number; location?: string; body?: unknown }>) {
+    const calls: { url: string; auth: string | null; redirect: RequestRedirect | undefined }[] = [];
+    const impl = (async (input: string | URL | Request, init?: RequestInit) => {
+      const url = String(input);
+      calls.push({ url, auth: new Headers(init?.headers).get("authorization"), redirect: init?.redirect });
+      const route = routes[url];
+      if (!route) return new Response("not found", { status: 404 });
+      const headers: Record<string, string> = route.location ? { location: route.location } : { "content-type": "application/json" };
+      return new Response(route.body === undefined ? null : JSON.stringify(route.body), { status: route.status, headers });
+    }) as typeof fetch;
+    return { impl, calls };
+  }
+  const page = (products: unknown[], nextCursor: string | null) => ({ creator, brands: [brand], products, nextCursor });
+
+  it("follows marcolini.lat → www.marcolini.lat with the key, and asks the next pages there directly", async () => {
+    const { impl, calls } = web({
+      "https://marcolini.test/api/v1/catalogo?limit=1000": { status: 308, location: "https://www.marcolini.test/api/v1/catalogo?limit=1000" },
+      "https://www.marcolini.test/api/v1/catalogo?limit=1000": { status: 200, body: page([product("p1")], "p1") },
+      "https://www.marcolini.test/api/v1/catalogo?limit=1000&cursor=p1": { status: 200, body: page([product("p2")], null) },
+    });
+    const catalog = await fetchMarcoliniCatalog(config, impl);
+    expect(catalog.products.map((p) => p.id)).toEqual(["p1", "p2"]);
+    expect(catalog.servedFrom).toBe("www.marcolini.test");
+    expect(calls.map((c) => c.url)).toEqual([
+      "https://marcolini.test/api/v1/catalogo?limit=1000",
+      "https://www.marcolini.test/api/v1/catalogo?limit=1000",
+      "https://www.marcolini.test/api/v1/catalogo?limit=1000&cursor=p1",
+    ]);
+    expect(calls.every((c) => c.auth === `Bearer ${config.apiKey}` && c.redirect === "manual")).toBe(true);
+  });
+
+  it("never sends the key to another site or down to http", async () => {
+    const elsewhere = web({ "https://marcolini.test/api/v1/catalogo?limit=1000": { status: 302, location: "https://otro.test/robar" } });
+    await expect(fetchMarcoliniCatalog(config, elsewhere.impl)).rejects.toThrow(/no le mando la llave/);
+    expect(elsewhere.calls).toHaveLength(1);
+    const downgrade = web({ "https://marcolini.test/api/v1/catalogo?limit=1000": { status: 301, location: "http://www.marcolini.test/api/v1/catalogo?limit=1000" } });
+    await expect(fetchMarcoliniCatalog(config, downgrade.impl)).rejects.toThrow(/no le mando la llave/);
+    expect(downgrade.calls).toHaveLength(1);
+  });
+
+  it("says when Marcolini got no key at all", async () => {
+    const { impl } = web({ "https://marcolini.test/api/v1/catalogo?limit=1000": { status: 401, body: { error: "x", reason: "missing_key" } } });
+    await expect(fetchMarcoliniCatalog(config, impl)).rejects.toThrow(/no le llegó la llave/);
+  });
+});
+
 describe("guessCategory", () => {
   it.each([
     ["Gel semipermanente Rojo Pasión", [], "geles"],

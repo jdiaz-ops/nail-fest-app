@@ -11,6 +11,7 @@ const DEFAULT_BASE_URL = "https://marcolini.lat";
 const PAGE_SIZE = 1000;
 // 50 pages of 1000 — far beyond any real catalog; stops a loop on a bad cursor.
 const MAX_PAGES = 50;
+const MAX_REDIRECTS = 3;
 
 export interface MarcoliniConfig {
   baseUrl: string;
@@ -110,6 +111,47 @@ export interface MarcoliniCatalog {
   products: MarcoliniProduct[];
   /** Rows dropped because they didn't parse (or weren't priced in COP). */
   skipped: number;
+  /** The host that actually answered, after following redirects. */
+  servedFrom: string;
+}
+
+/** marcolini.lat and www.marcolini.lat are the same site. */
+function sameSite(a: URL, b: URL): boolean {
+  const site = (u: URL) => u.hostname.replace(/^www\./, "");
+  return site(a) === site(b);
+}
+
+/** One GET with the key. Redirects are followed by hand: fetch drops the
+ * Authorization header whenever a redirect changes the host (marcolini.lat
+ * → www.marcolini.lat), and Marcolini would get no key at all and answer
+ * 401. The key only follows a redirect to the same site, and never from
+ * https down to http. */
+async function getWithKey(url: URL, config: MarcoliniConfig, fetchImpl: typeof fetch): Promise<{ res: Response; url: URL }> {
+  let current = url;
+  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+    let res: Response;
+    try {
+      res = await fetchImpl(current, {
+        headers: { authorization: `Bearer ${config.apiKey}`, accept: "application/json" },
+        cache: "no-store",
+        redirect: "manual",
+        signal: AbortSignal.timeout(25_000),
+      });
+    } catch (err) {
+      const what = err instanceof Error && err.name === "TimeoutError" ? "Marcolini no respondió a tiempo" : "No se pudo conectar con Marcolini";
+      throw new MarcoliniError(`${what} (${current.origin}). Vuelve a intentarlo en un rato.`);
+    }
+    const location = res.status >= 300 && res.status < 400 ? res.headers.get("location") : null;
+    if (!location) return { res, url: current };
+    const next = new URL(location, current);
+    if (!sameSite(next, current) || (current.protocol === "https:" && next.protocol !== "https:")) {
+      throw new MarcoliniError(
+        `${current.host} redirige a ${next.origin}, que no es el mismo sitio: no le mando la llave allá. Si esa es la dirección de Marcolini, ponla en MARCOLINI_API_URL.`,
+      );
+    }
+    current = next;
+  }
+  throw new MarcoliniError(`${url.host} redirige demasiadas veces. Revisa MARCOLINI_API_URL.`);
 }
 
 async function errorMessage(res: Response, config: MarcoliniConfig): Promise<string> {
@@ -119,6 +161,9 @@ async function errorMessage(res: Response, config: MarcoliniConfig): Promise<str
     case 401:
       // Marcolini says which side is wrong (see its /api/v1/catalogo); no
       // JSON at all means the address isn't Marcolini's catalog.
+      if (body?.reason === "missing_key") {
+        return "A Marcolini no le llegó la llave: se pierde en el camino. Pon en MARCOLINI_API_URL la dirección exacta donde responde Marcolini (por ejemplo https://www.marcolini.lat).";
+      }
       if (body?.reason === "no_keys") {
         return "Marcolini todavía no tiene la llave: en Vercel, proyecto de Marcolini, revisa que CATALOG_API_KEYS exista para Production con el formato nailfest:llave, y vuelve a desplegar Marcolini.";
       }
@@ -164,23 +209,17 @@ export async function fetchMarcoliniCatalog(config: MarcoliniConfig, fetchImpl: 
   const products: MarcoliniProduct[] = [];
   let skipped = 0;
   let cursor: string | null = null;
+  // After a redirect the next pages go straight to where Marcolini answered.
+  let base = config.baseUrl;
 
   for (let page = 0; page < MAX_PAGES; page++) {
-    const url = new URL("/api/v1/catalogo", config.baseUrl);
+    const url = new URL("/api/v1/catalogo", base);
     url.searchParams.set("limit", String(PAGE_SIZE));
     if (cursor) url.searchParams.set("cursor", cursor);
 
-    let res: Response;
-    try {
-      res = await fetchImpl(url, {
-        headers: { authorization: `Bearer ${config.apiKey}`, accept: "application/json" },
-        cache: "no-store",
-        signal: AbortSignal.timeout(25_000),
-      });
-    } catch (err) {
-      const what = err instanceof Error && err.name === "TimeoutError" ? "Marcolini no respondió a tiempo" : "No se pudo conectar con Marcolini";
-      throw new MarcoliniError(`${what} (${config.baseUrl}). Vuelve a intentarlo en un rato.`);
-    }
+    const answered = await getWithKey(url, config, fetchImpl);
+    const res = answered.res;
+    base = answered.url.origin;
     if (!res.ok) throw new MarcoliniError(await errorMessage(res, config));
 
     const parsed = pageSchema.safeParse(await res.json().catch(() => null));
@@ -209,5 +248,5 @@ export async function fetchMarcoliniCatalog(config: MarcoliniConfig, fetchImpl: 
   const kept = products.filter((p) => brandIds.has(p.brandId));
   skipped += products.length - kept.length;
   brands = brands.sort((a, b) => a.vitrinaOrder - b.vitrinaOrder);
-  return { creator: creator!, brands, products: kept, skipped };
+  return { creator: creator!, brands, products: kept, skipped, servedFrom: new URL(base).host };
 }

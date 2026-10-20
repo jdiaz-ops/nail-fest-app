@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { api, CardTitle, cardStyle, mutedText, Pill, primaryButtonStyle } from "./ui";
 
 type SyncResult =
-  | { ok: true; brands: number; products: number; brandsAdded: number; productsAdded: number; productsGone: number }
+  | { ok: true; brands: number; products: number; brandsAdded: number; productsAdded: number; productsGone: number; servedFrom?: string }
   | { ok: false; error: string };
 
 function plural(n: number, one: string, many: string) {
@@ -46,7 +46,9 @@ export default function CuponeraSyncCard(props: {
         ].filter(Boolean);
         setMessage({
           ok: true,
-          text: `Listo: ${plural(result.brands, "marca", "marcas")} y ${plural(result.products, "producto", "productos")}${changes.length ? ` (${changes.join(", ")})` : ", sin cambios"}.`,
+          text: `Listo: ${plural(result.brands, "marca", "marcas")} y ${plural(result.products, "producto", "productos")}${changes.length ? ` (${changes.join(", ")})` : ", sin cambios"}.${
+            result.servedFrom && result.servedFrom !== props.marcoliniHost ? ` Marcolini respondió desde ${result.servedFrom}.` : ""
+          }`,
         });
       } else {
         setMessage({ ok: false, text: result.error });

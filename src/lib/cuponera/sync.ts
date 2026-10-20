@@ -25,6 +25,7 @@ export type CuponeraSyncResult =
       productsUpdated: number;
       productsGone: number;
       skipped: number;
+      servedFrom: string;
     }
   | { ok: false; error: string };
 
@@ -203,5 +204,6 @@ export async function syncCuponera(options: { fetchImpl?: typeof fetch; now?: Da
     productsUpdated: toUpdate.length,
     productsGone: gone.count,
     skipped: catalog.skipped,
+    servedFrom: catalog.servedFrom,
   };
 }
