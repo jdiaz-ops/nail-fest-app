@@ -3,9 +3,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Fraunces } from "next/font/google";
 import { viewerCanSeeSamples } from "@/lib/reviewsViewer";
-import { getCuponeraView, nextBogotaMidnight, type CuponeraView } from "@/lib/cuponera/data";
+import { getCuponeraView, nextBogotaMidnight, type CuponeraNewItem, type CuponeraView } from "@/lib/cuponera/data";
 import { CUPONERA_DEFAULT_TEXTS, getCuponeraSettings } from "@/lib/cuponera/settings";
-import { discountPercent, formatCop, type CuponeraProduct } from "@/lib/cuponera/shared";
+import { discountPercent, formatCop } from "@/lib/cuponera/shared";
 import { SAMPLE_COUPONS, SAMPLE_DEAL, SAMPLE_DESIGN, SAMPLE_LISTS, SAMPLE_NEW, SAMPLE_PRODUCTS } from "@/lib/cuponera/sampleData";
 import CuponeraOfertas from "@/components/cuponera/CuponeraOfertas";
 import DealOfTheDay from "@/components/cuponera/DealOfTheDay";
@@ -14,6 +14,7 @@ import ShopTheDesign from "@/components/cuponera/ShopTheDesign";
 import PreviewLink from "@/components/cuponera/PreviewLink";
 import PreviewToast from "@/components/cuponera/PreviewToast";
 import ProductPhoto from "@/components/cuponera/ProductPhoto";
+import ProductTiles from "@/components/cuponera/ProductTiles";
 import WeekSignup from "@/components/cuponera/WeekSignup";
 
 const fraunces = Fraunces({ subsets: ["latin"], weight: ["800", "900"] });
@@ -34,7 +35,7 @@ function secondsUntil(date: Date, now: Date): number {
   return Math.max(0, Math.floor((date.getTime() - now.getTime()) / 1000));
 }
 
-function NewCard({ product }: { product: CuponeraProduct }) {
+function NewCard({ item: { product, moreInLine } }: { item: CuponeraNewItem }) {
   return (
     <PreviewLink
       href={product.url}
@@ -48,6 +49,9 @@ function NewCard({ product }: { product: CuponeraProduct }) {
       <span className="cup-newcard-body">
         <span className="cup-brandname">{product.brand}</span>
         <span className="cup-newcard-name">{product.name}</span>
+        {moreInLine > 0 && (
+          <span className="cup-newcard-more">{moreInLine === 1 ? "y 1 novedad más de la línea" : `y ${moreInLine} novedades más de la línea`}</span>
+        )}
         <span className="cup-prices">
           <span className="cup-price">
             {product.priceFrom && <span className="cup-from">Desde </span>}
@@ -128,6 +132,16 @@ function RealSections({ view, now }: { view: CuponeraView; now: Date }) {
         }
       />
 
+      {view.bestsellers.length > 0 && (
+        <section className="cup-section">
+          <div className="cup-section-head">
+            <h2 className={`cup-h2 ${fraunces.className}`}>Lo más comprado por la comunidad Nail Fest</h2>
+            <p className="cup-sub">Lo que más se ha comprado con los códigos de Nail Fest en los últimos 90 días.</p>
+          </div>
+          <ProductTiles tiles={view.bestsellers} ranked displayClassName={fraunces.className} />
+        </section>
+      )}
+
       {view.coupons.length > 0 && (
         <section className="cup-section">
           <div className="cup-section-head">
@@ -149,8 +163,8 @@ function RealSections({ view, now }: { view: CuponeraView; now: Date }) {
             <p className="cup-sub">{view.texts.newSubtitle}</p>
           </div>
           <div className="cup-news">
-            {view.news.map((p) => (
-              <NewCard key={p.id} product={p} />
+            {view.news.map((item) => (
+              <NewCard key={item.product.id} item={item} />
             ))}
           </div>
         </section>
@@ -216,7 +230,7 @@ function SampleSections({ now }: { now: Date }) {
         </div>
         <div className="cup-news">
           {SAMPLE_NEW.map((p) => (
-            <NewCard key={p.id} product={p} />
+            <NewCard key={p.id} item={{ product: p, moreInLine: 0 }} />
           ))}
         </div>
       </section>

@@ -17,6 +17,7 @@ const patchSchema = z
     showDeal: z.boolean(),
     showCoupons: z.boolean(),
     showNew: z.boolean(),
+    showBestsellers: z.boolean(),
     newTitle: optionalText,
     newSubtitle: optionalText,
     newDays: z.number().int().min(1).max(365),

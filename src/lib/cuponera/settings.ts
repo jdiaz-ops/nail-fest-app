@@ -21,6 +21,7 @@ const DEFAULTS: CuponeraSettings = {
   showDeal: true,
   showCoupons: true,
   showNew: true,
+  showBestsellers: true,
   newTitle: null,
   newSubtitle: null,
   newDays: 30,
@@ -49,6 +50,7 @@ export type CuponeraSettingsPatch = Partial<
     | "showDeal"
     | "showCoupons"
     | "showNew"
+    | "showBestsellers"
     | "newTitle"
     | "newSubtitle"
     | "newDays"

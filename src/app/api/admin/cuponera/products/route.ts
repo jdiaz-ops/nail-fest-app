@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth/guard";
 import { updateCuponeraProducts } from "@/lib/cuponera/admin";
-import { CATEGORY_KEYS, PROFESSION_KEYS, type CuponeraCategory, type CuponeraProfession } from "@/lib/cuponera/shared";
+import { CATEGORY_KEYS, isSubcategoryOf, PROFESSION_KEYS, type CuponeraCategory, type CuponeraProfession } from "@/lib/cuponera/shared";
 
 // One product (a row's own controls) or many at once (the selection bar) —
 // same curation fields either way.
@@ -13,11 +13,14 @@ const bodySchema = z.object({
       visible: z.boolean(),
       featured: z.boolean(),
       category: z.enum(CATEGORY_KEYS as [CuponeraCategory, ...CuponeraCategory[]]).nullable(),
+      subcategory: z.string().max(40).nullable(),
       professions: z.array(z.enum(PROFESSION_KEYS as [CuponeraProfession, ...CuponeraProfession[]])),
       isNew: z.boolean().nullable(),
     })
     .partial()
-    .refine((p) => Object.keys(p).length > 0, "empty patch"),
+    .refine((p) => Object.keys(p).length > 0, "empty patch")
+    // A subcategory always travels with the category it belongs to.
+    .refine((p) => p.subcategory == null || (p.category != null && isSubcategoryOf(p.category, p.subcategory)), "subcategory outside its category"),
 });
 
 export async function PATCH(req: NextRequest) {

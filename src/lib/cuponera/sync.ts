@@ -1,7 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { fetchMarcoliniCatalog, marcoliniConfig, MarcoliniError, type MarcoliniProduct } from "./marcolini";
-import { guessCategory } from "./shared";
+import { classifyProduct, isColorFamily, sizeOf } from "./shared";
 import { updateCuponeraSettings } from "./settings";
 
 // Copies Nail Fest's Marcolini catalog into CuponeraBrand/CuponeraProduct.
@@ -42,11 +42,33 @@ type SyncedProductFields = {
   type: string;
   available: boolean;
   marcoliniCreatedAt: Date;
+  description: string | null;
+  attributes: Record<string, string>;
+  colorFamily: string | null;
+  size: string | null;
+  line: string | null;
+  variant: string | null;
+  variantCount: number;
+  optionNames: string[];
+  ratingAverage: number | null;
+  ratingCount: number;
+  unitsLeft: number | null;
+  soldWithCode: number;
+  nicheCategory: string | null;
   autoCategory: string | null;
+  autoSubcategory: string | null;
 };
 
 function syncedProductFields(product: MarcoliniProduct, brandId: string): SyncedProductFields {
   const whole = (value: number | null) => (value == null ? null : Math.round(value));
+  const colorFamily = product.colorFamily ?? product.attributes["Familia de color"] ?? null;
+  const guess = classifyProduct({
+    name: product.name,
+    line: product.line,
+    collections: product.collections,
+    sourceCategory: product.category,
+    nicheCategory: product.nicheCategory,
+  });
   return {
     brandId,
     name: product.name,
@@ -60,11 +82,30 @@ function syncedProductFields(product: MarcoliniProduct, brandId: string): Synced
     type: product.type,
     available: true,
     marcoliniCreatedAt: new Date(product.createdAt),
-    autoCategory: guessCategory(product.name, [product.category, ...product.collections]),
+    description: product.description,
+    attributes: product.attributes,
+    colorFamily: isColorFamily(colorFamily) ? colorFamily : null,
+    size: sizeOf(product.name, product.size ?? product.attributes["Tamaño"]),
+    line: product.line,
+    variant: product.variant,
+    variantCount: product.variantCount,
+    optionNames: product.optionNames,
+    ratingAverage: product.rating && product.rating.count > 0 ? product.rating.average : null,
+    ratingCount: product.rating?.count ?? 0,
+    unitsLeft: product.unitsLeft,
+    soldWithCode: product.soldWithCode,
+    nicheCategory: product.nicheCategory,
+    autoCategory: guess.category,
+    autoSubcategory: guess.subcategory,
   };
 }
 
-function sameProduct(current: SyncedProductFields, next: SyncedProductFields): boolean {
+const sameList = (a: string[], b: string[]) => a.join("\n") === b.join("\n");
+// Key order aside: Postgres stores JSON objects with its own key order.
+const sortedJson = (record: object) => JSON.stringify(Object.entries(record).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
+const sameRecord = (a: unknown, b: Record<string, string>) => sortedJson((a ?? {}) as object) === sortedJson(b);
+
+function sameProduct(current: Omit<SyncedProductFields, "attributes"> & { attributes: unknown }, next: SyncedProductFields): boolean {
   return (
     current.brandId === next.brandId &&
     current.name === next.name &&
@@ -74,11 +115,25 @@ function sameProduct(current: SyncedProductFields, next: SyncedProductFields): b
     current.compareAtPrice === next.compareAtPrice &&
     current.url === next.url &&
     current.sourceCategory === next.sourceCategory &&
-    current.collections.join("\n") === next.collections.join("\n") &&
+    sameList(current.collections, next.collections) &&
     current.type === next.type &&
     current.available === next.available &&
     current.marcoliniCreatedAt.getTime() === next.marcoliniCreatedAt.getTime() &&
-    current.autoCategory === next.autoCategory
+    current.description === next.description &&
+    sameRecord(current.attributes, next.attributes) &&
+    current.colorFamily === next.colorFamily &&
+    current.size === next.size &&
+    current.line === next.line &&
+    current.variant === next.variant &&
+    current.variantCount === next.variantCount &&
+    sameList(current.optionNames, next.optionNames) &&
+    current.ratingAverage === next.ratingAverage &&
+    current.ratingCount === next.ratingCount &&
+    current.unitsLeft === next.unitsLeft &&
+    current.soldWithCode === next.soldWithCode &&
+    current.nicheCategory === next.nicheCategory &&
+    current.autoCategory === next.autoCategory &&
+    current.autoSubcategory === next.autoSubcategory
   );
 }
 
@@ -119,6 +174,8 @@ export async function syncCuponera(options: { fetchImpl?: typeof fetch; now?: Da
       discountPercent: brand.discountPercent,
       commissionPercent: brand.commissionPercent,
       campaign: brand.campaign ?? Prisma.DbNull,
+      freeShippingFrom: brand.freeShippingFrom == null ? null : Math.round(brand.freeShippingFrom),
+      freeShippingAllZones: brand.freeShippingAllZones,
       available: true,
       lastSyncedAt: now,
     };
@@ -157,7 +214,21 @@ export async function syncCuponera(options: { fetchImpl?: typeof fetch; now?: Da
           type: true,
           available: true,
           marcoliniCreatedAt: true,
+          description: true,
+          attributes: true,
+          colorFamily: true,
+          size: true,
+          line: true,
+          variant: true,
+          variantCount: true,
+          optionNames: true,
+          ratingAverage: true,
+          ratingCount: true,
+          unitsLeft: true,
+          soldWithCode: true,
+          nicheCategory: true,
           autoCategory: true,
+          autoSubcategory: true,
         },
       })
     ).map((p) => [p.marcoliniId, p]),

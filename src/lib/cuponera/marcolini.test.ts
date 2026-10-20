@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { cleanMarcoliniKey, fetchMarcoliniCatalog, marcoliniConfig, MarcoliniError } from "./marcolini";
-import { guessCategory, priceWithCode } from "./shared";
+import { priceWithCode } from "./shared";
 
 const config = { baseUrl: "https://marcolini.test", apiKey: "k".repeat(40) };
 
@@ -166,27 +166,6 @@ describe("redirects", () => {
   it("says when Marcolini got no key at all", async () => {
     const { impl } = web({ "https://marcolini.test/api/v1/catalogo?limit=1000": { status: 401, body: { error: "x", reason: "missing_key" } } });
     await expect(fetchMarcoliniCatalog(config, impl)).rejects.toThrow(/no le llegó la llave/);
-  });
-});
-
-describe("guessCategory", () => {
-  it.each([
-    ["Gel semipermanente Rojo Pasión", [], "geles"],
-    ["Top coat sellador UV", [], "geles"],
-    ["Base rubber fortalecedora", [], "geles"],
-    ["Lámpara UV/LED portátil 48W", [], "lamparas"],
-    ["Removedor de cutículas", [], "cuidado"],
-    ["Aceite de cutículas almendra", [], "cuidado"],
-    ["Pincel liner 00 para nail art", [], "nailart"],
-    ["Polvo acrílico clear 30 g", [], "acrilico"],
-    ["Monómero líquido 120 ml", [], "acrilico"],
-    ["Tips coffin x500", [], "acrilico"],
-    ["Lima 100/180 x10", [], "herramientas"],
-    ["Pusher acero inoxidable", [], "herramientas"],
-    ["Rosa chicle 15 ml", ["Geles"], "geles"],
-    ["Kit manicure francesa", [], null],
-  ] as const)("%s → %s", (name, hints, expected) => {
-    expect(guessCategory(name, [...hints])).toBe(expected);
   });
 });
 

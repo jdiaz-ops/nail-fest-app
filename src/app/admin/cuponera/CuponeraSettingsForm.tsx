@@ -10,6 +10,7 @@ interface SettingsValue {
   showDeal: boolean;
   showCoupons: boolean;
   showNew: boolean;
+  showBestsellers: boolean;
   newTitle: string | null;
   newSubtitle: string | null;
   newDays: number;
@@ -37,6 +38,7 @@ export default function CuponeraSettingsForm({
     showDeal: initial.showDeal,
     showCoupons: initial.showCoupons,
     showNew: initial.showNew,
+    showBestsellers: initial.showBestsellers,
     newTitle: initial.newTitle ?? "",
     newSubtitle: initial.newSubtitle ?? "",
     newDays: String(initial.newDays),
@@ -74,6 +76,7 @@ export default function CuponeraSettingsForm({
           showDeal: form.showDeal,
           showCoupons: form.showCoupons,
           showNew: form.showNew,
+          showBestsellers: form.showBestsellers,
           newTitle: form.newTitle,
           newSubtitle: form.newSubtitle,
           newDays,
@@ -90,7 +93,7 @@ export default function CuponeraSettingsForm({
     setStatus("idle");
   };
 
-  const checkbox = (key: "showDeal" | "showCoupons" | "showNew", label: string, hint: string) => (
+  const checkbox = (key: "showDeal" | "showCoupons" | "showNew" | "showBestsellers", label: string, hint: string) => (
     <label style={{ display: "flex", gap: 10, alignItems: "flex-start", cursor: "pointer", marginBottom: 10 }}>
       <input type="checkbox" checked={form[key]} onChange={(e) => set(key, e.target.checked)} style={{ marginTop: 3 }} />
       <span>
@@ -133,6 +136,7 @@ export default function CuponeraSettingsForm({
         <div style={{ fontSize: 13, fontWeight: 600, color: "#5b5f6b", margin: "4px 0 10px" }}>Secciones</div>
         {checkbox("showDeal", "Robo del día", "Un producto con cuenta regresiva arriba, al lado del buscador.")}
         {checkbox("showCoupons", "Cupones de las marcas", "Una tarjeta por marca con su código para copiar.")}
+        {checkbox("showBestsellers", "Lo más comprado", "Lo que más se ha comprado con los códigos de Nail Fest en los últimos 3 meses (sin mostrar cifras). Aparece cuando hay al menos 3 productos vendidos.")}
         {checkbox("showNew", "Lo nuevo", "Los productos que llegaron hace poco a las tiendas de las marcas.")}
 
         {form.showNew && (

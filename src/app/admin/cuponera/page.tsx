@@ -1,4 +1,5 @@
 import { requirePageUser } from "@/lib/auth/guard";
+import { db } from "@/lib/db";
 import { getCuponeraAdminData } from "@/lib/cuponera/admin";
 import { getCuponeraView } from "@/lib/cuponera/data";
 import { keyHint, marcoliniConfig } from "@/lib/cuponera/marcolini";
@@ -7,6 +8,7 @@ import CuponeraSyncCard from "./CuponeraSyncCard";
 import CuponeraSettingsForm from "./CuponeraSettingsForm";
 import CuponeraDealForm from "./CuponeraDealForm";
 import CuponeraBrandsEditor from "./CuponeraBrandsEditor";
+import CuponeraCollectionsEditor from "./CuponeraCollectionsEditor";
 import CuponeraProductsEditor from "./CuponeraProductsEditor";
 
 export const dynamic = "force-dynamic";
@@ -26,7 +28,15 @@ const syncDateFormatter = new Intl.DateTimeFormat("es-CO", {
 // under which category, and when the page goes public.
 export default async function AdminCuponeraPage() {
   await requirePageUser(["ADMIN"]);
-  const [settings, data, view] = await Promise.all([getCuponeraSettings(), getCuponeraAdminData(), getCuponeraView()]);
+  const [settings, data, view, lastMapping] = await Promise.all([
+    getCuponeraSettings(),
+    getCuponeraAdminData(),
+    getCuponeraView(),
+    db.cuponeraCollectionMap.aggregate({ _max: { updatedAt: true }, _count: { _all: true } }),
+  ]);
+  // The products editor keeps its own copy while editing; a new sync or a
+  // collection mapped in the unifier changes this key and reloads it.
+  const productsVersion = `${settings.lastSyncAt?.toISOString() ?? "never"}|${lastMapping._max.updatedAt?.toISOString() ?? ""}|${lastMapping._count._all}`;
   const config = marcoliniConfig();
   const productOptions = data.products
     .filter((p) => p.available && p.visible)
@@ -66,6 +76,7 @@ export default async function AdminCuponeraPage() {
           showDeal: settings.showDeal,
           showCoupons: settings.showCoupons,
           showNew: settings.showNew,
+          showBestsellers: settings.showBestsellers,
           newTitle: settings.newTitle,
           newSubtitle: settings.newSubtitle,
           newDays: settings.newDays,
@@ -84,7 +95,9 @@ export default async function AdminCuponeraPage() {
 
       <CuponeraBrandsEditor brands={data.brands} />
 
-      <CuponeraProductsEditor key={settings.lastSyncAt?.toISOString() ?? "never"} initialProducts={data.products} brands={data.brands.map((b) => ({ id: b.id, name: b.name }))} />
+      <CuponeraCollectionsEditor collections={data.collections} />
+
+      <CuponeraProductsEditor key={productsVersion} initialProducts={data.products} brands={data.brands.map((b) => ({ id: b.id, name: b.name }))} />
     </div>
   );
 }

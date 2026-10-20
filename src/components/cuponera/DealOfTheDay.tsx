@@ -1,18 +1,22 @@
 import Countdown from "./Countdown";
 import ProductPhoto from "./ProductPhoto";
 import PreviewLink from "./PreviewLink";
+import Rating from "./Rating";
 import { discountPercent, formatCop, type CuponeraProduct } from "@/lib/cuponera/shared";
 
 // Past two days a ticking hours counter reads oddly ("820:15:03"); a pinned
 // deal that long shows its end date instead. Rendered on the server only.
 const LONG_RUN_SECONDS = 48 * 3600;
 const untilFormatter = new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "long", timeZone: "America/Bogota" });
+// The deal says how many are left from this many down — only when the
+// store tracks stock.
+const FEW_UNITS = 10;
 
 // "Robo del día": one product for a day (Ulta's daily steal, Mercado
 // Libre's ofertas relámpago). endsAt null = a product the admin pinned with
 // no end date, so there's nothing to count down to. The "unidades
-// limitadas" bar only belongs to the sample preview: the real catalog has
-// no stock numbers to back it.
+// limitadas" bar only belongs to the sample preview; the real deal says
+// "Quedan 4 unidades" when its store's stock says so, and nothing otherwise.
 export default function DealOfTheDay({
   product,
   endsAt,
@@ -25,6 +29,7 @@ export default function DealOfTheDay({
   sample?: boolean;
 }) {
   const off = discountPercent(product.price, product.before);
+  const unitsLeft = product.unitsLeft != null && product.unitsLeft > 0 && product.unitsLeft <= FEW_UNITS ? product.unitsLeft : null;
   return (
     <div className="cup-deal">
       <div className="cup-deal-head">
@@ -49,6 +54,12 @@ export default function DealOfTheDay({
         <div className="cup-deal-info">
           <span className="cup-brandname">{product.brand}</span>
           <span className="cup-deal-name">{product.name}</span>
+          {(product.rating || product.variantsLabel) && (
+            <span className="cup-card-meta">
+              {product.rating && <Rating rating={product.rating} />}
+              {product.variantsLabel && <span>{product.variantsLabel}</span>}
+            </span>
+          )}
           <span className="cup-prices cup-prices--big">
             <span className="cup-price">
               {product.priceFrom && <span className="cup-from">Desde </span>}
@@ -57,13 +68,15 @@ export default function DealOfTheDay({
             {off > 0 && <span className="cup-before">{formatCop(product.before)}</span>}
           </span>
         </div>
-        {sample && (
+        {sample ? (
           <div className="cup-stock">
             <div className="cup-stock-bar">
               <span style={{ width: "72%" }} />
             </div>
             <span className="cup-stock-text">Unidades limitadas</span>
           </div>
+        ) : (
+          unitsLeft && <span className="cup-stock-text">{unitsLeft === 1 ? "Queda 1 unidad" : `Quedan ${unitsLeft} unidades`}</span>
         )}
         <PreviewLink
           href={product.url}

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { AdminCuponeraBrand } from "@/lib/cuponera/admin";
 import { formatPercent } from "@/lib/cuponera/shared";
-import { api, BrandMark, CardTitle, cardStyle, IconButton, Modal, mutedText, Pill, primaryButtonStyle, secondaryButtonStyle, Switch } from "./ui";
+import { api, BrandMark, CardTitle, cardStyle, cop, IconButton, Modal, mutedText, Pill, primaryButtonStyle, secondaryButtonStyle, Switch } from "./ui";
 
 const STORE_LABELS: Record<string, string> = {
   MARCOLINI: "Tienda en Marcolini",
@@ -94,6 +94,8 @@ export default function CuponeraBrandsEditor({ brands }: { brands: AdminCuponera
               {STORE_LABELS[b.storeKind] ?? b.storeKind}
               {b.codeAppliedByLink ? " (el link aplica el código solo)" : " (la compradora escribe el código al pagar)"} ·{" "}
               {b.visibleProductCount === b.productCount ? `${b.productCount} productos` : `${b.visibleProductCount} de ${b.productCount} productos visibles`}
+              {b.freeShippingFrom != null &&
+                ` · envío gratis${b.freeShippingFrom > 0 ? ` desde ${cop(b.freeShippingFrom)}` : ""}${b.freeShippingAllZones ? "" : " en algunas zonas"}`}
               {b.storeUrl && (
                 <>
                   {" · "}
@@ -162,6 +164,10 @@ function CouponForm({
   const [conditions, setConditions] = useState(brand.couponConditions.join("\n"));
   const [exclusive, setExclusive] = useState(brand.couponExclusive);
   const defaultCondition = brand.codeAppliedByLink ? "Con el botón de la tienda el código se aplica solo" : "Escribe el código al pagar";
+  const shippingCondition =
+    brand.freeShippingFrom == null
+      ? null
+      : `Envío gratis${brand.freeShippingFrom > 0 ? ` desde ${cop(brand.freeShippingFrom)}` : ""}${brand.freeShippingAllZones ? "" : " en algunas zonas"}`;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -179,12 +185,12 @@ function CouponForm({
           id="cup-coupon-conds"
           rows={4}
           value={conditions}
-          placeholder={`${defaultCondition}\nCompra mínima $80.000`}
+          placeholder={[defaultCondition, shippingCondition ?? "Compra mínima $80.000"].join("\n")}
           onChange={(e) => setConditions(e.target.value)}
         />
         <span style={{ ...mutedText, fontSize: 12 }}>
-          Vacío = «{defaultCondition}». La tarjeta muestra las dos primeras; todas se ven al abrir el código. Escribe solo lo que la marca
-          confirmó.
+          Vacío = «{defaultCondition}»{shippingCondition ? ` y «${shippingCondition}» (de sus zonas de envío en Marcolini)` : ""}. La tarjeta
+          muestra las dos primeras; todas se ven al abrir el código. Escribe solo lo que la marca confirmó.
         </span>
       </div>
       <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: "pointer", marginBottom: 16 }}>

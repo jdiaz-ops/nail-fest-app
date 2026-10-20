@@ -22,42 +22,87 @@ const p = (
   icon: ProductIconKind,
   color: string,
   tint: string,
-  category: CuponeraCategory,
+  where: `${CuponeraCategory}` | `${CuponeraCategory}/${string}`,
   professions: CuponeraProfession[],
-): CuponeraProduct => ({
-  id,
-  brand,
-  name,
-  price,
-  before,
-  priceFrom: false,
-  code: "NAILFEST",
-  imageUrl: null,
-  icon,
-  color,
-  tint,
-  category,
-  professions,
-  url: null,
+): CuponeraProduct => {
+  const [category, subcategory] = where.split("/") as [CuponeraCategory, string | undefined];
+  return {
+    id,
+    brand,
+    name,
+    price,
+    before,
+    priceFrom: false,
+    code: "NAILFEST",
+    imageUrl: null,
+    icon,
+    color,
+    tint,
+    category,
+    subcategory: subcategory ?? null,
+    professions,
+    url: null,
+    colorFamily: null,
+    size: null,
+    line: null,
+    variant: null,
+    variantCount: 0,
+    variantsLabel: null,
+    rating: null,
+    unitsLeft: null,
+    soldWithCode: 0,
+    description: null,
+  };
+};
+
+// The three gels of Marca A are one line: the page shows them as a single
+// "3 tonos" card, like a real brand's tones.
+const gelLine = (variant: string, colorFamily: string, extra: Partial<CuponeraProduct> = {}): Partial<CuponeraProduct> => ({
+  line: "Gel semipermanente",
+  variant,
+  colorFamily,
+  size: "15 ml",
+  ...extra,
 });
 
 export const SAMPLE_PRODUCTS: CuponeraProduct[] = [
-  p("gel-rosa", "Marca A", "Gel semipermanente Rosa chicle 15 ml", 27200, 32000, "bottle", "#f48fb1", "#fde8ef", "geles", ["mani"]),
-  p("base-rubber", "Marca B", "Base rubber nivelante 15 ml", 30600, 36000, "bottle", "#f6e3d8", "#fff3ea", "geles", ["mani"]),
-  p("tips-almendra", "Marca D", "Tips almendra transparentes x500", 25500, 30000, "tips", "#ffffff", "#e6f9f7", "acrilico", ["mani"]),
-  p("aceite-cuticula", "Marca E", "Aceite de cutícula de almendras 30 ml", 13600, 16000, "drop", "#f2b01e", "#fdf3d6", "cuidado", ["mani"]),
-  p("kit-acrilico", "Marca C", "Kit de acrílico para empezar", 119200, 149000, "kit", "#ffc5a8", "#fff3ea", "acrilico", ["est"]),
-  p("limas-buffers", "Marca D", "Limas y buffers x10", 16200, 18000, "file", "#ffc5a8", "#f3f1ee", "herramientas", ["est"]),
-  p("pincel-liner", "Marca B", "Pincel liner 00 para nail art", 12750, 15000, "brush", "#17181c", "#e6f9f7", "nailart", ["est"]),
-  p("trio-geles", "Marca A", "Trío de geles básicos 15 ml", 68000, 80000, "bottle", "#00beb5", "#e6f9f7", "geles", ["est"]),
-  p("lampara-36", "Marca C", "Lámpara LED/UV 36 W", 97750, 115000, "lamp", "none", "#f3f1ee", "lamparas", ["salon"]),
-  p("guantes", "Marca E", "Guantes de nitrilo x100", 25200, 28000, "kit", "#c4efeb", "#e6f9f7", "herramientas", ["salon"]),
-  p("top-coat-30", "Marca A", "Top coat sin residuo 30 ml", 40800, 48000, "bottle", "#ffffff", "#f3f1ee", "geles", ["salon"]),
-  p("torno", "Marca F", "Torno eléctrico profesional", 212500, 250000, "drill", "#ffc5a8", "#fff3ea", "herramientas", ["salon"]),
-  p("esmalte-coral", "Marca A", "Esmalte efecto gel Coral", 15300, 18000, "bottle", "#ff8a65", "#fff3ea", "geles", ["casa"]),
-  p("press-on", "Marca D", "Uñas press-on almendra x24", 22950, 27000, "tips", "#f48fb1", "#fde8ef", "nailart", ["casa"]),
-  p("quitaesmalte", "Marca E", "Quitaesmalte sin acetona 120 ml", 10200, 12000, "drop", "#c4efeb", "#e6f9f7", "cuidado", ["casa"]),
-  p("stickers", "Marca B", "Stickers de nail art Selva Pop", 8500, 10000, "star", "#f2b01e", "#fdf3d6", "nailart", ["casa"]),
+  {
+    ...p("gel-rosa", "Marca A", "Gel semipermanente Rosa chicle 15 ml", 27200, 32000, "bottle", "#f48fb1", "#fde8ef", "esmaltes/semipermanente", ["mani"]),
+    ...gelLine("Rosa chicle", "Rosados", { rating: { average: 4.8, count: 23 } }),
+  },
+  {
+    ...p("gel-verde", "Marca A", "Gel semipermanente Verde selva 15 ml", 27200, 32000, "bottle", "#00beb5", "#e6f9f7", "esmaltes/semipermanente", ["mani"]),
+    ...gelLine("Verde selva", "Verdes", { rating: { average: 4.6, count: 8 }, unitsLeft: 3 }),
+  },
+  {
+    ...p("gel-coral", "Marca A", "Gel semipermanente Coral 15 ml", 27200, 32000, "bottle", "#ff8a65", "#fff3ea", "esmaltes/semipermanente", ["mani"]),
+    ...gelLine("Coral", "Corales y naranjas"),
+  },
+  {
+    ...p("base-rubber", "Marca B", "Base rubber nivelante 15 ml", 30600, 36000, "bottle", "#f6e3d8", "#fff3ea", "construccion/rubber", ["mani"]),
+    size: "15 ml",
+    colorFamily: "Nudes",
+    rating: { average: 4.7, count: 12 },
+  },
+  { ...p("tips-almendra", "Marca D", "Tips almendra transparentes x500", 25500, 30000, "tips", "#ffffff", "#e6f9f7", "softgel/tips", ["mani"]), size: "500 und" },
+  p("aceite-cuticula", "Marca E", "Aceite de cutícula de almendras 30 ml", 13600, 16000, "drop", "#f2b01e", "#fdf3d6", "cuidado/cuticulas", ["mani"]),
+  p("kit-acrilico", "Marca C", "Kit de acrílico para empezar", 119200, 149000, "kit", "#ffc5a8", "#fff3ea", "kits", ["est"]),
+  p("limas-buffers", "Marca D", "Limas y buffers x10", 16200, 18000, "file", "#ffc5a8", "#f3f1ee", "herramientas/limas", ["est"]),
+  p("pincel-liner", "Marca B", "Pincel liner 00 para nail art", 12750, 15000, "brush", "#17181c", "#e6f9f7", "herramientas/pinceles", ["est"]),
+  p("trio-geles", "Marca A", "Trío de geles básicos 15 ml", 68000, 80000, "bottle", "#00beb5", "#e6f9f7", "esmaltes/semipermanente", ["est"]),
+  { ...p("lampara-36", "Marca C", "Lámpara LED/UV 36 W", 97750, 115000, "lamp", "none", "#f3f1ee", "herramientas/lamparas", ["salon"]), rating: { average: 4.9, count: 41 } },
+  p("guantes", "Marca E", "Guantes de nitrilo x100", 25200, 28000, "kit", "#c4efeb", "#e6f9f7", "cuidado", ["salon"]),
+  p("top-coat-30", "Marca A", "Top coat sin residuo 30 ml", 40800, 48000, "bottle", "#ffffff", "#f3f1ee", "cuidado/top-base", ["salon"]),
+  p("torno", "Marca F", "Torno eléctrico profesional", 212500, 250000, "drill", "#ffc5a8", "#fff3ea", "herramientas/tornos", ["salon"]),
+  { ...p("esmalte-coral", "Marca A", "Esmalte efecto gel Coral", 15300, 18000, "bottle", "#ff8a65", "#fff3ea", "esmaltes/tradicional", ["casa"]), colorFamily: "Corales y naranjas" },
+  {
+    ...p("press-on", "Marca D", "Uñas press-on almendra x24", 22950, 27000, "tips", "#f48fb1", "#fde8ef", "softgel/press-on", ["casa"]),
+    colorFamily: "Rosados",
+    variantCount: 4,
+    variantsLabel: "4 diseños",
+  },
+  p("quitaesmalte", "Marca E", "Quitaesmalte sin acetona 120 ml", 10200, 12000, "drop", "#c4efeb", "#e6f9f7", "cuidado/cuticulas", ["casa"]),
+  p("stickers", "Marca B", "Stickers de nail art Selva Pop", 8500, 10000, "star", "#f2b01e", "#fdf3d6", "decoracion/stickers", ["casa"]),
 ];
 
 export const SAMPLE_DEAL: CuponeraProduct = p(
@@ -69,13 +114,13 @@ export const SAMPLE_DEAL: CuponeraProduct = p(
   "lamp",
   "none",
   "#f3f1ee",
-  "lamparas",
+  "herramientas/lamparas",
   ["salon", "mani"],
 );
 
 export const SAMPLE_NEW: CuponeraProduct[] = [
-  p("coleccion-selva", "Marca A", "Colección Selva Pop, 6 geles", 163200, 192000, "bottle", "#00beb5", "#e6f9f7", "geles", ["mani", "salon"]),
-  p("torno-bolsillo", "Marca F", "Torno inalámbrico de bolsillo", 178500, 210000, "drill", "#ffc5a8", "#fff3ea", "herramientas", ["mani", "salon"]),
+  p("coleccion-selva", "Marca A", "Colección Selva Pop, 6 geles", 163200, 192000, "bottle", "#00beb5", "#e6f9f7", "esmaltes/semipermanente", ["mani", "salon"]),
+  p("torno-bolsillo", "Marca F", "Torno inalámbrico de bolsillo", 178500, 210000, "drill", "#ffc5a8", "#fff3ea", "herramientas/tornos", ["mani", "salon"]),
 ];
 
 export const SAMPLE_COUPONS: CuponeraCoupon[] = [

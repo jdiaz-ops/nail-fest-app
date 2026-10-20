@@ -3,20 +3,26 @@
 import { useMemo, useState } from "react";
 import type { AdminCuponeraProduct } from "@/lib/cuponera/admin";
 import {
+  categoryLabel,
+  colorSwatch,
+  COLOR_FAMILIES,
   CUPONERA_CATEGORIES,
   CUPONERA_PROFESSIONS,
+  formatRating,
   normalizeText,
+  subcategoriesOf,
+  subcategoryLabel,
+  subcategoryWithin,
   type CuponeraCategory,
   type CuponeraProfession,
 } from "@/lib/cuponera/shared";
 import { api, CardTitle, cardStyle, cop, IconButton, mutedText, Pill, secondaryButtonStyle, Switch } from "./ui";
 
-type Patch = Partial<Pick<AdminCuponeraProduct, "visible" | "featured" | "category" | "professions" | "isNew">>;
+type Patch = Partial<Pick<AdminCuponeraProduct, "visible" | "featured" | "category" | "subcategory" | "professions" | "isNew">>;
 type StatusFilter = "available" | "visible" | "hidden" | "featured" | "gone";
 
 const PAGE_SIZE = 50;
 const CATEGORY_OPTIONS = CUPONERA_CATEGORIES.filter((c) => c.key !== "todo") as { key: CuponeraCategory; label: string }[];
-const categoryLabel = (key: CuponeraCategory | null) => CATEGORY_OPTIONS.find((c) => c.key === key)?.label ?? "sin categoría";
 const SHORT_PROFESSION: Record<CuponeraProfession, string> = { mani: "Manicurista", est: "Estudiante", salon: "Salón", casa: "En casa" };
 
 const chipStyle = (on: boolean) => ({
@@ -45,6 +51,7 @@ export default function CuponeraProductsEditor({
   const [query, setQuery] = useState("");
   const [brandId, setBrandId] = useState("");
   const [category, setCategory] = useState<"" | "none" | CuponeraCategory>("");
+  const [color, setColor] = useState("");
   const [status, setStatus] = useState<StatusFilter>("available");
   const [limit, setLimit] = useState(PAGE_SIZE);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -60,11 +67,14 @@ export default function CuponeraProductsEditor({
       if (status === "hidden" && p.visible) return false;
       if (status === "featured" && !p.featured) return false;
       if (brandId && p.brandId !== brandId) return false;
-      if (category === "none" && p.effectiveCategory !== null) return false;
-      if (category && category !== "none" && p.effectiveCategory !== category) return false;
-      return !q || normalizeText(`${p.name} ${p.brandName}`).includes(q);
+      if (category === "none" && p.resolved.category !== null) return false;
+      if (category && category !== "none" && p.resolved.category !== category) return false;
+      if (color === "none" && p.colorFamily !== null) return false;
+      if (color && color !== "none" && p.colorFamily !== color) return false;
+      return !q || normalizeText(`${p.name} ${p.brandName} ${p.line ?? ""} ${p.variant ?? ""} ${p.colorFamily ?? ""} ${p.collections.join(" ")}`).includes(q);
     });
-  }, [products, query, brandId, category, status]);
+  }, [products, query, brandId, category, color, status]);
+  const colorsPresent = COLOR_FAMILIES.filter((f) => products.some((p) => p.colorFamily === f.name));
   const shown = filtered.slice(0, limit);
   const selectedIds = [...selected].filter((id) => filtered.some((p) => p.id === id));
 
@@ -78,8 +88,18 @@ export default function CuponeraProductsEditor({
         list.map((p) => {
           if (!ids.includes(p.id)) return p;
           const next = { ...p, ...patch };
-          // The admin's pick wins; clearing it goes back to the sync's guess.
-          if ("category" in patch) next.effectiveCategory = patch.category ?? p.autoCategory;
+          // Same order as resolveCategory: the admin's pick wins; clearing it
+          // goes back to the collection mapping or the sync's guess.
+          if ("category" in patch) {
+            next.subcategory = patch.category ? (patch.subcategory ?? null) : null;
+            next.resolved = patch.category
+              ? {
+                  category: patch.category,
+                  subcategory: patch.subcategory ?? subcategoryWithin(patch.category, p),
+                  source: "manual",
+                }
+              : p.automatic;
+          }
           return next;
         }),
       );
@@ -110,8 +130,8 @@ export default function CuponeraProductsEditor({
       <CardTitle aside={<span style={mutedText}>{`${counts.visible} de ${counts.available} visibles`}</span>}>Productos</CardTitle>
       <p style={{ ...mutedText, marginTop: 0 }}>
         Los que las marcas tienen a la venta en Marcolini (sin agotados ni borradores). El precio con código es el de la tienda menos el
-        descuento de la marca. La categoría sale sola del nombre; cámbiala si quedó mal. Sin profesiones elegidas, el producto sale para
-        todas.
+        descuento de la marca. La categoría sale sola (del nombre, o de la colección si la asignaste arriba); cámbiala aquí si quedó mal y
+        esa elección gana. Sin profesiones elegidas, el producto sale para todas.
       </p>
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
@@ -143,6 +163,17 @@ export default function CuponeraProductsEditor({
           ))}
           <option value="none">Sin categoría</option>
         </select>
+        {colorsPresent.length > 0 && (
+          <select aria-label="Color" value={color} onChange={(e) => setColor(e.target.value)} style={selectStyle}>
+            <option value="">Todos los colores</option>
+            {colorsPresent.map((f) => (
+              <option key={f.name} value={f.name}>
+                {f.name}
+              </option>
+            ))}
+            <option value="none">Sin color</option>
+          </select>
+        )}
         <select aria-label="Estado" value={status} onChange={(e) => setStatus(e.target.value as StatusFilter)} style={selectStyle}>
           <option value="available">Visibles y ocultos</option>
           <option value="visible">Solo visibles</option>
@@ -175,7 +206,7 @@ export default function CuponeraProductsEditor({
               value=""
               onChange={(e) => {
                 const value = e.target.value;
-                if (value) update(selectedIds, { category: value === "auto" ? null : (value as CuponeraCategory) });
+                if (value) update(selectedIds, { category: value === "auto" ? null : (value as CuponeraCategory), subcategory: null });
               }}
               style={selectStyle}
             >
@@ -278,7 +309,20 @@ function ProductRow({
   onSelect: () => void;
   onChange: (patch: Patch) => void;
 }) {
-  const autoLabel = `Automática (${categoryLabel(p.autoCategory)})`;
+  const automaticLabel = p.automatic.category ? categoryLabel(p.automatic.category) : "sin categoría";
+  const subs = subcategoriesOf(p.resolved.category);
+  // What "Automática" gives inside the category on screen.
+  const automaticSubKey = p.resolved.category ? (p.category ? subcategoryWithin(p.resolved.category, p) : p.automatic.subcategory) : null;
+  const automaticSub = subcategoryLabel(p.resolved.category, automaticSubKey);
+  const facts = [
+    p.size,
+    p.line ? `Línea: ${p.line}${p.variant ? ` · ${p.variant}` : ""}` : null,
+    p.variantCount > 1 ? `${p.variantCount} variantes` : null,
+    p.ratingAverage != null && p.ratingCount > 0 ? `★ ${formatRating(p.ratingAverage)} (${p.ratingCount})` : null,
+    p.unitsLeft != null ? `Quedan ${p.unitsLeft}` : null,
+    p.soldWithCode > 0 ? `${p.soldWithCode} ${p.soldWithCode === 1 ? "vendido" : "vendidos"} con el código (90 días)` : null,
+    p.resolved.source === "coleccion" ? "Categoría por su colección" : null,
+  ].filter(Boolean);
   return (
     <div style={{ display: "flex", gap: 12, padding: "12px 0", borderTop: "1px solid #f0efec", opacity: p.visible && p.available && p.brandVisible ? 1 : 0.55 }}>
       <input type="checkbox" checked={selected} onChange={onSelect} aria-label={`Seleccionar ${p.name}`} style={{ marginTop: 14 }} />
@@ -304,22 +348,61 @@ function ProductRow({
                 </>
               )}
             </span>
+            {(p.colorFamily || facts.length > 0) && (
+              <span style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", fontSize: 12, color: "#8a8478", marginTop: 2 }}>
+                {p.colorFamily && (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                    <span
+                      aria-hidden="true"
+                      style={{ width: 10, height: 10, borderRadius: "50%", background: colorSwatch(p.colorFamily) ?? "#ddd", border: "1px solid #d8d5cd" }}
+                    />
+                    {p.colorFamily}
+                  </span>
+                )}
+                {facts.map((f, i) => (
+                  <span key={f as string}>
+                    {i > 0 || p.colorFamily ? "· " : ""}
+                    {f}
+                  </span>
+                ))}
+              </span>
+            )}
           </span>
           <span style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 6, flex: "0 1 auto", minWidth: 0 }}>
             <select
               aria-label={`Categoría de ${p.name}`}
               value={p.category ?? ""}
               disabled={saving}
-              onChange={(e) => onChange({ category: e.target.value ? (e.target.value as CuponeraCategory) : null })}
-              style={{ ...selectStyle, padding: "6px 8px", maxWidth: 230, minWidth: 0, flex: "0 1 auto" }}
+              onChange={(e) => onChange({ category: e.target.value ? (e.target.value as CuponeraCategory) : null, subcategory: null })}
+              style={{ ...selectStyle, padding: "6px 8px", maxWidth: 210, minWidth: 0, flex: "0 1 auto" }}
             >
-              <option value="">{autoLabel}</option>
+              <option value="">Automática ({automaticLabel})</option>
               {CATEGORY_OPTIONS.map((c) => (
                 <option key={c.key} value={c.key}>
                   {c.label}
                 </option>
               ))}
             </select>
+            {subs.length > 0 && p.resolved.category && (
+              <select
+                aria-label={`Subcategoría de ${p.name}`}
+                value={p.category ? (p.subcategory ?? "") : ""}
+                disabled={saving}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value) onChange({ category: p.resolved.category, subcategory: value });
+                  else if (p.category) onChange({ category: p.category, subcategory: null });
+                }}
+                style={{ ...selectStyle, padding: "6px 8px", maxWidth: 190, minWidth: 0, flex: "0 1 auto" }}
+              >
+                <option value="">Automática ({automaticSub ?? "ninguna"})</option>
+                {subs.map((sub) => (
+                  <option key={sub.key} value={sub.key}>
+                    {sub.label}
+                  </option>
+                ))}
+              </select>
+            )}
             <IconButton title={p.featured ? "Quitar de destacados" : "Destacar"} active={p.featured} disabled={saving} onClick={() => onChange({ featured: !p.featured })}>
               <span style={{ color: p.featured ? "#e0a100" : "#c9c6bd" }}>★</span>
             </IconButton>

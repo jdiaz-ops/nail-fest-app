@@ -1955,6 +1955,11 @@ model CuponeraBrand {
   couponTitle      String?
   couponConditions String[] @default([])
   couponExclusive  Boolean  @default(false)
+  // From Marcolini's shipping zones: free shipping from this subtotal (COP;
+  // 0 = always), and whether that holds in every zone. null = not offered
+  // or unknown (Shopify/WooCommerce stores).
+  freeShippingFrom     Int?
+  freeShippingAllZones Boolean @default(false)
 
   products CuponeraProduct[]
 
@@ -1983,6 +1988,31 @@ model CuponeraProduct {
   collections        String[]      @default([])
   // "PHYSICAL" | "SERVICE" | "DIGITAL".
   type               String        @default("PHYSICAL")
+  // Short plain text, for the search box.
+  description        String?
+  // Marcolini's product attributes as sent ({"Familia de color", Tono,
+  // Tamaño, Grupo…}); colorFamily is one of its fixed families (its AI reads
+  // it from the photo), size is normalized ("15 ml").
+  attributes         Json          @default("{}")
+  colorFamily        String?
+  size               String?
+  // The line it belongs to and what it is in it ("Gel Polish Rosados" /
+  // "Princesa"): one card per line on the public page.
+  line               String?
+  variant            String?
+  // When the product itself has variants (a polish in 12 shades).
+  variantCount       Int           @default(0)
+  optionNames        String[]      @default([])
+  // Approved reviews in Marcolini.
+  ratingAverage      Float?
+  ratingCount        Int           @default(0)
+  // Only when the store tracks stock.
+  unitsLeft          Int?
+  // Units bought with Nail Fest's code in the last 90 days.
+  soldWithCode       Int           @default(0)
+  // Marcolini's own nail category for it (same rules it uses to propose
+  // collections) — the last hint for autoCategory.
+  nicheCategory      String?
   // false once it stops coming in the sync (sold out, unpublished, brand gone).
   available          Boolean       @default(true)
   marcoliniCreatedAt DateTime
@@ -1991,9 +2021,13 @@ model CuponeraProduct {
   // Curation — never touched by the sync (autoCategory is the sync's guess).
   visible      Boolean  @default(true)
   featured     Boolean  @default(false)
-  // Category key from lib/cuponera/shared.ts; null = use autoCategory.
-  category     String?
-  autoCategory String?
+  // Category and subcategory keys from lib/cuponera/shared.ts, picked by
+  // the admin; null = the collection mapping (CuponeraCollectionMap) or,
+  // failing that, the sync's guess in autoCategory/autoSubcategory.
+  category           String?
+  subcategory        String?
+  autoCategory       String?
+  autoSubcategory    String?
   // Profession keys; empty = shows for every profession.
   professions  String[] @default([])
   // null = automatic: created in Marcolini within CuponeraSettings.newDays.
@@ -2015,6 +2049,7 @@ model CuponeraSettings {
   showDeal         Boolean   @default(true)
   showCoupons      Boolean   @default(true)
   showNew          Boolean   @default(true)
+  showBestsellers  Boolean   @default(true)
   newTitle         String?
   newSubtitle      String?
   newDays          Int       @default(30)
@@ -2031,4 +2066,22 @@ model CuponeraSettings {
   creatorName      String?
   creatorSlug      String?
   updatedAt        DateTime  @updatedAt
+}
+
+// The unifier in /admin/cuponera: a brand collection, by its normalized name
+// (collectionKey in lib/cuponera/shared.ts — "Esmaltes Semipermanentes" and
+// "esmalte semipermanente" are one row), mapped once to a cuponera category
+// and subcategory. Every product in a collection with that name, from any
+// brand, takes it — unless the admin picked one for the product itself.
+// ignored = not a category at all ("Novedades", "Verano 2026").
+model CuponeraCollectionMap {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  // The name as one brand wrote it, to show in the admin.
+  label       String
+  category    String?
+  subcategory String?
+  ignored     Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

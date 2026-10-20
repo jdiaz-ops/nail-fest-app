@@ -76,6 +76,9 @@ const brandSchema = z.object({
   campaign: campaignSchema.nullable().catch(null),
   visibleInVitrina: z.boolean().catch(true),
   vitrinaOrder: z.number().catch(0),
+  // Added to Marcolini's API later: a Marcolini without them still parses.
+  freeShippingFrom: z.number().nonnegative().nullable().catch(null),
+  freeShippingAllZones: z.boolean().catch(false),
 });
 
 const productSchema = z.object({
@@ -92,6 +95,19 @@ const productSchema = z.object({
   collections: z.array(z.string()).catch([]),
   type: z.string().catch("PHYSICAL"),
   createdAt: z.string().refine((d) => !Number.isNaN(Date.parse(d)), "not a date"),
+  // Added to Marcolini's API later: a Marcolini without them still parses.
+  description: z.string().max(2000).nullable().catch(null),
+  attributes: z.record(z.string()).catch({}),
+  colorFamily: z.string().nullable().catch(null),
+  nicheCategory: z.string().nullable().catch(null),
+  line: z.string().nullable().catch(null),
+  variant: z.string().nullable().catch(null),
+  size: z.string().nullable().catch(null),
+  variantCount: z.number().int().nonnegative().catch(0),
+  optionNames: z.array(z.string()).catch([]),
+  rating: z.object({ average: z.number().min(0).max(5), count: z.number().int().nonnegative() }).nullable().catch(null),
+  unitsLeft: z.number().int().nonnegative().nullable().catch(null),
+  soldWithCode: z.number().int().nonnegative().catch(0),
 });
 
 const pageSchema = z.object({

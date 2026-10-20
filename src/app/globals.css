@@ -2479,3 +2479,51 @@ button.primary:disabled {
   .cup-coupons--grid { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
 }
 .cup-deal-until { font-size: 13px; font-weight: 700; color: #a5471a; }
+
+/* Cuponera browsing with Marcolini's catalog data: the filters (type,
+   color, size), the sort, the reviews, the line cards with their tones
+   sheet and the "Lo más comprado" ranking. */
+.cup-chip--small { height: 34px; padding: 0 12px; font-size: 13px; }
+.cup-sort { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--ink-muted); }
+.cup-sort select { height: 38px; max-width: 100%; padding: 0 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--ink); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
+.cup-filter { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.cup-filter > .cup-chips, .cup-filter > .cup-swatches { flex: 0 1 auto; min-width: 0; }
+.cup-filter-label { flex: none; font-size: 13px; font-weight: 700; color: var(--ink-muted); }
+.cup-swatches { display: flex; gap: 8px; padding: 5px 4px; overflow-x: auto; scrollbar-width: none; }
+.cup-swatches::-webkit-scrollbar { display: none; }
+.cup-swatch { flex: none; width: 32px; height: 32px; padding: 0; border: 1px solid rgba(23, 24, 28, 0.2); border-radius: 50%; cursor: pointer; }
+.cup-swatch.is-on { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--ink); }
+.cup-filter-clear { flex: none; padding: 4px 2px; border: 0; background: none; color: var(--link); font: inherit; font-size: 13px; font-weight: 700; text-decoration: underline; cursor: pointer; }
+.cup-linkrow { display: flex; flex-wrap: wrap; gap: 8px 24px; }
+.cup-card-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 3px 10px; font-size: 12px; color: var(--ink-muted); }
+.cup-rating { display: inline-flex; align-items: baseline; gap: 3px; color: var(--ink); font-weight: 700; font-variant-numeric: tabular-nums; }
+.cup-rating-star { color: #c27c00; }
+.cup-rating-count { color: var(--ink-muted); font-weight: 500; }
+.cup-last { font-size: 12px; font-weight: 700; color: #b0225c; }
+.cup-rank { position: absolute; top: 8px; right: 8px; z-index: 1; min-width: 30px; height: 30px; padding: 0 7px; display: flex; align-items: center; justify-content: center; box-sizing: border-box; border-radius: 999px; background: var(--ink); color: #fff; font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.cup-dots { display: inline-flex; }
+.cup-dot { flex: none; display: inline-block; width: 14px; height: 14px; box-sizing: border-box; border: 1.5px solid var(--surface); border-radius: 50%; box-shadow: 0 0 0 1px rgba(23, 24, 28, 0.18); }
+.cup-dots .cup-dot + .cup-dot { margin-left: -4px; }
+button.cup-card { width: 100%; padding: 0; font: inherit; text-align: left; cursor: pointer; }
+.cup-newcard-more { font-size: 12px; font-weight: 700; color: var(--link); }
+
+.cup-sheet--tones { overflow-y: auto; }
+.cup-sheet-top--start { align-items: flex-start; }
+.cup-sheet-head { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.cup-sheet-linetitle { margin: 0; font-size: 28px; line-height: 1.06; font-weight: 900; letter-spacing: -0.01em; text-wrap: balance; overflow-wrap: anywhere; }
+.cup-tones { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
+.cup-tones li + li { border-top: 1px solid var(--border); }
+.cup-tone { display: flex; align-items: center; gap: 12px; padding: 10px 4px; border-radius: 12px; color: var(--ink); text-decoration: none; }
+.cup-tone:hover { color: var(--ink); background: var(--bg); }
+.cup-tone-photo { position: relative; flex: none; width: 52px; height: 52px; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 10px; }
+.cup-tone-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.cup-tone-name { font-size: 15px; font-weight: 700; line-height: 1.25; overflow-wrap: anywhere; }
+.cup-tone-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 2px 10px; font-size: 12px; color: var(--ink-muted); }
+.cup-tone-color { display: inline-flex; align-items: center; gap: 5px; }
+.cup-tone-prices { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 1px; font-variant-numeric: tabular-nums; }
+.cup-tone-prices b { font-size: 16px; font-weight: 800; }
+.cup-tone-prices s { font-size: 12px; color: var(--ink-muted); }
+@media (max-width: 699px) {
+  .cup-sort { width: 100%; }
+  .cup-sort select { flex: 1; }
+}
