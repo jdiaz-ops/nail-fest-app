@@ -21,12 +21,12 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-// The coupons panel shows six brands at a glance and slides for more. While
-// there are few real ones, the team sees invented examples up to eighteen —
+// The brands' panel shows three per column and slides for more. While there
+// are few real ones, the team sees invented examples up to eighteen —
 // enough to slide through, asked on 2026-10-20 — and visitors see "muy
-// pronto" up to six: never a code that doesn't exist.
+// pronto" to fill the first column: never a code that doesn't exist.
 const PANEL_EXAMPLES_UP_TO = 18;
-const PANEL_SOON_UP_TO = 6;
+const PANEL_SOON_UP_TO = 3;
 
 // "Precios de feria, todo el año": what follows the last comma gets the
 // accent color. A title without a comma stays in one color.
@@ -45,7 +45,7 @@ function titleParts(title: string): [string, string | null] {
 // way out is a store.
 export default async function CuponeraPage() {
   const { data, staff } = await loadCuponera();
-  const filling = data.heroStyle === "cupones" && !data.sample;
+  const filling = data.heroStyle !== "marcas" && !data.sample;
   const examples = filling && staff ? EXAMPLE_PANEL_BRANDS.slice(0, Math.max(0, PANEL_EXAMPLES_UP_TO - data.panelBrands.length)) : [];
   const soon = filling && !staff ? Math.max(0, PANEL_SOON_UP_TO - data.panelBrands.length) : 0;
   const [titleStart, titleEnd] = titleParts(data.texts.heroTitle);
@@ -64,7 +64,7 @@ export default async function CuponeraPage() {
   return (
     <CuponeraShell data={data}>
       {data.heroStyle !== "marcas" ? (
-        <section className={data.heroStyle === "cupones" && data.panelBrands.length > 0 ? "cup-hero2 cup-hero2--coupons" : "cup-hero2"}>
+        <section className="cup-hero2">
           <div className="cup-hero2-inner">
             <div className="cup-hero2-copy">
               <h1 className={`cup-hero2-title ${fraunces.className}`}>{title}</h1>
@@ -74,7 +74,6 @@ export default async function CuponeraPage() {
               <BrandsPanel
                 brands={data.panelBrands}
                 title={data.texts.panelTitle}
-                variant={data.heroStyle === "cupones" ? "coupons" : "rows"}
                 examples={examples}
                 soon={soon}
                 displayClassName={fraunces.className}

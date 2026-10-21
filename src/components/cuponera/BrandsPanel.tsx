@@ -2,28 +2,25 @@
 
 import { useEffect, useRef, useState } from "react";
 import BrandLink, { BrandLogo } from "./BrandLink";
-import { formatPercent, type CuponeraBrandCard } from "@/lib/cuponera/shared";
+import type { CuponeraBrandCard } from "@/lib/cuponera/shared";
 
-// The brands' discounts in the hero (Student Beans' "deals of the day"),
-// sliding sideways: "rows" packs three brands per column — title, name and
-// code, always whole —; "coupons" shows small coupons three per row, two
-// rows — logo, name, the % big, "con el código" and the code — with the next
-// column peeking in and "Desliza para ver más marcas" until the first slide,
-// so it's clear there's more. Each brand goes to its store; the arrows are
-// for a mouse, the dots say where you are. While there are few brands, the
-// empty places show the team's examples (`examples`, staff only, never a
-// real offer) or, for visitors, "muy pronto" (`soon`).
+// The brands' discounts in the hero, like Student Beans' "deals of the day":
+// three brands per column — the logo, then the discount big, the brand and
+// the code, always whole — sliding sideways, the next column peeking in and
+// "Desliza para ver más marcas" until the first slide, so it's clear there's
+// more. Each brand goes to its store; the arrows are for a mouse, the dots
+// say where you are. While there are few brands, the empty places show the
+// team's examples (`examples`, staff only, never a real offer, opening no
+// store) or, for visitors, "muy pronto" (`soon`).
 export default function BrandsPanel({
   brands,
   title,
-  variant = "rows",
   examples = [],
   soon = 0,
   displayClassName,
 }: {
   brands: CuponeraBrandCard[];
   title: string;
-  variant?: "rows" | "coupons";
   examples?: CuponeraBrandCard[];
   soon?: number;
   displayClassName: string;
@@ -56,12 +53,12 @@ export default function BrandsPanel({
       track.removeEventListener("scroll", measure);
       window.removeEventListener("resize", measure);
     };
-  }, [brands.length, examples.length, soon, variant]);
+  }, [brands.length, examples.length, soon]);
 
   const go = (direction: 1 | -1) => trackRef.current?.scrollBy({ left: direction * step(), behavior: "smooth" });
 
   return (
-    <div className={`cup-panel cup-panel--${variant}`}>
+    <div className="cup-panel">
       <div className="cup-panel-head">
         <h2 className={`cup-panel-title ${displayClassName}`}>{title}</h2>
         {pages > 1 && (
@@ -80,70 +77,58 @@ export default function BrandsPanel({
         )}
       </div>
       <div className="cup-panel-track" ref={trackRef}>
-        {variant === "coupons" ? (
-          <>
-            {brands.map((b) => (
-              <MiniCoupon key={b.id} brand={b} />
-            ))}
-            {examples.map((b) => (
-              <MiniCoupon key={b.id} brand={b} example />
-            ))}
-            {Array.from({ length: soon }, (_, i) => (
-              <span key={`pronto-${i}`} className="cup-mini cup-mini--soon" aria-hidden="true">
-                <span className="cup-mini-ghost" />
-                <span className="cup-mini-name">Nueva marca</span>
-                <span className="cup-mini-soon">Muy pronto</span>
-              </span>
-            ))}
-          </>
-        ) : (
-          brands.map((b) => (
-            <BrandLink key={b.id} brand={b} className="cup-panel-row">
-              <BrandLogo brand={b} />
-              <span className="cup-panel-text">
-                <span className="cup-panel-offer">
-                  {b.title}
-                  {b.exclusive && <span className="cup-exclusive">Exclusivo</span>}
-                </span>
-                <span className="cup-panel-brand">{b.name}</span>
-                <span className="cup-panel-code">
-                  con el código <code className="cup-code-chip">{b.code}</code>
-                </span>
-              </span>
-            </BrandLink>
-          ))
-        )}
+        {brands.map((b) => (
+          <BrandRow key={b.id} brand={b} />
+        ))}
+        {examples.map((b) => (
+          <BrandRow key={b.id} brand={b} example />
+        ))}
+        {Array.from({ length: soon }, (_, i) => (
+          <span key={`pronto-${i}`} className="cup-panel-row cup-panel-row--soon" aria-hidden="true">
+            <span className="cup-panel-ghost" />
+            <span className="cup-panel-text">
+              <span className="cup-panel-offer">Nueva marca</span>
+              <span className="cup-panel-brand">Muy pronto</span>
+            </span>
+          </span>
+        ))}
       </div>
       {pages > 1 && (
-        <div className="cup-pager" aria-hidden="true">
-          {Array.from({ length: pages }, (_, i) => (
-            <i key={i} className={i === page ? "is-on" : undefined} />
-          ))}
-        </div>
-      )}
-      {pages > 1 && variant === "coupons" && (
-        <p className={page === 0 ? "cup-panel-hint" : "cup-panel-hint is-gone"} aria-hidden="true">
-          Desliza para ver más marcas
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M5 12h14M13 6l6 6-6 6" />
-          </svg>
-        </p>
+        <>
+          <div className="cup-pager" aria-hidden="true">
+            {Array.from({ length: pages }, (_, i) => (
+              <i key={i} className={i === page ? "is-on" : undefined} />
+            ))}
+          </div>
+          <p className={page === 0 ? "cup-panel-hint" : "cup-panel-hint is-gone"} aria-hidden="true">
+            Desliza para ver más marcas
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 12h14M13 6l6 6-6 6" />
+            </svg>
+          </p>
+        </>
       )}
     </div>
   );
 }
 
-// A brand as a small coupon: logo, name, the discount big, then "con el
-// código" and the code. An example (invented, staff only) looks the same —
-// its "Ejemplo" tag came off on 2026-10-20 — and opens no store.
-function MiniCoupon({ brand, example = false }: { brand: CuponeraBrandCard; example?: boolean }) {
+// One brand of the panel: its logo, then its offer ("10 % de descuento" or
+// the admin's title), its name and its code. An example looks the same and
+// opens no store.
+function BrandRow({ brand, example = false }: { brand: CuponeraBrandCard; example?: boolean }) {
   return (
-    <BrandLink brand={brand} className={example ? "cup-mini cup-mini--example" : "cup-mini"}>
-      <BrandLogo brand={brand} size="sm" />
-      <span className="cup-mini-name">{brand.name}</span>
-      <span className="cup-mini-off">{formatPercent(brand.discountPercent)}</span>
-      <span className="cup-mini-with">con el código</span>
-      <code className="cup-mini-code">{brand.code}</code>
+    <BrandLink brand={brand} className={example ? "cup-panel-row cup-panel-row--example" : "cup-panel-row"}>
+      <BrandLogo brand={brand} />
+      <span className="cup-panel-text">
+        <span className="cup-panel-offer">
+          {brand.title}
+          {brand.exclusive && <span className="cup-exclusive">Exclusivo</span>}
+        </span>
+        <span className="cup-panel-brand">{brand.name}</span>
+        <span className="cup-panel-code">
+          con el código <code className="cup-code-chip">{brand.code}</code>
+        </span>
+      </span>
     </BrandLink>
   );
 }

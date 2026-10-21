@@ -42,9 +42,9 @@ type TextKey = keyof Texts;
 type SwitchKey = "showCoupons" | "showCategories" | "showBestsellers" | "showNew" | "showAllBrands";
 type Status = "idle" | "saving" | "saved" | "invalid" | "error";
 
+// "panel" (the old rows) looks the same as "cupones" now: one option.
 const HERO_STYLES = [
-  ["cupones", "Panel con cupones", "Seis marcas a la vista, tres por fila, cada una con su % grande y su código; se desliza con el dedo para ver más (como Student Beans)."],
-  ["panel", "Panel con filas", "Tres marcas por columna, con su descuento y su código; se desliza con el dedo (como Student Beans)."],
+  ["cupones", "Panel de marcas", "Como Student Beans: tres marcas por columna, cada una con su descuento, su nombre y su código; se desliza con el dedo para ver más."],
   ["marcas", "Logos que se mueven solos", "Filas de logos que pasan hacia la izquierda, con el % y el código debajo (como Rakuten)."],
 ] as const;
 
