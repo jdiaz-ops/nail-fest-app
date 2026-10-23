@@ -5,9 +5,10 @@ import { classifyProduct, isColorFamily, sizeOf } from "./shared";
 import { CUPONERA_SETTINGS_ID, updateCuponeraSettings } from "./settings";
 
 // Copies Nail Fest's Marcolini catalog into CuponeraBrand/CuponeraProduct.
-// Runs every minute from the cron (/api/cuponera/sync) — so a change in
-// Marcolini shows here within about a minute — and from "Sincronizar ahora"
-// in /admin/cuponera, one at a time. Only the fields that come from Marcolini are
+// Runs every hour from the cron (/api/cuponera/sync) — so a change in
+// Marcolini shows here within the hour — and from "Sincronizar ahora" in
+// /admin/cuponera, one at a time. Each run reads Marcolini's whole catalog
+// (about ten queries on its database), which is why it isn't more often. Only the fields that come from Marcolini are
 // written; the admin's curation (visible, order, category, professions,
 // coupon texts…) is never touched. A brand or product that stops coming is
 // marked unavailable, never deleted — its curation is still there if it

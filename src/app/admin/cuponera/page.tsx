@@ -38,7 +38,7 @@ export default async function AdminCuponeraPage() {
     getCuponeraLists(),
   ]);
   // The products editor keeps its own copy while editing; a sync that
-  // changed products (not every minute's sync — most change nothing) or a
+  // changed products (not every hour's sync — most change nothing) or a
   // collection mapped in the unifier changes this key and reloads it.
   const productsVersion = `${lastProductChange._max.lastSyncedAt?.toISOString() ?? "never"}|${lastProductChange._count._all}|${lastMapping._max.updatedAt?.toISOString() ?? ""}|${lastMapping._count._all}`;
   const config = marcoliniConfig();

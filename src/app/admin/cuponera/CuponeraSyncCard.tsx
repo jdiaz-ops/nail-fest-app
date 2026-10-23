@@ -52,7 +52,7 @@ export default function CuponeraSyncCard(props: {
         });
         announceCuponeraSaved();
       } else {
-        // Busy = the every-minute sync is running right now: not an error.
+        // Busy = the hourly sync is running right now: not an error.
         setMessage({ ok: Boolean(result.busy), text: result.error });
       }
       router.refresh();
@@ -123,8 +123,8 @@ export default function CuponeraSyncCard(props: {
       </div>
 
       <p style={{ ...mutedText, fontSize: 12, marginBottom: 0 }}>
-        Se sincroniza sola cada minuto: lo que cambia en Marcolini (precios, productos agotados o nuevos, marcas, códigos) se ve aquí en
-        máximo un minuto. Solo entran las marcas que tienen a Nail Fest aceptada en Marcolini, con el código de Nail Fest en cada una; si una
+        Se sincroniza sola cada hora: lo que cambia en Marcolini (precios, productos agotados o nuevos, marcas, códigos) se ve aquí en
+        máximo una hora. Solo entran las marcas que tienen a Nail Fest aceptada en Marcolini, con el código de Nail Fest en cada una; si una
         marca saca a Nail Fest, sale de la cuponera en la siguiente sincronización.
       </p>
     </div>

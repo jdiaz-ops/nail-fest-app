@@ -23,7 +23,7 @@
     },
     {
       "path": "/api/cuponera/sync",
-      "schedule": "* * * * *"
+      "schedule": "0 * * * *"
     }
   ]
 }

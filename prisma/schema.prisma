@@ -2083,7 +2083,7 @@ model CuponeraSettings {
   lastSyncProducts    Int?
   creatorName         String?
   creatorSlug         String?
-  // One sync at a time (the every-minute cron and "Sincronizar ahora" can
+  // One sync at a time (the hourly cron and "Sincronizar ahora" can
   // meet): set while one runs; a sync that died leaves it to expire.
   syncLockUntil       DateTime?
   updatedAt           DateTime  @updatedAt
