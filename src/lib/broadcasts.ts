@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { Prisma, type EmailLogStatus } from "@prisma/client";
 import { categorizeEmailFailure, EMAIL_FAILURE_INFO, type EmailFailureCategory } from "@/lib/email/failureCategories";
-import { resolveEventBroadcastRecipients } from "@/lib/broadcastRecipients";
+import { resolveEventBroadcastRecipients, checkInOf } from "@/lib/broadcastRecipients";
 import { resolveSegment, type SegmentFilter } from "@/lib/segments/builder";
 import { bulkActiveConsent } from "@/lib/consent";
 import { emailProvider } from "@/lib/email";
@@ -70,7 +70,7 @@ export async function sendEventBroadcast(
   } else if (broadcast.recipientPersonIds) {
     recipientIds = broadcast.recipientPersonIds as unknown as string[];
   } else {
-    const recipients = await resolveEventBroadcastRecipients(broadcast.eventId, broadcast.ticketTypeId, broadcast.onlyCheckedIn);
+    const recipients = await resolveEventBroadcastRecipients(broadcast.eventId, broadcast.ticketTypeId, checkInOf(broadcast));
     recipientIds = recipients.map((r) => r.person.id);
     await db.emailBroadcast.update({
       where: { id: broadcast.id },
@@ -115,7 +115,7 @@ export async function sendEventBroadcast(
     // current, then filtered down to just this chunk's frozen ids —
     // membership itself never grows beyond recipientIds, only the DATA
     // for it gets refreshed.
-    const allRecipients = await resolveEventBroadcastRecipients(broadcast.eventId, broadcast.ticketTypeId, broadcast.onlyCheckedIn);
+    const allRecipients = await resolveEventBroadcastRecipients(broadcast.eventId, broadcast.ticketTypeId, checkInOf(broadcast));
     const byId = new Map(allRecipients.map((r) => [r.person.id, r]));
     const chunk = chunkIds
       .filter((id) => !alreadyLogged.has(id))

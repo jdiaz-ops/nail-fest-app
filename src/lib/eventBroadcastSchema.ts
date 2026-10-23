@@ -15,11 +15,16 @@ export const eventBroadcastBodySchema = z
     attachTicketPdf: z.boolean().optional().default(false),
     // Only registrants scanned at the door (the review ask) — see lib/reviews.ts.
     onlyCheckedIn: z.boolean().optional().default(false),
+    // Only registrants nobody has scanned yet ("te estamos esperando").
+    onlyNotCheckedIn: z.boolean().optional().default(false),
     scheduleKind: z.enum(["IMMEDIATE", "AT_DATETIME", "BEFORE_EVENT_START", "AFTER_EVENT_END"]),
     scheduledAt: z.string().datetime().optional(),
     scheduleOffsetMinutes: z.number().int().min(0).optional(),
   })
   .superRefine((data, ctx) => {
+    if (data.onlyCheckedIn && data.onlyNotCheckedIn) {
+      ctx.addIssue({ code: "custom", message: "onlyCheckedIn and onlyNotCheckedIn can't both be set", path: ["onlyNotCheckedIn"] });
+    }
     if (data.scheduleKind === "AT_DATETIME" && !data.scheduledAt) {
       ctx.addIssue({ code: "custom", message: "scheduledAt required for AT_DATETIME", path: ["scheduledAt"] });
     }

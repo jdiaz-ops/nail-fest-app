@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requirePageUser } from "@/lib/auth/guard";
+import { eventBroadcastAudienceCounts } from "@/lib/broadcastRecipients";
 import EventBroadcastComposer from "../../../EventBroadcastComposer";
 
 export const dynamic = "force-dynamic";
@@ -21,9 +22,9 @@ export default async function NewEventBroadcastPage({
   const event = await db.event.findUnique({ where: { id: params.id } });
   if (!event) notFound();
 
-  const [ticketTypes, allBuyersCount, source] = await Promise.all([
+  const [ticketTypes, counts, source] = await Promise.all([
     db.ticketType.findMany({ where: { eventId: params.id }, orderBy: { order: "asc" } }),
-    db.registration.count({ where: { eventId: params.id, status: "CONFIRMED" } }),
+    eventBroadcastAudienceCounts(params.id),
     searchParams.duplicate
       ? // Scoped to eventId too, not just id — a duplicate link should
         // never let someone pull in another event's broadcast content by
@@ -32,13 +33,7 @@ export default async function NewEventBroadcastPage({
       : null,
   ]);
 
-  const ticketTypeCounts = await Promise.all(
-    ticketTypes.map(async (t) => ({
-      id: t.id,
-      name: t.name,
-      count: await db.registration.count({ where: { eventId: params.id, status: "CONFIRMED", ticketTypeId: t.id } }),
-    }))
-  );
+  const ticketTypeCounts = ticketTypes.map((t) => ({ id: t.id, name: t.name, ...(counts.byTicketType.get(t.id) ?? { count: 0, checkedIn: 0 }) }));
 
   return (
     <div>
@@ -47,7 +42,7 @@ export default async function NewEventBroadcastPage({
         eventId={params.id}
         eventFormat={event.format}
         ticketTypes={ticketTypeCounts}
-        allBuyersCount={allBuyersCount}
+        allBuyers={counts.all}
         initial={
           source
             ? {
@@ -56,6 +51,7 @@ export default async function NewEventBroadcastPage({
                 bodyHtml: source.bodyHtml ?? "",
                 attachTicketPdf: source.attachTicketPdf,
                 onlyCheckedIn: source.onlyCheckedIn,
+                onlyNotCheckedIn: source.onlyNotCheckedIn,
               }
             : undefined
         }

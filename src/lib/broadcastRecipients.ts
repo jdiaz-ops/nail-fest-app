@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import type { Person } from "@prisma/client";
+import type { Person, Prisma } from "@prisma/client";
 
 // Registration fields needed to build a personalized entrada PDF for a
 // recipient (see broadcasts.ts's use of renderTicketPdfBuffer), plus
@@ -36,9 +36,31 @@ export interface EventBroadcastRecipient {
 // but keeping the registration attached is what lets a broadcast attach a
 // real, personalized entrada PDF (needs that registration's own qrToken)
 // instead of only the person's contact info.
-export async function resolveEventBroadcastRecipients(eventId: string, ticketTypeId?: string | null, onlyCheckedIn = false): Promise<EventBroadcastRecipient[]> {
+//
+// Either audience can be narrowed by attendance (EventBroadcastCheckIn).
+
+/** Who among the buyers: everyone, only those already scanned at the door
+ * (checkedInCount > 0 — the review ask), or only those nobody has scanned
+ * yet (checkedInCount = 0 — "te estamos esperando", asked on 2026-10-23). */
+export type EventBroadcastCheckIn = "all" | "checkedIn" | "notCheckedIn";
+
+/** A broadcast's (or a form's) two flags as one audience. */
+export function checkInOf(flags: { onlyCheckedIn: boolean; onlyNotCheckedIn: boolean }): EventBroadcastCheckIn {
+  return flags.onlyCheckedIn ? "checkedIn" : flags.onlyNotCheckedIn ? "notCheckedIn" : "all";
+}
+
+export function eventBroadcastRecipientWhere(eventId: string, ticketTypeId: string | null | undefined, checkIn: EventBroadcastCheckIn): Prisma.RegistrationWhereInput {
+  return {
+    eventId,
+    status: "CONFIRMED",
+    ...(ticketTypeId ? { ticketTypeId } : {}),
+    ...(checkIn === "checkedIn" ? { checkedInCount: { gt: 0 } } : checkIn === "notCheckedIn" ? { checkedInCount: 0 } : {}),
+  };
+}
+
+export async function resolveEventBroadcastRecipients(eventId: string, ticketTypeId?: string | null, checkIn: EventBroadcastCheckIn = "all"): Promise<EventBroadcastRecipient[]> {
   const registrations = await db.registration.findMany({
-    where: { eventId, status: "CONFIRMED", ...(ticketTypeId ? { ticketTypeId } : {}), ...(onlyCheckedIn ? { checkedInCount: { gt: 0 } } : {}) },
+    where: eventBroadcastRecipientWhere(eventId, ticketTypeId, checkIn),
     include: { person: true },
   });
   return registrations.map((r) => ({
@@ -47,6 +69,34 @@ export async function resolveEventBroadcastRecipients(eventId: string, ticketTyp
   }));
 }
 
-export async function countEventBroadcastRecipients(eventId: string, ticketTypeId?: string | null, onlyCheckedIn = false): Promise<number> {
-  return db.registration.count({ where: { eventId, status: "CONFIRMED", ...(ticketTypeId ? { ticketTypeId } : {}), ...(onlyCheckedIn ? { checkedInCount: { gt: 0 } } : {}) } });
+export async function countEventBroadcastRecipients(eventId: string, ticketTypeId?: string | null, checkIn: EventBroadcastCheckIn = "all"): Promise<number> {
+  return db.registration.count({ where: eventBroadcastRecipientWhere(eventId, ticketTypeId, checkIn) });
+}
+
+export interface AudienceCount {
+  count: number;
+  /** Already scanned at the door; the ones not scanned yet are the rest. */
+  checkedIn: number;
+}
+
+/** The composer's numbers: for all buyers and per ticket type, how many
+ * there are and how many were already scanned — two queries, not one per
+ * type and audience. */
+export async function eventBroadcastAudienceCounts(eventId: string): Promise<{ all: AudienceCount; byTicketType: Map<string, AudienceCount> }> {
+  const [everyone, scanned] = await Promise.all([
+    db.registration.groupBy({ by: ["ticketTypeId"], where: eventBroadcastRecipientWhere(eventId, null, "all"), _count: { _all: true } }),
+    db.registration.groupBy({ by: ["ticketTypeId"], where: eventBroadcastRecipientWhere(eventId, null, "checkedIn"), _count: { _all: true } }),
+  ]);
+  const all: AudienceCount = { count: 0, checkedIn: 0 };
+  const byTicketType = new Map<string, AudienceCount>();
+  for (const row of everyone) {
+    all.count += row._count._all;
+    if (row.ticketTypeId) byTicketType.set(row.ticketTypeId, { count: row._count._all, checkedIn: 0 });
+  }
+  for (const row of scanned) {
+    all.checkedIn += row._count._all;
+    const entry = row.ticketTypeId ? byTicketType.get(row.ticketTypeId) : undefined;
+    if (entry) entry.checkedIn = row._count._all;
+  }
+  return { all, byTicketType };
 }

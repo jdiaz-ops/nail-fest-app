@@ -834,6 +834,11 @@ model EmailBroadcast {
   // door (Registration.checkedInCount > 0) instead of everyone CONFIRMED —
   // the "ask attendees for a review" send, see lib/reviews.ts.
   onlyCheckedIn         Boolean               @default(false)
+  // Event broadcasts only, the other way around: the registrants nobody has
+  // scanned at the door yet (checkedInCount = 0) — "te estamos esperando",
+  // asked on 2026-10-23. Resolved when the send starts, like every audience
+  // here. Never set together with onlyCheckedIn (eventBroadcastSchema.ts).
+  onlyNotCheckedIn      Boolean               @default(false)
   subject               String
   // Plain text — the original /admin/crm/broadcasts flow (escaped +
   // newline-to-<br/> at send time, see lib/email/templates.ts's

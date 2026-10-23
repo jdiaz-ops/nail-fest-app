@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requirePageUser } from "@/lib/auth/guard";
+import { eventBroadcastAudienceCounts } from "@/lib/broadcastRecipients";
 import EventBroadcastComposer from "../../../../EventBroadcastComposer";
 
 export const dynamic = "force-dynamic";
@@ -43,17 +44,11 @@ export default async function EditEventBroadcastPage({
     );
   }
 
-  const [ticketTypes, allBuyersCount] = await Promise.all([
+  const [ticketTypes, counts] = await Promise.all([
     db.ticketType.findMany({ where: { eventId: params.id }, orderBy: { order: "asc" } }),
-    db.registration.count({ where: { eventId: params.id, status: "CONFIRMED" } }),
+    eventBroadcastAudienceCounts(params.id),
   ]);
-  const ticketTypeCounts = await Promise.all(
-    ticketTypes.map(async (t) => ({
-      id: t.id,
-      name: t.name,
-      count: await db.registration.count({ where: { eventId: params.id, status: "CONFIRMED", ticketTypeId: t.id } }),
-    }))
-  );
+  const ticketTypeCounts = ticketTypes.map((t) => ({ id: t.id, name: t.name, ...(counts.byTicketType.get(t.id) ?? { count: 0, checkedIn: 0 }) }));
 
   return (
     <div>
@@ -62,13 +57,15 @@ export default async function EditEventBroadcastPage({
         eventId={params.id}
         eventFormat={event.format}
         ticketTypes={ticketTypeCounts}
-        allBuyersCount={allBuyersCount}
+        allBuyers={counts.all}
         editing={{
           id: broadcast.id,
           ticketTypeId: broadcast.ticketTypeId,
           subject: broadcast.subject,
           bodyHtml: broadcast.bodyHtml ?? "",
-          attachTicketPdf: broadcast.attachTicketPdf, onlyCheckedIn: broadcast.onlyCheckedIn,
+          attachTicketPdf: broadcast.attachTicketPdf,
+          onlyCheckedIn: broadcast.onlyCheckedIn,
+          onlyNotCheckedIn: broadcast.onlyNotCheckedIn,
           scheduleKind: broadcast.scheduleKind,
           scheduledAt: broadcast.scheduledAt ? broadcast.scheduledAt.toISOString() : null,
           scheduleOffsetMinutes: broadcast.scheduleOffsetMinutes,

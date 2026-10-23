@@ -9,6 +9,13 @@ type ScheduleKind = "IMMEDIATE" | "AT_DATETIME" | "BEFORE_EVENT_START" | "AFTER_
 
 const UNIT_TO_MINUTES: Record<"minutos" | "horas" | "días", number> = { minutos: 1, horas: 60, días: 1440 };
 
+// Everyone, only those already scanned at the door, or only those nobody
+// has scanned yet — see lib/broadcastRecipients.ts (EventBroadcastCheckIn).
+type CheckIn = "all" | "checkedIn" | "notCheckedIn";
+
+const checkInFrom = (flags?: { onlyCheckedIn?: boolean; onlyNotCheckedIn?: boolean }): CheckIn =>
+  flags?.onlyCheckedIn ? "checkedIn" : flags?.onlyNotCheckedIn ? "notCheckedIn" : "all";
+
 type EditingBroadcast = {
   id: string;
   ticketTypeId: string | null;
@@ -16,6 +23,7 @@ type EditingBroadcast = {
   bodyHtml: string;
   attachTicketPdf: boolean;
   onlyCheckedIn: boolean;
+  onlyNotCheckedIn: boolean;
   scheduleKind: ScheduleKind;
   scheduledAt: string | null; // ISO, or null when scheduleKind isn't AT_DATETIME
   scheduleOffsetMinutes: number | null;
@@ -49,7 +57,7 @@ export default function EventBroadcastComposer({
   eventId,
   eventFormat,
   ticketTypes,
-  allBuyersCount,
+  allBuyers,
   initial,
   editing,
 }: {
@@ -59,8 +67,10 @@ export default function EventBroadcastComposer({
   // caller without it just never shows that button (same as before it
   // existed).
   eventFormat?: EventFormat;
-  ticketTypes: { id: string; name: string; count: number }[];
-  allBuyersCount: number;
+  // count = confirmed registrations; checkedIn = how many of them were
+  // already scanned at the door (the ones not scanned yet are the rest).
+  ticketTypes: { id: string; name: string; count: number; checkedIn: number }[];
+  allBuyers: { count: number; checkedIn: number };
   // Set when this composer opened from "Duplicar" on an existing
   // broadcast (see the [id]/broadcasts list's own comment) — pre-fills
   // the form with that broadcast's content so the admin only has to
@@ -68,7 +78,7 @@ export default function EventBroadcastComposer({
   // deliberately NOT copied — this is always a brand-new send the admin
   // configures fresh (a stale scheduled date from the original wouldn't
   // make sense to inherit silently), same as the plain "new" case.
-  initial?: { ticketTypeId: string | null; subject: string; bodyHtml: string; attachTicketPdf: boolean; onlyCheckedIn?: boolean };
+  initial?: { ticketTypeId: string | null; subject: string; bodyHtml: string; attachTicketPdf: boolean; onlyCheckedIn?: boolean; onlyNotCheckedIn?: boolean };
   // Set when this composer opened from "Editar" on an existing QUEUED
   // broadcast (see the list's own "Editar" link, shown only for QUEUED
   // rows). Unlike `initial`, this ALSO pre-fills the existing schedule
@@ -85,7 +95,7 @@ export default function EventBroadcastComposer({
   const [subject, setSubject] = useState(editing?.subject ?? initial?.subject ?? "");
   const [bodyHtml, setBodyHtml] = useState(editing?.bodyHtml ?? initial?.bodyHtml ?? "");
   const [attachTicketPdf, setAttachTicketPdf] = useState(editing?.attachTicketPdf ?? initial?.attachTicketPdf ?? false);
-  const [onlyCheckedIn, setOnlyCheckedIn] = useState(editing?.onlyCheckedIn ?? initial?.onlyCheckedIn ?? false);
+  const [checkIn, setCheckIn] = useState<CheckIn>(checkInFrom(editing ?? initial));
   const [scheduleKind, setScheduleKind] = useState<ScheduleKind>(editing?.scheduleKind ?? "IMMEDIATE");
   const [scheduledAtLocal, setScheduledAtLocal] = useState(
     editing?.scheduledAt ? toLocalInputValue(new Date(editing.scheduledAt)) : ""
@@ -99,7 +109,9 @@ export default function EventBroadcastComposer({
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const recipientCount = ticketTypeId ? ticketTypes.find((t) => t.id === ticketTypeId)?.count ?? 0 : allBuyersCount;
+  const audience = ticketTypeId ? ticketTypes.find((t) => t.id === ticketTypeId) ?? { count: 0, checkedIn: 0 } : allBuyers;
+  const notCheckedInCount = Math.max(0, audience.count - audience.checkedIn);
+  const recipientCount = checkIn === "checkedIn" ? audience.checkedIn : checkIn === "notCheckedIn" ? notCheckedInCount : audience.count;
 
   async function handleSendTest() {
     if (!testTo.trim() || !subject.trim() || !bodyHtml.trim()) return;
@@ -128,7 +140,8 @@ export default function EventBroadcastComposer({
       subject,
       bodyHtml,
       attachTicketPdf,
-      onlyCheckedIn,
+      onlyCheckedIn: checkIn === "checkedIn",
+      onlyNotCheckedIn: checkIn === "notCheckedIn",
       scheduleKind,
     };
     if (scheduleKind === "AT_DATETIME") {
@@ -164,16 +177,27 @@ export default function EventBroadcastComposer({
       <div className="field">
         <label>Destinatarios</label>
         <select value={ticketTypeId} onChange={(e) => setTicketTypeId(e.target.value)}>
-          <option value="">Todos los que compraron entrada ({allBuyersCount})</option>
+          <option value="">Todos los que compraron entrada ({allBuyers.count})</option>
           {ticketTypes.map((t) => (
             <option key={t.id} value={t.id}>
               Solo {t.name} ({t.count})
             </option>
           ))}
         </select>
+      </div>
+
+      <div className="field">
+        <label htmlFor="eb-check-in">Check-in</label>
+        <select id="eb-check-in" value={checkIn} onChange={(e) => setCheckIn(e.target.value as CheckIn)}>
+          <option value="all">Todos, hayan hecho check-in o no</option>
+          <option value="notCheckedIn">Solo quienes aún no han hecho check-in ({notCheckedInCount})</option>
+          <option value="checkedIn">Solo quienes ya hicieron check-in ({audience.checkedIn})</option>
+        </select>
         <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>
-          Se enviará a {recipientCount} {recipientCount === 1 ? "persona" : "personas"} — es correo
+          Se enviará a {recipientCount} {recipientCount === 1 ? "persona" : "personas"} (a hoy) — es correo
           operativo del evento (mismo canal que la entrada), no requiere consentimiento de marketing.
+          {checkIn !== "all" &&
+            " El check-in se revisa en el momento del envío: un correo programado solo le llega a quien siga en ese grupo cuando salga."}
         </p>
       </div>
 
@@ -209,20 +233,10 @@ export default function EventBroadcastComposer({
             + Insertar enlace de reseña
           </button>
           <p style={{ fontSize: 11, color: "#8a8478", margin: "4px 0 0" }}>
-            Cada destinataria recibe su propio enlace para calificar el evento (solo abre para quien fue escaneada en puerta). Combínalo con "Solo a quienes asistieron".
+            Cada destinataria recibe su propio enlace para calificar el evento (solo abre para quien fue escaneada en puerta). Combínalo con «Solo quienes ya hicieron check-in».
           </p>
         </div>
         <RichTextEditor ref={editorRef} value={bodyHtml} onChange={setBodyHtml} />
-      </div>
-
-      <div className="field">
-        <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <input type="checkbox" checked={onlyCheckedIn} onChange={(e) => setOnlyCheckedIn(e.target.checked)} />
-          <span>Solo a quienes asistieron (escaneadas en puerta)</span>
-        </label>
-        <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>
-          Para pedir la reseña después del evento. El conteo de destinatarios de arriba no aplica este filtro; el número real se muestra al programar.
-        </p>
       </div>
 
       <div className="field">

@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth/guard";
 import { sanitizeEventDescription } from "@/lib/sanitizeHtml";
 import { sendEventBroadcast } from "@/lib/broadcasts";
-import { countEventBroadcastRecipients } from "@/lib/broadcastRecipients";
+import { countEventBroadcastRecipients, checkInOf } from "@/lib/broadcastRecipients";
 import { eventBroadcastBodySchema } from "@/lib/eventBroadcastSchema";
 import { resolveDueAt } from "@/lib/broadcastSchedule";
 import { cancelScheduledSend, scheduleEventBroadcastSend, QSTASH_MAX_DELAY_MS } from "@/lib/qstash";
@@ -60,6 +60,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       bodyHtml: sanitizeEventDescription(data.bodyHtml),
       attachTicketPdf: data.attachTicketPdf,
       onlyCheckedIn: data.onlyCheckedIn,
+      onlyNotCheckedIn: data.onlyNotCheckedIn,
       scheduleKind: data.scheduleKind,
       scheduledAt: data.scheduledAt ? new Date(data.scheduledAt) : null,
       scheduleOffsetMinutes: data.scheduleOffsetMinutes ?? null,
@@ -86,7 +87,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const dueAt = resolveDueAt(updated, event);
   const qstashMessageId = dueAt ? await scheduleEventBroadcastSend(existing.id, dueAt) : null;
   if (qstashMessageId) await db.emailBroadcast.update({ where: { id: existing.id }, data: { qstashMessageId } });
-  const recipientCount = await countEventBroadcastRecipients(event.id, data.ticketTypeId || null, data.onlyCheckedIn);
+  const recipientCount = await countEventBroadcastRecipients(event.id, data.ticketTypeId || null, checkInOf(data));
   return NextResponse.json({
     ok: true,
     broadcastId: existing.id,

@@ -101,7 +101,10 @@ export default async function EventBroadcastsPage({ params }: { params: { id: st
               return (
                 <tr key={b.id} style={{ borderTop: "1px solid #f0efec" }}>
                   <td style={{ padding: "10px 12px" }}>{b.subject}</td>
-                  <td style={{ padding: "10px 12px", color: "#5b5f6b" }}>{b.ticketType ? b.ticketType.name : "Todos"}</td>
+                  <td style={{ padding: "10px 12px", color: "#5b5f6b" }}>
+                    {b.ticketType ? b.ticketType.name : "Todos"}
+                    {b.onlyNotCheckedIn ? " · sin check-in" : b.onlyCheckedIn ? " · con check-in" : ""}
+                  </td>
                   <td style={{ padding: "10px 12px", color: "#5b5f6b" }}>
                     {SCHEDULE_LABEL[b.scheduleKind] ?? b.scheduleKind}
                     {dueAt && ` — ${formatDateInTz(dueAt, { dateStyle: "medium", timeStyle: "short" }, orgSettings.timezone, orgSettings.language)}`}
