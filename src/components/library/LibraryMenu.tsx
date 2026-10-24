@@ -16,6 +16,15 @@ function Icon({ children }: { children: ReactNode }) {
 
 const ICONS = {
   home: <path d="M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z" />,
+  nailfest: (
+    <>
+      <rect x="3.5" y="3.5" width="7" height="7" rx="2" />
+      <rect x="13.5" y="3.5" width="7" height="7" rx="2" />
+      <rect x="3.5" y="13.5" width="7" height="7" rx="2" />
+      <rect x="13.5" y="13.5" width="7" height="7" rx="2" />
+    </>
+  ),
+  chat: <path d="M20.5 11.6a8.4 8.4 0 0 1-12.3 7.5L3.5 20.5l1.4-4.6a8.4 8.4 0 1 1 15.6-4.3z" />,
   shorties: (
     <>
       <rect x="6" y="2.5" width="12" height="19" rx="3" />
@@ -120,6 +129,7 @@ export default function LibraryMenu({
   const { texts, sections } = menu;
   const links = (
     [
+      menu.communityHome && { href: menu.communityHome, label: "Inicio Nail Fest", icon: ICONS.nailfest, tone: "bib-tone-stone" },
       menu.library && { href: "/biblioteca", label: texts.home, icon: ICONS.home, tone: "bib-tone-mint", current: current === "inicio" },
       menu.shorties && {
         href: "/biblioteca/cortos",
@@ -133,6 +143,7 @@ export default function LibraryMenu({
       menu.mostViewed && { href: "/biblioteca#lo-mas-visto", label: texts.mostViewed, icon: ICONS.trend, tone: "bib-tone-rose" },
       menu.recordings && { href: "/biblioteca/buscar?tipo=maraton", label: texts.recordings, icon: ICONS.camera, tone: "bib-tone-lilac" },
       menu.instructors && { href: "/instructoras", label: texts.directory, icon: ICONS.people, tone: "bib-tone-peach", current: current === "instructoras" },
+      menu.consultorio && { href: "/consultorio", label: "Consultorio", icon: ICONS.chat, tone: "bib-tone-green" },
       menu.cuponera && { href: "/cuponera", label: texts.cuponera, icon: ICONS.tag, tone: "bib-tone-sand" },
     ] as (MenuLink | false)[]
   ).filter((l): l is MenuLink => Boolean(l));

@@ -9,6 +9,7 @@ const patchSchema = z
     published: z.boolean(),
     instructorsPublished: z.boolean(),
     portalOpen: z.boolean(),
+    consultorioPublished: z.boolean(),
     // Only real keys; an empty text goes back to the usual one. Long enough
     // for the directory's terms (the portal's "Términos").
     texts: z.record(z.string(), z.string().max(8000)).transform((map) =>

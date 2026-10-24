@@ -405,6 +405,12 @@ export interface LibraryMenuData {
   library: boolean;
   instructors: boolean;
   cuponera: boolean;
+  /** The Consultorio, once it's public. */
+  consultorio: boolean;
+  /** Nail Fest's homepage as the community's home (OrgSettings.
+   * homepageCommunity) — where it is; null while it's not on. The team
+   * goes to its preview. */
+  communityHome: string | null;
   shorties: boolean;
   /** "Lo nuevo", the levels: there are short videos. */
   videos: boolean;

@@ -9,6 +9,12 @@ import { formatHeroDate } from "@/lib/eventHeroDate";
 const fraunces = Fraunces({ subsets: ["latin"], weight: ["900"] });
 import ReviewsSection from "@/components/reviews/ReviewsSection";
 import ReviewsBadge from "@/components/reviews/ReviewsBadge";
+import CommunityHub from "@/components/community/CommunityHub";
+import SiteMenu from "@/components/community/SiteMenu";
+import { viewerCanSeeSamples } from "@/lib/reviewsViewer";
+import { getLibraryViewer } from "@/lib/library/data";
+import { communityAccountLink, communityMenuLinks, getCommunityHome, partsOf } from "@/lib/community/home";
+import { getConsultorioIdentity } from "@/lib/community/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -17,8 +23,16 @@ export const dynamic = "force-dynamic";
 // once tiquete.nailfest.co is connected). Editable via /admin/homepage —
 // see OrgSettings.homepageImageUrl's schema comment for exactly which
 // parts are admin-authored vs. computed live from real Event data.
-export default async function HomePage() {
-  const [orgSettings, nextEvent] = await Promise.all([getOrgSettings(), getNextEvent()]);
+export default async function HomePage({ searchParams }: { searchParams: Record<string, string | string[] | undefined> }) {
+  const [orgSettings, nextEvent, staff] = await Promise.all([getOrgSettings(), getNextEvent(), viewerCanSeeSamples()]);
+
+  // The community's home (OrgSettings.homepageCommunity): the hub under the
+  // hero, and a menu over it. The team previews it at /?vista=comunidad.
+  const community = orgSettings.homepageCommunity || (staff && searchParams.vista === "comunidad");
+  const [viewer, identity] = community ? await Promise.all([getLibraryViewer(), getConsultorioIdentity()]) : [null, null];
+  const hub = viewer ? await getCommunityHome(viewer, nextEvent?.id ?? null) : null;
+  const menuLinks = hub ? communityMenuLinks(partsOf(hub), nextEvent, orgSettings.homepageCommunity ? "/" : "/?vista=comunidad") : [];
+  const account = hub ? communityAccountLink(identity, hub.consultorio.show) : null;
 
   // Venue only, no city — the city's already in the event name itself
   // (see EventForm's own "Nombre del evento" convention, e.g. "Nail Fest
@@ -36,6 +50,14 @@ export default async function HomePage() {
 
   return (
     <>
+    {hub && !orgSettings.homepageCommunity && (
+      <div className="bib-preview">
+        <span>
+          <b>Vista previa del equipo.</b> Así se verá la portada de la comunidad; el público todavía ve la portada de siempre.
+        </span>
+        <Link href="/admin/homepage">Ir a Editar homepage</Link>
+      </div>
+    )}
     <main
       style={{
         position: "relative",
@@ -95,6 +117,11 @@ export default async function HomePage() {
         </>
       )}
 
+      {hub && (
+        <div className={hasMedia ? "hub-menu" : "hub-menu hub-menu--solid"}>
+          <SiteMenu links={menuLinks} account={account} />
+        </div>
+      )}
       <div style={{ position: "relative", zIndex: 1, padding: "32px 24px 20px", textAlign: "center" }}>
         {/* eslint-disable-next-line @next/next/no-img-element -- fixed logo mark, not worth next/image's overhead here */}
         <img src="/logo.png" alt="Nail Fest" style={{ height: 72, width: "auto", margin: "0 auto", display: "block" }} />
@@ -188,7 +215,17 @@ export default async function HomePage() {
           </>
         )}
       </div>
+      {hub && (
+        <a href="#comunidad" className="hub-cue" style={{ textShadow: hasMedia ? "0 1px 6px rgba(0,0,0,0.35)" : "none" }}>
+          Descubre tu lugar Nail Fest
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </a>
+      )}
     </main>
+
+    {hub && <CommunityHub home={hub} titleClass={fraunces.className} events={hub.moreEvents} />}
 
     {/* Photo gallery — square tiles, already fully designed by whoever
         made them (photo + caption baked in); this just lays them out.

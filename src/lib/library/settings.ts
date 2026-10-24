@@ -12,6 +12,7 @@ const DEFAULTS: LibrarySettings = {
   published: false,
   instructorsPublished: false,
   portalOpen: false,
+  consultorioPublished: false,
   texts: {},
   sections: {},
   popularSearches: DEFAULT_POPULAR_SEARCHES,
@@ -27,6 +28,8 @@ export interface LibraryConfig {
   instructorsPublished: boolean;
   /** Anyone can make a profile at /instructoras/unirme. */
   portalOpen: boolean;
+  /** nailfest.lat/consultorio for everyone. */
+  consultorioPublished: boolean;
   texts: LibraryTexts;
   sections: LibrarySections;
   popularSearches: string[];
@@ -37,6 +40,7 @@ export function libraryConfigOf(settings: LibrarySettings): LibraryConfig {
     published: settings.published,
     instructorsPublished: settings.instructorsPublished,
     portalOpen: settings.portalOpen,
+    consultorioPublished: settings.consultorioPublished,
     texts: resolveTexts(settings.texts),
     sections: resolveSections(settings.sections),
     popularSearches: settings.popularSearches,
@@ -47,6 +51,7 @@ export type LibrarySettingsPatch = Partial<{
   published: boolean;
   instructorsPublished: boolean;
   portalOpen: boolean;
+  consultorioPublished: boolean;
   texts: Record<string, string>;
   sections: Record<string, boolean>;
   popularSearches: string[];

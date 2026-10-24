@@ -8,7 +8,7 @@ type Mode = "login" | "forgot" | "asked";
 // "Entrar" (/instructoras/entrar): her username or her email, and her
 // password. "¿Olvidaste tu contraseña?" only leaves the request for the
 // team, who send her a link by WhatsApp — nothing is emailed for now.
-export default function LoginForm() {
+export default function LoginForm({ returnTo = null }: { returnTo?: string | null }) {
   const [mode, setMode] = useState<Mode>("login");
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -21,7 +21,7 @@ export default function LoginForm() {
     setError(null);
     const result = await send("/api/instructoras/entrar", { login, password: String(form.get("password") ?? "") });
     if (result.ok) {
-      window.location.assign(typeof result.data.next === "string" ? result.data.next : "/instructoras/portal");
+      window.location.assign(returnTo ?? (typeof result.data.next === "string" ? result.data.next : "/instructoras/portal"));
       return;
     }
     setSending(false);

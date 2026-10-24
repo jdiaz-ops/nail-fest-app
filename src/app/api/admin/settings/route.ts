@@ -64,6 +64,8 @@ const patchSchema = z
     homepageReviews: z.enum(["block", "badge", "off"]),
     homepageReviewsPosition: z.enum(["after_hero", "before_logos"]),
     linksPageReviewsBadge: z.boolean(),
+    // The homepage as the community's home — see OrgSettings.homepageCommunity.
+    homepageCommunity: z.boolean(),
   })
   .partial();
 

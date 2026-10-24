@@ -18,6 +18,7 @@ const NAV: { href: string; label: string; adminOnly?: boolean }[] = [
   { href: "/admin/links", label: "Editar Links", adminOnly: true },
   { href: "/admin/cuponera", label: "Editar cuponera", adminOnly: true },
   { href: "/admin/biblioteca", label: "Editar biblioteca", adminOnly: true },
+  { href: "/admin/consultorio", label: "Consultorio" },
   { href: "/admin/pages", label: "Páginas", adminOnly: true },
   { href: "/admin/resenas", label: "Reseñas" },
   { href: "/admin/settings", label: "Configuración", adminOnly: true },

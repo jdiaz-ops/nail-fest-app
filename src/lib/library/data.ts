@@ -1,6 +1,7 @@
 import type { CuponeraBrand, CuponeraProduct as CuponeraProductRow, Instructor, LibraryVideo, Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { viewerCanSeeSamples } from "@/lib/reviewsViewer";
+import { getOrgSettings } from "@/lib/settings";
 import { getCuponeraSettings } from "@/lib/cuponera/settings";
 import { getCuponeraView } from "@/lib/cuponera/data";
 import { SAMPLE_PRODUCTS } from "@/lib/cuponera/sampleData";
@@ -388,9 +389,10 @@ export async function getLibraryMenu(viewer: LibraryViewer, now: Date = new Date
   const { texts, sections, popularSearches } = viewer.config;
   const library = viewer.staff || viewer.config.published;
   const instructors = viewer.staff || viewer.config.instructorsPublished;
-  const [facts, people] = await Promise.all([
+  const [facts, people, org] = await Promise.all([
     library ? menuVideoFacts(viewer, now) : Promise.resolve(null),
     instructors ? getInstructorCards(viewer, now) : Promise.resolve([] as InstructorCard[]),
+    getOrgSettings(),
   ]);
   const themes = facts
     ? LIBRARY_THEMES.filter((t) => (facts.themeCounts.get(t.key) ?? 0) > 0).map((t) => ({ key: t.key, label: t.label, icon: t.icon, tile: t.tile, count: facts.themeCounts.get(t.key) ?? 0 }))
@@ -399,6 +401,8 @@ export async function getLibraryMenu(viewer: LibraryViewer, now: Date = new Date
     library,
     instructors,
     cuponera: viewer.cuponeraLive,
+    consultorio: viewer.staff || viewer.config.consultorioPublished,
+    communityHome: org.homepageCommunity ? "/" : viewer.staff ? "/?vista=comunidad" : null,
     shorties: Boolean(facts) && (viewer.staff || (sections.shorties && facts!.shorties >= SHORTIES_SHOWN_FROM)),
     videos: Boolean(facts) && sections.newest && (viewer.staff || facts!.shorts > 0),
     mostViewed: Boolean(facts) && sections.mostViewed && (viewer.staff || facts!.watched >= MOST_VIEWED_FROM),

@@ -50,6 +50,8 @@ export interface OrgSettingsValue {
   homepageReviews: "block" | "badge" | "off";
   homepageReviewsPosition: "after_hero" | "before_logos";
   linksPageReviewsBadge: boolean;
+  // See OrgSettings.homepageCommunity's own schema comment.
+  homepageCommunity: boolean;
 }
 
 const DEFAULTS: OrgSettingsValue = {
@@ -82,6 +84,7 @@ const DEFAULTS: OrgSettingsValue = {
   homepageReviews: "block",
   homepageReviewsPosition: "before_logos",
   linksPageReviewsBadge: false,
+  homepageCommunity: false,
 };
 
 // No row exists until the first save from /admin/settings — reads never
@@ -120,6 +123,7 @@ export async function getOrgSettings(): Promise<OrgSettingsValue> {
     homepageReviews: row.homepageReviews === "badge" || row.homepageReviews === "off" ? row.homepageReviews : "block",
     homepageReviewsPosition: row.homepageReviewsPosition === "after_hero" ? "after_hero" : "before_logos",
     linksPageReviewsBadge: row.linksPageReviewsBadge,
+    homepageCommunity: row.homepageCommunity,
   };
 }
 
@@ -159,5 +163,6 @@ export async function updateOrgSettings(patch: Partial<OrgSettingsValue>): Promi
     homepageReviews: row.homepageReviews === "badge" || row.homepageReviews === "off" ? row.homepageReviews : "block",
     homepageReviewsPosition: row.homepageReviewsPosition === "after_hero" ? "after_hero" : "before_logos",
     linksPageReviewsBadge: row.linksPageReviewsBadge,
+    homepageCommunity: row.homepageCommunity,
   };
 }

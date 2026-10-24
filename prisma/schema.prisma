@@ -73,6 +73,8 @@ model Person {
   whatsappConversations WhatsAppConversation[]
   labels                Label[]
   reviews               Review[]
+  // Her community account (the Consultorio), when its email is this one.
+  communityMembers      CommunityMember[]
 
   @@index([phone])
   @@index([city])
@@ -1381,7 +1383,7 @@ model OrgSettings {
 
   // Privacy policy — rendered at /privacidad, linked from the
   // registration form's consent section.
-  privacyPolicyText String?
+  privacyPolicyText    String?
   // Its community part, below it (lib/communityPrivacy.ts): the library,
   // the cortos, the instructors, the Consultorio, the newsletters and their
   // polls. Null = the usual text.
@@ -1451,6 +1453,11 @@ model OrgSettings {
   homepageReviews         String  @default("block")
   homepageReviewsPosition String  @default("before_logos")
   linksPageReviewsBadge   Boolean @default(false)
+  // The homepage as the community's home (2026-10-24): under the event's
+  // hero, the way into everything — cortos, discounts, instructors, the
+  // Consultorio — and a menu. Off = the homepage as it was; the team can
+  // preview it at /?vista=comunidad.
+  homepageCommunity       Boolean @default(false)
   // The attendee-facing review pages' copy — title, intro, labels, the
   // consent and raffle lines, the thanks page's boxes and the "not
   // eligible" messages — as a {key: text} override map edited at
@@ -1654,6 +1661,10 @@ model AdminUser {
   whatsappNotes         WhatsAppNote[]
   comprobantes          Comprobante[]
   cancellations         Registration[]         @relation("RegistrationCancelledBy")
+  // The Consultorio, as "Equipo Nail Fest".
+  consultorioQuestions  ConsultorioQuestion[]
+  consultorioAnswers    ConsultorioAnswer[]
+  consultorioVotes      ConsultorioVote[]
 }
 
 // ---------------------------------------------------------------------------
@@ -2212,12 +2223,16 @@ model Instructor {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  videos      LibraryVideo[]
-  classes     InstructorClass[]
-  leads       LibraryLead[]
-  account     InstructorAccount?
-  accessLinks InstructorAccessLink[]
-  submissions InstructorVideoSubmission[]
+  videos               LibraryVideo[]
+  classes              InstructorClass[]
+  leads                LibraryLead[]
+  account              InstructorAccount?
+  accessLinks          InstructorAccessLink[]
+  submissions          InstructorVideoSubmission[]
+  // The Consultorio, with her portal account.
+  consultorioQuestions ConsultorioQuestion[]
+  consultorioAnswers   ConsultorioAnswer[]
+  consultorioVotes     ConsultorioVote[]
 }
 
 // An instructor's own login to the portal (nailfest.lat/instructoras/portal),
@@ -2441,6 +2456,8 @@ model LibrarySettings {
   // Anyone can make a profile at nailfest.lat/instructoras/unirme; closed =
   // staff only, while the instructors the team invites can still get in.
   portalOpen           Boolean  @default(false)
+  // nailfest.lat/consultorio for everyone; hidden = staff only, 404 for the rest.
+  consultorioPublished Boolean  @default(false)
   // Text key → the admin's text.
   texts                Json     @default("{}")
   // Section key → false when switched off.
@@ -2448,4 +2465,154 @@ model LibrarySettings {
   // "Lo más buscado" under the search box.
   popularSearches      String[] @default([])
   updatedAt            DateTime @updatedAt
+}
+
+// ── The community: accounts and the Consultorio (2026-10-24) ───────────────
+//
+// Anyone in the community can make an account (nailfest.lat/cuenta) to ask,
+// answer and vote in the Consultorio (nailfest.lat/consultorio). Instructors
+// take part with their portal account, and the team as "Equipo Nail Fest".
+// Nothing is emailed for now: a forgotten password becomes a request the
+// team answers with a one-time link by WhatsApp.
+
+model CommunityMember {
+  id               String    @id @default(cuid())
+  // Shown with everything she posts, with her city.
+  name             String
+  city             String
+  // Lowercase; never shown.
+  email            String    @unique
+  passwordHash     String
+  // The Consultorio's rules and the privacy policy, accepted at sign-up.
+  termsAcceptedAt  DateTime
+  resetRequestedAt DateTime?
+  // Wrong passwords in a row; enough of them lock the login for a while.
+  failedLogins     Int       @default(0)
+  lockedUntil      DateTime?
+  lastLoginAt      DateTime?
+  // The team stopped her from posting; what she posted is hidden.
+  blocked          Boolean   @default(false)
+  // Her CRM contact, when her email was already there.
+  person           Person?   @relation(fields: [personId], references: [id], onDelete: SetNull)
+  personId         String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  sessions    CommunitySession[]
+  accessLinks CommunityAccessLink[]
+  questions   ConsultorioQuestion[]
+  answers     ConsultorioAnswer[]
+  votes       ConsultorioVote[]
+
+  @@index([personId])
+}
+
+model CommunitySession {
+  id        String          @id @default(cuid())
+  tokenHash String          @unique
+  member    CommunityMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  memberId  String
+  createdAt DateTime        @default(now())
+  expiresAt DateTime
+
+  @@index([memberId])
+}
+
+// A one-time link the team sends her by WhatsApp to set a new password.
+model CommunityAccessLink {
+  id        String          @id @default(cuid())
+  tokenHash String          @unique
+  member    CommunityMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  memberId  String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime        @default(now())
+
+  @@index([memberId])
+}
+
+// Who posted: a member, an instructor (her portal account) or the team.
+enum ConsultorioAuthor {
+  MEMBER
+  INSTRUCTOR
+  TEAM
+}
+
+model ConsultorioQuestion {
+  id             String             @id @default(cuid())
+  // Its address (nailfest.lat/consultorio/<slug>), from the title.
+  slug           String             @unique
+  authorKind     ConsultorioAuthor
+  member         CommunityMember?   @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  memberId       String?
+  instructor     Instructor?        @relation(fields: [instructorId], references: [id], onDelete: Cascade)
+  instructorId   String?
+  // Who in the team posted it; it stays "Equipo Nail Fest" if they leave.
+  adminUser      AdminUser?         @relation(fields: [adminUserId], references: [id], onDelete: SetNull)
+  adminUserId    String?
+  // A key of lib/community/consultorio.ts's topics.
+  topic          String
+  title          String
+  body           String?
+  photoUrl       String?
+  // Hidden by the team: out of the Consultorio, kept.
+  hidden         Boolean            @default(false)
+  // "La que me resolvió", marked by whoever asked.
+  bestAnswer     ConsultorioAnswer? @relation("BestAnswer", fields: [bestAnswerId], references: [id], onDelete: SetNull)
+  bestAnswerId   String?            @unique
+  // The answers people see, kept in step with them.
+  answerCount    Int                @default(0)
+  // The last question or answer: "Recientes" goes by it.
+  lastActivityAt DateTime           @default(now())
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  answers ConsultorioAnswer[] @relation("QuestionAnswers")
+
+  @@index([hidden, lastActivityAt])
+  @@index([memberId])
+  @@index([instructorId])
+}
+
+model ConsultorioAnswer {
+  id           String              @id @default(cuid())
+  question     ConsultorioQuestion @relation("QuestionAnswers", fields: [questionId], references: [id], onDelete: Cascade)
+  questionId   String
+  authorKind   ConsultorioAuthor
+  member       CommunityMember?    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  memberId     String?
+  instructor   Instructor?         @relation(fields: [instructorId], references: [id], onDelete: Cascade)
+  instructorId String?
+  adminUser    AdminUser?          @relation(fields: [adminUserId], references: [id], onDelete: SetNull)
+  adminUserId  String?
+  body         String
+  hidden       Boolean             @default(false)
+  // "Me sirvió", kept in step with its votes.
+  usefulCount  Int                 @default(0)
+  createdAt    DateTime            @default(now())
+
+  votes  ConsultorioVote[]
+  bestOf ConsultorioQuestion? @relation("BestAnswer")
+
+  @@index([questionId, hidden])
+  @@index([memberId])
+  @@index([instructorId])
+}
+
+// "Me sirvió": one per person and answer.
+model ConsultorioVote {
+  id           String            @id @default(cuid())
+  answer       ConsultorioAnswer @relation(fields: [answerId], references: [id], onDelete: Cascade)
+  answerId     String
+  member       CommunityMember?  @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  memberId     String?
+  instructor   Instructor?       @relation(fields: [instructorId], references: [id], onDelete: Cascade)
+  instructorId String?
+  adminUser    AdminUser?        @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+  adminUserId  String?
+  createdAt    DateTime          @default(now())
+
+  @@unique([answerId, memberId])
+  @@unique([answerId, instructorId])
+  @@unique([answerId, adminUserId])
 }

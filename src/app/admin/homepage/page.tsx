@@ -6,6 +6,7 @@ import HomepageGalleryEditor from "./HomepageGalleryEditor";
 import HomepageBrandLogosEditor from "./HomepageBrandLogosEditor";
 import HomepageClosingTextEditor from "./HomepageClosingTextEditor";
 import HomepageReviewsEditor from "./HomepageReviewsEditor";
+import HomepageCommunityEditor from "./HomepageCommunityEditor";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,7 @@ export default async function AdminHomepagePage() {
         La página principal de nailfest.co. El nombre del evento, ciudad y fechas se toman solos del próximo evento
         publicado — aquí solo editas el fondo (imagen, GIF o video), un eslogan opcional, y el texto del botón.
       </p>
+      <HomepageCommunityEditor initialOn={orgSettings.homepageCommunity} />
       <HomepageEditorForm
         initialImageUrl={orgSettings.homepageImageUrl}
         initialVideoUrl={orgSettings.homepageVideoUrl}
