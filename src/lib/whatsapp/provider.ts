@@ -45,6 +45,16 @@ export interface WhatsAppDocumentMessage {
   caption?: string;
 }
 
+// An emoji reaction to a message the person sent (lib/whatsapp/reactions.ts)
+// — inside the same 24h window as a text reply. An empty emoji takes back
+// the reaction left before.
+export interface WhatsAppReactionMessage {
+  to: string; // E.164
+  /** The wamid of the message reacted to (WhatsAppMessage.providerMessageId). */
+  messageId: string;
+  emoji: string;
+}
+
 // Meta's real button component shapes. A URL button can be dynamic — its
 // `url` ends in a literal "{{1}}" placeholder, filled per-recipient at
 // send time (WhatsAppTemplateMessage.buttonUrlParam) the same way Meta's
@@ -117,6 +127,7 @@ export interface WhatsAppProvider {
   sendTemplate(input: WhatsAppTemplateMessage): Promise<{ providerMessageId: string }>;
   sendFreeform(input: WhatsAppFreeformMessage): Promise<{ providerMessageId: string }>;
   sendDocument(input: WhatsAppDocumentMessage): Promise<{ providerMessageId: string }>;
+  sendReaction(input: WhatsAppReactionMessage): Promise<{ providerMessageId: string | null }>;
   listTemplates(): Promise<RemoteWhatsAppTemplate[]>;
   createTemplate(input: CreateWhatsAppTemplateInput): Promise<{ metaTemplateId: string; status: RemoteWhatsAppTemplate["status"] }>;
   getPhoneNumberStatus(): Promise<WhatsAppPhoneNumberStatus>;

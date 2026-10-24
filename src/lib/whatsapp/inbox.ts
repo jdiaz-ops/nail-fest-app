@@ -4,6 +4,7 @@ import { revokeConsent } from "@/lib/consent";
 import { markMetaBlocked, markPhoneInvalid } from "@/lib/contactHygiene";
 import { categorizeWhatsAppFailure } from "./failureCategories";
 import { whatsappProvider } from "./index";
+import { inboundReactionBody } from "./reactions";
 
 // Digits only — Meta's webhook payload identifies contacts by "wa_id"
 // (e.g. "573001234567", no "+"), while Person.phone is stored with the
@@ -203,7 +204,7 @@ export function describeInbound(msg: WebhookMessage): InboundDescription {
     case "button":
       return { body: msg.button?.text ?? null, ...none };
     case "reaction":
-      return { body: msg.reaction?.emoji ? `Reaccionó ${msg.reaction.emoji} a un mensaje` : "Quitó su reacción a un mensaje", ...none };
+      return { body: inboundReactionBody(msg.reaction?.emoji), ...none };
     case "image":
       return { body: msg.image?.caption?.trim() || "📷 Foto", mediaType: "image", mediaId: msg.image?.id ?? null, mediaMime: msg.image?.mime_type ?? null, mediaFilename: null };
     case "audio":
@@ -434,7 +435,15 @@ async function handleStatusUpdate(status: WebhookStatus): Promise<void> {
     where: { providerMessageId: status.id },
     select: { id: true, kind: true, conversationId: true, conversation: { select: { phone: true } } },
   });
-  if (!existing) return;
+  if (!existing) {
+    // Not a message of ours — maybe a reaction the team left from Bandeja
+    // (lib/whatsapp/reactions.ts): Meta only says whether it went out, and
+    // if it didn't, it comes off the message the team reacted to.
+    if (mapped === "FAILED") {
+      await db.whatsAppMessage.updateMany({ where: { staffReactionProviderId: status.id, staffReaction: { not: null } }, data: { staffReaction: null } });
+    }
+    return;
+  }
 
   const firstError = status.errors?.[0];
   const data: { status: WhatsAppMessageStatus; deliveredAt?: Date; readAt?: Date; errorMessage?: string } = { status: mapped };

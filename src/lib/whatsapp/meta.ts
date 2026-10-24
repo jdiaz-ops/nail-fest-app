@@ -5,6 +5,7 @@ import type {
   WhatsAppFreeformMessage,
   WhatsAppPhoneNumberStatus,
   WhatsAppProvider,
+  WhatsAppReactionMessage,
   WhatsAppTemplateButton,
   WhatsAppTemplateMessage,
 } from "./provider";
@@ -113,6 +114,24 @@ async function sendDocument(input: WhatsAppDocumentMessage): Promise<{ providerM
   const providerMessageId = json?.messages?.[0]?.id;
   if (!providerMessageId) throw new Error("WhatsApp Cloud API did not return a message id");
   return { providerMessageId };
+}
+
+// Meta's reaction message (Cloud API "Reaction messages"): type
+// "reaction" naming the message reacted to. Meta answers with the
+// reaction's own id, and later only a "sent" status for it — or "failed".
+async function sendReaction(input: WhatsAppReactionMessage): Promise<{ providerMessageId: string | null }> {
+  const conn = await getWhatsAppConnection();
+  const json = await graphFetch(`${conn.phoneNumberId}/messages`, conn.token, {
+    method: "POST",
+    body: JSON.stringify({
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to: toGraphPhone(input.to),
+      type: "reaction",
+      reaction: { message_id: input.messageId, emoji: input.emoji },
+    }),
+  });
+  return { providerMessageId: json?.messages?.[0]?.id ?? null };
 }
 
 async function listTemplates(): Promise<RemoteWhatsAppTemplate[]> {
@@ -305,6 +324,7 @@ export const metaWhatsAppProvider: WhatsAppProvider = {
   sendTemplate,
   sendFreeform,
   sendDocument,
+  sendReaction,
   listTemplates,
   createTemplate,
   getPhoneNumberStatus,

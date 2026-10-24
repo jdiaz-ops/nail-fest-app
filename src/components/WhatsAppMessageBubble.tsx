@@ -1,11 +1,14 @@
 import { chatTimeLabel } from "@/lib/chatTime";
 import { describeWhatsAppSendError, extractMetaErrorCode } from "@/lib/whatsapp/failureCategories";
+import { canBeReactedTo, reactionBlockedReason } from "@/lib/whatsapp/reactions";
+import WhatsAppReactable from "./WhatsAppReactable";
 
 // One message in a Bandeja thread (CRM desktop and the scan app's phone
 // view share it): media first when there is any, the text, then the
 // time in the org's timezone and, for what we sent, a Spanish status —
 // a failed send turns the bubble red and says why (Meta's code, in
-// words), so nobody mistakes it for a delivered message again.
+// words), so nobody mistakes it for a delivered message again. A tap on
+// what the person sent reacts to it with an emoji (./WhatsAppReactable).
 
 export interface ThreadMessage {
   id: string;
@@ -19,6 +22,10 @@ export interface ThreadMessage {
   mediaType: string | null;
   mediaId: string | null;
   mediaFilename: string | null;
+  /** The team's reaction to it (❤️ / 💅), or null. */
+  staffReaction: string | null;
+  /** Something the person sent that WhatsApp can take a reaction to. */
+  reactable: boolean;
 }
 
 export function toThreadMessage(m: {
@@ -33,6 +40,8 @@ export function toThreadMessage(m: {
   mediaType: string | null;
   mediaId: string | null;
   mediaFilename: string | null;
+  providerMessageId: string | null;
+  staffReaction: string | null;
 }): ThreadMessage {
   return {
     id: m.id,
@@ -46,6 +55,8 @@ export function toThreadMessage(m: {
     mediaType: m.mediaType,
     mediaId: m.mediaId,
     mediaFilename: m.mediaFilename,
+    staffReaction: m.staffReaction,
+    reactable: canBeReactedTo(m),
   };
 }
 
@@ -68,19 +79,54 @@ function isMediaLabel(body: string, mediaFilename: string | null): boolean {
   return ["📷 Foto", "🎤 Nota de voz", "🎵 Audio", "🎬 Video", "Sticker", `📄 ${mediaFilename ?? "Documento"}`].includes(body);
 }
 
-export default function WhatsAppMessageBubble({ message: item, timezone, language, maxWidth = "70%" }: { message: ThreadMessage; timezone: string; language: string; maxWidth?: string }) {
+export default function WhatsAppMessageBubble({
+  message: item,
+  timezone,
+  language,
+  maxWidth = "70%",
+  reactions,
+}: {
+  message: ThreadMessage;
+  timezone: string;
+  language: string;
+  maxWidth?: string;
+  /** Reacting on (both Bandeja threads): the conversation, and when the
+   * person last wrote — WhatsApp's 24h window for a reaction. */
+  reactions?: { conversationId: string; lastInboundAt: Date | null };
+}) {
   const failed = item.status === "FAILED";
+  const place = { alignSelf: item.direction === "OUTBOUND" ? "flex-end" : "flex-start", maxWidth } as const;
+  const bubble = {
+    background: failed ? "#fdeaea" : item.direction === "OUTBOUND" ? "#ffe4d1" : "#f6f5f2",
+    border: failed ? "1px solid #f0b8b4" : "none",
+    borderRadius: 12,
+    padding: "10px 14px",
+  };
+  if (reactions && item.reactable) {
+    return (
+      <WhatsAppReactable
+        conversationId={reactions.conversationId}
+        messageId={item.id}
+        reaction={item.staffReaction}
+        blockedReason={reactionBlockedReason(item.createdAt, reactions.lastInboundAt)}
+        style={place}
+      >
+        <div style={bubble}>
+          <BubbleContent item={item} failed={failed} timezone={timezone} language={language} />
+        </div>
+      </WhatsAppReactable>
+    );
+  }
   return (
-    <div
-      style={{
-        alignSelf: item.direction === "OUTBOUND" ? "flex-end" : "flex-start",
-        maxWidth,
-        background: failed ? "#fdeaea" : item.direction === "OUTBOUND" ? "#ffe4d1" : "#f6f5f2",
-        border: failed ? "1px solid #f0b8b4" : "none",
-        borderRadius: 12,
-        padding: "10px 14px",
-      }}
-    >
+    <div style={{ ...place, ...bubble }}>
+      <BubbleContent item={item} failed={failed} timezone={timezone} language={language} />
+    </div>
+  );
+}
+
+function BubbleContent({ item, failed, timezone, language }: { item: ThreadMessage; failed: boolean; timezone: string; language: string }) {
+  return (
+    <>
       {item.mediaId && item.mediaType && <MessageMedia mediaId={item.mediaId} mediaType={item.mediaType} mediaFilename={item.mediaFilename} createdAt={item.createdAt} />}
       {item.body && !(item.mediaId && isMediaLabel(item.body, item.mediaFilename)) && <div style={{ fontSize: 14, whiteSpace: "pre-wrap" }}>{item.body}</div>}
       {!item.body && !item.mediaId && <div style={{ fontSize: 14 }}>—</div>}
@@ -103,7 +149,7 @@ export default function WhatsAppMessageBubble({ message: item, timezone, languag
           {extractMetaErrorCode(item.errorMessage) === 131047 && " Reábrela con una plantilla desde el cuadro de abajo."}
         </div>
       )}
-    </div>
+    </>
   );
 }
 

@@ -142,7 +142,13 @@ export default async function WhatsAppThreadPage({ params, searchParams }: { par
                 </div>
               </div>
             ) : (
-              <WhatsAppMessageBubble key={item.id} message={item} timezone={timezone} language={language} />
+              <WhatsAppMessageBubble
+                key={item.id}
+                message={item}
+                timezone={timezone}
+                language={language}
+                reactions={{ conversationId: conversation.id, lastInboundAt: conversation.lastInboundAt }}
+              />
             )
           )}
           {timeline.length === 0 && <p style={{ color: "#5b5f6b" }}>Sin mensajes todavía.</p>}

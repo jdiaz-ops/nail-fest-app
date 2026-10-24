@@ -129,7 +129,14 @@ export default async function ScanWhatsAppThreadPage({ params, searchParams }: {
               </div>
             </div>
           ) : (
-            <WhatsAppMessageBubble key={item.id} message={item} timezone={timezone} language={language} maxWidth="82%" />
+            <WhatsAppMessageBubble
+              key={item.id}
+              message={item}
+              timezone={timezone}
+              language={language}
+              maxWidth="82%"
+              reactions={{ conversationId: conversation.id, lastInboundAt: conversation.lastInboundAt }}
+            />
           )
         )}
         {timeline.length === 0 && <p style={{ color: "#5b5f6b" }}>Sin mensajes todavía.</p>}
