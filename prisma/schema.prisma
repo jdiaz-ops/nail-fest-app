@@ -2133,3 +2133,166 @@ model CuponeraList {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+// ---------------------------------------------------------------------------
+// Library and instructors (2026-10-24). nailfest.lat/biblioteca: the
+// instructors' short videos (techniques, business, biosafety…) and the
+// marathons' recordings, each with "Lo que usó" linked to the cuponera.
+// nailfest.lat/instructoras: the curated "Instructora Nail Fest" directory
+// and profiles. All edited in /admin/biblioteca (see lib/library/). While it
+// fills up, staff see invented examples (lib/library/samples.ts) — the
+// public never does.
+// ---------------------------------------------------------------------------
+
+// An instructor's public profile (/instructoras/<slug>): only what the
+// instructors' agreement says is public — never her document, phone or email.
+model Instructor {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  // The name she wants to appear with.
+  name        String
+  city        String
+  photoUrl    String?
+  // Up to 300 characters, in her own words.
+  bio         String?
+  specialties String[] @default([])
+  // Usernames, without the @.
+  instagram   String?
+  tiktok      String?
+  // "Destacada" (level 3 of the agreement): the badge, and first in the directory.
+  featured    Boolean  @default(false)
+  // Hidden = no profile and out of the directory; her videos stay, unsigned.
+  visible     Boolean  @default(true)
+  // Nail Fest events she's been part of, one per line
+  // ("Nail Fest Cúcuta 2026 · Tarima principal").
+  appearances String[] @default([])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  videos  LibraryVideo[]
+  classes InstructorClass[]
+  leads   LibraryLead[]
+}
+
+// A video in the library: a short vertical one ("video") or a marathon's
+// recording ("maraton"), hosted on YouTube (public or unlisted) and played
+// from there — nothing heavy goes through this app.
+model LibraryVideo {
+  id              String      @id @default(cuid())
+  slug            String      @unique
+  // "video" | "maraton"
+  kind            String      @default("video")
+  title           String
+  description     String?
+  // Theme and level keys from lib/library/shared.ts.
+  theme           String
+  level           String      @default("principiante")
+  youtubeId       String
+  durationSeconds Int?
+  instructorId    String?
+  instructor      Instructor? @relation(fields: [instructorId], references: [id], onDelete: SetNull)
+  // A marathon's teachers ("4 instructoras"), shown instead of one name.
+  teachersNote    String?
+  // "Lo que usó": [{ cuponeraProductId?, brand, name }]. A cuponera product
+  // brings its discount, code and store link; the names are kept so the line
+  // survives the product leaving the catalog.
+  products        Json        @default("[]")
+  // The step by step, one step per line — shown after the free sign-up.
+  steps           String[]    @default([])
+  // Behind the free sign-up (the marathons' recordings, by default).
+  gated           Boolean     @default(false)
+  visible         Boolean     @default(true)
+  publishedAt     DateTime    @default(now())
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  dailyViews LibraryVideoDailyView[]
+
+  @@index([visible, publishedAt])
+}
+
+// Views of each video's page per Bogotá day — "Lo más visto esta semana".
+model LibraryVideoDailyView {
+  videoId String
+  video   LibraryVideo @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  day     DateTime     @db.Date
+  views   Int          @default(0)
+
+  @@id([videoId, day])
+}
+
+// An upcoming class on an instructor's profile ("Próximas clases").
+model InstructorClass {
+  id           String     @id @default(cuid())
+  instructorId String
+  instructor   Instructor @relation(fields: [instructorId], references: [id], onDelete: Cascade)
+  title        String
+  startsAt     DateTime
+  // "En línea por Zoom", "Presencial en Cúcuta".
+  place        String
+  // "Gratis con registro", "$120.000", "Cupos limitados".
+  priceLabel   String?
+  // Where to sign up; empty = Nail Fest's own form ("Reservar clase").
+  url          String?
+  visible      Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@index([instructorId, startsAt])
+}
+
+enum LibraryLeadKind {
+  // The library's free sign-up: unlocks the recordings and the step by steps.
+  REGISTRO
+  // "¿Enseñas uñas? Postularme".
+  POSTULACION
+  // A brand looking for instructors ("Contratar para tu marca").
+  MARCA
+  // "Reservar clase" with an instructor.
+  CLASE
+}
+
+// What people send from the library and the instructors' pages, read and
+// marked as handled in /admin/biblioteca (Registros). Nothing is emailed or
+// WhatsApped to them from here.
+model LibraryLead {
+  id               String          @id @default(cuid())
+  kind             LibraryLeadKind
+  name             String
+  email            String
+  phone            String?
+  city             String?
+  // The brand, for MARCA.
+  company          String?
+  message          String?
+  // The instructor it's about (CLASE, or MARCA from her profile).
+  instructorId     String?
+  instructor       Instructor?     @relation(fields: [instructorId], references: [id], onDelete: SetNull)
+  // Where it was sent from: the class, the video that asked for the sign-up.
+  context          String?
+  // Opted in to Nail Fest's news — optional and separate from the
+  // data-processing notice every form shows (Ley 1581).
+  marketingConsent Boolean         @default(false)
+  handled          Boolean         @default(false)
+  createdAt        DateTime        @default(now())
+
+  @@index([kind, createdAt])
+}
+
+// One row ("singleton"), same as CuponeraSettings. The texts the admin
+// changed and the sections switched off are JSON maps (lib/library/settings.ts
+// has every key and its usual text): there are dozens, across four pages.
+model LibrarySettings {
+  id                   String   @id
+  // nailfest.lat/biblioteca for everyone; hidden = staff only, 404 for the rest.
+  published            Boolean  @default(false)
+  // nailfest.lat/instructoras, the same way.
+  instructorsPublished Boolean  @default(false)
+  // Text key → the admin's text.
+  texts                Json     @default("{}")
+  // Section key → false when switched off.
+  sections             Json     @default("{}")
+  // "Lo más buscado" under the search box.
+  popularSearches      String[] @default([])
+  updatedAt            DateTime @updatedAt
+}
