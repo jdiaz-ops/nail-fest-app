@@ -21,6 +21,9 @@ const badgeStyle: CSSProperties = {
   lineHeight: 1,
 };
 
+// The bar's height plus its gap to the message.
+const BAR_SPACE = 64;
+
 /** The thread's own scrolling box — to tell whether the bar fits above the message. */
 function scrollParentOf(el: HTMLElement): HTMLElement | null {
   for (let node = el.parentElement; node; node = node.parentElement) {
@@ -53,6 +56,7 @@ export default function WhatsAppReactable({
 }) {
   const router = useRouter();
   const box = useRef<HTMLDivElement>(null);
+  const bar = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [below, setBelow] = useState(false);
   const [current, setCurrent] = useState(reaction);
@@ -64,26 +68,38 @@ export default function WhatsAppReactable({
 
   useEffect(() => {
     if (!open) return;
-    const onPointer = (e: PointerEvent) => {
+    // A tap elsewhere closes it — a click, not a touch: putting a finger
+    // down to scroll the thread mustn't (2026-10-25: "no desliza y no
+    // puedo escogerlo").
+    const onClick = (e: MouseEvent) => {
       if (!box.current?.contains(e.target as Node)) setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
     };
-    document.addEventListener("pointerdown", onPointer);
+    document.addEventListener("click", onClick);
     document.addEventListener("keydown", onKey);
     return () => {
-      document.removeEventListener("pointerdown", onPointer);
+      document.removeEventListener("click", onClick);
       document.removeEventListener("keydown", onKey);
     };
   }, [open]);
 
+  // Once open, the thread scrolls just enough for the whole bar to show —
+  // on a phone the thread can be a strip a few messages tall.
+  useEffect(() => {
+    if (open) bar.current?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [open, below]);
+
   const toggle = () => {
     if (!open && box.current) {
-      // Above the message, as in WhatsApp — below it when the message is
-      // too close to the top of the thread for the bar to fit.
+      // Above the message, as in WhatsApp, whenever there's room above it
+      // in the thread (scrolling if need be); below only for the very
+      // first messages, where nothing above can make room.
       const scroller = scrollParentOf(box.current);
-      setBelow(box.current.getBoundingClientRect().top - (scroller?.getBoundingClientRect().top ?? 0) < 64);
+      const top = box.current.getBoundingClientRect().top;
+      const fromStart = scroller ? top - scroller.getBoundingClientRect().top + scroller.scrollTop : top + window.scrollY;
+      setBelow(fromStart < BAR_SPACE);
     }
     setError(null);
     setOpen((o) => !o);
@@ -144,6 +160,7 @@ export default function WhatsAppReactable({
       )}
       {open && (
         <div
+          ref={bar}
           role="menu"
           aria-label="Reaccionar a este mensaje"
           style={{

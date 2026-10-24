@@ -34,8 +34,11 @@ export default function WhatsAppWindowCountdown({ lastInboundAt }: { lastInbound
   const remaining = deadline - now;
   const open = remaining > 0;
 
+  // The server's second and the phone's are never the same one: without
+  // suppressHydrationWarning React calls the whole thread a mismatch and
+  // redraws it from scratch on every open.
   return (
-    <span style={{ color: open ? "#12966b" : "#b5b0a6", fontWeight: 600 }}>
+    <span suppressHydrationWarning style={{ color: open ? "#12966b" : "#b5b0a6", fontWeight: 600 }}>
       {open ? `Ventana abierta — ${format(remaining)}` : "Ventana cerrada"}
     </span>
   );
