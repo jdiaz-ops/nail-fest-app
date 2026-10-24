@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { getOrgSettings } from "@/lib/settings";
-import { listResendableRegistrations } from "@/lib/whatsapp/sendTicketPdf";
+import { listChatEntradas } from "@/lib/whatsapp/chatEntradas";
+import { withdrawnByLine } from "@/lib/registrationWithdrawal";
 import WhatsAppThreadComposer from "@/components/WhatsAppThreadComposer";
 import WhatsAppMarkRead from "@/components/WhatsAppMarkRead";
 import ScrollToLatest from "@/components/ScrollToLatest";
@@ -14,6 +15,7 @@ import WhatsAppSendTicketButton from "@/components/WhatsAppSendTicketButton";
 import WhatsAppSendZoomLinkButton from "@/components/WhatsAppSendZoomLinkButton";
 import WhatsAppAiToggle from "@/components/WhatsAppAiToggle";
 import WhatsAppTicketActions from "@/components/WhatsAppTicketActions";
+import RegistrationEditionToggle from "@/components/RegistrationEditionToggle";
 import WhatsAppMessageBubble, { toThreadMessage, type ThreadMessage } from "@/components/WhatsAppMessageBubble";
 import { listReopenTemplates } from "@/lib/whatsapp/reopenTemplates";
 import { chatTimeLabel } from "@/lib/chatTime";
@@ -65,13 +67,13 @@ export default async function WhatsAppThreadPage({ params, searchParams }: { par
     select: { id: true },
   });
 
-  const [agents, orgSettings, lastRegistration, resendableRegistrations, reopenTemplates] = await Promise.all([
+  const [agents, orgSettings, lastRegistration, entradas, reopenTemplates] = await Promise.all([
     db.adminUser.findMany({ where: { active: true }, orderBy: { name: "asc" } }),
     getOrgSettings(),
     conversation.personId
       ? db.registration.findFirst({ where: { personId: conversation.personId }, orderBy: { createdAt: "desc" } })
       : null,
-    listResendableRegistrations(conversation),
+    listChatEntradas(conversation),
     listReopenTemplates(),
   ]);
   const { timezone, language } = orgSettings;
@@ -161,12 +163,13 @@ export default async function WhatsAppThreadPage({ params, searchParams }: { par
           <WhatsAppTicketActions
             conversationId={conversation.id}
             withinWindow={withinWindow}
-            registrations={resendableRegistrations.map((r) => ({
+            registrations={entradas.map((r) => ({
             id: r.id,
             eventName: r.event.name,
             ticketCount: r.ticketCount,
-            ownerEmail: r.personId !== conversation.personId ? r.person.email : null,
+            ownerEmail: r.ownerEmail,
             showZoomLink: r.event.format !== "IN_PERSON" && Boolean(r.event.zoomMeetingId),
+            edition: r.edition && { state: r.edition.state, withdrawnBy: withdrawnByLine(r.edition, timezone, language) },
           }))}
           />
         </div>
@@ -217,15 +220,15 @@ export default async function WhatsAppThreadPage({ params, searchParams }: { par
           )}
         </SidebarSection>
 
-        {resendableRegistrations.length > 0 && (
+        {entradas.length > 0 && (
           <SidebarSection title="Entradas">
-            {!withinWindow && (
+            {!withinWindow && entradas.some((r) => r.edition?.state !== "out") && (
               <p style={{ fontSize: 12, color: "#8a5a1f", margin: "0 0 8px" }}>
                 Ventana cerrada — no se puede reenviar un PDF hasta que la persona vuelva a escribir.
               </p>
             )}
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {resendableRegistrations.map((r) => (
+              {entradas.map((r) => (
                 <div key={r.id} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                   <span style={{ fontSize: 12.5, fontWeight: 500 }}>{r.event.name}</span>
                   <span style={{ fontSize: 11, color: "#8a8478" }}>
@@ -235,10 +238,8 @@ export default async function WhatsAppThreadPage({ params, searchParams }: { par
                   {/* Same phone, but a different CRM contact than this chat's
                       (e.g. registered again with another email) — say whose
                       it is so nobody resends the wrong one by mistake. */}
-                  {r.personId !== conversation.personId && (
-                    <span style={{ fontSize: 11, color: "#8a5a1f" }}>A nombre de {r.person.email}</span>
-                  )}
-                  {withinWindow && (
+                  {r.ownerEmail && <span style={{ fontSize: 11, color: "#8a5a1f" }}>A nombre de {r.ownerEmail}</span>}
+                  {withinWindow && r.edition?.state !== "out" && (
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                       <WhatsAppSendTicketButton conversationId={conversation.id} registrationId={r.id} />
                       {/* Solo tiene sentido para un evento VIRTUAL/HÍBRIDO
@@ -249,6 +250,14 @@ export default async function WhatsAppThreadPage({ params, searchParams }: { par
                         <WhatsAppSendZoomLinkButton conversationId={conversation.id} registrationId={r.id} />
                       )}
                     </div>
+                  )}
+                  {r.edition && (
+                    <RegistrationEditionToggle
+                      registrationId={r.id}
+                      state={r.edition.state}
+                      withdrawnBy={withdrawnByLine(r.edition, timezone, language)}
+                      conversationId={conversation.id}
+                    />
                   )}
                 </div>
               ))}

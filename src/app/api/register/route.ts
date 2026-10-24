@@ -373,6 +373,10 @@ export async function POST(req: NextRequest) {
                 ticketCount,
                 status: nextStatus,
                 confirmedAt: nextStatus === "CONFIRMED" ? existingRegistration.confirmedAt ?? new Date() : existingRegistration.confirmedAt,
+                // Registering again undoes an earlier "no va" (see
+                // lib/registrationWithdrawal.ts).
+                cancelledAt: null,
+                cancelledById: null,
               },
             })
           : await tx.registration.create({

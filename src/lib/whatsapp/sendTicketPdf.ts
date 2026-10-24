@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { whatsappProvider } from "./index";
 import { recordOutboundMessage } from "./inbox";
@@ -81,14 +82,20 @@ export function registrationBelongsToChat(registration: { personId: string; pers
   return tail !== null && phoneTail(registration.person.phone) === tail;
 }
 
-/** Up to 5 most recent confirmed, QR-issued registrations this chat can
- * resend — its linked contact's, plus any other contact's registered with
- * the same phone (see registrationBelongsToChat). What the Bandeja sidebar
- * lists to pick which ticket to resend. Same cap/ordering as
- * /api/resend-ticket's own query. */
-export async function listResendableRegistrations(chat: ChatRef) {
+/** Whose registrations a chat can act on: its linked contact's, plus any
+ * other contact's registered with the same phone (see
+ * registrationBelongsToChat). Empty when there's neither. */
+export function chatRegistrationOwners(chat: ChatRef): Prisma.RegistrationWhereInput[] {
   const tail = phoneTail(chat.phone);
-  const owners = [...(chat.personId ? [{ personId: chat.personId }] : []), ...(tail ? [{ person: { phone: { endsWith: tail } } }] : [])];
+  return [...(chat.personId ? [{ personId: chat.personId }] : []), ...(tail ? [{ person: { phone: { endsWith: tail } } }] : [])];
+}
+
+/** Up to 5 most recent confirmed, QR-issued registrations this chat can
+ * resend (see chatRegistrationOwners). What the Bandeja sidebar lists to
+ * pick which ticket to resend. Same cap/ordering as /api/resend-ticket's
+ * own query. */
+export async function listResendableRegistrations(chat: ChatRef) {
+  const owners = chatRegistrationOwners(chat);
   if (owners.length === 0) return [];
   return db.registration.findMany({
     where: { status: "CONFIRMED", qrToken: { not: null }, OR: owners },

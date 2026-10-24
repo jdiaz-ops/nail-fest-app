@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requirePageUser } from "@/lib/auth/guard";
-import { listResendableRegistrations } from "@/lib/whatsapp/sendTicketPdf";
+import { listChatEntradas } from "@/lib/whatsapp/chatEntradas";
+import { withdrawnByLine } from "@/lib/registrationWithdrawal";
 import WhatsAppThreadComposer from "@/components/WhatsAppThreadComposer";
 import WhatsAppMarkRead from "@/components/WhatsAppMarkRead";
 import ScrollToLatest from "@/components/ScrollToLatest";
@@ -53,7 +54,7 @@ export default async function ScanWhatsAppThreadPage({ params, searchParams }: {
     select: { id: true },
   });
 
-  const [resendableRegistrations, orgSettings, reopenTemplates] = await Promise.all([listResendableRegistrations(conversation), getOrgSettings(), listReopenTemplates()]);
+  const [entradas, orgSettings, reopenTemplates] = await Promise.all([listChatEntradas(conversation), getOrgSettings(), listReopenTemplates()]);
   const { timezone, language } = orgSettings;
 
   const withinWindow = Boolean(conversation.lastInboundAt && Date.now() - conversation.lastInboundAt.getTime() < WINDOW_MS);
@@ -146,12 +147,13 @@ export default async function ScanWhatsAppThreadPage({ params, searchParams }: {
         <WhatsAppTicketActions
           conversationId={conversation.id}
           withinWindow={withinWindow}
-          registrations={resendableRegistrations.map((r) => ({
+          registrations={entradas.map((r) => ({
             id: r.id,
             eventName: r.event.name,
             ticketCount: r.ticketCount,
-            ownerEmail: r.personId !== conversation.personId ? r.person.email : null,
+            ownerEmail: r.ownerEmail,
             showZoomLink: r.event.format !== "IN_PERSON" && Boolean(r.event.zoomMeetingId),
+            edition: r.edition && { state: r.edition.state, withdrawnBy: withdrawnByLine(r.edition, timezone, language) },
           }))}
         />
       </div>

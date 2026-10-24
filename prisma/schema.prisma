@@ -483,6 +483,18 @@ model Registration {
   ticketCount    Int @default(1)
   checkedInCount Int @default(0)
 
+  // Who took this registration out, and when: "Retirar de esta edición"
+  // when the person wrote (WhatsApp, email) that they can't make it — the
+  // Bandeja and the contact's page, see lib/registrationWithdrawal.ts —
+  // or "Cancelar inscripción" in Entradas emitidas. status CANCELLED does
+  // the actual work (out of every send, every stat and the capacity
+  // count); these only say who and when, so it can be shown and undone.
+  // Null for anything cancelled before 2026-10-24, and cleared again on
+  // undo or when they register again.
+  cancelledAt   DateTime?
+  cancelledBy   AdminUser? @relation("RegistrationCancelledBy", fields: [cancelledById], references: [id], onDelete: SetNull)
+  cancelledById String?
+
   consents       Consent[]
   metaEvents     MetaEvent[]
   scans          ScanLog[]
@@ -1637,6 +1649,7 @@ model AdminUser {
   assignedConversations WhatsAppConversation[]
   whatsappNotes         WhatsAppNote[]
   comprobantes          Comprobante[]
+  cancellations         Registration[]         @relation("RegistrationCancelledBy")
 }
 
 // ---------------------------------------------------------------------------

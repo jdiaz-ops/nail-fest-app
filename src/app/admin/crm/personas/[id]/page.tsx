@@ -3,6 +3,9 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { getPersonProfile, type TimelineItem } from "@/lib/personTimeline";
 import { HYGIENE_LABELS } from "@/lib/contactHygiene";
+import { getOrgSettings } from "@/lib/settings";
+import { listEditionRegistrations, withdrawnByLine } from "@/lib/registrationWithdrawal";
+import RegistrationEditionToggle from "@/components/RegistrationEditionToggle";
 
 const HYGIENE_LABEL_NAMES = new Set<string>(Object.values(HYGIENE_LABELS));
 import StageBadge from "../../StageBadge";
@@ -14,6 +17,7 @@ const TYPE_ICON: Record<TimelineItem["type"], { bg: string; ink: string }> = {
   // Neutral, not accent — an incomplete attempt isn't the same kind of
   // event as a real registration, so it shouldn't share its color.
   REGISTRATION_STARTED: { bg: "#f6f5f2", ink: "#5b5f6b" },
+  REGISTRATION_CANCELLED: { bg: "#fbe9ea", ink: "#a3212b" },
   SCAN: { bg: "#e8f6ef", ink: "#0e6b4c" },
   CONSENT: { bg: "#f6f5f2", ink: "#5b5f6b" },
   META_EVENT: { bg: "#f6f5f2", ink: "#5b5f6b" },
@@ -42,6 +46,13 @@ function TimelineIcon({ type }: { type: TimelineItem["type"] }) {
         <svg {...common}>
           <circle cx="12" cy="12" r="9" strokeDasharray="3 3" />
           <path d="M12 8v4l2.5 2.5" />
+        </svg>
+      );
+    case "REGISTRATION_CANCELLED":
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="12" r="9" />
+          <path d="M9 9l6 6M15 9l-6 6" />
         </svg>
       );
     case "SCAN":
@@ -127,6 +138,9 @@ export default async function PersonaPage({ params }: { params: { id: string } }
   const profile = await getPersonProfile(params.id);
   const labels = (await db.person.findUnique({ where: { id: params.id }, select: { labels: { select: { name: true }, orderBy: { name: "asc" } } } }))?.labels ?? [];
   if (!profile) notFound();
+  // Upcoming events, for "Retirar de esta edición" when the person wrote
+  // somewhere other than WhatsApp (an email) that they can't make it.
+  const [edition, { timezone, language }] = await Promise.all([listEditionRegistrations([{ personId: params.id }]), getOrgSettings()]);
 
   const name = [profile.firstName, profile.lastName].filter(Boolean).join(" ") || profile.email;
   const initials =
@@ -227,6 +241,21 @@ export default async function PersonaPage({ params }: { params: { id: string } }
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {edition.length > 0 && (
+            <div style={{ border: "1px solid #e3e1dc", borderRadius: 10, padding: "18px 20px" }}>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Próximos eventos</div>
+              <p style={{ fontSize: 12, lineHeight: 1.45, color: "#5b5f6b", margin: "0 0 4px" }}>Si avisó que no va (por correo, por ejemplo), se retira de esa edición con un toque.</p>
+              {edition.map((r) => (
+                <div key={r.id} style={{ display: "flex", flexDirection: "column", gap: 6, padding: "10px 0 2px", borderTop: "1px solid #f0efec", marginTop: 8 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>
+                    {r.event.name}
+                    {r.ticketCount > 1 ? ` · ${r.ticketCount} boletas` : ""}
+                  </span>
+                  <RegistrationEditionToggle registrationId={r.id} state={r.state} withdrawnBy={withdrawnByLine(r, timezone, language)} />
+                </div>
+              ))}
+            </div>
+          )}
           <div style={{ border: "1px solid #e3e1dc", borderRadius: 10, padding: "18px 20px" }}>
             <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12 }}>Consentimientos</div>
             {profile.consents.length === 0 ? (

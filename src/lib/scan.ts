@@ -156,7 +156,12 @@ export async function recordScan(
     // ticketCount are rejected as NOT_FOUND — see the ScanLog model comment.
     db.registration.update({
       where: { id: registrationId },
-      data: { checkedInCount: { increment: 1 } },
+      data: {
+        checkedInCount: { increment: 1 },
+        // They'd written they couldn't make it and came anyway: they're
+        // here, so they count again (see lib/registrationWithdrawal.ts).
+        ...(registration.status === "CANCELLED" && registration.cancelledAt ? { status: "CONFIRMED" as const, cancelledAt: null, cancelledById: null } : {}),
+      },
     }),
   ]);
 

@@ -11,7 +11,7 @@ interface Log {
 }
 const store = vi.hoisted(() => ({
   logs: [] as Log[],
-  registrations: new Map<string, { id: string; eventId: string; ticketCount: number; checkedInCount: number }>(),
+  registrations: new Map<string, { id: string; eventId: string; ticketCount: number; checkedInCount: number; status?: string; cancelledAt?: Date | null; cancelledById?: string | null }>(),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -34,9 +34,10 @@ vi.mock("@/lib/db", () => ({
         const r = store.registrations.get(where.id);
         return r ? { ...r, person: { firstName: "María", lastName: "Pérez", email: "m@x.co" }, event: { name: "Nail Fest Cúcuta" } } : null;
       },
-      update: async ({ where }: { where: { id: string } }) => {
+      update: async ({ where, data }: { where: { id: string }; data: { status?: string; cancelledAt?: null; cancelledById?: null } }) => {
         const r = store.registrations.get(where.id)!;
         r.checkedInCount += 1;
+        if (data.status) Object.assign(r, { status: data.status, cancelledAt: data.cancelledAt, cancelledById: data.cancelledById });
         return r;
       },
     },
@@ -94,5 +95,19 @@ describe("recordScan with a 2-ticket order", () => {
   it("still flags a companion ticket from another event", async () => {
     const wrong = await recordScan(issueQrToken(REG, 2), "other-event");
     expect(wrong).toMatchObject({ result: "WRONG_EVENT", personName: "Acompañante de María Pérez" });
+  });
+});
+
+describe("recordScan for someone taken out of the edition", () => {
+  it("puts back someone who'd written they couldn't come and came anyway", async () => {
+    store.registrations.set(REG, { id: REG, eventId: EVENT, ticketCount: 1, checkedInCount: 0, status: "CANCELLED", cancelledAt: new Date(), cancelledById: "admin1" });
+    const scan = await recordScan(issueQrToken(REG), EVENT);
+    expect(scan.result).toBe("VALID_FIRST");
+    expect(store.registrations.get(REG)).toMatchObject({ status: "CONFIRMED", cancelledAt: null, cancelledById: null, checkedInCount: 1 });
+  });
+
+  it("leaves everyone else's status alone", async () => {
+    await recordScan(issueQrToken(REG), EVENT);
+    expect(store.registrations.get(REG)!.status).toBeUndefined();
   });
 });

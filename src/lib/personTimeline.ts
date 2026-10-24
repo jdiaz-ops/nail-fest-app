@@ -10,6 +10,7 @@ import { db } from "@/lib/db";
 export type TimelineItemType =
   | "REGISTRATION"
   | "REGISTRATION_STARTED"
+  | "REGISTRATION_CANCELLED"
   | "SCAN"
   | "CONSENT"
   | "META_EVENT"
@@ -169,7 +170,7 @@ export async function getPersonProfile(personId: string): Promise<PersonProfile 
   const [registrations, scans, consents, metaEvents, emailLogs] = await Promise.all([
     db.registration.findMany({
       where: { personId },
-      include: { event: true, ticketType: true },
+      include: { event: true, ticketType: true, cancelledBy: { select: { name: true, username: true } } },
       orderBy: { createdAt: "desc" },
     }),
     db.scanLog.findMany({
@@ -216,6 +217,12 @@ export async function getPersonProfile(personId: string): Promise<PersonProfile 
         title: `Se registró para ${r.event.name}`,
         detail: ticketLabel,
       });
+    }
+    // Taken out of that edition ("Retirar de esta edición", or "Cancelar
+    // inscripción" in Entradas emitidas) — see lib/registrationWithdrawal.ts.
+    if (r.status === "CANCELLED" && r.cancelledAt) {
+      const who = r.cancelledBy ? r.cancelledBy.name || r.cancelledBy.username : null;
+      timeline.push({ type: "REGISTRATION_CANCELLED", at: r.cancelledAt, title: `Se retiró de ${r.event.name}`, detail: who ? `por ${who}` : undefined });
     }
   }
 

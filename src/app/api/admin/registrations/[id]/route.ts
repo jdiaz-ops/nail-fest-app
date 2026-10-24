@@ -63,7 +63,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 
   const registrationUpdate: Record<string, unknown> = {};
-  if (data.status !== undefined) registrationUpdate.status = data.status;
+  if (data.status !== undefined && data.status !== registration.status) {
+    registrationUpdate.status = data.status;
+    // Who and when, same as "Retirar de esta edición" (see
+    // lib/registrationWithdrawal.ts) — cleared again on reactivating.
+    registrationUpdate.cancelledAt = data.status === "CANCELLED" ? new Date() : null;
+    registrationUpdate.cancelledById = data.status === "CANCELLED" ? auth.user.id : null;
+  }
   if (data.customFields !== undefined) {
     const existing = (registration.customFields as Record<string, string> | null) ?? {};
     registrationUpdate.customFields = { ...existing, ...data.customFields };
