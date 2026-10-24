@@ -8,7 +8,7 @@ import ShareButton from "@/components/library/ShareButton";
 import ViewPing from "@/components/library/ViewPing";
 import { Avatar, SampleBadge, VideoCard } from "@/components/library/parts";
 import { getLibraryVideoPage, getLibraryViewer, libraryRobots } from "@/lib/library/data";
-import { VIEWS_SHOWN_FROM, formatDuration, formatLength, formatViews, levelLabel, themeOf, toneOf } from "@/lib/library/shared";
+import { VIEWS_SHOWN_FROM, formatDuration, formatLength, formatViews, levelLabel, themeOf, toneOf, topicKey } from "@/lib/library/shared";
 import { fraunces } from "@/app/cuponera/fonts";
 
 export const dynamic = "force-dynamic";
@@ -25,9 +25,10 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   };
 }
 
-// A video's page: the video (played from YouTube), who teaches it, "Lo que
-// usó" with the cuponera's discounts, the step by step behind the free
-// sign-up, and more of the same theme.
+// A video's page: the video (played from YouTube), who teaches it, its
+// theme, level and topics (a topic opens its cortos), "Lo que usó" with the
+// cuponera's discounts, the step by step behind the free sign-up, and more
+// of the same theme.
 export default async function BibliotecaVideoPage({ params }: { params: { slug: string } }) {
   const viewer = await getLibraryViewer();
   if (!viewer.config.published && !viewer.staff) notFound();
@@ -73,6 +74,17 @@ export default async function BibliotecaVideoPage({ params }: { params: { slug: 
             <Link href={`/biblioteca/buscar?nivel=${video.level}`} className="bib-tag">
               {levelLabel(video.level)}
             </Link>
+            {video.tags
+              .filter((tag) => topicKey(tag) !== video.theme)
+              .map((tag) => (
+                <Link
+                  key={tag}
+                  href={sections.shorties ? `/biblioteca/cortos?tema=${topicKey(tag)}` : `/biblioteca/buscar?q=${encodeURIComponent(tag)}`}
+                  className="bib-tag"
+                >
+                  {tag}
+                </Link>
+              ))}
             {video.views >= VIEWS_SHOWN_FROM && <span>· {formatViews(video.views)}</span>}
           </div>
           {video.instructor ? (

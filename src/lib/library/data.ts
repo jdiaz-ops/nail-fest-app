@@ -21,8 +21,10 @@ import {
   themeOf,
   levelLabel,
   toneOf,
+  topicsOf,
   usedProductRefsOf,
   withExamples,
+  type CortosTopic,
   type InstructorCard,
   type LibraryLevel,
   type LibraryMenuData,
@@ -132,6 +134,7 @@ function toVideoCard(row: VideoRow, views: { total: Map<string, number>; week: M
     durationSeconds: row.durationSeconds,
     instructor: row.instructor ? personOf(row.instructor) : null,
     teachersNote: row.teachersNote,
+    tags: row.tags,
     gated: row.gated,
     publishedAt: row.publishedAt.toISOString(),
     views: views.total.get(row.id) ?? 0,
@@ -164,15 +167,18 @@ export interface LibraryHome {
   /** Videos per theme; themes with none don't show. */
   themeCounts: Partial<Record<LibraryTheme, number>>;
   instructors: InstructorCard[];
-  /** Real shorties (the public sees the way into Shorties from SHORTIES_SHOWN_FROM). */
+  /** Real cortos (the public sees the way into Cortos from SHORTIES_SHOWN_FROM). */
   shorties: number;
+  /** The cortos' topics, the most cortos first: chips to their feed. */
+  cortosTopics: CortosTopic[];
 }
 
 export async function getLibraryHome(viewer: LibraryViewer, now: Date = new Date()): Promise<LibraryHome> {
-  const [{ real, examples }, instructors, shorties] = await Promise.all([
+  const [{ real, examples }, instructors, shorties, cortosTopics] = await Promise.all([
     videoPool(viewer, now),
     viewer.staff || viewer.config.instructorsPublished ? getInstructorCards(viewer, now) : Promise.resolve([]),
     shortiesCount(),
+    getCortosTopics(viewer, now),
   ]);
   const shorts = real.filter((v) => v.kind === "video");
   const exampleShorts = examples.filter((v) => v.kind === "video");
@@ -198,6 +204,7 @@ export async function getLibraryHome(viewer: LibraryViewer, now: Date = new Date
     themeCounts,
     instructors,
     shorties,
+    cortosTopics,
   };
 }
 
@@ -312,14 +319,23 @@ export async function recordVideoView(videoId: string, now: Date = new Date()): 
   return true;
 }
 
-// ── Shorties ───────────────────────────────────────────────────────────────
+// ── Cortos ("Shorties" until 2026-10-24) ────────────────────────────────────
 
 const SHORTIES_EXAMPLES_UP_TO = 12;
 const shortiesWhere = { visible: true, kind: "video", inShorties: true } satisfies Prisma.LibraryVideoWhereInput;
 
-/** Real shorties: whether the public sees the way into Shorties. */
+/** Real cortos: whether the public sees the way into Cortos. */
 export function shortiesCount(): Promise<number> {
   return db.libraryVideo.count({ where: shortiesWhere });
+}
+
+/** The topics of the cortos feed, the most cortos first — its chips (the
+ * library's front page, the community home). Staff see the examples' too
+ * while there are few real ones. */
+export async function getCortosTopics(viewer: LibraryViewer, now: Date = new Date()): Promise<CortosTopic[]> {
+  const rows = await db.libraryVideo.findMany({ where: shortiesWhere, select: { theme: true, tags: true } });
+  const examples = viewer.staff && rows.length < SHORTIES_EXAMPLES_UP_TO ? sampleVideos(now).filter((v) => v.kind === "video") : [];
+  return topicsOf([...rows, ...examples]);
 }
 
 /** Every short of the feed, newest first (the page shuffles them), with its
@@ -455,6 +471,7 @@ export async function searchLibrary(params: LibrarySearchParams, viewer: Library
   const videos = words.length
     ? rankBy(pool, words, (v) => [
         { text: v.title, weight: 5 },
+        { text: v.tags.join(" "), weight: 4 },
         { text: themeOf(v.theme).label, weight: 3 },
         { text: v.instructor?.name, weight: 3 },
         { text: v.description, weight: 1 },

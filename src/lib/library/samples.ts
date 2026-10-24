@@ -379,6 +379,21 @@ export function sampleVideoSlug(key: string): string {
   return `${SAMPLE_SLUG_PREFIX}${key}`;
 }
 
+/** The examples' topics, so their chips can be tried. */
+const SAMPLE_TAGS: Record<string, string[]> = {
+  "errores-polygel": ["Polygel"],
+  "retiro-acrilico": ["Acrílico", "Retiro"],
+  "francesa-invertida": ["Francesa", "Nail art"],
+  "amor-y-amistad": ["Nail art"],
+  "extension-polygel": ["Polygel", "Esculpidas"],
+  "cuando-usar": ["Polygel", "Acrílico", "Semipermanente"],
+  "manicura-rusa": ["Manicura rusa"],
+  "unas-mordidas": ["Semipermanente"],
+  "pedicura-spa": ["Pedicura", "Spa de manos"],
+  "maraton-polygel": ["Polygel"],
+  "maraton-navidad": ["Nail art"],
+};
+
 function toCard(v: SampleVideo, now: Date): LibraryVideoCard {
   return {
     id: `sample-${v.key}`,
@@ -392,6 +407,7 @@ function toCard(v: SampleVideo, now: Date): LibraryVideoCard {
     durationSeconds: v.seconds,
     instructor: v.instructor ? person(v.instructor) : null,
     teachersNote: v.teachersNote ?? null,
+    tags: SAMPLE_TAGS[v.key] ?? [],
     gated: v.kind === "maraton",
     publishedAt: new Date(now.getTime() - v.daysAgo * DAY_MS).toISOString(),
     views: v.views,

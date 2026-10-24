@@ -3,14 +3,16 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LIBRARY_LEVELS, LIBRARY_THEMES } from "@/lib/library/shared";
-import { send } from "./fields";
+import { SUBMISSION_TAGS_UP_TO } from "@/lib/library/portal";
+import { LIBRARY_LEVELS, LIBRARY_THEMES, VIDEO_TAG_SUGGESTIONS } from "@/lib/library/shared";
+import { ChoiceChips, send } from "./fields";
 
 // "Enviar un video" (Mis videos): her own YouTube link and its ficha, for
 // the team to choose from. The first one carries the content permission.
 export default function VideoSubmitForm({ needsContentTerms }: { needsContentTerms: boolean }) {
   const router = useRouter();
   const [state, setState] = useState<{ sending: boolean; sent: boolean; message: string | null; fields: string[] }>({ sending: false, sent: false, message: null, fields: [] });
+  const [tags, setTags] = useState<string[]>([]);
   const bad = (field: string) => state.fields.includes(field) || undefined;
 
   async function submit(e: FormEvent<HTMLFormElement>) {
@@ -26,6 +28,7 @@ export default function VideoSubmitForm({ needsContentTerms }: { needsContentTer
       level: text("level"),
       description: text("description"),
       products: text("products"),
+      tags,
       acceptContent: form.get("acceptContent") === "on",
     });
     if (!result.ok) {
@@ -33,6 +36,7 @@ export default function VideoSubmitForm({ needsContentTerms }: { needsContentTer
       return;
     }
     formEl.reset();
+    setTags([]);
     setState({ sending: false, sent: true, message: null, fields: [] });
     router.refresh();
   }
@@ -75,6 +79,12 @@ export default function VideoSubmitForm({ needsContentTerms }: { needsContentTer
             ))}
           </select>
         </div>
+      </div>
+      <div className="field">
+        <span className="pt-label-strong" id="vs-tags">
+          Etiquetas (hasta {SUBMISSION_TAGS_UP_TO}, opcional)
+        </span>
+        <ChoiceChips options={VIDEO_TAG_SUGGESTIONS} value={tags} onChange={setTags} max={SUBMISSION_TAGS_UP_TO} labelledBy="vs-tags" />
       </div>
       <div className="field">
         <label htmlFor="vs-description">Descripción</label>

@@ -79,8 +79,26 @@ export function PasswordInput({
 
 /** The list's specialties — plus any the team had given her — up to 5. */
 export function SpecialtyChips({ value, onChange, labelledBy }: { value: string[]; onChange: (next: string[]) => void; labelledBy: string }) {
-  const options = [...value.filter((s) => !(INSTRUCTOR_SPECIALTIES as readonly string[]).includes(s)), ...INSTRUCTOR_SPECIALTIES];
-  const full = value.length >= SPECIALTIES_UP_TO;
+  return <ChoiceChips options={INSTRUCTOR_SPECIALTIES} value={value} onChange={onChange} max={SPECIALTIES_UP_TO} labelledBy={labelledBy} />;
+}
+
+/** Chips to pick some of a list, up to a number — the ones already picked
+ * that aren't in the list stay first. */
+export function ChoiceChips({
+  options: list,
+  value,
+  onChange,
+  max,
+  labelledBy,
+}: {
+  options: readonly string[];
+  value: string[];
+  onChange: (next: string[]) => void;
+  max: number;
+  labelledBy: string;
+}) {
+  const options = [...value.filter((s) => !list.includes(s)), ...list];
+  const full = value.length >= max;
   return (
     <div className="pt-chips" role="group" aria-labelledby={labelledBy}>
       {options.map((s) => {

@@ -38,7 +38,16 @@ export async function POST(req: NextRequest) {
 
   await db.$transaction([
     db.instructorVideoSubmission.create({
-      data: { instructorId: instructor.id, youtubeId: input.youtube, title: input.title, theme: input.theme, level: input.level, description: input.description, products: input.products },
+      data: {
+        instructorId: instructor.id,
+        youtubeId: input.youtube,
+        title: input.title,
+        theme: input.theme,
+        level: input.level,
+        description: input.description,
+        products: input.products,
+        tags: input.tags,
+      },
     }),
     ...(account.contentTermsAcceptedAt ? [] : [db.instructorAccount.update({ where: { id: account.id }, data: { contentTermsAcceptedAt: new Date() } })]),
   ]);

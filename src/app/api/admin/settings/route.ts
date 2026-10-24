@@ -14,6 +14,9 @@ const patchSchema = z
     replyToEmail: z.string().email().or(z.literal("")),
     briefingEmails: z.array(z.string().email()),
     privacyPolicyText: z.string(),
+    // The community part of the policy — "" = back to the usual text
+    // (lib/communityPrivacy.ts).
+    communityPrivacyText: z.string(),
     termsAndConditionsText: z.string(),
     bannedEmails: z.array(z.string().email()),
     cookieConsentEnabled: z.boolean(),
@@ -93,11 +96,13 @@ export async function POST(req: NextRequest) {
     linksPageImageUrl,
     linksPageVideoUrl,
     clarityProjectId,
+    communityPrivacyText,
     ...rest
   } = parsed.data;
   const updated = await updateOrgSettings({
     ...rest,
     ...(replyToEmail !== undefined ? { replyToEmail: replyToEmail || null } : {}),
+    ...(communityPrivacyText !== undefined ? { communityPrivacyText: communityPrivacyText.trim() || null } : {}),
     ...(clarityProjectId !== undefined ? { clarityProjectId: clarityProjectId.trim() || null } : {}),
     ...(confirmationEmailHtml !== undefined
       ? { confirmationEmailHtml: confirmationEmailHtml ? sanitizeEventDescription(confirmationEmailHtml) : null }

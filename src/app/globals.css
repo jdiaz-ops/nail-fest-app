@@ -3240,6 +3240,15 @@ html:has(.bib-drawer[open]) { overflow: hidden; }
 .bib-short-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .bib-short-tags > span:not(.bib-sample) { padding: 3px 9px; border-radius: 999px; background: rgba(255, 255, 255, 0.16); font-size: 12px; font-weight: 700; }
 .bib-short-tags .bib-sample { margin: 0; }
+/* Cortos (2026-10-24): what each short is, and its topics to tap. */
+.bib-short-desc { margin: 0; max-width: 46ch; font-size: 14px; line-height: 1.4; color: rgba(255, 255, 255, 0.92); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.bib-short-desc.is-open { display: block; max-height: 34cqh; overflow-y: auto; pointer-events: auto; }
+.bib-short-more { margin-top: -4px; padding: 0; border: 0; background: none; color: #fff; font-size: 13px; font-weight: 800; text-decoration: underline; cursor: pointer; pointer-events: auto; }
+.bib-short-info a.bib-short-topic { padding: 3px 10px; border: 1px solid rgba(255, 255, 255, 0.6); border-radius: 999px; background: rgba(255, 255, 255, 0.12); font-size: 12px; font-weight: 800; }
+.bib-short-info a.bib-short-topic[aria-current="true"] { border-color: #00beb5; background: #00beb5; color: #0b2e2c; }
+.bib-shorts-topic { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px 5px 12px; border-radius: 999px; background: #00beb5; color: #0b2e2c; font-size: 13px; font-weight: 800; text-decoration: none; }
+.bib-shorts-side .bib-shorts-topic { align-self: flex-start; margin: 2px 0 10px; }
+.bib-topics { display: flex; flex-direction: column; gap: 8px; margin: -6px 0 20px; }
 .bib-short-hint { position: absolute; left: calc((100% - 76px) / 2); top: 42%; z-index: 2; display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 999px; background: rgba(0, 0, 0, 0.45); backdrop-filter: blur(6px); color: #fff; font-size: 13px; font-weight: 700; white-space: nowrap; pointer-events: none; transform: translateX(-50%); animation: bib-hint 1.6s ease-in-out infinite; }
 @keyframes bib-hint { 50% { transform: translate(-50%, -6px); } }
 .bib-short-lock { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px; background: rgba(0, 0, 0, 0.45); text-align: center; }

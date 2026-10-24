@@ -1382,6 +1382,10 @@ model OrgSettings {
   // Privacy policy — rendered at /privacidad, linked from the
   // registration form's consent section.
   privacyPolicyText String?
+  // Its community part, below it (lib/communityPrivacy.ts): the library,
+  // the cortos, the instructors, the Consultorio, the newsletters and their
+  // polls. Null = the usual text.
+  communityPrivacyText String?
 
   // Terms and conditions — rendered at /terminos, linked alongside the
   // privacy policy from the same implicit-acceptance line (no separate
@@ -2302,6 +2306,8 @@ model InstructorVideoSubmission {
   description  String?
   // "Lo que usaste", one product per line, as she wrote it.
   products     String[]                   @default([])
+  // The topics she picked ("Polygel"…), for the video the team makes from it.
+  tags         String[]                   @default([])
   status       InstructorSubmissionStatus @default(PENDING)
   video        LibraryVideo?              @relation(fields: [videoId], references: [id], onDelete: SetNull)
   videoId      String?                    @unique
@@ -2339,8 +2345,12 @@ model LibraryVideo {
   // Behind the free sign-up (the marathons' recordings, by default).
   gated           Boolean     @default(false)
   visible         Boolean     @default(true)
-  // In the Shorties feed (/biblioteca/shorties); only short videos go there.
+  // In the Cortos feed (/biblioteca/cortos, "Shorties" until 2026-10-24);
+  // only short videos go there.
   inShorties      Boolean     @default(true)
+  // Its topics ("Polygel", "Nail art"…): each chip opens the cortos of that
+  // topic (/biblioteca/cortos?tema=polygel).
+  tags            String[]    @default([])
   publishedAt     DateTime    @default(now())
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt

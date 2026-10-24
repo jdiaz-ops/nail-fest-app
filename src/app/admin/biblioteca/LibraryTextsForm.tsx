@@ -18,7 +18,7 @@ import { listOf } from "./ui";
 type Status = "idle" | "saving" | "saved" | "error";
 
 // Editar biblioteca → Textos y secciones: every title and text of the
-// library's and the instructors' pages, Shorties, the menu and the forms,
+// library's and the instructors' pages, Cortos, the menu and the forms,
 // and a switch for each section — page by page, top to bottom as they show.
 // An empty box is the usual text (shown in gray).
 export default function LibraryTextsForm({

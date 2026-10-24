@@ -1,6 +1,6 @@
 "use client";
 
-import type { CSSProperties, ReactNode } from "react";
+import { useState, type CSSProperties, type ReactNode } from "react";
 
 // What Editar biblioteca adds to the cuponera editors' pieces (../cuponera/ui):
 // a wider sheet for the long forms, and the form's own small parts.
@@ -61,4 +61,68 @@ export function listOf(text: string): string[] {
     .split(",")
     .map((l) => l.trim())
     .filter(Boolean);
+}
+
+/** A video's topics: the usual ones as chips to tap, and any other written in. */
+export function TagPicker({ value, onChange, suggestions, max, id }: { value: string[]; onChange: (next: string[]) => void; suggestions: readonly string[]; max: number; id: string }) {
+  const [other, setOther] = useState("");
+  const key = (t: string) => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+  const has = (t: string) => value.some((v) => key(v) === key(t));
+  const full = value.length >= max;
+  const toggle = (t: string) => onChange(has(t) ? value.filter((v) => key(v) !== key(t)) : [...value, t]);
+  const add = () => {
+    const t = other.trim().replace(/\s+/g, " ");
+    if (t && !has(t) && !full) onChange([...value, t]);
+    setOther("");
+  };
+  const chip = (t: string, on: boolean) => (
+    <button
+      key={t}
+      type="button"
+      onClick={() => toggle(t)}
+      disabled={!on && full}
+      aria-pressed={on}
+      style={{
+        padding: "5px 11px",
+        borderRadius: 999,
+        border: `1px solid ${on ? "#0f7d76" : "#e3e1dc"}`,
+        background: on ? "#0f7d76" : "#fff",
+        color: on ? "#fff" : "#17181c",
+        fontSize: 13,
+        fontWeight: 600,
+        cursor: !on && full ? "default" : "pointer",
+        opacity: !on && full ? 0.45 : 1,
+      }}
+    >
+      {on ? `✓ ${t}` : t}
+    </button>
+  );
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+        {value.filter((v) => !suggestions.some((s) => key(s) === key(v))).map((t) => chip(t, true))}
+        {suggestions.map((t) => chip(t, has(t)))}
+      </div>
+      <div style={{ display: "flex", gap: 8 }}>
+        <input
+          id={id}
+          value={other}
+          maxLength={40}
+          placeholder="Otra etiqueta (Cromo, Baby boomer…)"
+          disabled={full}
+          onChange={(e) => setOther(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              add();
+            }
+          }}
+          style={{ flex: 1 }}
+        />
+        <button type="button" onClick={add} disabled={full || !other.trim()} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #e3e1dc", background: "#fff", cursor: "pointer" }}>
+          Agregar
+        </button>
+      </div>
+    </div>
+  );
 }

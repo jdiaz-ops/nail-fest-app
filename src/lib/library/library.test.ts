@@ -246,6 +246,7 @@ describe("Shorties", () => {
 
   it("has its own address, which no video can take", () => {
     expect(RESERVED_VIDEO_SLUGS).toContain("shorties");
+    expect(RESERVED_VIDEO_SLUGS).toContain("cortos");
   });
 
   it("falls back to YouTube's player, silent and looping", () => {
@@ -257,8 +258,8 @@ describe("Shorties", () => {
     const sections = resolveSections({});
     expect(sections.shorties && sections.shortiesBanner && sections.shortiesSignup && sections.menuThemes && sections.menuCities).toBe(true);
     expect(resolveSections({ shorties: false }).shorties).toBe(false);
-    expect(resolveTexts({}).shortiesTitle).toBe("Shorties");
-    expect(resolveTexts({ shortiesTitle: "Cortos" }).shortiesTitle).toBe("Cortos");
+    expect(resolveTexts({}).shortiesTitle).toBe("Cortos");
+    expect(resolveTexts({ shortiesTitle: "Videos cortos" }).shortiesTitle).toBe("Videos cortos");
     const pages = LIBRARY_PAGES.map((p) => p.key);
     for (const def of [...Object.values(LIBRARY_TEXTS), ...Object.values(LIBRARY_SECTIONS)]) expect(pages).toContain(def.page);
   });

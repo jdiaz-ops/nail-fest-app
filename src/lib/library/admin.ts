@@ -12,6 +12,7 @@ import {
   SAMPLE_SLUG_PREFIX,
   handleOf,
   parseDuration,
+  cleanTags,
   usedProductRefsOf,
   youtubeIdFrom,
   type UsedProductRef,
@@ -71,8 +72,14 @@ export const videoInputSchema = z.object({
   steps: z.array(z.string().trim().min(1).max(300)).max(30),
   gated: z.boolean(),
   visible: z.boolean(),
-  /** Only short videos go to Shorties; on by default. */
+  /** Only short videos go to Cortos; on by default. */
   inShorties: z.boolean().default(true),
+  /** Its topics ("Polygel"…), tidy and without repeats. */
+  tags: z
+    .array(z.string().max(60))
+    .max(20)
+    .default([])
+    .transform((tags) => cleanTags(tags)),
 });
 
 export const instructorInputSchema = z.object({
@@ -191,6 +198,7 @@ export interface AdminVideo {
   gated: boolean;
   visible: boolean;
   inShorties: boolean;
+  tags: string[];
   views: number;
 }
 
@@ -232,6 +240,7 @@ export interface AdminSubmission {
   level: string;
   description: string | null;
   products: string[];
+  tags: string[];
   createdAtLabel: string;
 }
 
@@ -333,6 +342,7 @@ export async function getLibraryAdminData() {
         gated: v.gated,
         visible: v.visible,
         inShorties: v.inShorties,
+        tags: v.tags,
         views: viewsById.get(v.id) ?? 0,
       }),
     ),
@@ -379,6 +389,7 @@ export async function getLibraryAdminData() {
         level: s.level,
         description: s.description,
         products: s.products,
+        tags: s.tags,
         createdAtLabel: leadDate.format(s.createdAt),
       }),
     ),

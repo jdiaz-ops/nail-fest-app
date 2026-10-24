@@ -55,7 +55,7 @@ type Current = "inicio" | "shorties" | "instructoras" | null;
 
 function currentOf(pathname: string): Current {
   if (pathname === "/biblioteca") return "inicio";
-  if (pathname.startsWith("/biblioteca/shorties")) return "shorties";
+  if (pathname.startsWith("/biblioteca/cortos") || pathname.startsWith("/biblioteca/shorties")) return "shorties";
   if (pathname.startsWith("/instructoras")) return "instructoras";
   return null;
 }
@@ -69,7 +69,7 @@ interface MenuLink {
   badge?: string | null;
 }
 
-// The menu of every page of the library, Shorties and the instructors'
+// The menu of every page of the library, Cortos and the instructors'
 // directory (the approved mockup of 2026-10-24): the search, the sections,
 // and the ways to search — by theme, level, instructor and city. Only what
 // this viewer can open shows; a modal panel from the right, closed with
@@ -82,14 +82,14 @@ export default function LibraryMenu({
 }: {
   menu: LibraryMenuData;
   titleClass: string;
-  /** Shorties' version: a light button over the video. */
+  /** Cortos' version: a light button over the video. */
   dark?: boolean;
   onOpenChange?: (open: boolean) => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
-  // Shorties has two menus (phone and computer): each its own search box.
+  // Cortos has two menus (phone and computer): each its own search box.
   const searchId = useId();
   const current = currentOf(usePathname() ?? "");
   const notify = useRef(onOpenChange);
@@ -122,7 +122,7 @@ export default function LibraryMenu({
     [
       menu.library && { href: "/biblioteca", label: texts.home, icon: ICONS.home, tone: "bib-tone-mint", current: current === "inicio" },
       menu.shorties && {
-        href: "/biblioteca/shorties",
+        href: "/biblioteca/cortos",
         label: texts.shorties,
         icon: ICONS.shorties,
         tone: "bib-drawer-ic--dark",

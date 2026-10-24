@@ -44,6 +44,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         youtubeId: submission.youtubeId,
         instructorId: submission.instructorId,
         products: submission.products.map(productRefOfLine) as unknown as Prisma.InputJsonValue,
+        tags: submission.tags,
         visible: false,
       },
     });

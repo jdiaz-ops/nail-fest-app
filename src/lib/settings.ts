@@ -23,6 +23,8 @@ export interface OrgSettingsValue {
   // See OrgSettings.briefingEmails's own schema comment.
   briefingEmails: string[];
   privacyPolicyText: string | null;
+  // See OrgSettings.communityPrivacyText's own schema comment.
+  communityPrivacyText: string | null;
   termsAndConditionsText: string | null;
   bannedEmails: string[];
   cookieConsentEnabled: boolean;
@@ -57,6 +59,7 @@ const DEFAULTS: OrgSettingsValue = {
   replyToEmail: null,
   briefingEmails: [],
   privacyPolicyText: null,
+  communityPrivacyText: null,
   termsAndConditionsText: null,
   bannedEmails: [],
   cookieConsentEnabled: false,
@@ -94,6 +97,7 @@ export async function getOrgSettings(): Promise<OrgSettingsValue> {
     replyToEmail: row.replyToEmail,
     briefingEmails: row.briefingEmails,
     privacyPolicyText: row.privacyPolicyText,
+    communityPrivacyText: row.communityPrivacyText,
     termsAndConditionsText: row.termsAndConditionsText,
     bannedEmails: row.bannedEmails,
     cookieConsentEnabled: row.cookieConsentEnabled,
@@ -132,6 +136,7 @@ export async function updateOrgSettings(patch: Partial<OrgSettingsValue>): Promi
     replyToEmail: row.replyToEmail,
     briefingEmails: row.briefingEmails,
     privacyPolicyText: row.privacyPolicyText,
+    communityPrivacyText: row.communityPrivacyText,
     termsAndConditionsText: row.termsAndConditionsText,
     bannedEmails: row.bannedEmails,
     cookieConsentEnabled: row.cookieConsentEnabled,

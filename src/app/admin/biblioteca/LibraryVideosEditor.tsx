@@ -7,6 +7,8 @@ import { scoreFields } from "@/lib/library/search";
 import {
   LIBRARY_LEVELS,
   LIBRARY_THEMES,
+  VIDEO_TAGS_UP_TO,
+  VIDEO_TAG_SUGGESTIONS,
   formatDuration,
   formatViews,
   isLevel,
@@ -19,7 +21,7 @@ import {
   type UsedProductRef,
 } from "@/lib/library/shared";
 import { api, CardTitle, cardStyle, IconButton, mutedText, Pill, primaryButtonStyle, secondaryButtonStyle, Switch } from "../cuponera/ui";
-import { Check, FormError, Sheet, linesOf, rowStyle, twoColumns } from "./ui";
+import { Check, FormError, Sheet, TagPicker, linesOf, rowStyle, twoColumns } from "./ui";
 
 interface Draft {
   kind: "video" | "maraton";
@@ -36,6 +38,7 @@ interface Draft {
   gated: boolean;
   visible: boolean;
   inShorties: boolean;
+  tags: string[];
 }
 
 const EMPTY: Draft = {
@@ -53,6 +56,7 @@ const EMPTY: Draft = {
   gated: false,
   visible: true,
   inShorties: true,
+  tags: [],
 };
 
 function draftOf(v: AdminVideo): Draft {
@@ -71,6 +75,7 @@ function draftOf(v: AdminVideo): Draft {
     gated: v.gated,
     visible: v.visible,
     inShorties: v.inShorties,
+    tags: v.tags,
   };
 }
 
@@ -174,7 +179,7 @@ export default function LibraryVideosEditor({
                 <div style={{ display: "flex", gap: 6, marginTop: 4, flexWrap: "wrap" }}>
                   {v.kind === "maraton" && <Pill tone="grey">Grabación</Pill>}
                   {v.gated && <Pill tone="amber">Con registro</Pill>}
-                  {v.kind === "video" && !v.inShorties && <Pill tone="grey">Fuera de Shorties</Pill>}
+                  {v.kind === "video" && !v.inShorties && <Pill tone="grey">Fuera de Cortos</Pill>}
                   {v.products.length > 0 && <Pill tone="green">{v.products.length === 1 ? "1 producto" : `${v.products.length} productos`}</Pill>}
                   {!v.visible && <Pill tone="red">Oculto</Pill>}
                 </div>
@@ -269,6 +274,7 @@ function VideoForm({
       gated: d.gated,
       visible: d.visible,
       inShorties: d.inShorties,
+      tags: d.tags,
     };
     try {
       await api(id ? `/api/admin/library/videos/${id}` : "/api/admin/library/videos", { method: id ? "PATCH" : "POST", body: JSON.stringify(body) });
@@ -367,6 +373,12 @@ function VideoForm({
       <div className="field">
         <label htmlFor="video-description">Descripción corta</label>
         <textarea id="video-description" rows={3} value={d.description} maxLength={1000} onChange={(e) => set("description", e.target.value)} />
+        <span style={{ ...mutedText, fontSize: 12 }}>Sale debajo del título en Cortos y en la página del video.</span>
+      </div>
+      <div className="field">
+        <label htmlFor="video-tags">Etiquetas (hasta {VIDEO_TAGS_UP_TO})</label>
+        <TagPicker id="video-tags" value={d.tags} onChange={(tags) => set("tags", tags)} suggestions={VIDEO_TAG_SUGGESTIONS} max={VIDEO_TAGS_UP_TO} />
+        <span style={{ ...mutedText, fontSize: 12 }}>Cada etiqueta, igual que el tema, abre los cortos de ese tema (nailfest.lat/biblioteca/cortos?tema=polygel).</span>
       </div>
 
       <div className="field">
@@ -449,8 +461,8 @@ function VideoForm({
         <Check
           checked={d.inShorties}
           onChange={(v) => set("inShorties", v)}
-          label="Mostrar en Shorties"
-          hint="Sale en nailfest.lat/biblioteca/shorties, los videos cortos al azar uno tras otro."
+          label="Mostrar en Cortos"
+          hint="Sale en nailfest.lat/biblioteca/cortos, los videos cortos al azar uno tras otro."
         />
       )}
       {message && <FormError>{message}</FormError>}

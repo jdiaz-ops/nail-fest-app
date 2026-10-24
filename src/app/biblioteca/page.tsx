@@ -67,7 +67,7 @@ export default async function BibliotecaPage() {
 
       <div className="bib-wrap">
         {showShorties && (
-          <Link href="/biblioteca/shorties" className="bib-shortsbox">
+          <Link href="/biblioteca/cortos" className="bib-shortsbox">
             <span className="bib-shortsbox-text">
               {sections.shortiesBadge && <em className="bib-new">{texts.shortiesBadgeLabel}</em>}
               <b className={fraunces.className}>{texts.shortiesTitle}</b>
@@ -90,6 +90,18 @@ export default async function BibliotecaPage() {
               ))}
             </span>
           </Link>
+        )}
+        {showShorties && home.cortosTopics.length > 1 && (
+          <nav className="bib-topics" aria-label={`${texts.shortiesTitle} por tema`}>
+            <span className="bib-label">{texts.shortiesTitle} por tema</span>
+            <div className="bib-chips bib-chips--scroll">
+              {home.cortosTopics.slice(0, 12).map((t) => (
+                <Link key={t.key} href={`/biblioteca/cortos?tema=${t.key}`} className="bib-chip">
+                  {t.label}
+                </Link>
+              ))}
+            </div>
+          </nav>
         )}
 
         {shown.length === 0 && <p className="bib-empty">{texts.emptyText}</p>}

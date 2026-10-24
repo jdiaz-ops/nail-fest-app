@@ -57,14 +57,88 @@ export function isKind(value: unknown): value is LibraryVideoKind {
   return value === "video" || value === "maraton";
 }
 
-// Slugs the pages under /biblioteca and /instructoras already use.
-export const RESERVED_VIDEO_SLUGS = ["buscar", "registro", "shorties"];
+// Slugs the pages under /biblioteca and /instructoras already use
+// ("shorties" is the cortos' old address).
+export const RESERVED_VIDEO_SLUGS = ["buscar", "registro", "cortos", "shorties"];
 // The directory's own pages under /instructoras/ (the portal, its sign-up
 // and login, the terms) — never an instructor's address.
 export const RESERVED_INSTRUCTOR_SLUGS = ["solicitud", "unirme", "entrar", "portal", "clave", "terminos"];
 // Invented examples (lib/library/samples.ts) live under this prefix, so a
 // real video or instructor never takes one of their addresses.
 export const SAMPLE_SLUG_PREFIX = "ejemplo-";
+
+// ── Topics ──────────────────────────────────────────────────────────────────
+//
+// A video's topics ("Polygel", "Nail art"…), on top of its theme: each chip
+// opens the cortos of that topic (/biblioteca/cortos?tema=polygel), and a
+// theme works the same way (?tema=tecnicas). The usual ones are offered as
+// chips; the team can write others.
+
+export const VIDEO_TAG_SUGGESTIONS = [
+  "Polygel",
+  "Acrílico",
+  "Semipermanente",
+  "Nail art",
+  "Manicura rusa",
+  "Esculpidas",
+  "Francesa",
+  "Retiro",
+  "Pedicura",
+  "Spa de manos",
+] as const;
+export const VIDEO_TAGS_UP_TO = 6;
+
+/** A topic's address: "Nail art" → "nail-art". */
+export function topicKey(text: string): string {
+  return normalizeText(text).replace(/ /g, "-");
+}
+
+/** Topics as stored: tidy, without repeats (accents and case aside), up to six. */
+export function cleanTags(tags: readonly string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of tags) {
+    const tag = raw.trim().replace(/\s+/g, " ").slice(0, 40);
+    const key = topicKey(tag);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push(tag);
+    if (out.length >= VIDEO_TAGS_UP_TO) break;
+  }
+  return out;
+}
+
+/** A video is in a topic by its theme or by one of its tags. */
+export function hasTopic(video: { theme: string; tags: readonly string[] }, key: string): boolean {
+  return video.theme === key || video.tags.some((t) => topicKey(t) === key);
+}
+
+export interface CortosTopic {
+  key: string;
+  label: string;
+  count: number;
+}
+
+/** The topics some videos are in, the most videos first — a theme by its
+ * name, a tag as the videos write it. */
+export function topicsOf(videos: { theme: string; tags: readonly string[] }[]): CortosTopic[] {
+  const topics = new Map<string, CortosTopic>();
+  for (const video of videos) {
+    const keys = new Map<string, string>();
+    const theme = LIBRARY_THEMES.find((t) => t.key === video.theme);
+    if (theme) keys.set(theme.key, theme.label);
+    for (const tag of video.tags) {
+      const key = topicKey(tag);
+      if (key && !keys.has(key)) keys.set(key, LIBRARY_THEMES.find((t) => t.key === key)?.label ?? tag);
+    }
+    for (const [key, label] of keys) {
+      const topic = topics.get(key);
+      if (topic) topic.count++;
+      else topics.set(key, { key, label, count: 1 });
+    }
+  }
+  return [...topics.values()].sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, "es"));
+}
 
 // ── YouTube ─────────────────────────────────────────────────────────────────
 
@@ -246,6 +320,8 @@ export interface LibraryVideoCard {
   durationSeconds: number | null;
   instructor: LibraryPerson | null;
   teachersNote: string | null;
+  /** Its topics ("Polygel"…) — see topicsOf(). */
+  tags: string[];
   gated: boolean;
   /** ISO date. */
   publishedAt: string;

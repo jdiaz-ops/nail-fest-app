@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { LIBRARY_LEVELS, LIBRARY_THEMES, RESERVED_INSTRUCTOR_SLUGS, SAMPLE_SLUG_PREFIX, handleOf, youtubeIdFrom } from "./shared";
+import { LIBRARY_LEVELS, LIBRARY_THEMES, RESERVED_INSTRUCTOR_SLUGS, SAMPLE_SLUG_PREFIX, VIDEO_TAG_SUGGESTIONS, cleanTags, handleOf, youtubeIdFrom } from "./shared";
 
 // The instructors' portal (nailfest.lat/instructoras/portal, 2026-10-24):
 // each instructor makes her own profile with a username and a password,
@@ -23,6 +23,8 @@ export const INSTRUCTOR_SPECIALTIES = [
 ] as const;
 
 export const SPECIALTIES_UP_TO = 5;
+/** The topics she can pick for a video she sends. */
+export const SUBMISSION_TAGS_UP_TO = 3;
 export const BIO_UP_TO = 300;
 export const PASSWORD_FROM = 8;
 
@@ -174,6 +176,12 @@ export const submissionSchema = z.object({
         .filter(Boolean)
         .slice(0, 20),
     ),
+  /** Up to three of the usual topics ("Polygel"…), for the video the team makes. */
+  tags: z
+    .array(z.string().max(40))
+    .max(10)
+    .default([])
+    .transform((tags) => cleanTags(tags.filter((t) => (VIDEO_TAG_SUGGESTIONS as readonly string[]).includes(t))).slice(0, SUBMISSION_TAGS_UP_TO)),
   /** The content permission — required with her first video. */
   acceptContent: z.boolean().default(false),
 });

@@ -56,6 +56,7 @@ export default function LibrarySubmissionsCard({ submissions }: { submissions: A
               {s.instructorName} · {themeLabel(s.theme)} · {levelLabel(s.level)} · {s.createdAtLabel}
             </div>
             {s.description && <p style={{ fontSize: 13, margin: "6px 0 0", lineHeight: 1.45 }}>{s.description}</p>}
+            {s.tags.length > 0 && <div style={{ ...mutedText, fontSize: 12, marginTop: 4 }}>Etiquetas: {s.tags.join(", ")}</div>}
             {s.products.length > 0 && <div style={{ ...mutedText, fontSize: 12, marginTop: 4 }}>Lo que usó: {s.products.join(" · ")}</div>}
             <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
               <button type="button" style={primaryButtonStyle} disabled={busyId === s.id} onClick={() => review(s, "accept")}>

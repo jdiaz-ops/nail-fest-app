@@ -10,6 +10,7 @@ import {
   shuffled,
   themeOf,
   toneOf,
+  topicKey,
   youtubeLoopEmbedUrl,
   youtubeThumbnail,
   type LibraryMenuData,
@@ -55,6 +56,10 @@ type Mode = "api" | "native" | "plain";
 
 // Before a short's player loads: long enough that flicking past it doesn't.
 const SETTLE_MS = 250;
+// The feed's address ("/biblioteca/shorties" until 2026-10-24).
+const CORTOS = "/biblioteca/cortos";
+// A description longer than this gets «Ver más».
+const DESCRIPTION_CLAMP = 90;
 
 function Icon({ children, size = 22 }: { children: ReactNode; size?: number }) {
   return (
@@ -197,6 +202,8 @@ function ShortPlayer({
 
 interface Props {
   items: ShortItem[];
+  /** Only one topic's cortos (?tema=): its chip at the top clears it. */
+  topic: { key: string; label: string } | null;
   texts: ShortiesTexts;
   menu: LibraryMenuData;
   titleClass: string;
@@ -211,12 +218,14 @@ interface Props {
   staffNote: string | null;
 }
 
-// nailfest.lat/biblioteca/shorties (the approved mockup of 2026-10-24): one
-// short at a time, full screen, swipe up for the next — in a new order every
-// visit. Only the short on screen loads a player; the others are YouTube's
-// stills. The sound needs a tap (browsers start videos silent); where even
-// that isn't allowed, YouTube's own button takes over.
-export default function ShortiesFeed({ items: firstOrder, texts, menu, titleClass, signupEvery, unlocked, profiles, showUsed, showSteps, staffNote }: Props) {
+// nailfest.lat/biblioteca/cortos (the approved mockup of 2026-10-24, then
+// "Shorties"): one short at a time, full screen, swipe up for the next — in
+// a new order every visit. Only the short on screen loads a player; the
+// others are YouTube's stills. The sound needs a tap (browsers start videos
+// silent); where even that isn't allowed, YouTube's own button takes over.
+// Each short says what it is (title and description), and its theme and
+// tags open the cortos of that topic.
+export default function ShortiesFeed({ items: firstOrder, topic, texts, menu, titleClass, signupEvery, unlocked, profiles, showUsed, showSteps, staffNote }: Props) {
   const [items, setItems] = useState(firstOrder);
   // Each "again" builds the feed anew: scrolling it back to the top instead
   // would land on the short that was there, now somewhere else.
@@ -241,6 +250,8 @@ export default function ShortiesFeed({ items: firstOrder, texts, menu, titleClas
   const sheetClose = useRef<HTMLButtonElement>(null);
   const sheetOpener = useRef<HTMLElement | null>(null);
   const counted = useRef(new Set<string>());
+  // The short whose whole description is open.
+  const [openDescription, setOpenDescription] = useState<string | null>(null);
 
   /** The player follows the pause: the person's, or something on top. */
   const apply = useCallback(() => {
@@ -400,7 +411,7 @@ export default function ShortiesFeed({ items: firstOrder, texts, menu, titleClas
     pausedRef.current = false;
     setPaused(false);
     const slide = slides[active];
-    if (slide?.kind === "video") window.history.replaceState(null, "", `/biblioteca/shorties?v=${slide.item.video.slug}`);
+    if (slide?.kind === "video") window.history.replaceState(null, "", `${CORTOS}?v=${slide.item.video.slug}${topic ? `&tema=${topic.key}` : ""}`);
     const timer = window.setTimeout(() => {
       setSettled(true);
       if (slide?.kind !== "video") return;
@@ -410,7 +421,7 @@ export default function ShortiesFeed({ items: firstOrder, texts, menu, titleClas
       pingView(video.id);
     }, SETTLE_MS);
     return () => window.clearTimeout(timer);
-  }, [active, slides, unlocked]);
+  }, [active, slides, unlocked, topic]);
 
   // The keyboard on a computer: arrows to move, space to pause, M for the sound.
   const keys = useRef({ goTo, togglePause, enableSound, muteSound });
@@ -469,7 +480,7 @@ export default function ShortiesFeed({ items: firstOrder, texts, menu, titleClas
   }, [sheetItem, closeSheet]);
 
   const share = async (item: ShortItem) => {
-    const url = `${window.location.origin}/biblioteca/shorties?v=${item.video.slug}`;
+    const url = `${window.location.origin}${CORTOS}?v=${item.video.slug}`;
     if (navigator.share) {
       try {
         await navigator.share({ title: item.video.title, url });
@@ -493,7 +504,17 @@ export default function ShortiesFeed({ items: firstOrder, texts, menu, titleClas
     setActive(0);
   };
 
-  const signupHref = (slug?: string) => `/biblioteca/registro?volver=${encodeURIComponent(slug ? `/biblioteca/shorties?v=${slug}` : "/biblioteca/shorties")}`;
+  const here = (slug?: string) => {
+    const params = [slug && `v=${slug}`, topic && `tema=${topic.key}`].filter(Boolean).join("&");
+    return params ? `${CORTOS}?${params}` : CORTOS;
+  };
+  const signupHref = (slug?: string) => `/biblioteca/registro?volver=${encodeURIComponent(here(slug))}`;
+  const topicChip = topic && (
+    <Link href={CORTOS} className="bib-shorts-topic" aria-label={`Quitar el tema ${topic.label}: ver todos los cortos`}>
+      {topic.label}
+      <Icon size={14}>{PATHS.close}</Icon>
+    </Link>
+  );
   const sheetDiscounted = sheetItem?.products.some((p) => p.discountPercent != null && p.code) ?? false;
 
   return (
@@ -515,6 +536,7 @@ export default function ShortiesFeed({ items: firstOrder, texts, menu, titleClas
         </Link>
         <span className="bib-shorts-heading">
           <h1 className={`bib-shorts-title ${titleClass}`}>{texts.title}</h1>
+          {topicChip}
           {staffNote && (
             <Link href="/admin/biblioteca" className="bib-shorts-staff" title={staffNote}>
               Vista previa del equipo
@@ -529,6 +551,7 @@ export default function ShortiesFeed({ items: firstOrder, texts, menu, titleClas
           ← Biblioteca
         </Link>
         <h1 className={`bib-shorts-side-title ${titleClass}`}>{texts.title}</h1>
+        {topicChip}
         <p>{texts.subtitle}</p>
         {staffNote && (
           <p className="bib-shorts-side-note">
@@ -544,9 +567,9 @@ export default function ShortiesFeed({ items: firstOrder, texts, menu, titleClas
               <span className="bib-short-card-ic">
                 <Icon size={26}>{PATHS.shorties}</Icon>
               </span>
-              <p>{texts.empty}</p>
-              <Link href="/biblioteca" className="bib-btn bib-btn-main">
-                {texts.endLibrary}
+              <p>{topic ? `Todavía no hay cortos de ${topic.label}.` : texts.empty}</p>
+              <Link href={topic ? CORTOS : "/biblioteca"} className="bib-btn bib-btn-main">
+                {topic ? "Ver todos los cortos" : texts.endLibrary}
               </Link>
             </div>
           </section>
@@ -579,13 +602,13 @@ export default function ShortiesFeed({ items: firstOrder, texts, menu, titleClas
                   <span className="bib-short-card-ic">
                     <Icon size={26}>{PATHS.shorties}</Icon>
                   </span>
-                  <h2 className={titleClass}>{texts.endTitle}</h2>
-                  <p>{texts.endText}</p>
+                  <h2 className={titleClass}>{topic ? `Ya viste los cortos de ${topic.label}` : texts.endTitle}</h2>
+                  <p>{topic ? "Puedes verlos otra vez en otro orden o seguir con todos los cortos." : texts.endText}</p>
                   <button type="button" className="bib-btn bib-btn-main" onClick={again}>
                     {texts.endAgain}
                   </button>
-                  <Link href="/biblioteca" className="bib-btn bib-btn-ghost">
-                    {texts.endLibrary}
+                  <Link href={topic ? CORTOS : "/biblioteca"} className="bib-btn bib-btn-ghost">
+                    {topic ? "Ver todos los cortos" : texts.endLibrary}
                   </Link>
                 </div>
               </section>
@@ -602,6 +625,10 @@ export default function ShortiesFeed({ items: firstOrder, texts, menu, titleClas
           const steered = playable && mode === "api";
           const profileHref = profiles && video.instructor?.slug ? `/instructoras/${video.instructor.slug}` : null;
           const length = video.durationSeconds != null ? formatDuration(video.durationSeconds) : null;
+          const theme = themeOf(video.theme);
+          const descriptionOpen = openDescription === video.id;
+          const longDescription = (video.description?.length ?? 0) > DESCRIPTION_CLAMP;
+          const tags = video.tags.filter((t) => topicKey(t) !== video.theme);
           return (
             <section key={video.id} className="bib-short" aria-label={video.title}>
               <div className="bib-short-frame">
@@ -691,9 +718,22 @@ export default function ShortiesFeed({ items: firstOrder, texts, menu, titleClas
                     </span>
                   )}
                   <h2 className="bib-short-title">{video.title}</h2>
+                  {video.description && <p className={`bib-short-desc${descriptionOpen ? " is-open" : ""}`}>{video.description}</p>}
+                  {longDescription && (
+                    <button type="button" className="bib-short-more" aria-expanded={descriptionOpen} onClick={() => setOpenDescription(descriptionOpen ? null : video.id)}>
+                      {descriptionOpen ? "Ver menos" : "Ver más"}
+                    </button>
+                  )}
                   <span className="bib-short-tags">
                     {video.sample && <SampleBadge />}
-                    <span>{themeOf(video.theme).label}</span>
+                    <Link href={`${CORTOS}?tema=${theme.key}`} className="bib-short-topic" aria-current={topic?.key === theme.key ? "true" : undefined}>
+                      {theme.label}
+                    </Link>
+                    {tags.map((tag) => (
+                      <Link key={tag} href={`${CORTOS}?tema=${topicKey(tag)}`} className="bib-short-topic" aria-current={topic?.key === topicKey(tag) ? "true" : undefined}>
+                        {tag}
+                      </Link>
+                    ))}
                     <span>{levelLabel(video.level)}</span>
                     {length && <span>{length}</span>}
                   </span>

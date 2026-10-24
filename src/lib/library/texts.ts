@@ -7,7 +7,7 @@ export type LibraryPage = "biblioteca" | "shorties" | "video" | "instructoras" |
 
 export const LIBRARY_PAGES: { key: LibraryPage; label: string; hint: string }[] = [
   { key: "biblioteca", label: "Portada de la biblioteca", hint: "nailfest.lat/biblioteca" },
-  { key: "shorties", label: "Shorties", hint: "nailfest.lat/biblioteca/shorties" },
+  { key: "shorties", label: "Cortos", hint: "nailfest.lat/biblioteca/cortos" },
   { key: "video", label: "Página de cada video", hint: "nailfest.lat/biblioteca/<video>" },
   { key: "instructoras", label: "Directorio de instructoras", hint: "nailfest.lat/instructoras" },
   { key: "perfil", label: "Perfil de cada instructora", hint: "nailfest.lat/instructoras/<instructora>" },
@@ -27,7 +27,7 @@ interface TextDef {
 }
 
 export const LIBRARY_SECTIONS = {
-  shortiesBanner: { page: "biblioteca", label: "Entrada a Shorties", hint: "El recuadro de Shorties debajo del buscador. Sale desde 3 shorties." },
+  shortiesBanner: { page: "biblioteca", label: "Entrada a Cortos", hint: "El recuadro de Cortos debajo del buscador, con sus temas. Sale desde 3 cortos." },
   themes: { page: "biblioteca", label: "Explora por tema", hint: "Los ocho temas, con cuántos videos tiene cada uno." },
   levels: { page: "biblioteca", label: "Filtro por nivel", hint: "Principiante, intermedio y avanzado, debajo de los temas." },
   newest: { page: "biblioteca", label: "Lo nuevo", hint: "Los últimos videos publicados." },
@@ -35,7 +35,7 @@ export const LIBRARY_SECTIONS = {
   recordings: { page: "biblioteca", label: "Grabaciones de maratones", hint: "Las grabaciones largas, con su candado de registro gratis." },
   signup: { page: "biblioteca", label: "Registro gratis", hint: "El recuadro que invita a registrarse." },
   instructorsRow: { page: "biblioteca", label: "Aprende con", hint: "Las instructoras, con enlace a su perfil." },
-  shorties: { page: "shorties", label: "Shorties", hint: "Apagado, no sale en la portada ni en el menú, y su página no abre para el público." },
+  shorties: { page: "shorties", label: "Cortos", hint: "Apagado, no sale en la portada ni en el menú, y su página no abre para el público." },
   shortiesBadge: { page: "shorties", label: "Etiqueta «Nuevo»", hint: "En la entrada de la portada y en el menú." },
   shortiesSignup: { page: "shorties", label: "Invitación a registrarse", hint: "Sale cada 6 videos a quien no se ha registrado." },
   used: { page: "video", label: "Lo que usó", hint: "Los productos del video, con el descuento y el código de la cuponera." },
@@ -61,7 +61,7 @@ export const LIBRARY_TEXTS = {
   homeLede: { page: "biblioteca", label: "Texto debajo del título", value: "Técnicas, negocio y bioseguridad, explicadas por instructoras Nail Fest. Gratis.", long: true },
   searchPlaceholder: { page: "biblioteca", label: "Texto dentro del buscador", value: "Busca una técnica o un producto" },
   shortiesBannerText: { page: "biblioteca", label: "Texto", value: "Videos cortos al azar, uno tras otro. Desliza y aprende.", long: true, section: "shortiesBanner" },
-  shortiesBannerButton: { page: "biblioteca", label: "Botón", value: "Ver Shorties", section: "shortiesBanner" },
+  shortiesBannerButton: { page: "biblioteca", label: "Botón", value: "Ver los cortos", section: "shortiesBanner" },
   themesTitle: { page: "biblioteca", label: "Título", value: "Explora por tema", section: "themes" },
   newestTitle: { page: "biblioteca", label: "Título", value: "Lo nuevo", section: "newest" },
   mostViewedTitle: { page: "biblioteca", label: "Título", value: "Lo más visto esta semana", section: "mostViewed" },
@@ -73,7 +73,7 @@ export const LIBRARY_TEXTS = {
   instructorsRowTitle: { page: "biblioteca", label: "Título", value: "Aprende con", section: "instructorsRow" },
   emptyText: { page: "biblioteca", label: "Mientras no haya videos", value: "Muy pronto: estamos preparando los primeros videos con las instructoras Nail Fest.", long: true },
 
-  shortiesTitle: { page: "shorties", label: "Nombre", value: "Shorties" },
+  shortiesTitle: { page: "shorties", label: "Nombre", value: "Cortos" },
   shortiesSubtitle: { page: "shorties", label: "Texto debajo del nombre (en computador)", value: "Videos cortos al azar. Desliza o usa las flechas." },
   shortiesHint: { page: "shorties", label: "Aviso del primer video", value: "Desliza hacia arriba para ver otro" },
   shortiesSound: { page: "shorties", label: "Botón del sonido", value: "Activar sonido" },
@@ -86,7 +86,7 @@ export const LIBRARY_TEXTS = {
   shortiesEndText: { page: "shorties", label: "Al terminar: texto", value: "Puedes verlos otra vez en otro orden o seguir en la biblioteca.", long: true },
   shortiesEndAgain: { page: "shorties", label: "Al terminar: botón para repetir", value: "Verlos otra vez en otro orden" },
   shortiesEndLibrary: { page: "shorties", label: "Al terminar: botón a la biblioteca", value: "Ir a la biblioteca" },
-  shortiesEmpty: { page: "shorties", label: "Mientras no haya shorties", value: "Muy pronto: estamos preparando los primeros shorties.", long: true },
+  shortiesEmpty: { page: "shorties", label: "Mientras no haya cortos", value: "Muy pronto: estamos preparando los primeros cortos.", long: true },
   shortiesBadgeLabel: { page: "shorties", label: "Etiqueta", value: "Nuevo", section: "shortiesBadge" },
   shortiesSignupTitle: { page: "shorties", label: "Título", value: "¿Te están sirviendo?", section: "shortiesSignup" },
   shortiesSignupText: {
