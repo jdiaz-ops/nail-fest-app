@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { slugify } from "@/lib/events";
 import { getLibrarySettings } from "./settings";
 import { resolveSections, resolveTexts } from "./texts";
+import { phoneOf, profileStatus, youtubeChannelOf, type ProfileStatus } from "./portal";
 import {
   LIBRARY_LEVELS,
   LIBRARY_THEMES,
@@ -90,7 +91,20 @@ export const instructorInputSchema = z.object({
     .max(120)
     .nullish()
     .transform((v) => handleOf(v)),
+  youtube: z
+    .string()
+    .max(200)
+    .nullish()
+    .transform((v) => youtubeChannelOf(v)),
+  whatsapp: z
+    .string()
+    .max(40)
+    .nullish()
+    .transform((v) => phoneOf(v)),
+  online: z.boolean(),
   featured: z.boolean(),
+  /** The "Instructora invitada Nail Fest" seal. */
+  invited: z.boolean(),
   visible: z.boolean(),
   appearances: z.array(z.string().trim().min(1).max(120)).max(12),
 });
@@ -190,10 +204,35 @@ export interface AdminInstructor {
   specialties: string[];
   instagram: string | null;
   tiktok: string | null;
+  youtube: string | null;
+  whatsapp: string | null;
+  online: boolean;
   featured: boolean;
+  invited: boolean;
   visible: boolean;
+  /** Paused by her, from her portal. */
+  paused: boolean;
   appearances: string[];
   videoCount: number;
+  /** Where her profile stands (lib/library/portal.ts). */
+  status: ProfileStatus;
+  submittedAtLabel: string | null;
+  /** Her portal account, when she has one — never public. */
+  account: { email: string; phone: string; resetRequestedLabel: string | null; lastLoginLabel: string | null } | null;
+}
+
+/** A video an instructor sent from her portal, waiting for the team. */
+export interface AdminSubmission {
+  id: string;
+  instructorId: string;
+  instructorName: string;
+  youtubeId: string;
+  title: string;
+  theme: string;
+  level: string;
+  description: string | null;
+  products: string[];
+  createdAtLabel: string;
 }
 
 export interface AdminClass {
@@ -240,7 +279,10 @@ export async function getLibraryAdminData() {
   const [settings, videos, instructors, classes, leads, products, views] = await Promise.all([
     getLibrarySettings(),
     db.libraryVideo.findMany({ orderBy: { publishedAt: "desc" }, include: { instructor: { select: { name: true } } } }),
-    db.instructor.findMany({ orderBy: [{ featured: "desc" }, { name: "asc" }], include: { _count: { select: { videos: true } } } }),
+    db.instructor.findMany({
+      orderBy: [{ featured: "desc" }, { name: "asc" }],
+      include: { _count: { select: { videos: true } }, account: { select: { email: true, phone: true, resetRequestedAt: true, lastLoginAt: true } } },
+    }),
     db.instructorClass.findMany({ orderBy: { startsAt: "desc" }, take: 200, include: { instructor: { select: { name: true } } } }),
     db.libraryLead.findMany({ orderBy: { createdAt: "desc" }, take: 500, include: { instructor: { select: { name: true } } } }),
     db.cuponeraProduct.findMany({
@@ -253,11 +295,17 @@ export async function getLibraryAdminData() {
   const viewsById = new Map(views.map((v) => [v.videoId, v._sum.views ?? 0]));
   const now = Date.now();
   const counts = await db.libraryLead.groupBy({ by: ["kind"], where: { handled: false }, _count: { _all: true } });
+  const submissions = await db.instructorVideoSubmission.findMany({
+    where: { status: "PENDING" },
+    orderBy: { createdAt: "asc" },
+    include: { instructor: { select: { name: true } } },
+  });
 
   return {
     settings: {
       published: settings.published,
       instructorsPublished: settings.instructorsPublished,
+      portalOpen: settings.portalOpen,
       // What the admin typed, not the usual texts: an empty box is the usual one.
       texts: Object.fromEntries(
         Object.entries((settings.texts ?? {}) as Record<string, unknown>).filter((e): e is [string, string] => typeof e[1] === "string"),
@@ -299,10 +347,39 @@ export async function getLibraryAdminData() {
         specialties: i.specialties,
         instagram: i.instagram,
         tiktok: i.tiktok,
+        youtube: i.youtube,
+        whatsapp: i.whatsapp,
+        online: i.online,
         featured: i.featured,
+        invited: i.invited,
         visible: i.visible,
+        paused: i.paused,
         appearances: i.appearances,
         videoCount: i._count.videos,
+        status: profileStatus(i),
+        submittedAtLabel: i.submittedAt ? leadDate.format(i.submittedAt) : null,
+        account: i.account
+          ? {
+              email: i.account.email,
+              phone: i.account.phone,
+              resetRequestedLabel: i.account.resetRequestedAt ? leadDate.format(i.account.resetRequestedAt) : null,
+              lastLoginLabel: i.account.lastLoginAt ? leadDate.format(i.account.lastLoginAt) : null,
+            }
+          : null,
+      }),
+    ),
+    submissions: submissions.map(
+      (s): AdminSubmission => ({
+        id: s.id,
+        instructorId: s.instructorId,
+        instructorName: s.instructor.name,
+        youtubeId: s.youtubeId,
+        title: s.title,
+        theme: s.theme,
+        level: s.level,
+        description: s.description,
+        products: s.products,
+        createdAtLabel: leadDate.format(s.createdAt),
       }),
     ),
     classes: classes.map(
@@ -345,3 +422,13 @@ export async function getLibraryAdminData() {
 }
 
 export type LibraryAdminData = Awaited<ReturnType<typeof getLibraryAdminData>>;
+
+/** One line of "Lo que usaste" ("Marca · producto · tono") as a "Lo que usó" line written by hand. */
+export function productRefOfLine(line: string): UsedProductRef {
+  const parts = line
+    .split(/\s*[·|]\s*/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  if (parts.length >= 2) return { cuponeraProductId: null, brand: parts[0]!.slice(0, 80), name: parts.slice(1).join(" · ").slice(0, 160) };
+  return { cuponeraProductId: null, brand: "", name: line.trim().slice(0, 160) };
+}

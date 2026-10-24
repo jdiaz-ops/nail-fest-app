@@ -82,13 +82,26 @@ export default function LibraryVideosEditor({
   videos,
   instructors,
   products,
+  openId = null,
 }: {
   videos: AdminVideo[];
   instructors: AdminInstructor[];
   products: AdminCuponeraProduct[];
+  /** A video to open right away: one just accepted from "Enviados por instructoras". */
+  openId?: string | null;
 }) {
   const router = useRouter();
-  const [editing, setEditing] = useState<{ id: string | null; draft: Draft } | null>(null);
+  const [editing, setEditing] = useState<{ id: string | null; draft: Draft } | null>(() => {
+    const video = openId ? videos.find((v) => v.id === openId) : undefined;
+    return video ? { id: video.id, draft: draftOf(video) } : null;
+  });
+  // Closing it leaves the page's address without the video to open — that
+  // navigation reads the list fresh too, so a refresh on top would undo it.
+  const close = (saved = false) => {
+    setEditing(null);
+    if (openId) router.replace("/admin/biblioteca?tab=videos", { scroll: false });
+    else if (saved) router.refresh();
+  };
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -187,11 +200,8 @@ export default function LibraryVideosEditor({
           initial={editing.draft}
           instructors={instructors}
           products={products}
-          onClose={() => setEditing(null)}
-          onSaved={() => {
-            setEditing(null);
-            router.refresh();
-          }}
+          onClose={() => close()}
+          onSaved={() => close(true)}
         />
       )}
     </div>

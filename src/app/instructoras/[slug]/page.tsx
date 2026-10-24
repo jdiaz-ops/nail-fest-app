@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import LibraryShell, { libraryStaffNote } from "@/components/library/LibraryShell";
-import PreviewLink from "@/components/cuponera/PreviewLink";
-import { Avatar, SampleBadge, VideoCard, classDayParts } from "@/components/library/parts";
+import { Avatar, SampleBadge, VideoCard } from "@/components/library/parts";
 import { getInstructorProfile, getLibraryViewer, libraryRobots } from "@/lib/library/data";
+import { getPortalUser } from "@/lib/library/portalAuth";
+import { whatsappUrl, youtubeChannelUrl } from "@/lib/library/portal";
 import { formatPercent } from "@/lib/cuponera/shared";
 import { fraunces } from "@/app/cuponera/fonts";
 
@@ -22,29 +23,33 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   };
 }
 
-const timeFormatter = new Intl.DateTimeFormat("es-CO", { hour: "numeric", minute: "2-digit", timeZone: "America/Bogota" });
-
-// An instructor's profile: who she is and her networks, her videos, her
-// upcoming classes (each one straight to her own sign-up link — Nail Fest
-// shows them, doesn't take bookings: 2026-10-25), the cuponera brands in her
-// videos and the Nail Fest events she's been part of. No brand requests:
-// that's Marcolini's.
+// An instructor's profile: who she is and her networks (her WhatsApp when
+// she gave one), her videos, the cuponera brands in her videos and the
+// Nail Fest events she's been part of. No classes (2026-10-24) and no brand
+// requests (that's Marcolini's). Before the team approves it, she can see
+// it from her portal as a preview.
 export default async function InstructoraPage({ params }: { params: { slug: string } }) {
-  const viewer = await getLibraryViewer();
-  if (!viewer.config.instructorsPublished && !viewer.staff) notFound();
-  const profile = await getInstructorProfile(params.slug, viewer);
+  const [viewer, portalUser] = await Promise.all([getLibraryViewer(), getPortalUser()]);
+  const owner = portalUser?.instructor.slug === params.slug;
+  if (!viewer.config.instructorsPublished && !viewer.staff && !owner) notFound();
+  const profile = await getInstructorProfile(params.slug, viewer, new Date(), owner);
   if (!profile) notFound();
-  const { instructor, videos, classes, brands } = profile;
+  const { instructor, videos, brands } = profile;
   const { texts, sections } = viewer.config;
   const handle = instructor.instagram ?? instructor.tiktok;
   const libraryOpen = viewer.staff || viewer.config.published;
-  const notes = [
-    libraryStaffNote(viewer, "instructoras", instructor.sample),
-    profile.hidden ? "Este perfil está oculto: solo lo ve el equipo." : null,
-  ].filter(Boolean);
+  const notes = [libraryStaffNote(viewer, "instructoras", instructor.sample), viewer.staff && profile.hidden ? `${profile.hidden} Solo lo ve el equipo.` : null].filter(Boolean);
+  const ownerNote =
+    owner && !viewer.staff
+      ? profile.hidden
+        ? `Así se verá tu perfil en el directorio. ${profile.hidden} Por ahora solo lo ves tú.`
+        : viewer.config.instructorsPublished
+          ? null
+          : "Así se verá tu perfil. El directorio todavía no está abierto al público."
+      : null;
 
   return (
-    <LibraryShell section="instructoras" viewer={viewer} note={notes.length ? notes.join(" ") : null}>
+    <LibraryShell section="instructoras" viewer={viewer} note={notes.length ? notes.join(" ") : null} ownerNote={ownerNote}>
       <div className="bib-band">
         <div className="bib-band-inner">
           <Link href="/instructoras" className="bib-back">
@@ -62,18 +67,21 @@ export default async function InstructoraPage({ params }: { params: { slug: stri
               {instructor.sample && <SampleBadge />}
               <span>
                 {instructor.city}
+                {instructor.online ? " · también en línea" : ""}
                 {handle ? ` · @${handle}` : ""}
               </span>
-              <span className="bib-seal">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M5 12.5l4.5 4.5L19 7.5" />
-                </svg>
-                {texts.sealLabel}
-              </span>
+              {instructor.invited && (
+                <span className="bib-seal">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M5 12.5l4.5 4.5L19 7.5" />
+                  </svg>
+                  {texts.sealLabel}
+                </span>
+              )}
               {instructor.featured && <span className="bib-badge bib-badge--top">{texts.featuredLabel}</span>}
             </div>
           </div>
-          {(instructor.instagram || instructor.tiktok) && (
+          {(instructor.instagram || instructor.tiktok || instructor.youtube || instructor.whatsapp) && (
             <div className="bib-socials">
               {instructor.instagram && (
                 <a href={`https://www.instagram.com/${instructor.instagram}/`} target="_blank" rel="noopener" className="bib-social">
@@ -83,6 +91,16 @@ export default async function InstructoraPage({ params }: { params: { slug: stri
               {instructor.tiktok && (
                 <a href={`https://www.tiktok.com/@${instructor.tiktok}`} target="_blank" rel="noopener" className="bib-social">
                   TikTok
+                </a>
+              )}
+              {instructor.youtube && (
+                <a href={youtubeChannelUrl(instructor.youtube)} target="_blank" rel="noopener" className="bib-social">
+                  YouTube
+                </a>
+              )}
+              {instructor.whatsapp && (
+                <a href={whatsappUrl(instructor.whatsapp)} target="_blank" rel="noopener" className="bib-social">
+                  WhatsApp
                 </a>
               )}
             </div>
@@ -103,10 +121,6 @@ export default async function InstructoraPage({ params }: { params: { slug: stri
               <span>{videos.length === 1 ? "video" : "videos"}</span>
             </div>
             <div>
-              <b className={fraunces.className}>{classes.length}</b>
-              <span>{classes.length === 1 ? "próxima clase" : "próximas clases"}</span>
-            </div>
-            <div>
               <b className={fraunces.className}>{instructor.appearances.length}</b>
               <span>{instructor.appearances.length === 1 ? "evento Nail Fest" : "eventos Nail Fest"}</span>
             </div>
@@ -120,40 +134,6 @@ export default async function InstructoraPage({ params }: { params: { slug: stri
               {videos.map((v) => (
                 <VideoCard key={v.id} video={v} />
               ))}
-            </div>
-          </section>
-        )}
-
-        {sections.classes && classes.length > 0 && (
-          <section className="bib-section">
-            <h2 className={`bib-h2 ${fraunces.className}`}>{texts.classesTitle}</h2>
-            <p className="bib-sub">{texts.classesNote}</p>
-            <div className="bib-classes">
-              {classes.map((c) => {
-                const { day, month } = classDayParts(c.startsAt);
-                return (
-                  <div key={c.id} className="bib-class">
-                    <span className="bib-date">
-                      <b className={fraunces.className}>{day}</b>
-                      <span>{month}</span>
-                    </span>
-                    <span className="bib-class-text">
-                      <b>{c.title}</b>
-                      <small>{[c.place, timeFormatter.format(new Date(c.startsAt)), c.priceLabel].filter(Boolean).join(" · ")}</small>
-                    </span>
-                    {(c.url || instructor.sample) && (
-                      <PreviewLink
-                        href={c.url}
-                        preview="Ejemplo: aquí se abriría el enlace de inscripción de la instructora (su WhatsApp, su página o su formulario)."
-                        className="bib-btn bib-btn-main bib-btn-sm"
-                        ariaLabel={`Inscribirme en «${c.title}» (abre el enlace de la instructora)`}
-                      >
-                        Inscribirme
-                      </PreviewLink>
-                    )}
-                  </div>
-                );
-              })}
             </div>
           </section>
         )}

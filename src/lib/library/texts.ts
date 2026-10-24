@@ -3,7 +3,7 @@
 // secciones), with the usual text — what shows while the admin leaves it
 // empty. No database here: the admin's form imports it too.
 
-export type LibraryPage = "biblioteca" | "shorties" | "video" | "instructoras" | "perfil" | "menu" | "formularios";
+export type LibraryPage = "biblioteca" | "shorties" | "video" | "instructoras" | "perfil" | "portal" | "menu" | "formularios";
 
 export const LIBRARY_PAGES: { key: LibraryPage; label: string; hint: string }[] = [
   { key: "biblioteca", label: "Portada de la biblioteca", hint: "nailfest.lat/biblioteca" },
@@ -11,6 +11,7 @@ export const LIBRARY_PAGES: { key: LibraryPage; label: string; hint: string }[] 
   { key: "video", label: "Página de cada video", hint: "nailfest.lat/biblioteca/<video>" },
   { key: "instructoras", label: "Directorio de instructoras", hint: "nailfest.lat/instructoras" },
   { key: "perfil", label: "Perfil de cada instructora", hint: "nailfest.lat/instructoras/<instructora>" },
+  { key: "portal", label: "Portal de instructoras", hint: "Crear perfil (nailfest.lat/instructoras/unirme) y los términos que aceptan" },
   { key: "menu", label: "Menú", hint: "El menú de la biblioteca y del directorio de instructoras" },
   { key: "formularios", label: "Formularios", hint: "Registro gratis y postulación de instructoras" },
 ];
@@ -41,9 +42,8 @@ export const LIBRARY_SECTIONS = {
   steps: { page: "video", label: "El paso a paso", hint: "Los pasos del video, que se ven con el registro gratis." },
   related: { page: "video", label: "Sigue con", hint: "Más videos del mismo tema." },
   filters: { page: "instructoras", label: "Filtros", hint: "Ciudad y especialidad, arriba de las tarjetas." },
-  teachCta: { page: "instructoras", label: "¿Enseñas uñas?", hint: "La invitación a postularse." },
+  teachCta: { page: "instructoras", label: "¿Enseñas uñas?", hint: "La invitación a crear su perfil." },
   profileVideos: { page: "perfil", label: "Sus videos", hint: "Los videos de la instructora en la biblioteca." },
-  classes: { page: "perfil", label: "Próximas clases", hint: "Las clases que tiene programadas, con el enlace de inscripción de ella." },
   profileProducts: { page: "perfil", label: "Lo que usa en sus videos", hint: "Las marcas de la cuponera que salen en sus videos." },
   appearances: { page: "perfil", label: "Ha estado en", hint: "Los eventos de Nail Fest en los que ha estado." },
   menuThemes: { page: "menu", label: "Busca por tema", hint: "Los temas, con cuántos videos tiene cada uno." },
@@ -107,11 +107,11 @@ export const LIBRARY_TEXTS = {
   stepsButton: { page: "video", label: "Botón", value: "Ver el paso a paso", section: "steps" },
   relatedTitle: { page: "video", label: "Título", value: "Sigue con", section: "related" },
 
-  directoryTitle: { page: "instructoras", label: "Título", value: "Instructoras Nail Fest" },
+  directoryTitle: { page: "instructoras", label: "Título", value: "El directorio de instructoras de uñas" },
   directoryLede: {
     page: "instructoras",
     label: "Texto debajo del título",
-    value: "Educadoras de uñas elegidas por Nail Fest. Mira sus técnicas, sus redes y sus próximas clases.",
+    value: "Encuentra instructoras de uñas por ciudad y especialidad: sus técnicas, sus videos y sus redes.",
     long: true,
   },
   directorySearchPlaceholder: { page: "instructoras", label: "Texto dentro del buscador", value: "Busca por nombre, ciudad o técnica" },
@@ -119,20 +119,66 @@ export const LIBRARY_TEXTS = {
   teachText: {
     page: "instructoras",
     label: "Texto",
-    value: "Postúlate gratis: tu perfil en el directorio, con tus redes, y la oportunidad de que tus videos salgan en la biblioteca, en nuestras redes y en nuestro correo.",
+    value: "Crea tu perfil gratis: que te encuentren por tu ciudad y tu especialidad, con tus redes. Y si quieres, envía tus videos: el equipo elige cuáles salen en la biblioteca, en nuestras redes y en nuestro correo.",
     long: true,
     section: "teachCta",
   },
-  teachButton: { page: "instructoras", label: "Botón", value: "Postularme", section: "teachCta" },
-  directoryEmptyText: { page: "instructoras", label: "Mientras no haya instructoras", value: "Muy pronto: estamos eligiendo a las primeras Instructoras Nail Fest.", long: true },
+  teachButton: { page: "instructoras", label: "Botón", value: "Crear mi perfil", section: "teachCta" },
+  directoryEmptyText: { page: "instructoras", label: "Mientras no haya instructoras", value: "Muy pronto: estamos sumando las primeras instructoras al directorio.", long: true },
 
-  sealLabel: { page: "perfil", label: "Sello", value: "Instructora invitada Nail Fest" },
+  sealLabel: { page: "perfil", label: "Sello (solo las que tienen el sello en su ficha)", value: "Instructora invitada Nail Fest" },
   featuredLabel: { page: "perfil", label: "Sello de las destacadas", value: "Destacada" },
   profileVideosTitle: { page: "perfil", label: "Título", value: "Sus videos", section: "profileVideos" },
-  classesTitle: { page: "perfil", label: "Título", value: "Próximas clases", section: "classes" },
-  classesNote: { page: "perfil", label: "Texto debajo", value: "Las organiza y cobra cada instructora; Nail Fest solo las muestra.", section: "classes" },
   profileProductsTitle: { page: "perfil", label: "Título", value: "Lo que usa en sus videos", section: "profileProducts" },
   appearancesTitle: { page: "perfil", label: "Título", value: "Ha estado en", section: "appearances" },
+
+  joinTitle: { page: "portal", label: "Crear perfil: título", value: "Crea tu perfil gratis" },
+  joinLede: {
+    page: "portal",
+    label: "Crear perfil: texto debajo del título",
+    value: "Para que alumnas de todo el país te encuentren por tu ciudad y por lo que enseñas, con tus redes.",
+    long: true,
+  },
+  joinActiveTitle: { page: "portal", label: "Instructora activa: título", value: "¿Quieres que te descubran?" },
+  joinActiveText: {
+    page: "portal",
+    label: "Instructora activa: texto",
+    value: "Sé instructora activa: envía tus videos con su ficha. El equipo elige cuáles salen en la biblioteca, en las redes y en el correo de Nail Fest, con tu nombre y tus redes.",
+    long: true,
+  },
+  joinMoneyTitle: { page: "portal", label: "Cómo gana Nail Fest: título", value: "Así gana Nail Fest" },
+  joinMoneyText: {
+    page: "portal",
+    label: "Cómo gana Nail Fest: texto",
+    value: "Tu perfil es gratis y no recibes pagos. Algunos productos de los videos tienen enlaces con descuento, y Nail Fest puede recibir una comisión de la marca por esas compras.",
+    long: true,
+  },
+  termsText: {
+    page: "portal",
+    label: "Términos del directorio (se aceptan al crear la cuenta; deja una línea en blanco entre párrafos)",
+    value: [
+      "El directorio de instructoras de uñas de Nail Fest es un espacio gratuito para que las alumnas encuentren instructoras por ciudad y especialidad. Crear tu perfil no tiene costo y no genera pagos ni para ti ni para Nail Fest.",
+      "Tu perfil lo escribes y lo cuidas tú: tu nombre, tu foto, tu ciudad, tus especialidades, lo que cuentas de ti y tus redes. Lo que publiques tiene que ser verdad y ser tuyo. Puedes cambiarlo o pausarlo cuando quieras, y pedirnos que lo borremos.",
+      "El equipo de Nail Fest revisa cada perfil antes de publicarlo. Puede no publicarlo, pedirte cambios u ocultarlo si no cumple estos términos.",
+      "Estar en el directorio no te garantiza alumnas, ventas, invitaciones a eventos, maratones ni ningún otro espacio de Nail Fest.",
+      "Nail Fest no te cobra ni te paga. Algunos productos de la biblioteca tienen enlaces con descuento de la Cuponera Nail Fest, y Nail Fest puede recibir una comisión de la marca por esas compras.",
+      "Tu correo y tu celular no se publican: son para que entres a tu cuenta y para escribirte sobre tu perfil. Lo demás de tu perfil es público mientras esté publicado. Tratamos tus datos según nuestra política de privacidad (nailfest.lat/privacidad).",
+      "Si tienes dudas o quieres borrar tu perfil, escríbenos por WhatsApp.",
+    ].join("\n\n"),
+    long: true,
+  },
+  contentTermsText: {
+    page: "portal",
+    label: "Permiso de uso de contenido (se acepta con el primer video; deja una línea en blanco entre párrafos)",
+    value: [
+      "Al enviar un video desde tu portal confirmas que es tuyo: lo grabaste tú o tienes permiso de quienes aparecen, y no usa música ni contenido de otras personas sin permiso.",
+      "Le das permiso a Nail Fest, sin costo, para mostrar ese video y sus imágenes en la biblioteca, en sus redes sociales y en sus correos, siempre con tu nombre y tus redes. El video sigue siendo tuyo y sigue en tu canal de YouTube: las vistas son tuyas.",
+      "Nail Fest elige qué videos publica y puede no publicar alguno. Enviar un video no garantiza que salga, ni pagos, ni invitaciones a eventos.",
+      "Puedes pedirnos que retiremos un video tuyo cuando quieras: lo quitamos de la biblioteca y no lo usamos en publicaciones nuevas.",
+      "Nail Fest puede recibir una comisión de las marcas por las compras hechas con los enlaces con descuento que acompañan los videos.",
+    ].join("\n\n"),
+    long: true,
+  },
 
   menuSectionsTitle: { page: "menu", label: "Título de las secciones", value: "Secciones" },
   menuHome: { page: "menu", label: "Enlace a la portada", value: "Inicio de la biblioteca" },

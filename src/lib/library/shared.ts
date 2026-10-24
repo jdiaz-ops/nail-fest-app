@@ -59,7 +59,9 @@ export function isKind(value: unknown): value is LibraryVideoKind {
 
 // Slugs the pages under /biblioteca and /instructoras already use.
 export const RESERVED_VIDEO_SLUGS = ["buscar", "registro", "shorties"];
-export const RESERVED_INSTRUCTOR_SLUGS = ["solicitud"];
+// The directory's own pages under /instructoras/ (the portal, its sign-up
+// and login, the terms) — never an instructor's address.
+export const RESERVED_INSTRUCTOR_SLUGS = ["solicitud", "unirme", "entrar", "portal", "clave", "terminos"];
 // Invented examples (lib/library/samples.ts) live under this prefix, so a
 // real video or instructor never takes one of their addresses.
 export const SAMPLE_SLUG_PREFIX = "ejemplo-";
@@ -253,16 +255,6 @@ export interface LibraryVideoCard {
   sample: boolean;
 }
 
-export interface InstructorClassItem {
-  id: string;
-  title: string;
-  /** ISO date-time. */
-  startsAt: string;
-  place: string;
-  priceLabel: string | null;
-  url: string | null;
-}
-
 export interface InstructorCard extends LibraryPerson {
   id: string;
   slug: string;
@@ -270,9 +262,16 @@ export interface InstructorCard extends LibraryPerson {
   specialties: string[];
   instagram: string | null;
   tiktok: string | null;
+  /** Her channel: "@handle" or "channel/UC…" (lib/library/portal.ts). */
+  youtube: string | null;
+  /** A WhatsApp for students, when she gave one. */
+  whatsapp: string | null;
+  /** Also teaches online. */
+  online: boolean;
+  /** The "Instructora invitada Nail Fest" seal. */
+  invited: boolean;
   appearances: string[];
   videoCount: number;
-  nextClass: InstructorClassItem | null;
   sample: boolean;
 }
 

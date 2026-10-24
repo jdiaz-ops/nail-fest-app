@@ -23,7 +23,20 @@ export function libraryStaffNote(viewer: LibraryViewer, section: Section, hasExa
 // the staff banner while there's something visitors don't see, the header
 // with the menu (./LibraryMenu: the sections and ways to search this viewer
 // can open), the footer, and the note that confirms a copied code.
-export default async function LibraryShell({ section, viewer, note, children }: { section: Section; viewer: LibraryViewer; note: string | null; children: ReactNode }) {
+export default async function LibraryShell({
+  section,
+  viewer,
+  note,
+  ownerNote = null,
+  children,
+}: {
+  section: Section;
+  viewer: LibraryViewer;
+  note: string | null;
+  /** An instructor previewing her own profile from the portal. */
+  ownerNote?: string | null;
+  children: ReactNode;
+}) {
   const menu = await getLibraryMenu(viewer);
   return (
     <main className="bib-page">
@@ -33,6 +46,14 @@ export default async function LibraryShell({ section, viewer, note, children }: 
             <b>Vista previa del equipo.</b> {note}
           </span>
           <Link href="/admin/biblioteca">Ir a Editar biblioteca</Link>
+        </div>
+      )}
+      {ownerNote && (
+        <div className="bib-preview">
+          <span>
+            <b>Vista previa.</b> {ownerNote}
+          </span>
+          <Link href="/instructoras/portal">Ir a tu portal</Link>
         </div>
       )}
       <header className="bib-header">
@@ -55,7 +76,7 @@ export default async function LibraryShell({ section, viewer, note, children }: 
         <p>
           {section === "biblioteca"
             ? "Los videos se ven desde YouTube. Los descuentos de «Lo que usó» son de la Cuponera Nail Fest y se usan en la tienda en línea de cada marca; Nail Fest puede recibir una comisión por esas compras."
-            : "Las Instructoras Nail Fest son educadoras de uñas elegidas por Nail Fest. Cada una organiza y cobra sus propias clases."}
+            : "El directorio de instructoras de uñas de Nail Fest: cada perfil lo hace su instructora y el equipo lo revisa antes de publicarlo."}
         </p>
         <a href="/privacidad">Política de privacidad</a>
       </footer>

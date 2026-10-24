@@ -218,23 +218,6 @@ export function PeopleRow({ people }: { people: InstructorCard[] }) {
   );
 }
 
-const shortDate = new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "short", timeZone: "America/Bogota" });
-
-/** "12" and "nov" for a class's date block, in Bogotá. */
-export function classDayParts(iso: string): { day: string; month: string } {
-  const parts = shortDate.formatToParts(new Date(iso));
-  return {
-    day: parts.find((p) => p.type === "day")?.value ?? "",
-    month: (parts.find((p) => p.type === "month")?.value ?? "").replace(".", ""),
-  };
-}
-
-/** "12 nov". */
-export function classDay(iso: string): string {
-  const { day, month } = classDayParts(iso);
-  return `${day} ${month}`;
-}
-
 export function InstructorTile({ instructor, featuredLabel }: { instructor: InstructorCard; featuredLabel: string }) {
   const meta = [instructor.videoCount === 1 ? "1 video" : `${instructor.videoCount} videos`];
   return (
@@ -248,6 +231,7 @@ export function InstructorTile({ instructor, featuredLabel }: { instructor: Inst
         <small className="bib-icard-city">
           {instructor.sample && <SampleBadge />}
           {instructor.city}
+          {instructor.online ? " · también en línea" : ""}
         </small>
         {instructor.specialties.length > 0 && (
           <span className="bib-tags">
@@ -258,10 +242,7 @@ export function InstructorTile({ instructor, featuredLabel }: { instructor: Inst
             ))}
           </span>
         )}
-        <small className="bib-icard-meta">
-          {meta.join(" · ")}
-          {instructor.nextClass && <b> · Clase {classDay(instructor.nextClass.startsAt)}</b>}
-        </small>
+        <small className="bib-icard-meta">{meta.join(" · ")}</small>
       </span>
     </Link>
   );

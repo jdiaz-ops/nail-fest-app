@@ -15,8 +15,8 @@ type SearchParams = Record<string, string | string[] | undefined>;
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
-    title: "Instructoras · Nail Fest",
-    description: "Educadoras de uñas elegidas por Nail Fest: sus técnicas, sus clases y cómo contactarlas.",
+    title: "El directorio de instructoras de uñas · Nail Fest",
+    description: "Encuentra instructoras de uñas por ciudad y especialidad: sus técnicas, sus videos y sus redes.",
     robots: await libraryRobots("instructoras"),
   };
 }
@@ -30,11 +30,11 @@ function distinct(values: string[]): string[] {
   return [...seen.values()];
 }
 
-// nailfest.lat/instructoras — the curated directory of Instructoras Nail
-// Fest: filters by city and specialty, a card per instructor (featured
-// first, then the most active) and the two ways in — instructors who want
-// to apply, brands looking for one. Profiles live in ./[slug], the forms in
-// ./solicitud.
+// nailfest.lat/instructoras — the directory of instructoras de uñas:
+// filters by city and specialty, a card per instructor (featured first,
+// then the most active) and the way in for instructors — their own profile,
+// made in the portal (./unirme) and approved by the team. Profiles live in
+// ./[slug].
 export default async function InstructorasPage({ searchParams }: { searchParams: SearchParams }) {
   const viewer = await getLibraryViewer();
   if (!viewer.config.instructorsPublished && !viewer.staff) notFound();
@@ -148,7 +148,7 @@ export default async function InstructorasPage({ searchParams }: { searchParams:
             <div className="bib-cta bib-cta--teach">
               <h2 className={fraunces.className}>{texts.teachTitle}</h2>
               <p>{texts.teachText}</p>
-              <Link href="/instructoras/solicitud?tipo=postulacion" className="bib-btn bib-btn-dark">
+              <Link href="/instructoras/unirme" className="bib-btn bib-btn-dark">
                 {texts.teachButton}
               </Link>
             </div>

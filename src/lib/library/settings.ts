@@ -11,6 +11,7 @@ const DEFAULTS: LibrarySettings = {
   id: LIBRARY_SETTINGS_ID,
   published: false,
   instructorsPublished: false,
+  portalOpen: false,
   texts: {},
   sections: {},
   popularSearches: DEFAULT_POPULAR_SEARCHES,
@@ -24,6 +25,8 @@ export async function getLibrarySettings(): Promise<LibrarySettings> {
 export interface LibraryConfig {
   published: boolean;
   instructorsPublished: boolean;
+  /** Anyone can make a profile at /instructoras/unirme. */
+  portalOpen: boolean;
   texts: LibraryTexts;
   sections: LibrarySections;
   popularSearches: string[];
@@ -33,6 +36,7 @@ export function libraryConfigOf(settings: LibrarySettings): LibraryConfig {
   return {
     published: settings.published,
     instructorsPublished: settings.instructorsPublished,
+    portalOpen: settings.portalOpen,
     texts: resolveTexts(settings.texts),
     sections: resolveSections(settings.sections),
     popularSearches: settings.popularSearches,
@@ -42,6 +46,7 @@ export function libraryConfigOf(settings: LibrarySettings): LibraryConfig {
 export type LibrarySettingsPatch = Partial<{
   published: boolean;
   instructorsPublished: boolean;
+  portalOpen: boolean;
   texts: Record<string, string>;
   sections: Record<string, boolean>;
   popularSearches: string[];

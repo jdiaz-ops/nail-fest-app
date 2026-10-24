@@ -9,8 +9,10 @@ export type LibraryLeadKindKey = (typeof LIBRARY_LEAD_KINDS)[number];
 
 /** The forms the pages still offer (2026-10-25: no brand requests — that's
  * Marcolini's — and no class bookings through Nail Fest: each instructor
- * takes her own). MARCA and CLASE stay only for what already came in. */
-export const PUBLIC_LEAD_KINDS: readonly LibraryLeadKindKey[] = ["REGISTRO", "POSTULACION"];
+ * takes her own; 2026-10-24: instructors make their own profile in the
+ * portal instead of applying). POSTULACION, MARCA and CLASE stay only for
+ * what already came in. */
+export const PUBLIC_LEAD_KINDS: readonly LibraryLeadKindKey[] = ["REGISTRO"];
 
 export const LEAD_KIND_LABELS: Record<LibraryLeadKindKey, string> = {
   REGISTRO: "Registro gratis",

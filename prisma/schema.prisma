@@ -2167,31 +2167,148 @@ model CuponeraList {
 // An instructor's public profile (/instructoras/<slug>): only what the
 // instructors' agreement says is public — never her document, phone or email.
 model Instructor {
-  id          String   @id @default(cuid())
-  slug        String   @unique
+  id          String    @id @default(cuid())
+  slug        String    @unique
   // The name she wants to appear with.
   name        String
   city        String
   photoUrl    String?
   // Up to 300 characters, in her own words.
   bio         String?
-  specialties String[] @default([])
+  specialties String[]  @default([])
   // Usernames, without the @.
   instagram   String?
   tiktok      String?
-  // "Destacada" (level 3 of the agreement): the badge, and first in the directory.
-  featured    Boolean  @default(false)
+  // "Destacada": the badge, and first in the directory.
+  featured    Boolean   @default(false)
   // Hidden = no profile and out of the directory; her videos stay, unsigned.
-  visible     Boolean  @default(true)
+  visible     Boolean   @default(true)
   // Nail Fest events she's been part of, one per line
   // ("Nail Fest Cúcuta 2026 · Tarima principal").
-  appearances String[] @default([])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  appearances String[]  @default([])
+  // Her channel, as a handle or a link (youtube.com/@…).
+  youtube     String?
+  // A WhatsApp number for students, on her profile — optional, hers to give.
+  whatsapp    String?
+  // "También doy clases en línea".
+  online      Boolean   @default(false)
+  // The "Instructora invitada Nail Fest" seal: the instructors the team
+  // brought in. A profile made in the portal starts without it, and the
+  // team can give it (Editar biblioteca → Instructoras).
+  invited     Boolean   @default(true)
+  // Her own switch in the portal ("Mostrar mi perfil en el directorio"):
+  // paused = out of the directory, nothing deleted.
+  paused      Boolean   @default(false)
+  // A profile made in the portal (lib/library/portal.ts): when she sent it
+  // for review, and when the team approved it — only approved profiles
+  // show (2026-10-24: "sí hay revisión de perfil manual"). The ones the
+  // team makes are approved as they're made.
+  submittedAt DateTime?
+  approvedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
-  videos  LibraryVideo[]
-  classes InstructorClass[]
-  leads   LibraryLead[]
+  videos      LibraryVideo[]
+  classes     InstructorClass[]
+  leads       LibraryLead[]
+  account     InstructorAccount?
+  accessLinks InstructorAccessLink[]
+  submissions InstructorVideoSubmission[]
+}
+
+// An instructor's own login to the portal (nailfest.lat/instructoras/portal),
+// where she makes her profile and keeps it up to date. Her username is her
+// profile's address (Instructor.slug). The email and phone are never
+// public: they're how she logs in and how the team reaches her.
+model InstructorAccount {
+  id                     String              @id @default(cuid())
+  instructor             Instructor          @relation(fields: [instructorId], references: [id], onDelete: Cascade)
+  instructorId           String              @unique
+  // Lowercase.
+  email                  String              @unique
+  // Her WhatsApp, for the team (review, a new password).
+  phone                  String
+  passwordHash           String
+  // The directory's terms, accepted at sign-up; the content permission,
+  // with her first video.
+  termsAcceptedAt        DateTime
+  contentTermsAcceptedAt DateTime?
+  // "¿Olvidaste tu contraseña?": nothing is emailed for now (2026-10-24) —
+  // the team sees the request and sends her a link by WhatsApp.
+  resetRequestedAt       DateTime?
+  // Wrong passwords in a row; enough of them lock the login for a while.
+  failedLogins           Int                 @default(0)
+  lockedUntil            DateTime?
+  lastLoginAt            DateTime?
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+  sessions               InstructorSession[]
+}
+
+model InstructorSession {
+  id        String            @id @default(cuid())
+  tokenHash String            @unique
+  account   InstructorAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  accountId String
+  createdAt DateTime          @default(now())
+  expiresAt DateTime
+
+  @@index([accountId])
+}
+
+enum InstructorAccessKind {
+  // A new password, for an instructor who forgot hers.
+  RESET
+  // Her own account for a profile the team made.
+  INVITE
+}
+
+// A one-time link the team makes in Editar biblioteca and sends her by
+// WhatsApp (/instructoras/clave/<token>). Only its hash is kept.
+model InstructorAccessLink {
+  id           String               @id @default(cuid())
+  tokenHash    String               @unique
+  kind         InstructorAccessKind
+  instructor   Instructor           @relation(fields: [instructorId], references: [id], onDelete: Cascade)
+  instructorId String
+  expiresAt    DateTime
+  usedAt       DateTime?
+  createdAt    DateTime             @default(now())
+
+  @@index([instructorId])
+}
+
+enum InstructorSubmissionStatus {
+  PENDING
+  // Made into a library video (videoId).
+  PUBLISHED
+  // "No seleccionado".
+  DECLINED
+}
+
+// A video an instructor sends from her portal ("Mis videos"): her own
+// YouTube link and its ficha. The team decides: publishing makes a library
+// video out of it, or it stays "no seleccionado". Videos that come in by
+// WhatsApp the team still adds as library videos directly.
+model InstructorVideoSubmission {
+  id           String                     @id @default(cuid())
+  instructor   Instructor                 @relation(fields: [instructorId], references: [id], onDelete: Cascade)
+  instructorId String
+  youtubeId    String
+  title        String
+  // Theme and level keys from lib/library/shared.ts.
+  theme        String
+  level        String
+  description  String?
+  // "Lo que usaste", one product per line, as she wrote it.
+  products     String[]                   @default([])
+  status       InstructorSubmissionStatus @default(PENDING)
+  video        LibraryVideo?              @relation(fields: [videoId], references: [id], onDelete: SetNull)
+  videoId      String?                    @unique
+  reviewedAt   DateTime?
+  createdAt    DateTime                   @default(now())
+
+  @@index([status, createdAt])
 }
 
 // A video in the library: a short vertical one ("video") or a marathon's
@@ -2229,6 +2346,7 @@ model LibraryVideo {
   updatedAt       DateTime    @updatedAt
 
   dailyViews LibraryVideoDailyView[]
+  submission InstructorVideoSubmission?
 
   @@index([visible, publishedAt])
 }
@@ -2310,6 +2428,9 @@ model LibrarySettings {
   published            Boolean  @default(false)
   // nailfest.lat/instructoras, the same way.
   instructorsPublished Boolean  @default(false)
+  // Anyone can make a profile at nailfest.lat/instructoras/unirme; closed =
+  // staff only, while the instructors the team invites can still get in.
+  portalOpen           Boolean  @default(false)
   // Text key → the admin's text.
   texts                Json     @default("{}")
   // Section key → false when switched off.

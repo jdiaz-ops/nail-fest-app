@@ -1,4 +1,4 @@
-import { SAMPLE_SLUG_PREFIX, type InstructorCard, type InstructorClassItem, type LibraryLevel, type LibraryTheme, type LibraryVideoCard, type UsedProduct } from "./shared";
+import { SAMPLE_SLUG_PREFIX, type InstructorCard, type LibraryLevel, type LibraryTheme, type LibraryVideoCard, type UsedProduct } from "./shared";
 
 // Invented examples, for staff only (asked on 2026-10-24: "ponle videos y
 // demás muestras inventados por ahora mientras se va poblando"). They fill
@@ -421,22 +421,6 @@ export function sampleVideoDetail(slug: string, now: Date = new Date()): SampleV
   };
 }
 
-function sampleClasses(key: string, now: Date): InstructorClassItem[] {
-  const at = (days: number, hour: number) => {
-    // 7:00 p. m. Bogotá = 00:00 UTC of the next day.
-    const day = new Date(now.getTime() + days * DAY_MS);
-    return new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate(), hour + 5)).toISOString();
-  };
-  const all: Record<string, InstructorClassItem[]> = {
-    a: [
-      { id: "sample-class-a1", title: "Maratón de polygel", startsAt: at(19, 19), place: "En línea por Zoom", priceLabel: "Gratis con registro", url: null },
-      { id: "sample-class-a2", title: "Taller de nail art", startsAt: at(37, 10), place: "Presencial en Cúcuta", priceLabel: "Cupos limitados", url: null },
-    ],
-    d: [{ id: "sample-class-d1", title: "Bioseguridad para tu puesto", startsAt: at(26, 19), place: "En línea por Zoom", priceLabel: "Gratis", url: null }],
-  };
-  return all[key] ?? [];
-}
-
 export function sampleInstructors(now: Date = new Date()): InstructorCard[] {
   const videos = sampleVideos(now);
   return INSTRUCTORS.map((i) => {
@@ -454,15 +438,13 @@ export function sampleInstructors(now: Date = new Date()): InstructorCard[] {
       specialties: i.specialties,
       instagram: `instructora.${i.key}`,
       tiktok: `instructora.${i.key}`,
+      youtube: null,
+      whatsapp: null,
+      online: i.key === "a",
+      invited: true,
       appearances: i.appearances,
       videoCount: videos.filter((v) => v.instructor?.slug === slug).length,
-      nextClass: sampleClasses(i.key, now)[0] ?? null,
       sample: true,
     };
   });
-}
-
-export function sampleInstructorClasses(slug: string, now: Date = new Date()): InstructorClassItem[] {
-  const key = INSTRUCTORS.find((i) => instructorSlug(i.key) === slug)?.key;
-  return key ? sampleClasses(key, now) : [];
 }

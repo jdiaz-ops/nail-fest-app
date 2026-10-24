@@ -7,7 +7,7 @@ import { SAMPLE_PRODUCTS } from "@/lib/cuponera/sampleData";
 import { classifyProduct, lookFor, type CuponeraProduct } from "@/lib/cuponera/shared";
 import { hasLibraryAccess } from "./access";
 import { getLibrarySettings, libraryConfigOf, type LibraryConfig } from "./settings";
-import { sampleInstructorClasses, sampleInstructors, sampleVideoDetail, sampleVideos } from "./samples";
+import { sampleInstructors, sampleVideoDetail, sampleVideos } from "./samples";
 import { rankBy } from "./search";
 import {
   LIBRARY_THEMES,
@@ -24,7 +24,6 @@ import {
   usedProductRefsOf,
   withExamples,
   type InstructorCard,
-  type InstructorClassItem,
   type LibraryLevel,
   type LibraryMenuData,
   type LibraryPerson,
@@ -86,9 +85,18 @@ export async function libraryRobots(page: "biblioteca" | "instructoras") {
 
 type VideoRow = LibraryVideo & { instructor: Instructor | null };
 
+/** Who's in the directory: on in the admin, approved by the team (a
+ * profile made in the portal waits for that — lib/library/portal.ts) and
+ * not paused by her. */
+export const listedInstructor = { visible: true, paused: false, approvedAt: { not: null } } satisfies Prisma.InstructorWhereInput;
+
+export function isListed(instructor: Pick<Instructor, "visible" | "paused" | "approvedAt">): boolean {
+  return instructor.visible && !instructor.paused && instructor.approvedAt !== null;
+}
+
 function personOf(instructor: Instructor): LibraryPerson {
   return {
-    slug: instructor.visible ? instructor.slug : null,
+    slug: isListed(instructor) ? instructor.slug : null,
     name: instructor.name,
     initial: initialOf(instructor.name),
     city: instructor.city,
@@ -486,21 +494,8 @@ async function cuponeraProductsFor(words: string[], staff: boolean, now: Date): 
 
 // ── Instructors ────────────────────────────────────────────────────────────
 
-function toClassItem(row: { id: string; title: string; startsAt: Date; place: string; priceLabel: string | null; url: string | null }): InstructorClassItem {
-  return { id: row.id, title: row.title, startsAt: row.startsAt.toISOString(), place: row.place, priceLabel: row.priceLabel, url: row.url };
-}
-
-/** The visible instructors — the featured first, then the most active —
- * and, for staff, the examples up to eight. */
-export async function getInstructorCards(viewer: LibraryViewer, now: Date = new Date()): Promise<InstructorCard[]> {
-  const rows = await db.instructor.findMany({
-    where: { visible: true },
-    include: {
-      _count: { select: { videos: { where: { visible: true } } } },
-      classes: { where: { visible: true, startsAt: { gte: now } }, orderBy: { startsAt: "asc" }, take: 1 },
-    },
-  });
-  const cards: InstructorCard[] = rows.map((row) => ({
+function toInstructorCard(row: Instructor, videoCount: number): InstructorCard {
+  return {
     ...personOf(row),
     slug: row.slug,
     id: row.id,
@@ -508,11 +503,24 @@ export async function getInstructorCards(viewer: LibraryViewer, now: Date = new 
     specialties: row.specialties,
     instagram: row.instagram,
     tiktok: row.tiktok,
+    youtube: row.youtube,
+    whatsapp: row.whatsapp,
+    online: row.online,
+    invited: row.invited,
     appearances: row.appearances,
-    videoCount: row._count.videos,
-    nextClass: row.classes[0] ? toClassItem(row.classes[0]) : null,
+    videoCount,
     sample: false,
-  }));
+  };
+}
+
+/** The instructors in the directory — the featured first, then the most
+ * active — and, for staff, the examples up to eight. */
+export async function getInstructorCards(viewer: LibraryViewer, now: Date = new Date()): Promise<InstructorCard[]> {
+  const rows = await db.instructor.findMany({
+    where: listedInstructor,
+    include: { _count: { select: { videos: { where: { visible: true } } } } },
+  });
+  const cards: InstructorCard[] = rows.map((row) => toInstructorCard(row, row._count.videos));
   cards.sort((a, b) => Number(b.featured) - Number(a.featured) || b.videoCount - a.videoCount || a.name.localeCompare(b.name, "es"));
   return withExamples(cards, viewer.staff ? sampleInstructors(now) : [], INSTRUCTORS_UP_TO, viewer.staff);
 }
@@ -530,11 +538,19 @@ export interface ProfileBrand {
 
 export interface InstructorProfile {
   instructor: InstructorCard;
-  /** Hidden in the admin: only staff get here, with a note. */
-  hidden: boolean;
+  /** Why it isn't in the directory (hidden, waiting for approval, paused),
+   * for the staff and for her own preview; null when it is. */
+  hidden: string | null;
   videos: LibraryVideoCard[];
-  classes: InstructorClassItem[];
   brands: ProfileBrand[];
+}
+
+/** Why a profile isn't in the directory, in words. */
+function hiddenReason(row: Instructor): string | null {
+  if (!row.visible) return "Este perfil está oculto.";
+  if (!row.approvedAt) return row.submittedAt ? "Este perfil espera la aprobación del equipo." : "Este perfil todavía no se envía a revisión.";
+  if (row.paused) return "Este perfil está pausado por la instructora.";
+  return null;
 }
 
 function brandsOf(products: UsedProduct[]): ProfileBrand[] {
@@ -546,24 +562,23 @@ function brandsOf(products: UsedProduct[]): ProfileBrand[] {
   return [...seen.values()];
 }
 
-export async function getInstructorProfile(slug: string, viewer: LibraryViewer, now: Date = new Date()): Promise<InstructorProfile | null> {
+/** A profile; one outside the directory only for staff, or for its own
+ * instructor (`owner`: her preview from the portal). */
+export async function getInstructorProfile(slug: string, viewer: LibraryViewer, now: Date = new Date(), owner = false): Promise<InstructorProfile | null> {
   if (slug.startsWith(SAMPLE_SLUG_PREFIX)) {
     if (!viewer.staff) return null;
     const instructor = sampleInstructors(now).find((i) => i.slug === slug);
     if (!instructor) return null;
     const videos = sampleVideos(now).filter((v) => v.instructor?.slug === slug);
     const products = videos.flatMap((v) => sampleVideoDetail(v.slug, now)?.products ?? []);
-    return { instructor, hidden: false, videos, classes: sampleInstructorClasses(slug, now), brands: brandsOf(products) };
+    return { instructor, hidden: null, videos, brands: brandsOf(products) };
   }
 
   const row = await db.instructor.findUnique({
     where: { slug },
-    include: {
-      videos: { where: { visible: true }, orderBy: { publishedAt: "desc" }, include: { instructor: true } },
-      classes: { where: { visible: true, startsAt: { gte: now } }, orderBy: { startsAt: "asc" } },
-    },
+    include: { videos: { where: { visible: true }, orderBy: { publishedAt: "desc" }, include: { instructor: true } } },
   });
-  if (!row || (!row.visible && !viewer.staff)) return null;
+  if (!row || (!isListed(row) && !viewer.staff && !owner)) return null;
   const views = await viewCounts(
     row.videos.map((v) => v.id),
     now,
@@ -572,24 +587,10 @@ export async function getInstructorProfile(slug: string, viewer: LibraryViewer, 
     row.videos.flatMap((v) => usedProductRefsOf(v.products)),
     viewer.cuponeraLive,
   );
-  const classes = row.classes.map(toClassItem);
   return {
-    instructor: {
-      ...personOf(row),
-      slug: row.slug,
-      id: row.id,
-      bio: row.bio,
-      specialties: row.specialties,
-      instagram: row.instagram,
-      tiktok: row.tiktok,
-      appearances: row.appearances,
-      videoCount: row.videos.length,
-      nextClass: classes[0] ?? null,
-      sample: false,
-    },
-    hidden: !row.visible,
+    instructor: toInstructorCard(row, row.videos.length),
+    hidden: hiddenReason(row),
     videos: row.videos.map((v) => toVideoCard(v, views)),
-    classes,
     brands: brandsOf(products),
   };
 }

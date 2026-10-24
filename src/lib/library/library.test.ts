@@ -270,16 +270,24 @@ describe("Shorties", () => {
   });
 });
 
-describe("the instructors' directory, as of 2026-10-25", () => {
-  it("takes only the free sign-up and instructors' applications: no brand requests, no bookings", () => {
-    expect([...PUBLIC_LEAD_KINDS]).toEqual(["REGISTRO", "POSTULACION"]);
+describe("the instructors' directory, as of 2026-10-24", () => {
+  it("takes only the free sign-up: no brand requests, no bookings, and instructors make their own profile in the portal", () => {
+    expect([...PUBLIC_LEAD_KINDS]).toEqual(["REGISTRO"]);
   });
 
   it("promises no money, brands, events or step by steps in its usual texts", () => {
     const usual = Object.values(resolveTexts({})).join(" ").toLowerCase();
-    for (const promise of ["contratar", "tu marca", "eventos", "paso a paso de cada técnica"]) expect(usual).not.toContain(promise);
+    for (const promise of ["contratar", "tu marca", "tarima", "te pagamos", "paso a paso de cada técnica"]) expect(usual).not.toContain(promise);
+    // Events and payments only come up to say there's no promise of them.
+    expect(resolveTexts({}).termsText).toMatch(/no te garantiza alumnas, ventas, invitaciones a eventos/);
+    expect(resolveTexts({}).termsText).toMatch(/no te cobra ni te paga/);
+    expect(resolveTexts({}).joinMoneyText).toMatch(/comisión/);
     expect(Object.keys(LIBRARY_SECTIONS)).not.toContain("hire");
     expect(Object.keys(LIBRARY_SECTIONS)).not.toContain("brandCta");
-    expect(resolveTexts({}).classesNote).toMatch(/cobra cada instructora/);
+  });
+
+  it("shows no classes on the profiles", () => {
+    expect(Object.keys(LIBRARY_SECTIONS)).not.toContain("classes");
+    expect(Object.keys(resolveTexts({}))).not.toContain("classesTitle");
   });
 });

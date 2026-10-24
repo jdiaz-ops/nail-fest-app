@@ -1,19 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { requireUser } from "@/lib/auth/guard";
 import { db } from "@/lib/db";
 import { instructorInputSchema } from "@/lib/library/admin";
 
-// Edit an instructor (the whole form, or one switch) or delete her: her
-// videos stay in the library, unsigned; her classes go with her.
+// "Aprobar" a profile made in the portal: it shows in the directory from now on.
+const patchSchema = instructorInputSchema.partial().extend({ approved: z.literal(true).optional() });
+
+// Edit an instructor (the whole form, or one switch), approve a profile
+// she made in the portal, or delete her: her videos stay in the library,
+// unsigned; her classes go with her.
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const auth = await requireUser(["ADMIN"]);
   if ("response" in auth) return auth.response;
 
-  const parsed = instructorInputSchema.partial().safeParse(await req.json().catch(() => null));
+  const parsed = patchSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: "invalid_body", issues: parsed.error.issues }, { status: 400 });
   }
-  const updated = await db.instructor.updateMany({ where: { id: params.id }, data: parsed.data });
+  const { approved, ...data } = parsed.data;
+  const updated = await db.instructor.updateMany({ where: { id: params.id }, data: approved ? { ...data, approvedAt: new Date(), visible: true } : data });
   if (updated.count === 0) return NextResponse.json({ error: "not_found" }, { status: 404 });
   return NextResponse.json({ ok: true });
 }

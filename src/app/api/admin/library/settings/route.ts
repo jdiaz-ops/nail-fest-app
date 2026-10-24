@@ -8,8 +8,10 @@ const patchSchema = z
   .object({
     published: z.boolean(),
     instructorsPublished: z.boolean(),
-    // Only real keys; an empty text goes back to the usual one.
-    texts: z.record(z.string(), z.string().max(400)).transform((map) =>
+    portalOpen: z.boolean(),
+    // Only real keys; an empty text goes back to the usual one. Long enough
+    // for the directory's terms (the portal's "Términos").
+    texts: z.record(z.string(), z.string().max(8000)).transform((map) =>
       Object.fromEntries(
         Object.entries(map)
           .filter(([key]) => (LIBRARY_TEXT_KEYS as string[]).includes(key))
