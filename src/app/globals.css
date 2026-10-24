@@ -2891,12 +2891,42 @@ button.cup-card { width: 100%; padding: 0; font: inherit; text-align: left; curs
 .bib-brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
 .bib-brand img { height: 36px; width: auto; display: block; }
 .bib-brand span { font-size: 12px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--link); }
-.bib-menu { position: relative; }
-.bib-menu summary { width: 40px; height: 40px; border: 1px solid var(--border); border-radius: 12px; display: grid; place-items: center; color: var(--ink); cursor: pointer; list-style: none; }
-.bib-menu summary::-webkit-details-marker { display: none; }
-.bib-menu nav { position: absolute; right: 0; top: 48px; min-width: 200px; padding: 8px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); box-shadow: 0 12px 30px rgba(23, 24, 28, 0.12); display: flex; flex-direction: column; }
-.bib-menu nav a { padding: 10px 12px; border-radius: 10px; color: var(--ink); font-weight: 700; text-decoration: none; }
-.bib-menu nav a:hover, .bib-menu nav a[aria-current="page"] { background: #e6f9f7; color: var(--accent-ink); }
+/* The menu (components/library/LibraryMenu): a panel from the right with the
+   search, the sections and the ways to search — the mockup of 2026-10-24. */
+.bib-burger { flex: none; width: 40px; height: 40px; border: 1px solid var(--border); border-radius: 12px; display: grid; place-items: center; background: var(--surface); color: var(--ink); cursor: pointer; }
+.bib-burger--dark { border: 0; border-radius: 50%; background: rgba(255, 255, 255, 0.16); color: #fff; backdrop-filter: blur(6px); }
+html:has(.bib-drawer[open]) { overflow: hidden; }
+.bib-drawer { position: fixed; inset: 0 0 0 auto; width: min(90vw, 400px); max-width: none; height: 100dvh; max-height: none; margin: 0; padding: 0; border: 0; background: var(--bg); color: var(--ink); overflow-y: auto; overscroll-behavior: contain; box-shadow: -18px 0 40px rgba(0, 0, 0, 0.2); }
+.bib-drawer[open] { animation: bib-drawer-in 0.22s ease-out; }
+.bib-drawer::backdrop { background: rgba(14, 15, 18, 0.55); }
+@keyframes bib-drawer-in { from { transform: translateX(100%); } }
+.bib-drawer-top { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.bib-drawer-close { flex: none; width: 40px; height: 40px; border: 1px solid var(--border); border-radius: 12px; display: grid; place-items: center; background: var(--surface); color: var(--ink); cursor: pointer; }
+.bib-drawer-search { padding: 16px; background: radial-gradient(120% 80% at 100% 0%, #13968d 0%, #0f7d76 45%, #0b5c57 100%); }
+.bib-drawer-search .bib-search { max-width: none; }
+.bib-drawer-search .bib-popular { margin-top: 10px; }
+.bib-drawer-block { display: flex; flex-direction: column; gap: 10px; padding: 16px; border-bottom: 1px solid var(--border); }
+.bib-drawer-block:last-child { border-bottom: 0; padding-bottom: 28px; }
+.bib-drawer-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.bib-drawer-head a { color: var(--link); font-size: 13px; font-weight: 700; text-decoration: none; }
+.bib-drawer-links { display: flex; flex-direction: column; margin: 0 -8px; }
+.bib-drawer-link { display: flex; align-items: center; gap: 12px; padding: 7px 8px; border-radius: 12px; color: var(--ink); font-size: 15px; font-weight: 700; text-decoration: none; }
+.bib-drawer-link:hover { background: #f3f1ee; }
+.bib-drawer-link[aria-current="page"] { background: #e6f9f7; color: var(--accent-ink); }
+.bib-drawer-ic { flex: none; width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; }
+.bib-drawer-ic--dark { background: var(--ink); color: #fff; }
+.bib-new { margin-left: auto; padding: 2px 8px; border-radius: 999px; background: var(--accent-secondary); color: var(--accent-secondary-ink); font-size: 11px; font-style: normal; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; }
+.bib-drawer-themes { display: flex; flex-wrap: wrap; gap: 8px; }
+.bib-drawer-theme { display: inline-flex; align-items: center; gap: 7px; padding: 5px 12px 5px 5px; border-radius: 999px; text-decoration: none; }
+.bib-drawer-theme-ic { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: rgba(255, 255, 255, 0.75); }
+.bib-drawer-theme-ic svg { width: 16px; height: 16px; }
+.bib-drawer-theme b { font-size: 13px; line-height: 1.2; white-space: nowrap; }
+.bib-drawer-theme small { font-size: 12px; font-weight: 700; opacity: 0.7; }
+.bib-drawer-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.bib-drawer-chips .bib-chip { padding: 7px 12px; font-size: 13px; }
+.bib-drawer .bib-people { gap: 10px; }
+.bib-drawer .bib-person { width: 66px; }
+.bib-drawer .bib-person-face { width: 54px; height: 54px; font-size: 22px; }
 .bib-footer { margin-top: 12px; padding: 24px 20px 32px; background: var(--ink); color: #c9cbd1; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; font-size: 13px; }
 .bib-footer p { max-width: 640px; margin: 0; line-height: 1.5; }
 .bib-footer a { color: #9ff0ea; font-weight: 700; }
@@ -3155,4 +3185,113 @@ button.cup-card { width: 100%; padding: 0; font: inherit; text-align: left; curs
 @media (prefers-reduced-motion: reduce) {
   .bib-theme { transition: none; }
   .bib-theme:hover { transform: none; }
+}
+
+/* ── Shorties (components/library/ShortiesFeed — nailfest.lat/biblioteca/shorties)
+   One short at a time, full screen, snapping as it scrolls; on a computer the
+   video sits in the middle with its buttons beside it. The mockup of
+   2026-10-24, and its way in on the library's front page. */
+.bib-shortsbox { margin-top: 20px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 18px 8px 18px 18px; border-radius: 20px; background: var(--ink); color: #fff; text-decoration: none; overflow: hidden; }
+.bib-shortsbox-text { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-width: 0; }
+.bib-shortsbox-text b { font-size: 34px; line-height: 1; font-weight: 900; letter-spacing: -0.01em; }
+.bib-shortsbox-text > span:not(.bib-btn) { max-width: 220px; font-size: 14px; line-height: 1.4; color: #c9cbd1; }
+.bib-shortsbox .bib-new { margin-left: 0; }
+.bib-fan { position: relative; flex: none; width: 128px; height: 160px; }
+.bib-fan-card { position: absolute; top: 14px; overflow: hidden; width: 78px; aspect-ratio: 9 / 16; border: 2px solid rgba(255, 255, 255, 0.9); border-radius: 12px; box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4); }
+.bib-fan-card img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.bib-fan-card:nth-child(1) { left: 0; transform: rotate(-11deg); }
+.bib-fan-card:nth-child(2) { left: 24px; top: 6px; transform: rotate(-2deg); }
+.bib-fan-card:nth-child(3) { left: 48px; transform: rotate(9deg); }
+.bib-fan-play { position: absolute; left: 50%; top: 50%; width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%; display: grid; place-items: center; background: rgba(23, 24, 28, 0.55); }
+.bib-section { scroll-margin-top: 76px; }
+
+.bib-shorts { position: fixed; inset: 0; background: #000; color: #fff; }
+.bib-shorts-head, .bib-shorts-side, .bib-shorts-nav { display: none; }
+.bib-shorts-top { position: fixed; top: 0; left: 0; right: 0; z-index: 20; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 12px 14px 28px; background: linear-gradient(rgba(0, 0, 0, 0.5), transparent); pointer-events: none; }
+.bib-shorts-top > * { pointer-events: auto; }
+.bib-shorts-round { flex: none; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: rgba(255, 255, 255, 0.16); color: #fff; backdrop-filter: blur(6px); }
+.bib-shorts-heading { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 0; padding-top: 4px; }
+.bib-shorts-title { margin: 0; font-size: 24px; line-height: 1.1; font-weight: 900; letter-spacing: -0.01em; color: #fff; }
+.bib-shorts-staff { padding: 2px 8px; border-radius: 999px; background: rgba(255, 255, 255, 0.9); color: var(--ink); font-size: 11px; font-weight: 800; text-decoration: none; }
+.bib-shorts-feed { position: fixed; inset: 0; overflow-y: auto; overscroll-behavior: contain; scroll-snap-type: y mandatory; scrollbar-width: none; }
+.bib-shorts-feed::-webkit-scrollbar { display: none; }
+.bib-short { position: relative; height: 100%; overflow: hidden; scroll-snap-align: start; scroll-snap-stop: always; background: #000; }
+.bib-short-frame { position: absolute; inset: 0; overflow: hidden; container-type: size; }
+.bib-short-media { position: absolute; inset: 0; }
+.bib-short-media > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+/* The player covers the screen like the still does: a 9:16 video on a taller
+   phone loses a little of each side, never gets black bars. */
+.bib-short-player { position: absolute; left: 50%; top: 50%; width: 100%; height: 100%; width: max(100cqw, 56.25cqh); height: max(100cqh, 177.78cqw); transform: translate(-50%, -50%); }
+.bib-short-player iframe { display: block; width: 100%; height: 100%; border: 0; }
+.bib-short-note { position: absolute; z-index: 1; top: 34%; left: calc((100% - 76px) / 2); max-width: calc(100% - 110px); padding: 6px 12px; border: 1px dashed rgba(255, 255, 255, 0.6); border-radius: 999px; color: rgba(255, 255, 255, 0.9); font-size: 12px; font-weight: 700; text-align: center; transform: translateX(-50%); }
+.bib-short-tap { position: absolute; inset: 0; z-index: 1; width: 100%; padding: 0; border: 0; background: transparent; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.bib-short-tap:focus-visible { outline: 3px solid var(--accent); outline-offset: -6px; }
+.bib-short-paused { position: absolute; inset: 0; z-index: 1; display: grid; place-items: center; pointer-events: none; }
+.bib-short-paused > span { width: 72px; height: 72px; border-radius: 50%; display: grid; place-items: center; background: rgba(0, 0, 0, 0.45); color: #fff; }
+.bib-short-sound { position: absolute; top: 70px; left: 14px; z-index: 3; display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px 0 9px; border: 0; border-radius: 999px; background: rgba(255, 255, 255, 0.92); color: var(--ink); font-size: 13px; font-weight: 800; cursor: pointer; }
+.bib-short-sound--on { width: 40px; height: 40px; padding: 0; justify-content: center; background: rgba(0, 0, 0, 0.38); color: #fff; backdrop-filter: blur(6px); }
+.bib-short-info { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; display: flex; flex-direction: column; align-items: flex-start; gap: 7px; padding: 60px 84px 26px 16px; background: linear-gradient(transparent, rgba(0, 0, 0, 0.72)); color: #fff; pointer-events: none; }
+.bib-short-info a { color: #fff; text-decoration: none; pointer-events: auto; }
+.bib-short-who { font-size: 15px; }
+.bib-short-who > span { color: rgba(255, 255, 255, 0.8); }
+.bib-short-seal { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 999px; background: rgba(0, 190, 181, 0.25); color: #b8f3ee; font-size: 11px; font-weight: 800; }
+.bib-short-title { margin: 2px 0 0; font-size: 18px; line-height: 1.25; font-weight: 800; text-wrap: balance; }
+.bib-short-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.bib-short-tags > span:not(.bib-sample) { padding: 3px 9px; border-radius: 999px; background: rgba(255, 255, 255, 0.16); font-size: 12px; font-weight: 700; }
+.bib-short-tags .bib-sample { margin: 0; }
+.bib-short-hint { position: absolute; left: calc((100% - 76px) / 2); top: 42%; z-index: 2; display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 999px; background: rgba(0, 0, 0, 0.45); backdrop-filter: blur(6px); color: #fff; font-size: 13px; font-weight: 700; white-space: nowrap; pointer-events: none; transform: translateX(-50%); animation: bib-hint 1.6s ease-in-out infinite; }
+@keyframes bib-hint { 50% { transform: translate(-50%, -6px); } }
+.bib-short-lock { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px; background: rgba(0, 0, 0, 0.45); text-align: center; }
+.bib-short-lock p { margin: 0; font-size: 15px; font-weight: 700; }
+.bib-short-rail { position: absolute; right: 10px; bottom: 132px; z-index: 3; display: flex; flex-direction: column; align-items: center; gap: 16px; }
+.bib-short-act { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 0; border: 0; background: none; color: #fff; font: inherit; text-decoration: none; cursor: pointer; }
+.bib-short-act small { font-size: 11px; font-weight: 700; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6); }
+.bib-short-btn { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; background: rgba(0, 0, 0, 0.38); backdrop-filter: blur(6px); }
+.bib-short-face { position: relative; overflow: hidden; width: 50px; height: 50px; border: 2px solid #fff; border-radius: 50%; display: grid; place-items: center; color: rgba(255, 255, 255, 0.95); font-family: Georgia, serif; font-size: 22px; font-weight: 900; }
+.bib-short-face img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.bib-short.bib-short--card { display: grid; place-items: center; padding: 24px; background: radial-gradient(120% 80% at 100% 0%, #13968d 0%, #0f7d76 45%, #0b5c57 100%); }
+.bib-short.bib-short--end { background: var(--ink); }
+.bib-short-card { width: min(100%, 420px); display: flex; flex-direction: column; align-items: flex-start; gap: 14px; }
+.bib-short-card-ic { width: 56px; height: 56px; border-radius: 18px; display: grid; place-items: center; background: rgba(255, 255, 255, 0.16); }
+.bib-short-card h2 { margin: 0; font-size: 38px; line-height: 1.02; font-weight: 900; letter-spacing: -0.02em; text-wrap: balance; }
+.bib-short-card p { margin: 0; font-size: 16px; line-height: 1.45; color: #d9f4f1; }
+.bib-short--end .bib-short-card p { color: #c9cbd1; }
+.bib-short-card .bib-btn { align-self: stretch; }
+.bib-short-later { align-self: center; display: inline-flex; align-items: center; gap: 6px; color: #d9f4f1; font-size: 14px; font-weight: 700; }
+.bib-btn-ghost { border: 1.5px solid rgba(255, 255, 255, 0.7); background: transparent; color: #fff; }
+/* "Lo que usó" over the video: a sheet from below, under the copied-code note. */
+.bib-sheet-scrim { position: fixed; inset: 0; z-index: 50; display: flex; align-items: flex-end; justify-content: center; background: rgba(0, 0, 0, 0.5); }
+.bib-sheet { width: min(100%, 560px); max-height: 85dvh; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 8px 16px 22px; border-radius: 22px 22px 0 0; background: var(--bg); color: var(--ink); animation: bib-sheet-in 0.22s ease-out; }
+@keyframes bib-sheet-in { from { transform: translateY(100%); } }
+.bib-sheet-handle { align-self: center; width: 42px; height: 5px; border-radius: 999px; background: #d6d3cd; }
+.bib-sheet-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.bib-sheet-head h2 { margin: 0; font-size: 24px; line-height: 1.1; font-weight: 900; }
+.bib-sheet-head p { margin: 4px 0 0; font-size: 14px; color: var(--ink-muted); }
+.bib-sheet .bib-btn-line { align-self: stretch; }
+
+@media (min-width: 900px) {
+  .bib-shortsbox { padding: 22px 28px; }
+  .bib-shortsbox-text > span:not(.bib-btn) { max-width: 420px; }
+  .bib-shorts-head { display: block; position: fixed; top: 0; left: 0; right: 0; }
+  .bib-shorts-top { display: none; }
+  .bib-shorts-side { position: fixed; top: 79px; left: 28px; z-index: 5; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; max-width: calc(50vw - 260px); }
+  .bib-shorts-side-title { margin: 0; font-size: 34px; line-height: 1.05; font-weight: 900; letter-spacing: -0.01em; color: #fff; }
+  .bib-shorts-side p { margin: 0; color: #9a9ea8; font-size: 13px; line-height: 1.45; }
+  .bib-shorts-side .bib-shorts-side-note { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: #26282e; color: #c9cbd1; }
+  .bib-shorts-side-note a { color: #9ff0ea; font-weight: 700; }
+  .bib-shorts-feed { top: 61px; }
+  .bib-short { display: grid; grid-template-columns: 1fr auto 1fr; grid-template-rows: minmax(0, 1fr); column-gap: 16px; padding: 16px 0; background: #0e0f12; }
+  .bib-short-frame { position: relative; inset: auto; grid-column: 2; width: calc((100dvh - 61px - 32px) * 9 / 16); height: calc(100dvh - 61px - 32px); border-radius: 18px; }
+  .bib-short-rail { position: static; grid-column: 3; align-self: end; justify-self: start; padding-bottom: 8px; }
+  .bib-short-rail .bib-short-btn { background: #26282e; }
+  .bib-short-sound { top: 14px; }
+  .bib-short-info { padding-right: 16px; }
+  .bib-short-note, .bib-short-hint { left: 50%; }
+  .bib-short.bib-short--card { grid-template-columns: 1fr; }
+  .bib-shorts-nav { position: fixed; right: 28px; top: 50%; z-index: 5; display: flex; flex-direction: column; gap: 12px; transform: translateY(-50%); }
+  .bib-shorts-nav button { width: 52px; height: 52px; border: 0; border-radius: 50%; display: grid; place-items: center; background: #26282e; color: #fff; cursor: pointer; }
+  .bib-shorts-nav button:disabled { opacity: 0.35; cursor: default; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bib-drawer[open], .bib-sheet, .bib-short-hint { animation: none; }
 }

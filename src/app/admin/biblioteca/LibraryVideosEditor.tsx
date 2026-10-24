@@ -35,6 +35,7 @@ interface Draft {
   steps: string;
   gated: boolean;
   visible: boolean;
+  inShorties: boolean;
 }
 
 const EMPTY: Draft = {
@@ -51,6 +52,7 @@ const EMPTY: Draft = {
   steps: "",
   gated: false,
   visible: true,
+  inShorties: true,
 };
 
 function draftOf(v: AdminVideo): Draft {
@@ -68,6 +70,7 @@ function draftOf(v: AdminVideo): Draft {
     steps: v.steps.join("\n"),
     gated: v.gated,
     visible: v.visible,
+    inShorties: v.inShorties,
   };
 }
 
@@ -158,6 +161,7 @@ export default function LibraryVideosEditor({
                 <div style={{ display: "flex", gap: 6, marginTop: 4, flexWrap: "wrap" }}>
                   {v.kind === "maraton" && <Pill tone="grey">Grabación</Pill>}
                   {v.gated && <Pill tone="amber">Con registro</Pill>}
+                  {v.kind === "video" && !v.inShorties && <Pill tone="grey">Fuera de Shorties</Pill>}
                   {v.products.length > 0 && <Pill tone="green">{v.products.length === 1 ? "1 producto" : `${v.products.length} productos`}</Pill>}
                   {!v.visible && <Pill tone="red">Oculto</Pill>}
                 </div>
@@ -254,6 +258,7 @@ function VideoForm({
       steps: linesOf(d.steps),
       gated: d.gated,
       visible: d.visible,
+      inShorties: d.inShorties,
     };
     try {
       await api(id ? `/api/admin/library/videos/${id}` : "/api/admin/library/videos", { method: id ? "PATCH" : "POST", body: JSON.stringify(body) });
@@ -430,6 +435,14 @@ function VideoForm({
       </div>
       <Check checked={d.gated} onChange={(v) => set("gated", v)} label="Pide registro gratis para verlo" hint="El video se ve después de dejar nombre y correo (lo normal en las grabaciones)." />
       <Check checked={d.visible} onChange={(v) => set("visible", v)} label="Visible en la biblioteca" />
+      {d.kind === "video" && (
+        <Check
+          checked={d.inShorties}
+          onChange={(v) => set("inShorties", v)}
+          label="Mostrar en Shorties"
+          hint="Sale en nailfest.lat/biblioteca/shorties, los videos cortos al azar uno tras otro."
+        />
+      )}
       {message && <FormError>{message}</FormError>}
       <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
         <button type="button" style={secondaryButtonStyle} onClick={onClose}>

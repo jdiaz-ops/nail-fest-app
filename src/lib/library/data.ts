@@ -1,4 +1,4 @@
-import type { CuponeraBrand, CuponeraProduct as CuponeraProductRow, Instructor, LibraryVideo } from "@prisma/client";
+import type { CuponeraBrand, CuponeraProduct as CuponeraProductRow, Instructor, LibraryVideo, Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { viewerCanSeeSamples } from "@/lib/reviewsViewer";
 import { getCuponeraSettings } from "@/lib/cuponera/settings";
@@ -10,7 +10,9 @@ import { getLibrarySettings, libraryConfigOf, type LibraryConfig } from "./setti
 import { sampleInstructorClasses, sampleInstructors, sampleVideoDetail, sampleVideos } from "./samples";
 import { rankBy } from "./search";
 import {
+  LIBRARY_THEMES,
   SAMPLE_SLUG_PREFIX,
+  SHORTIES_SHOWN_FROM,
   isKind,
   isLevel,
   initialOf,
@@ -24,10 +26,12 @@ import {
   type InstructorCard,
   type InstructorClassItem,
   type LibraryLevel,
+  type LibraryMenuData,
   type LibraryPerson,
   type LibraryTheme,
   type LibraryVideoCard,
   type LibraryVideoKind,
+  type ShortItem,
   type UsedProduct,
   type UsedProductRef,
 } from "./shared";
@@ -152,12 +156,15 @@ export interface LibraryHome {
   /** Videos per theme; themes with none don't show. */
   themeCounts: Partial<Record<LibraryTheme, number>>;
   instructors: InstructorCard[];
+  /** Real shorties (the public sees the way into Shorties from SHORTIES_SHOWN_FROM). */
+  shorties: number;
 }
 
 export async function getLibraryHome(viewer: LibraryViewer, now: Date = new Date()): Promise<LibraryHome> {
-  const [{ real, examples }, instructors] = await Promise.all([
+  const [{ real, examples }, instructors, shorties] = await Promise.all([
     videoPool(viewer, now),
     viewer.staff || viewer.config.instructorsPublished ? getInstructorCards(viewer, now) : Promise.resolve([]),
+    shortiesCount(),
   ]);
   const shorts = real.filter((v) => v.kind === "video");
   const exampleShorts = examples.filter((v) => v.kind === "video");
@@ -182,6 +189,7 @@ export async function getLibraryHome(viewer: LibraryViewer, now: Date = new Date
     ),
     themeCounts,
     instructors,
+    shorties,
   };
 }
 
@@ -203,11 +211,18 @@ function lookOfName(name: string) {
   return lookFor(category, subcategory);
 }
 
+function cuponeraIdsOf(refs: UsedProductRef[]): string[] {
+  return refs.map((r) => r.cuponeraProductId).filter((id): id is string => Boolean(id));
+}
+
 /** Each product of a video: from the cuponera — its discount, code, photo
  * and store — when it's there and the cuponera is live; otherwise the
  * names the coordination wrote, without a link. */
 export async function resolveUsedProducts(refs: UsedProductRef[], cuponeraLive: boolean): Promise<UsedProduct[]> {
-  const rows = await cuponeraRows(refs.map((r) => r.cuponeraProductId).filter((id): id is string => Boolean(id)));
+  return resolveWith(refs, await cuponeraRows(cuponeraIdsOf(refs)), cuponeraLive);
+}
+
+function resolveWith(refs: UsedProductRef[], rows: Map<string, CuponeraRow>, cuponeraLive: boolean): UsedProduct[] {
   return refs.map((ref, index) => {
     const row = ref.cuponeraProductId ? rows.get(ref.cuponeraProductId) : undefined;
     if (row && cuponeraLive) {
@@ -287,6 +302,111 @@ export async function recordVideoView(videoId: string, now: Date = new Date()): 
     create: { videoId, day, views: 1 },
   });
   return true;
+}
+
+// ── Shorties ───────────────────────────────────────────────────────────────
+
+const SHORTIES_EXAMPLES_UP_TO = 12;
+const shortiesWhere = { visible: true, kind: "video", inShorties: true } satisfies Prisma.LibraryVideoWhereInput;
+
+/** Real shorties: whether the public sees the way into Shorties. */
+export function shortiesCount(): Promise<number> {
+  return db.libraryVideo.count({ where: shortiesWhere });
+}
+
+/** Every short of the feed, newest first (the page shuffles them), with its
+ * products from one cuponera query — and, for staff, the examples up to twelve. */
+export async function getShorties(viewer: LibraryViewer, now: Date = new Date()): Promise<ShortItem[]> {
+  const rows = await db.libraryVideo.findMany({ where: shortiesWhere, orderBy: { publishedAt: "desc" }, include: { instructor: true } });
+  const refs = rows.map((r) => usedProductRefsOf(r.products));
+  const [views, cuponera] = await Promise.all([
+    viewCounts(
+      rows.map((r) => r.id),
+      now,
+    ),
+    cuponeraRows(cuponeraIdsOf(refs.flat())),
+  ]);
+  const items = rows.map(
+    (row, i): ShortItem => ({ video: toVideoCard(row, views), products: resolveWith(refs[i]!, cuponera, viewer.cuponeraLive), hasSteps: row.steps.length > 0 }),
+  );
+  const examples = viewer.staff
+    ? sampleVideos(now)
+        .filter((v) => v.kind === "video")
+        .map((card): ShortItem => {
+          const detail = sampleVideoDetail(card.slug, now);
+          return { video: card, products: detail?.products ?? [], hasSteps: (detail?.steps.length ?? 0) > 0 };
+        })
+    : [];
+  return withExamples(items, examples, SHORTIES_EXAMPLES_UP_TO, viewer.staff);
+}
+
+// ── The menu ───────────────────────────────────────────────────────────────
+
+const MENU_PEOPLE_UP_TO = 8;
+
+async function menuVideoFacts(viewer: LibraryViewer, now: Date) {
+  const since = new Date(bogotaDay(now).getTime() - 6 * DAY_MS);
+  const [byTheme, byKind, watched, shorties] = await Promise.all([
+    db.libraryVideo.groupBy({ by: ["theme"], where: { visible: true }, _count: { _all: true } }),
+    db.libraryVideo.groupBy({ by: ["kind"], where: { visible: true }, _count: { _all: true } }),
+    db.libraryVideoDailyView.groupBy({ by: ["videoId"], where: { day: { gte: since }, views: { gt: 0 }, video: { visible: true, kind: "video" } } }),
+    shortiesCount(),
+  ]);
+  const themeCounts = new Map<string, number>(byTheme.map((r) => [r.theme, r._count._all]));
+  if (viewer.staff) for (const v of sampleVideos(now)) themeCounts.set(v.theme, (themeCounts.get(v.theme) ?? 0) + 1);
+  const kinds = new Map<string, number>(byKind.map((r) => [r.kind, r._count._all]));
+  return { themeCounts, shorts: kinds.get("video") ?? 0, recordings: kinds.get("maraton") ?? 0, watched: watched.length, shorties };
+}
+
+/** The menu of every page of the library and the instructors' directory:
+ * the sections and the ways to search this viewer can open. */
+export async function getLibraryMenu(viewer: LibraryViewer, now: Date = new Date()): Promise<LibraryMenuData> {
+  const { texts, sections, popularSearches } = viewer.config;
+  const library = viewer.staff || viewer.config.published;
+  const instructors = viewer.staff || viewer.config.instructorsPublished;
+  const [facts, people] = await Promise.all([
+    library ? menuVideoFacts(viewer, now) : Promise.resolve(null),
+    instructors ? getInstructorCards(viewer, now) : Promise.resolve([] as InstructorCard[]),
+  ]);
+  const themes = facts
+    ? LIBRARY_THEMES.filter((t) => (facts.themeCounts.get(t.key) ?? 0) > 0).map((t) => ({ key: t.key, label: t.label, icon: t.icon, tile: t.tile, count: facts.themeCounts.get(t.key) ?? 0 }))
+    : [];
+  return {
+    library,
+    instructors,
+    cuponera: viewer.cuponeraLive,
+    shorties: Boolean(facts) && (viewer.staff || (sections.shorties && facts!.shorties >= SHORTIES_SHOWN_FROM)),
+    videos: Boolean(facts) && sections.newest && (viewer.staff || facts!.shorts > 0),
+    mostViewed: Boolean(facts) && sections.mostViewed && (viewer.staff || facts!.watched >= MOST_VIEWED_FROM),
+    recordings: Boolean(facts) && sections.recordings && (viewer.staff || facts!.recordings > 0),
+    signup: library && sections.signup && (viewer.staff || !viewer.unlocked),
+    popularSearches: library ? popularSearches : [],
+    themes,
+    people: people.slice(0, MENU_PEOPLE_UP_TO).map((p) => ({ slug: p.slug, name: p.name, initial: p.initial, photoUrl: p.photoUrl, tone: p.tone, city: p.city })),
+    cities: [...new Set(people.map((p) => p.city))].sort((a, b) => a.localeCompare(b, "es")),
+    sections: { badge: sections.shortiesBadge, themes: sections.menuThemes, levels: sections.menuLevels, instructors: sections.menuInstructors, cities: sections.menuCities },
+    texts: {
+      sectionsTitle: texts.menuSectionsTitle,
+      home: texts.menuHome,
+      shorties: texts.shortiesTitle,
+      badge: texts.shortiesBadgeLabel,
+      newest: texts.newestTitle,
+      mostViewed: texts.mostViewedTitle,
+      recordings: texts.recordingsTitle,
+      directory: texts.directoryTitle,
+      cuponera: texts.menuCuponera,
+      themesTitle: texts.menuThemesTitle,
+      levelsTitle: texts.menuLevelsTitle,
+      instructorsTitle: texts.menuInstructorsTitle,
+      seeAll: texts.menuSeeAll,
+      citiesTitle: texts.menuCitiesTitle,
+      searchPlaceholder: texts.searchPlaceholder,
+      directorySearchPlaceholder: texts.directorySearchPlaceholder,
+      signupTitle: texts.signupTitle,
+      signupText: texts.signupText,
+      signupButton: texts.signupButton,
+    },
+  };
 }
 
 // ── Search ─────────────────────────────────────────────────────────────────

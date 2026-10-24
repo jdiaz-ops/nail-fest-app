@@ -108,7 +108,7 @@ export default async function BibliotecaVideoPage({ params }: { params: { slug: 
         )}
 
         {sections.steps && page.steps.length > 0 && (
-          <section className="bib-section">
+          <section className="bib-section" id="paso-a-paso">
             {viewer.unlocked ? (
               <>
                 <h2 className={`bib-h2 ${fraunces.className}`}>{texts.stepsTitle}</h2>

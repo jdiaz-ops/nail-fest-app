@@ -2202,6 +2202,8 @@ model LibraryVideo {
   // Behind the free sign-up (the marathons' recordings, by default).
   gated           Boolean     @default(false)
   visible         Boolean     @default(true)
+  // In the Shorties feed (/biblioteca/shorties); only short videos go there.
+  inShorties      Boolean     @default(true)
   publishedAt     DateTime    @default(now())
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt

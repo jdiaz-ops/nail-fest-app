@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import LibraryShell, { libraryStaffNote } from "@/components/library/LibraryShell";
-import { PeopleRow, RecordingCard, SearchForm, ThemeIcon, VideoCard } from "@/components/library/parts";
+import { PeopleRow, PlayIcon, RecordingCard, SearchForm, ThemeIcon, VideoCard } from "@/components/library/parts";
 import { getLibraryHome, getLibraryViewer, libraryRobots } from "@/lib/library/data";
-import { LIBRARY_LEVELS, LIBRARY_THEMES } from "@/lib/library/shared";
+import { LIBRARY_LEVELS, LIBRARY_THEMES, SHORTIES_SHOWN_FROM, toneOf, youtubeThumbnail } from "@/lib/library/shared";
 import { fraunces } from "@/app/cuponera/fonts";
 
 export const dynamic = "force-dynamic";
@@ -26,11 +26,12 @@ function SectionHead({ title, href, label }: { title: string; href?: string; lab
   );
 }
 
-// nailfest.lat/biblioteca — the library's front page: the search, the
-// themes and levels, what's new and most watched, the marathons'
-// recordings behind the free sign-up, and the instructors. Each section can
-// be renamed or switched off in Editar biblioteca; a video's page lives in
-// ./[slug], the search and the themes in ./buscar.
+// nailfest.lat/biblioteca — the library's front page: the search, the way
+// into Shorties, the themes and levels, what's new and most watched, the
+// marathons' recordings behind the free sign-up, and the instructors. Each
+// section can be renamed or switched off in Editar biblioteca; a video's
+// page lives in ./[slug], the search and the themes in ./buscar, the feed in
+// ./shorties.
 export default async function BibliotecaPage() {
   const viewer = await getLibraryViewer();
   if (!viewer.config.published && !viewer.staff) notFound();
@@ -40,6 +41,9 @@ export default async function BibliotecaPage() {
   const hasExamples = shown.some((v) => v.sample) || home.instructors.some((i) => i.sample);
   const themes = LIBRARY_THEMES.filter((t) => (home.themeCounts[t.key] ?? 0) > 0);
   const showSignup = sections.signup && (viewer.staff || !viewer.unlocked);
+  const showShorties = sections.shorties && sections.shortiesBanner && (viewer.staff || home.shorties >= SHORTIES_SHOWN_FROM);
+  // The three cards fanned out in Shorties' box: the newest shorts' stills.
+  const fan = [0, 1, 2].map((i) => home.newest[i] ?? null);
 
   return (
     <LibraryShell section="biblioteca" viewer={viewer} note={libraryStaffNote(viewer, "biblioteca", hasExamples)}>
@@ -62,6 +66,32 @@ export default async function BibliotecaPage() {
       </section>
 
       <div className="bib-wrap">
+        {showShorties && (
+          <Link href="/biblioteca/shorties" className="bib-shortsbox">
+            <span className="bib-shortsbox-text">
+              {sections.shortiesBadge && <em className="bib-new">{texts.shortiesBadgeLabel}</em>}
+              <b className={fraunces.className}>{texts.shortiesTitle}</b>
+              <span>{texts.shortiesBannerText}</span>
+              <span className="bib-btn bib-btn-main bib-btn-sm">{texts.shortiesBannerButton}</span>
+            </span>
+            <span className="bib-fan" aria-hidden="true">
+              {fan.map((v, i) => (
+                <span key={v?.id ?? i} className={`bib-fan-card bib-ph-${v ? toneOf(v.slug) : [6, 2, 4][i]}`}>
+                  {v?.youtubeId && (
+                    // eslint-disable-next-line @next/next/no-img-element -- YouTube's still
+                    <img src={youtubeThumbnail(v.youtubeId)} alt="" loading="lazy" decoding="async" />
+                  )}
+                  {i === 2 && (
+                    <span className="bib-fan-play">
+                      <PlayIcon />
+                    </span>
+                  )}
+                </span>
+              ))}
+            </span>
+          </Link>
+        )}
+
         {shown.length === 0 && <p className="bib-empty">{texts.emptyText}</p>}
 
         {((sections.themes && themes.length > 0) || (sections.levels && shown.length > 0)) && (
@@ -112,7 +142,7 @@ export default async function BibliotecaPage() {
         )}
 
         {sections.mostViewed && home.mostViewed.length > 0 && (
-          <section className="bib-section">
+          <section className="bib-section" id="lo-mas-visto">
             <SectionHead title={texts.mostViewedTitle} />
             <div className="bib-rail">
               {home.mostViewed.map((v) => (

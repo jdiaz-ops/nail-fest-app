@@ -3,13 +3,15 @@
 // secciones), with the usual text — what shows while the admin leaves it
 // empty. No database here: the admin's form imports it too.
 
-export type LibraryPage = "biblioteca" | "video" | "instructoras" | "perfil" | "formularios";
+export type LibraryPage = "biblioteca" | "shorties" | "video" | "instructoras" | "perfil" | "menu" | "formularios";
 
 export const LIBRARY_PAGES: { key: LibraryPage; label: string; hint: string }[] = [
   { key: "biblioteca", label: "Portada de la biblioteca", hint: "nailfest.lat/biblioteca" },
+  { key: "shorties", label: "Shorties", hint: "nailfest.lat/biblioteca/shorties" },
   { key: "video", label: "Página de cada video", hint: "nailfest.lat/biblioteca/<video>" },
   { key: "instructoras", label: "Directorio de instructoras", hint: "nailfest.lat/instructoras" },
   { key: "perfil", label: "Perfil de cada instructora", hint: "nailfest.lat/instructoras/<instructora>" },
+  { key: "menu", label: "Menú", hint: "El menú de la biblioteca y del directorio de instructoras" },
   { key: "formularios", label: "Formularios", hint: "Registro gratis, postulación, marcas y clases" },
 ];
 
@@ -24,6 +26,7 @@ interface TextDef {
 }
 
 export const LIBRARY_SECTIONS = {
+  shortiesBanner: { page: "biblioteca", label: "Entrada a Shorties", hint: "El recuadro de Shorties debajo del buscador. Sale desde 3 shorties." },
   themes: { page: "biblioteca", label: "Explora por tema", hint: "Los ocho temas, con cuántos videos tiene cada uno." },
   levels: { page: "biblioteca", label: "Filtro por nivel", hint: "Principiante, intermedio y avanzado, debajo de los temas." },
   newest: { page: "biblioteca", label: "Lo nuevo", hint: "Los últimos videos publicados." },
@@ -31,6 +34,9 @@ export const LIBRARY_SECTIONS = {
   recordings: { page: "biblioteca", label: "Grabaciones de maratones", hint: "Las grabaciones largas, con su candado de registro gratis." },
   signup: { page: "biblioteca", label: "Registro gratis", hint: "El recuadro que invita a registrarse." },
   instructorsRow: { page: "biblioteca", label: "Aprende con", hint: "Las instructoras, con enlace a su perfil." },
+  shorties: { page: "shorties", label: "Shorties", hint: "Apagado, no sale en la portada ni en el menú, y su página no abre para el público." },
+  shortiesBadge: { page: "shorties", label: "Etiqueta «Nuevo»", hint: "En la entrada de la portada y en el menú." },
+  shortiesSignup: { page: "shorties", label: "Invitación a registrarse", hint: "Sale cada 6 videos a quien no se ha registrado." },
   used: { page: "video", label: "Lo que usó", hint: "Los productos del video, con el descuento y el código de la cuponera." },
   steps: { page: "video", label: "El paso a paso", hint: "Los pasos del video, que se ven con el registro gratis." },
   related: { page: "video", label: "Sigue con", hint: "Más videos del mismo tema." },
@@ -42,6 +48,10 @@ export const LIBRARY_SECTIONS = {
   profileProducts: { page: "perfil", label: "Lo que usa en sus videos", hint: "Las marcas de la cuponera que salen en sus videos." },
   appearances: { page: "perfil", label: "Ha estado en", hint: "Los eventos de Nail Fest en los que ha estado." },
   hire: { page: "perfil", label: "¿Tu marca necesita una instructora?", hint: "El recuadro final para las marcas." },
+  menuThemes: { page: "menu", label: "Busca por tema", hint: "Los temas, con cuántos videos tiene cada uno." },
+  menuLevels: { page: "menu", label: "Por nivel", hint: "Principiante, intermedio y avanzado." },
+  menuInstructors: { page: "menu", label: "Por instructora", hint: "Las instructoras, con enlace a su perfil." },
+  menuCities: { page: "menu", label: "Instructoras por ciudad", hint: "Las ciudades donde hay instructoras." },
 } as const satisfies Record<string, { page: LibraryPage; label: string; hint: string }>;
 
 export type LibrarySectionKey = keyof typeof LIBRARY_SECTIONS;
@@ -52,6 +62,8 @@ export const LIBRARY_TEXTS = {
   homeTitle: { page: "biblioteca", label: "Título", value: "Biblioteca Nail Fest" },
   homeLede: { page: "biblioteca", label: "Texto debajo del título", value: "Técnicas, negocio y bioseguridad, explicadas por instructoras Nail Fest. Gratis.", long: true },
   searchPlaceholder: { page: "biblioteca", label: "Texto dentro del buscador", value: "Busca una técnica o un producto" },
+  shortiesBannerText: { page: "biblioteca", label: "Texto", value: "Videos cortos al azar, uno tras otro. Desliza y aprende.", long: true, section: "shortiesBanner" },
+  shortiesBannerButton: { page: "biblioteca", label: "Botón", value: "Ver Shorties", section: "shortiesBanner" },
   themesTitle: { page: "biblioteca", label: "Título", value: "Explora por tema", section: "themes" },
   newestTitle: { page: "biblioteca", label: "Título", value: "Lo nuevo", section: "newest" },
   mostViewedTitle: { page: "biblioteca", label: "Título", value: "Lo más visto esta semana", section: "mostViewed" },
@@ -62,6 +74,32 @@ export const LIBRARY_TEXTS = {
   signupButton: { page: "biblioteca", label: "Botón", value: "Registrarme", section: "signup" },
   instructorsRowTitle: { page: "biblioteca", label: "Título", value: "Aprende con", section: "instructorsRow" },
   emptyText: { page: "biblioteca", label: "Mientras no haya videos", value: "Muy pronto: estamos preparando los primeros videos con las instructoras Nail Fest.", long: true },
+
+  shortiesTitle: { page: "shorties", label: "Nombre", value: "Shorties" },
+  shortiesSubtitle: { page: "shorties", label: "Texto debajo del nombre (en computador)", value: "Videos cortos al azar. Desliza o usa las flechas." },
+  shortiesHint: { page: "shorties", label: "Aviso del primer video", value: "Desliza hacia arriba para ver otro" },
+  shortiesSound: { page: "shorties", label: "Botón del sonido", value: "Activar sonido" },
+  shortiesProfile: { page: "shorties", label: "Botón del perfil", value: "Su perfil" },
+  shortiesUsed: { page: "shorties", label: "Botón de los productos", value: "Lo que usó" },
+  shortiesSteps: { page: "shorties", label: "Botón del paso a paso", value: "Paso a paso" },
+  shortiesShare: { page: "shorties", label: "Botón de compartir", value: "Compartir" },
+  shortiesStepsLink: { page: "shorties", label: "Enlace al final de «Lo que usó»", value: "Ver el paso a paso completo" },
+  shortiesEndTitle: { page: "shorties", label: "Al terminar: título", value: "Ya los viste todos" },
+  shortiesEndText: { page: "shorties", label: "Al terminar: texto", value: "Puedes verlos otra vez en otro orden o seguir en la biblioteca.", long: true },
+  shortiesEndAgain: { page: "shorties", label: "Al terminar: botón para repetir", value: "Verlos otra vez en otro orden" },
+  shortiesEndLibrary: { page: "shorties", label: "Al terminar: botón a la biblioteca", value: "Ir a la biblioteca" },
+  shortiesEmpty: { page: "shorties", label: "Mientras no haya shorties", value: "Muy pronto: estamos preparando los primeros shorties.", long: true },
+  shortiesBadgeLabel: { page: "shorties", label: "Etiqueta", value: "Nuevo", section: "shortiesBadge" },
+  shortiesSignupTitle: { page: "shorties", label: "Título", value: "¿Te están sirviendo?", section: "shortiesSignup" },
+  shortiesSignupText: {
+    page: "shorties",
+    label: "Texto",
+    value: "Regístrate gratis y desbloquea las grabaciones completas de las maratones y el paso a paso de cada técnica.",
+    long: true,
+    section: "shortiesSignup",
+  },
+  shortiesSignupButton: { page: "shorties", label: "Botón", value: "Registrarme gratis", section: "shortiesSignup" },
+  shortiesSignupLater: { page: "shorties", label: "Debajo del botón", value: "O sigue deslizando", section: "shortiesSignup" },
 
   usedTitle: { page: "video", label: "Título", value: "Lo que usó", section: "used" },
   usedSubtitle: { page: "video", label: "Texto debajo", value: "Con descuento en la Cuponera Nail Fest.", section: "used" },
@@ -115,6 +153,15 @@ export const LIBRARY_TEXTS = {
     long: true,
     section: "hire",
   },
+
+  menuSectionsTitle: { page: "menu", label: "Título de las secciones", value: "Secciones" },
+  menuHome: { page: "menu", label: "Enlace a la portada", value: "Inicio de la biblioteca" },
+  menuCuponera: { page: "menu", label: "Enlace a la cuponera", value: "Cuponera Nail Fest" },
+  menuThemesTitle: { page: "menu", label: "Título", value: "Busca por tema", section: "menuThemes" },
+  menuLevelsTitle: { page: "menu", label: "Título", value: "Por nivel", section: "menuLevels" },
+  menuInstructorsTitle: { page: "menu", label: "Título", value: "Por instructora", section: "menuInstructors" },
+  menuSeeAll: { page: "menu", label: "Enlace a todas", value: "Ver todas", section: "menuInstructors" },
+  menuCitiesTitle: { page: "menu", label: "Título", value: "Instructoras por ciudad", section: "menuCities" },
 
   signupFormTitle: { page: "formularios", label: "Registro gratis: título", value: "Regístrate gratis" },
   signupFormText: {

@@ -11,10 +11,11 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = { title: "Regístrate gratis · Biblioteca Nail Fest", robots: { index: false, follow: false } };
 
-/** Back to the library page that asked for the sign-up — never anywhere else. */
+/** Back to the library page that asked for the sign-up (a short in
+ * Shorties keeps its ?v=) — never anywhere else. */
 function returnPath(value: string | string[] | undefined): string {
   const path = Array.isArray(value) ? value[0] : value;
-  return path && /^\/biblioteca(?:\/[a-z0-9-]+)?$/.test(path) ? path : "/biblioteca";
+  return path && /^\/biblioteca(?:\/[a-z0-9-]+)?(?:\?v=[a-z0-9-]+)?$/.test(path) ? path : "/biblioteca";
 }
 
 // nailfest.lat/biblioteca/registro — the free sign-up that opens the

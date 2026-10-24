@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import PreviewToast from "@/components/cuponera/PreviewToast";
-import type { LibraryViewer } from "@/lib/library/data";
+import { getLibraryMenu, type LibraryViewer } from "@/lib/library/data";
+import { fraunces } from "@/app/cuponera/fonts";
+import LibraryMenu from "./LibraryMenu";
 
 type Section = "biblioteca" | "instructoras";
 
@@ -19,14 +21,10 @@ export function libraryStaffNote(viewer: LibraryViewer, section: Section, hasExa
 
 // What every page of the library and the instructors' directory shares:
 // the staff banner while there's something visitors don't see, the header
-// with the menu (only to the pages this viewer can open), the footer, and
-// the note that confirms a copied code.
-export default function LibraryShell({ section, viewer, note, children }: { section: Section; viewer: LibraryViewer; note: string | null; children: ReactNode }) {
-  const links = [
-    { href: "/biblioteca", label: "Biblioteca", show: viewer.staff || viewer.config.published },
-    { href: "/instructoras", label: "Instructoras", show: viewer.staff || viewer.config.instructorsPublished },
-    { href: "/cuponera", label: "Cuponera", show: viewer.cuponeraLive },
-  ].filter((l) => l.show);
+// with the menu (./LibraryMenu: the sections and ways to search this viewer
+// can open), the footer, and the note that confirms a copied code.
+export default async function LibraryShell({ section, viewer, note, children }: { section: Section; viewer: LibraryViewer; note: string | null; children: ReactNode }) {
+  const menu = await getLibraryMenu(viewer);
   return (
     <main className="bib-page">
       {note && (
@@ -44,22 +42,7 @@ export default function LibraryShell({ section, viewer, note, children }: { sect
             <img src="/logo.png" alt="Nail Fest" />
             <span>{LABELS[section]}</span>
           </Link>
-          {links.length > 1 && (
-            <details className="bib-menu">
-              <summary aria-label="Abrir el menú">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
-                  <path d="M4 7h16M4 12h16M4 17h16" />
-                </svg>
-              </summary>
-              <nav aria-label="Secciones de Nail Fest">
-                {links.map((l) => (
-                  <Link key={l.href} href={l.href} aria-current={l.href === `/${section}` ? "page" : undefined}>
-                    {l.label}
-                  </Link>
-                ))}
-              </nav>
-            </details>
-          )}
+          <LibraryMenu menu={menu} titleClass={fraunces.className} />
         </div>
       </header>
       {children}

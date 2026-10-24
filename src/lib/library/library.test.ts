@@ -1,19 +1,26 @@
 import { describe, expect, it } from "vitest";
 import {
+  RESERVED_VIDEO_SLUGS,
+  SHORTIES_SIGNUP_EVERY,
   formatDuration,
   formatLength,
   formatViews,
   handleOf,
   parseDuration,
+  shortiesOrder,
+  shortiesSlides,
+  shuffled,
   toneOf,
   usedProductRefsOf,
   withExamples,
   youtubeIdFrom,
+  youtubeLoopEmbedUrl,
+  type ShortItem,
 } from "./shared";
 import { rankBy, scoreFields } from "./search";
 import { isLibraryAccessToken, libraryAccessToken } from "./access";
 import { leadSchema } from "./leads";
-import { resolveSections, resolveTexts, LIBRARY_TEXTS } from "./texts";
+import { resolveSections, resolveTexts, LIBRARY_PAGES, LIBRARY_SECTIONS, LIBRARY_TEXTS } from "./texts";
 import { classInputSchema, toBogotaInput, videoInputSchema } from "./admin";
 import { sampleInstructors, sampleVideoDetail, sampleVideos } from "./samples";
 
@@ -195,5 +202,63 @@ describe("the admin's forms", () => {
     expect(parsed.startsAt.toISOString()).toBe("2026-11-13T00:00:00.000Z");
     expect(toBogotaInput(parsed.startsAt)).toBe("2026-11-12T19:00");
     expect(classInputSchema.safeParse({ instructorId: "i1", title: "Maratón", startsAt: "2026-11-12T19:00", place: "Zoom", url: "http://x.co", visible: true }).success).toBe(false);
+  });
+});
+
+describe("Shorties", () => {
+  const items: ShortItem[] = sampleVideos()
+    .filter((v) => v.kind === "video")
+    .map((video) => ({ video, products: [], hasSteps: false }));
+  // A fixed "random" so the order can be checked.
+  const seeded = (seed: number) => () => {
+    seed = (seed * 16807) % 2147483647;
+    return (seed - 1) / 2147483646;
+  };
+
+  it("shuffles without losing or repeating a short", () => {
+    const order = shuffled(items, seeded(7));
+    expect(order).toHaveLength(items.length);
+    expect(new Set(order.map((i) => i.video.id))).toEqual(new Set(items.map((i) => i.video.id)));
+    expect(order.map((i) => i.video.id)).not.toEqual(items.map((i) => i.video.id));
+  });
+
+  it("puts a shared short first and ignores one that isn't in the feed", () => {
+    const shared = items[5]!.video.slug;
+    expect(shortiesOrder(items, shared, seeded(3))[0]!.video.slug).toBe(shared);
+    const order = shortiesOrder(items, "no-existe", seeded(3));
+    expect(order).toHaveLength(items.length);
+  });
+
+  it("invites to sign up every six shorts, never as the last one, and ends with the end card", () => {
+    const slides = shortiesSlides(items, SHORTIES_SIGNUP_EVERY);
+    expect(items).toHaveLength(12);
+    expect(slides.map((s) => s.kind)).toEqual([...Array(6).fill("video"), "signup", ...Array(6).fill("video"), "end"]);
+    expect(shortiesSlides(items, null).filter((s) => s.kind === "signup")).toHaveLength(0);
+    expect(shortiesSlides([], SHORTIES_SIGNUP_EVERY)).toEqual([]);
+  });
+
+  it("has its own address, which no video can take", () => {
+    expect(RESERVED_VIDEO_SLUGS).toContain("shorties");
+  });
+
+  it("falls back to YouTube's player, silent and looping", () => {
+    expect(youtubeLoopEmbedUrl("dQw4w9WgXcQ")).toContain("mute=1");
+    expect(youtubeLoopEmbedUrl("dQw4w9WgXcQ")).toContain("loop=1&playlist=dQw4w9WgXcQ");
+  });
+
+  it("and the menu are on, editable, and grouped in the admin's texts", () => {
+    const sections = resolveSections({});
+    expect(sections.shorties && sections.shortiesBanner && sections.shortiesSignup && sections.menuThemes && sections.menuCities).toBe(true);
+    expect(resolveSections({ shorties: false }).shorties).toBe(false);
+    expect(resolveTexts({}).shortiesTitle).toBe("Shorties");
+    expect(resolveTexts({ shortiesTitle: "Cortos" }).shortiesTitle).toBe("Cortos");
+    const pages = LIBRARY_PAGES.map((p) => p.key);
+    for (const def of [...Object.values(LIBRARY_TEXTS), ...Object.values(LIBRARY_SECTIONS)]) expect(pages).toContain(def.page);
+  });
+
+  it("is a choice per short video in the admin, on unless unticked", () => {
+    const base = { kind: "video", title: "Francesa", youtube: "dQw4w9WgXcQ", duration: "", theme: "tecnicas", level: "principiante", products: [], steps: [], gated: false, visible: true };
+    expect(videoInputSchema.parse(base).inShorties).toBe(true);
+    expect(videoInputSchema.parse({ ...base, inShorties: false }).inShorties).toBe(false);
   });
 });

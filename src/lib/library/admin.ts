@@ -70,6 +70,8 @@ export const videoInputSchema = z.object({
   steps: z.array(z.string().trim().min(1).max(300)).max(30),
   gated: z.boolean(),
   visible: z.boolean(),
+  /** Only short videos go to Shorties; on by default. */
+  inShorties: z.boolean().default(true),
 });
 
 export const instructorInputSchema = z.object({
@@ -174,6 +176,7 @@ export interface AdminVideo {
   steps: string[];
   gated: boolean;
   visible: boolean;
+  inShorties: boolean;
   views: number;
 }
 
@@ -281,6 +284,7 @@ export async function getLibraryAdminData() {
         steps: v.steps,
         gated: v.gated,
         visible: v.visible,
+        inShorties: v.inShorties,
         views: viewsById.get(v.id) ?? 0,
       }),
     ),

@@ -58,7 +58,7 @@ export function isKind(value: unknown): value is LibraryVideoKind {
 }
 
 // Slugs the pages under /biblioteca and /instructoras already use.
-export const RESERVED_VIDEO_SLUGS = ["buscar", "registro"];
+export const RESERVED_VIDEO_SLUGS = ["buscar", "registro", "shorties"];
 export const RESERVED_INSTRUCTOR_SLUGS = ["solicitud"];
 // Invented examples (lib/library/samples.ts) live under this prefix, so a
 // real video or instructor never takes one of their addresses.
@@ -99,6 +99,12 @@ export function youtubeThumbnail(id: string): string {
 /** The privacy-enhanced player: no YouTube cookies until it's played. */
 export function youtubeEmbedUrl(id: string): string {
   return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&playsinline=1&modestbranding=1`;
+}
+
+/** Shorties' player when YouTube's script can't load: starts silent (what
+ * browsers allow on their own), loops, and keeps YouTube's controls for the sound. */
+export function youtubeLoopEmbedUrl(id: string): string {
+  return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}&rel=0&playsinline=1&modestbranding=1`;
 }
 
 // ── Durations and views ────────────────────────────────────────────────────
@@ -268,6 +274,94 @@ export interface InstructorCard extends LibraryPerson {
   videoCount: number;
   nextClass: InstructorClassItem | null;
   sample: boolean;
+}
+
+/** A short in the Shorties feed: the video and what its buttons open. */
+export interface ShortItem {
+  video: LibraryVideoCard;
+  products: UsedProduct[];
+  /** Its page has a step by step ("Paso a paso" links there). */
+  hasSteps: boolean;
+}
+
+// A sign-up card every this many shorties, for whoever hasn't signed up.
+export const SHORTIES_SIGNUP_EVERY = 6;
+// The public sees the way into Shorties (the front page's box, the menu)
+// from this many real shorties on; staff always, filled with examples.
+export const SHORTIES_SHOWN_FROM = 3;
+
+/** A new order, at random (Fisher–Yates). */
+export function shuffled<T>(list: T[], random: () => number = Math.random): T[] {
+  const out = [...list];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [out[i], out[j]] = [out[j]!, out[i]!];
+  }
+  return out;
+}
+
+/** Shorties' order: the shared one first (?v=), the rest at random. */
+export function shortiesOrder(items: ShortItem[], first: string | null, random: () => number = Math.random): ShortItem[] {
+  const lead = first ? items.find((i) => i.video.slug === first) : undefined;
+  const rest = shuffled(
+    items.filter((i) => i !== lead),
+    random,
+  );
+  return lead ? [lead, ...rest] : rest;
+}
+
+export type ShortiesSlide = { kind: "video"; item: ShortItem } | { kind: "signup"; key: string } | { kind: "end" };
+
+/** The feed: the shorties, a sign-up card after every `signupEvery` (never
+ * last), and the end. */
+export function shortiesSlides(items: ShortItem[], signupEvery: number | null): ShortiesSlide[] {
+  const slides: ShortiesSlide[] = [];
+  items.forEach((item, i) => {
+    slides.push({ kind: "video", item });
+    if (signupEvery && (i + 1) % signupEvery === 0 && i < items.length - 1) slides.push({ kind: "signup", key: `signup-${i}` });
+  });
+  if (items.length > 0) slides.push({ kind: "end" });
+  return slides;
+}
+
+/** The menu of the library and the instructors' pages: only what this
+ * viewer can open. */
+export interface LibraryMenuData {
+  library: boolean;
+  instructors: boolean;
+  cuponera: boolean;
+  shorties: boolean;
+  /** "Lo nuevo", the levels: there are short videos. */
+  videos: boolean;
+  mostViewed: boolean;
+  recordings: boolean;
+  signup: boolean;
+  popularSearches: string[];
+  themes: { key: LibraryTheme; label: string; icon: LibraryThemeIcon; tile: string; count: number }[];
+  people: { slug: string; name: string; initial: string; photoUrl: string | null; tone: number; city: string }[];
+  cities: string[];
+  sections: { badge: boolean; themes: boolean; levels: boolean; instructors: boolean; cities: boolean };
+  texts: {
+    sectionsTitle: string;
+    home: string;
+    shorties: string;
+    badge: string;
+    newest: string;
+    mostViewed: string;
+    recordings: string;
+    directory: string;
+    cuponera: string;
+    themesTitle: string;
+    levelsTitle: string;
+    instructorsTitle: string;
+    seeAll: string;
+    citiesTitle: string;
+    searchPlaceholder: string;
+    directorySearchPlaceholder: string;
+    signupTitle: string;
+    signupText: string;
+    signupButton: string;
+  };
 }
 
 /** Search words: accent-free, lowercase, in order. */
