@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { AdminLead } from "@/lib/library/admin";
-import { LEAD_KIND_LABELS, LIBRARY_LEAD_KINDS, type LibraryLeadKindKey } from "@/lib/library/leads";
+import { LEAD_KIND_LABELS, LIBRARY_LEAD_KINDS, PUBLIC_LEAD_KINDS, type LibraryLeadKindKey } from "@/lib/library/leads";
 import { api, CardTitle, cardStyle, mutedText, Pill, secondaryButtonStyle } from "../cuponera/ui";
 import { FormError, rowStyle } from "./ui";
 
@@ -25,6 +25,8 @@ export default function LibraryLeadsList({ leads, pending }: { leads: AdminLead[
   // The box changes right away; the counts follow when the page reloads.
   const [handledNow, setHandledNow] = useState<Record<string, boolean>>({});
   const shown = (kind === "todos" ? leads : leads.filter((l) => l.kind === kind)).map((l) => ({ ...l, handled: handledNow[l.id] ?? l.handled }));
+  // The forms still on the pages, plus any old kind that has something in it.
+  const kinds = LIBRARY_LEAD_KINDS.filter((k) => PUBLIC_LEAD_KINDS.includes(k) || leads.some((l) => l.kind === k));
 
   async function setHandled(lead: AdminLead, handled: boolean) {
     setBusyId(lead.id);
@@ -68,12 +70,12 @@ export default function LibraryLeadsList({ leads, pending }: { leads: AdminLead[
         Registros y solicitudes
       </CardTitle>
       <p style={{ ...mutedText, marginTop: 0 }}>
-        El registro gratis de la biblioteca, las postulaciones de instructoras, las marcas que buscan instructoras y las reservas de clases. A
-        nadie se le envió nada automático: escríbele tú y márcalo como atendido. Entre paréntesis, los que faltan por atender.
+        El registro gratis de la biblioteca y las postulaciones de instructoras. A nadie se le envió nada automático: escríbele tú y márcalo como
+        atendido. Entre paréntesis, los que faltan por atender.
       </p>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
         {tab("todos", "Todos")}
-        {LIBRARY_LEAD_KINDS.map((k) => tab(k, LEAD_KIND_LABELS[k]))}
+        {kinds.map((k) => tab(k, LEAD_KIND_LABELS[k]))}
       </div>
       {error && <FormError>{error}</FormError>}
       {shown.length === 0 ? (

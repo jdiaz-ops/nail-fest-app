@@ -17,8 +17,8 @@ interface Draft {
 }
 
 // Editar biblioteca → Clases: what shows in "Próximas clases" on each
-// instructor's profile. Without a sign-up link, "Inscribirme" opens Nail
-// Fest's own form and the booking lands in Registros.
+// instructor's profile. "Inscribirme" opens her own sign-up link (WhatsApp,
+// page or form): Nail Fest shows the class, doesn't take the booking.
 export default function LibraryClassesEditor({ classes, instructors }: { classes: AdminClass[]; instructors: AdminInstructor[] }) {
   const router = useRouter();
   const [editing, setEditing] = useState<{ id: string | null; draft: Draft } | null>(null);
@@ -63,7 +63,7 @@ export default function LibraryClassesEditor({ classes, instructors }: { classes
         </div>
         <div style={{ display: "flex", gap: 6, marginTop: 4, flexWrap: "wrap" }}>
           {isPast && <Pill tone="grey">Ya pasó</Pill>}
-          {c.url ? <Pill tone="green">Link propio</Pill> : <Pill tone="grey">Formulario de Nail Fest</Pill>}
+          {!c.url && <Pill tone="red">Sin link: no sale «Inscribirme»</Pill>}
           {!c.visible && <Pill tone="red">Oculta</Pill>}
         </div>
       </div>
@@ -102,8 +102,8 @@ export default function LibraryClassesEditor({ classes, instructors }: { classes
         Clases de las instructoras
       </CardTitle>
       <p style={{ ...mutedText, marginTop: 0 }}>
-        Salen en «Próximas clases» del perfil de cada instructora hasta que pasan. Sin link propio, «Inscribirme» abre el formulario de Nail Fest y
-        la reserva llega a Registros.
+        Salen en «Próximas clases» del perfil de cada instructora hasta que pasan. «Inscribirme» lleva al link de ella (su WhatsApp, su página o
+        su formulario): Nail Fest muestra la clase, no recibe las reservas.
       </p>
       {error && <FormError>{error}</FormError>}
       {instructors.length === 0 && <p style={{ ...mutedText, margin: 0 }}>Primero agrega una instructora.</p>}
@@ -150,10 +150,10 @@ function ClassForm({
 
   async function save() {
     if (!d.instructorId || d.title.trim().length < 3 || !d.startsAt || d.place.trim().length < 2) return setMessage("Falta la instructora, el título, la fecha o el lugar.");
-    if (d.url && !d.url.startsWith("https://")) return setMessage("El link de inscripción tiene que empezar por https://");
+    if (!d.url.trim().startsWith("https://")) return setMessage("Falta el link de inscripción de la instructora (empieza por https://): su WhatsApp (https://wa.me/57…), su página o su formulario.");
     setSaving(true);
     setMessage(null);
-    const body = { ...d, priceLabel: d.priceLabel || null, url: d.url || null };
+    const body = { ...d, priceLabel: d.priceLabel || null, url: d.url.trim() };
     try {
       await api(id ? `/api/admin/library/classes/${id}` : "/api/admin/library/classes", { method: id ? "PATCH" : "POST", body: JSON.stringify(body) });
       onSaved();
@@ -193,8 +193,8 @@ function ClassForm({
           <input id="class-price" value={d.priceLabel} maxLength={60} placeholder="Gratis con registro" onChange={(e) => set("priceLabel", e.target.value)} />
         </div>
         <div className="field">
-          <label htmlFor="class-url">Link de inscripción (opcional)</label>
-          <input id="class-url" value={d.url} maxLength={500} placeholder="https://…" onChange={(e) => set("url", e.target.value)} />
+          <label htmlFor="class-url">Link de inscripción de ella</label>
+          <input id="class-url" value={d.url} maxLength={500} placeholder="https://wa.me/57… o su página" onChange={(e) => set("url", e.target.value)} />
         </div>
       </div>
       <Check checked={d.visible} onChange={(v) => set("visible", v)} label="Visible en su perfil" />

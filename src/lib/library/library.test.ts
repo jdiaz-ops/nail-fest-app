@@ -19,7 +19,7 @@ import {
 } from "./shared";
 import { rankBy, scoreFields } from "./search";
 import { isLibraryAccessToken, libraryAccessToken } from "./access";
-import { leadSchema } from "./leads";
+import { PUBLIC_LEAD_KINDS, leadSchema } from "./leads";
 import { resolveSections, resolveTexts, LIBRARY_PAGES, LIBRARY_SECTIONS, LIBRARY_TEXTS } from "./texts";
 import { classInputSchema, toBogotaInput, videoInputSchema } from "./admin";
 import { sampleInstructors, sampleVideoDetail, sampleVideos } from "./samples";
@@ -198,10 +198,17 @@ describe("the admin's forms", () => {
   });
 
   it("reads a class's date in Bogotá time, both ways", () => {
-    const parsed = classInputSchema.parse({ instructorId: "i1", title: "Maratón", startsAt: "2026-11-12T19:00", place: "Zoom", visible: true });
+    const parsed = classInputSchema.parse({ instructorId: "i1", title: "Maratón", startsAt: "2026-11-12T19:00", place: "Zoom", url: "https://wa.me/573001112233", visible: true });
     expect(parsed.startsAt.toISOString()).toBe("2026-11-13T00:00:00.000Z");
     expect(toBogotaInput(parsed.startsAt)).toBe("2026-11-12T19:00");
     expect(classInputSchema.safeParse({ instructorId: "i1", title: "Maratón", startsAt: "2026-11-12T19:00", place: "Zoom", url: "http://x.co", visible: true }).success).toBe(false);
+  });
+
+  it("only shows a class with her own sign-up link: Nail Fest doesn't take bookings", () => {
+    const base = { instructorId: "i1", title: "Maratón", startsAt: "2026-11-12T19:00", place: "Zoom", visible: true };
+    expect(classInputSchema.safeParse(base).success).toBe(false);
+    expect(classInputSchema.safeParse({ ...base, url: "" }).success).toBe(false);
+    expect(classInputSchema.safeParse({ ...base, url: "https://instagram.com/ana.unas" }).success).toBe(true);
   });
 });
 
@@ -260,5 +267,19 @@ describe("Shorties", () => {
     const base = { kind: "video", title: "Francesa", youtube: "dQw4w9WgXcQ", duration: "", theme: "tecnicas", level: "principiante", products: [], steps: [], gated: false, visible: true };
     expect(videoInputSchema.parse(base).inShorties).toBe(true);
     expect(videoInputSchema.parse({ ...base, inShorties: false }).inShorties).toBe(false);
+  });
+});
+
+describe("the instructors' directory, as of 2026-10-25", () => {
+  it("takes only the free sign-up and instructors' applications: no brand requests, no bookings", () => {
+    expect([...PUBLIC_LEAD_KINDS]).toEqual(["REGISTRO", "POSTULACION"]);
+  });
+
+  it("promises no money, brands, events or step by steps in its usual texts", () => {
+    const usual = Object.values(resolveTexts({})).join(" ").toLowerCase();
+    for (const promise of ["contratar", "tu marca", "eventos", "paso a paso de cada técnica"]) expect(usual).not.toContain(promise);
+    expect(Object.keys(LIBRARY_SECTIONS)).not.toContain("hire");
+    expect(Object.keys(LIBRARY_SECTIONS)).not.toContain("brandCta");
+    expect(resolveTexts({}).classesNote).toMatch(/cobra cada instructora/);
   });
 });

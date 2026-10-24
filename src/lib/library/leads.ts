@@ -7,6 +7,11 @@ import { z } from "zod";
 export const LIBRARY_LEAD_KINDS = ["REGISTRO", "POSTULACION", "MARCA", "CLASE"] as const;
 export type LibraryLeadKindKey = (typeof LIBRARY_LEAD_KINDS)[number];
 
+/** The forms the pages still offer (2026-10-25: no brand requests — that's
+ * Marcolini's — and no class bookings through Nail Fest: each instructor
+ * takes her own). MARCA and CLASE stay only for what already came in. */
+export const PUBLIC_LEAD_KINDS: readonly LibraryLeadKindKey[] = ["REGISTRO", "POSTULACION"];
+
 export const LEAD_KIND_LABELS: Record<LibraryLeadKindKey, string> = {
   REGISTRO: "Registro gratis",
   POSTULACION: "Postulación de instructora",

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getLibrarySettings } from "@/lib/library/settings";
-import { leadSchema } from "@/lib/library/leads";
+import { PUBLIC_LEAD_KINDS, leadSchema } from "@/lib/library/leads";
 import { LIBRARY_ACCESS_COOKIE, LIBRARY_ACCESS_MAX_AGE_SECONDS, libraryAccessToken } from "@/lib/library/access";
 import { SAMPLE_SLUG_PREFIX } from "@/lib/library/shared";
 import { viewerCanSeeSamples } from "@/lib/reviewsViewer";
@@ -23,6 +23,7 @@ export async function POST(req: NextRequest) {
   const lead = parsed.data;
   // The box people never see came back filled in: a bot. It's told "ok".
   if (lead.website) return NextResponse.json({ ok: true });
+  if (!PUBLIC_LEAD_KINDS.includes(lead.kind)) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
   const [settings, staff] = await Promise.all([getLibrarySettings(), viewerCanSeeSamples()]);
   const open = lead.kind === "REGISTRO" ? settings.published : settings.instructorsPublished;

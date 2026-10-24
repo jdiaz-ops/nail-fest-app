@@ -108,12 +108,12 @@ export const classInputSchema = z.object({
   startsAt: bogotaDateTime,
   place: z.string().trim().min(2).max(120),
   priceLabel: optionalText(60),
+  /** Where people sign up: her WhatsApp, page or form — Nail Fest doesn't take bookings. */
   url: z
     .string()
+    .trim()
     .max(500)
-    .nullish()
-    .transform((v) => (v && v.trim() ? v.trim() : null))
-    .refine((v) => v === null || /^https:\/\/\S+$/.test(v), "https"),
+    .regex(/^https:\/\/\S+$/, "https"),
   visible: z.boolean(),
 });
 

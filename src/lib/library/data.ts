@@ -593,15 +593,3 @@ export async function getInstructorProfile(slug: string, viewer: LibraryViewer, 
     brands: brandsOf(products),
   };
 }
-
-/** For the forms: the instructor a class booking or a brand's request is about. */
-export async function instructorForForm(slug: string | null, viewer: LibraryViewer): Promise<{ slug: string; name: string; sample: boolean } | null> {
-  if (!slug) return null;
-  if (slug.startsWith(SAMPLE_SLUG_PREFIX)) {
-    const sample = viewer.staff ? sampleInstructors().find((i) => i.slug === slug) : undefined;
-    return sample ? { slug: sample.slug, name: sample.name, sample: true } : null;
-  }
-  const row = await db.instructor.findUnique({ where: { slug }, select: { slug: true, name: true, visible: true } });
-  return row && (row.visible || viewer.staff) ? { slug: row.slug, name: row.name, sample: false } : null;
-}
-

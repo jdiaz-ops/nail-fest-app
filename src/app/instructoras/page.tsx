@@ -143,26 +143,15 @@ export default async function InstructorasPage({ searchParams }: { searchParams:
           </>
         )}
 
-        {(sections.teachCta || sections.brandCta) && (
-          <div className="bib-ctas">
-            {sections.teachCta && (
-              <div className="bib-cta bib-cta--teach">
-                <h2 className={fraunces.className}>{texts.teachTitle}</h2>
-                <p>{texts.teachText}</p>
-                <Link href="/instructoras/solicitud?tipo=postulacion" className="bib-btn bib-btn-dark">
-                  {texts.teachButton}
-                </Link>
-              </div>
-            )}
-            {sections.brandCta && (
-              <div className="bib-cta bib-cta--brand">
-                <h2 className={fraunces.className}>{texts.brandTitle}</h2>
-                <p>{texts.brandText}</p>
-                <Link href="/instructoras/solicitud?tipo=marca" className="bib-btn bib-btn-dark">
-                  {texts.brandButton}
-                </Link>
-              </div>
-            )}
+        {sections.teachCta && (
+          <div className="bib-ctas bib-ctas--one">
+            <div className="bib-cta bib-cta--teach">
+              <h2 className={fraunces.className}>{texts.teachTitle}</h2>
+              <p>{texts.teachText}</p>
+              <Link href="/instructoras/solicitud?tipo=postulacion" className="bib-btn bib-btn-dark">
+                {texts.teachButton}
+              </Link>
+            </div>
           </div>
         )}
       </div>

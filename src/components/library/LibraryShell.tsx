@@ -54,8 +54,8 @@ export default async function LibraryShell({ section, viewer, note, children }: 
         </span>
         <p>
           {section === "biblioteca"
-            ? "Los videos se ven desde YouTube. Los descuentos de «Lo que usó» son de la Cuponera Nail Fest y se usan en la tienda en línea de cada marca."
-            : "Las Instructoras Nail Fest son educadoras elegidas por Nail Fest. Las clases y servicios los da cada instructora."}
+            ? "Los videos se ven desde YouTube. Los descuentos de «Lo que usó» son de la Cuponera Nail Fest y se usan en la tienda en línea de cada marca; Nail Fest puede recibir una comisión por esas compras."
+            : "Las Instructoras Nail Fest son educadoras de uñas elegidas por Nail Fest. Cada una organiza y cobra sus propias clases."}
         </p>
         <a href="/privacidad">Política de privacidad</a>
       </footer>

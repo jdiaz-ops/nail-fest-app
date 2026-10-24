@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import LibraryShell, { libraryStaffNote } from "@/components/library/LibraryShell";
+import PreviewLink from "@/components/cuponera/PreviewLink";
 import { Avatar, SampleBadge, VideoCard, classDayParts } from "@/components/library/parts";
 import { getInstructorProfile, getLibraryViewer, libraryRobots } from "@/lib/library/data";
 import { formatPercent } from "@/lib/cuponera/shared";
@@ -23,10 +24,11 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 
 const timeFormatter = new Intl.DateTimeFormat("es-CO", { hour: "numeric", minute: "2-digit", timeZone: "America/Bogota" });
 
-// An instructor's profile: who she is, how to book a class or hire her for
-// a brand (both through Nail Fest's forms), her videos, her upcoming
-// classes, the cuponera brands in her videos and the Nail Fest events she's
-// been part of.
+// An instructor's profile: who she is and her networks, her videos, her
+// upcoming classes (each one straight to her own sign-up link — Nail Fest
+// shows them, doesn't take bookings: 2026-10-25), the cuponera brands in her
+// videos and the Nail Fest events she's been part of. No brand requests:
+// that's Marcolini's.
 export default async function InstructoraPage({ params }: { params: { slug: string } }) {
   const viewer = await getLibraryViewer();
   if (!viewer.config.instructorsPublished && !viewer.staff) notFound();
@@ -35,8 +37,6 @@ export default async function InstructoraPage({ params }: { params: { slug: stri
   const { instructor, videos, classes, brands } = profile;
   const { texts, sections } = viewer.config;
   const handle = instructor.instagram ?? instructor.tiktok;
-  const bookHref = `/instructoras/solicitud?tipo=clase&instructora=${instructor.slug}`;
-  const hireHref = `/instructoras/solicitud?tipo=marca&instructora=${instructor.slug}`;
   const libraryOpen = viewer.staff || viewer.config.published;
   const notes = [
     libraryStaffNote(viewer, "instructoras", instructor.sample),
@@ -87,14 +87,6 @@ export default async function InstructoraPage({ params }: { params: { slug: stri
               )}
             </div>
           )}
-          <div className="bib-actions">
-            <Link href={bookHref} className="bib-btn bib-btn-main">
-              {texts.bookButton}
-            </Link>
-            <Link href={hireHref} className="bib-btn bib-btn-line">
-              {texts.hireButton}
-            </Link>
-          </div>
           {instructor.bio && <p className="bib-desc">{instructor.bio}</p>}
           {instructor.specialties.length > 0 && (
             <div className="bib-tags">
@@ -135,10 +127,10 @@ export default async function InstructoraPage({ params }: { params: { slug: stri
         {sections.classes && classes.length > 0 && (
           <section className="bib-section">
             <h2 className={`bib-h2 ${fraunces.className}`}>{texts.classesTitle}</h2>
+            <p className="bib-sub">{texts.classesNote}</p>
             <div className="bib-classes">
               {classes.map((c) => {
                 const { day, month } = classDayParts(c.startsAt);
-                const href = c.url ?? `${bookHref}&clase=${c.id}`;
                 return (
                   <div key={c.id} className="bib-class">
                     <span className="bib-date">
@@ -149,14 +141,15 @@ export default async function InstructoraPage({ params }: { params: { slug: stri
                       <b>{c.title}</b>
                       <small>{[c.place, timeFormatter.format(new Date(c.startsAt)), c.priceLabel].filter(Boolean).join(" · ")}</small>
                     </span>
-                    {c.url ? (
-                      <a href={href} target="_blank" rel="noopener" className="bib-btn bib-btn-main bib-btn-sm">
+                    {(c.url || instructor.sample) && (
+                      <PreviewLink
+                        href={c.url}
+                        preview="Ejemplo: aquí se abriría el enlace de inscripción de la instructora (su WhatsApp, su página o su formulario)."
+                        className="bib-btn bib-btn-main bib-btn-sm"
+                        ariaLabel={`Inscribirme en «${c.title}» (abre el enlace de la instructora)`}
+                      >
                         Inscribirme
-                      </a>
-                    ) : (
-                      <Link href={href} className="bib-btn bib-btn-main bib-btn-sm">
-                        Inscribirme
-                      </Link>
+                      </PreviewLink>
                     )}
                   </div>
                 );
@@ -205,16 +198,6 @@ export default async function InstructoraPage({ params }: { params: { slug: stri
               })}
             </div>
           </section>
-        )}
-
-        {sections.hire && (
-          <div className="bib-hire">
-            <h2 className={fraunces.className}>{texts.hireTitle}</h2>
-            <p>{texts.hireText}</p>
-            <Link href={hireHref} className="bib-btn bib-btn-dark">
-              {texts.hireButton}
-            </Link>
-          </div>
         )}
       </div>
     </LibraryShell>
