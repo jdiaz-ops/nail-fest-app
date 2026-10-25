@@ -24,16 +24,21 @@ async function handle(req: NextRequest) {
   const settings = await getLibrarySettings();
   if (!settings.youtubeAutopilot || !settings.youtubeUploadsId || !settings.youtubeApiKey) return NextResponse.json({ ok: true, skipped: "off" });
 
+  const started = Date.now();
   let imported: { added: number; complete: boolean } | { problem: string } | null = null;
-  if (!settings.youtubeImportedAt || Date.now() - settings.youtubeImportedAt.getTime() > IMPORT_EVERY_MS) {
+  if (!settings.youtubeImportedAt || started - settings.youtubeImportedAt.getTime() > IMPORT_EVERY_MS) {
     try {
-      imported = await importNewUploads(45_000);
+      // The whole channel the first time (it starts over from the newest
+      // until it gets to the end once), only the newest after.
+      imported = await importNewUploads(settings.youtubeImportedAt ? 45_000 : 200_000);
     } catch (error) {
       if (!(error instanceof YoutubeError)) throw error;
       imported = { problem: error.problem };
     }
   }
-  // No request starts late: the round fits in the function's five minutes.
+  // No request starts late: the round fits in the function's five minutes —
+  // after a long import, Claude goes on in the next one.
+  if (Date.now() - started > 60_000) return NextResponse.json({ ok: true, imported, skipped: "next" });
   return NextResponse.json({ ok: true, imported, ...(await runAutopilot({ lanes: 3, budgetMs: imported ? 10_000 : 40_000 })) });
 }
 
