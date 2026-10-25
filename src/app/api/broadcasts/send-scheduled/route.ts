@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { sendEventBroadcast } from "@/lib/broadcasts";
+import { sendEventBroadcast, sendSegmentEmailBroadcast } from "@/lib/broadcasts";
 import { scheduledEmailSendCallbackUrl, verifyQstashSignature } from "@/lib/qstash";
 
 // QStash's exact-time callback for an event EMAIL broadcast — the email
-// twin of /api/whatsapp/send-scheduled (see that route's own comment).
+// twin of /api/whatsapp/send-scheduled (see that route's own comment) —
+// and for a La Mesa edition (lib/mesa/sends.ts), the one scheduled
+// segment broadcast.
 // Scheduled when the broadcast is created/edited (see
 // /api/admin/events/[id]/broadcasts and lib/qstash.ts's
 // scheduleEventBroadcastSend); the daily /api/broadcasts/send-due cron
@@ -25,14 +27,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "missing_broadcastId" }, { status: 400 });
   }
   const broadcast = await db.emailBroadcast.findUnique({ where: { id: broadcastId } });
-  // Deleted before it fired, already sent (cron, or a QStash retry after a
-  // successful call), or not an event broadcast — nothing to do. Always
-  // 200: a non-2xx would only make QStash retry a call with no work behind it.
-  if (!broadcast || broadcast.status !== "QUEUED" || !broadcast.eventId) {
+  // Deleted or cancelled before it fired, already sent (cron, or a QStash
+  // retry after a successful call), or neither an event broadcast nor a La
+  // Mesa edition — nothing to do. Always 200: a non-2xx would only make
+  // QStash retry a call with no work behind it.
+  const mesa = broadcast?.mesaEdition != null && broadcast.segmentId != null;
+  if (!broadcast || broadcast.status !== "QUEUED" || (!broadcast.eventId && !mesa)) {
     return NextResponse.json({ ok: true, skipped: true });
   }
   try {
-    const result = await sendEventBroadcast(broadcastId);
+    const result = broadcast.eventId ? await sendEventBroadcast(broadcastId) : await sendSegmentEmailBroadcast(broadcastId);
     return NextResponse.json({ ok: true, ...result });
   } catch (err) {
     console.error("send-scheduled (email): broadcast send failed", broadcastId, err);

@@ -1,25 +1,32 @@
 "use client";
 
+import Link from "next/link";
 import { useState, type CSSProperties, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import type { MesaAdminData, MesaEditionView, MesaPieceView } from "@/lib/mesa/data";
+import type { MesaAdminData, MesaEditionView, MesaPieceView, MesaSentView } from "@/lib/mesa/data";
 import {
   MESA_COMMUNITY,
   MESA_PIECE_SECTIONS,
   MESA_SECTIONS,
   NAME_TOKEN,
+  bogotaDateTime,
   contentOf,
+  fromBogotaInput,
   summaryOf,
   type MesaPieceSection,
   type MesaSectionKey,
 } from "@/lib/mesa/sections";
-import { CardTitle, cardStyle, mutedText, Pill, primaryButtonStyle, secondaryButtonStyle } from "../cuponera/ui";
+import { CardTitle, cardStyle, mutedText, Pill, primaryButtonStyle, secondaryButtonStyle } from "@/app/admin/cuponera/ui";
 
 // La Mesa in the admin (2026-10-25), as in the approved mockup: the next
 // editions and what each still needs; the bank, section by section, with
 // Claude's ideas — «Aprobar» or «Otra idea», and «Editar» for a word — and
 // the approved ones in the order they go out; El termómetro's questions;
-// each edition's subject line. Nothing is sent from here.
+// each edition's subject line. It lives in CRM → Broadcasts: a ready
+// edition is looked at («Ver el correo», «Enviarme una prueba») and
+// scheduled to a segment at a day and time; until then nothing goes out,
+// and «Cancelar el envío» works while it hasn't started. What the readers
+// of the sent ones answered, at the end.
 
 type Tab = MesaPieceSection | "ASUNTO";
 
@@ -43,6 +50,7 @@ const iaPill = (
 );
 
 const linkButton: CSSProperties = { border: "none", background: "transparent", padding: 0, fontSize: 13, color: "#5b5f6b", textDecoration: "underline", cursor: "pointer" };
+const smallLink: CSSProperties = { ...linkButton, fontSize: 12.5, fontWeight: 600, color: "#17181c" };
 const fieldStyle: CSSProperties = { width: "100%", padding: "8px 12px", border: "1px solid #e3e1dc", borderRadius: 8, fontSize: 14, fontFamily: "inherit" };
 
 async function call(path: string, init: RequestInit): Promise<{ ok: boolean; id?: string }> {
@@ -263,18 +271,44 @@ function PieceEditor({ piece, onSave, onCancel, busy }: { piece: MesaPieceView; 
 
 // ── The screen ──────────────────────────────────────────────────────────────
 
-export default function MesaAdmin({ data }: { data: MesaAdminData }) {
+export interface MesaSegmentOption {
+  id: string;
+  name: string;
+  memberCount: number;
+}
+
+type ErrorAt = "key" | "editions" | "bank" | "send";
+
+export default function MesaAdmin({
+  data,
+  segments,
+  defaultSegmentId,
+  testEmail,
+}: {
+  data: MesaAdminData;
+  segments: MesaSegmentOption[];
+  /** The segment the last edition went to. */
+  defaultSegmentId: string | null;
+  /** Where «Enviarme una prueba» starts: the team's reply-to address. */
+  testEmail: string;
+}) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("MITO");
   const [topics, setTopics] = useState<Partial<Record<MesaPieceSection, string>>>({});
   const [busy, setBusy] = useState<string | null>(null);
   // Each problem shows in the card where it happened.
-  const [error, setError] = useState<{ at: "key" | "editions" | "bank"; message: string } | null>(null);
+  const [error, setError] = useState<{ at: ErrorAt; message: string } | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [dateDraft, setDateDraft] = useState<string | null>(null);
   const [keyDraft, setKeyDraft] = useState("");
+  // «Programar el envío» / «Enviarme una prueba» for one edition.
+  const [panel, setPanel] = useState<{ edition: number; mode: "schedule" | "test" } | null>(null);
+  const [segmentId, setSegmentId] = useState(defaultSegmentId && segments.some((s) => s.id === defaultSegmentId) ? defaultSegmentId : (segments[0]?.id ?? ""));
+  const [when, setWhen] = useState("");
+  const [testTo, setTestTo] = useState(testEmail);
+  const [notice, setNotice] = useState<string | null>(null);
 
-  async function run(key: string, work: () => Promise<unknown>, at: "key" | "editions" | "bank" = "bank") {
+  async function run(key: string, work: () => Promise<unknown>, at: ErrorAt = "bank") {
     setBusy(key);
     setError(null);
     try {
@@ -286,7 +320,7 @@ export default function MesaAdmin({ data }: { data: MesaAdminData }) {
       setBusy(null);
     }
   }
-  const alert = (at: "key" | "editions" | "bank") =>
+  const alert = (at: ErrorAt) =>
     error?.at === at && (
       <p role="alert" style={{ margin: "12px 0", padding: "10px 14px", borderRadius: 10, background: "#fde8ef", color: "#b0225c", fontSize: 13.5 }}>
         {error.message}
@@ -311,6 +345,36 @@ export default function MesaAdmin({ data }: { data: MesaAdminData }) {
       },
       "claudeKey" in body ? "key" : "editions",
     );
+
+  const openPanel = (edition: MesaEditionView, mode: "schedule" | "test") => {
+    setPanel({ edition: edition.number, mode });
+    setWhen(`${edition.day}T07:00`);
+    setNotice(null);
+    setError(null);
+  };
+  const schedule = (edition: number) =>
+    run(
+      "send",
+      async () => {
+        const at = fromBogotaInput(when);
+        if (!at) throw new Error("Elige el día y la hora.");
+        await call("/api/admin/mesa/envios", { method: "POST", body: JSON.stringify({ action: "schedule", edition, segmentId, scheduledAt: at.toISOString() }) });
+        setPanel(null);
+      },
+      "send",
+    );
+  const cancelSend = (edition: number) => run("send", () => call("/api/admin/mesa/envios", { method: "POST", body: JSON.stringify({ action: "cancel", edition }) }), "editions");
+  const sendTest = (edition: number) =>
+    run(
+      "test",
+      async () => {
+        setNotice(null);
+        await call("/api/admin/mesa/prueba", { method: "POST", body: JSON.stringify({ edition, email: testTo.trim() }) });
+        setNotice(`Listo: la prueba va camino a ${testTo.trim()}.`);
+      },
+      "send",
+    );
+  const previewHref = (edition: number) => `/api/admin/mesa/correo?edicion=${edition}`;
 
   // The section an upcoming edition still needs a piece of: its tab says so.
   const missing = new Set(data.editions.flatMap((e) => e.slots.filter((s) => !s.pieceId).map((s) => s.section)));
@@ -363,6 +427,7 @@ export default function MesaAdmin({ data }: { data: MesaAdminData }) {
   const sectionPanel = (section: MesaPieceSection) => {
     const ideas = data.ideas[section];
     const approved = data.approved[section];
+    const queued = approved.filter((p) => !p.pinned);
     const asking = busy === `ask:${section}`;
     return (
       <>
@@ -391,50 +456,72 @@ export default function MesaAdmin({ data }: { data: MesaAdminData }) {
           <span style={mutedText}>Usa las flechas para cambiar el orden</span>
         </div>
         {approved.length === 0 && <p style={{ ...mutedText, margin: 0 }}>Todavía no hay ninguna aprobada.</p>}
-        {approved.map((piece, index) =>
-          editing === piece.id ? (
-            <div key={piece.id} style={{ padding: "12px 0", borderTop: "1px solid #efece7" }}>
-              <PieceEditor piece={piece} busy={busy === `edit:${piece.id}`} onSave={(content) => saveEdit(piece.id, content)} onCancel={() => setEditing(null)} />
-            </div>
-          ) : (
+        {approved.map((piece) => {
+          if (editing === piece.id) {
+            return (
+              <div key={piece.id} style={{ padding: "12px 0", borderTop: "1px solid #efece7" }}>
+                <PieceEditor piece={piece} busy={busy === `edit:${piece.id}`} onSave={(content) => saveEdit(piece.id, content)} onCancel={() => setEditing(null)} />
+              </div>
+            );
+          }
+          // A scheduled edition holds it: no moving or removing, only «Editar».
+          const order = queued.indexOf(piece);
+          return (
             <div key={piece.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderTop: "1px solid #efece7", fontSize: 14 }}>
-              <span style={{ width: 22, height: 22, borderRadius: "50%", display: "grid", placeItems: "center", background: "#f0efec", fontSize: 12, fontWeight: 700, flex: "none" }}>
-                {index + 1}
+              <span
+                style={{
+                  width: 22,
+                  height: 22,
+                  borderRadius: "50%",
+                  display: "grid",
+                  placeItems: "center",
+                  background: piece.pinned ? "#e3f6ee" : "#f0efec",
+                  color: piece.pinned ? "#0d6e4f" : undefined,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  flex: "none",
+                }}
+              >
+                {piece.pinned ? "✓" : order + 1}
               </span>
               <span style={{ flex: 1, minWidth: 0 }}>
                 {section === "MITO" ? `«${summaryOf(section, piece.content)}»` : summaryOf(section, piece.content)}
                 {secondLine(piece) && <small style={{ display: "block", fontSize: 12, color: "#5b5f6b" }}>{secondLine(piece)}</small>}
               </span>
-              {piece.editionLabel ? <Pill tone={index === 0 ? "green" : "grey"}>{piece.editionLabel}</Pill> : <Pill tone="grey">Más adelante</Pill>}
-              <span style={{ display: "flex", gap: 2 }}>
-                <button type="button" title="Subir" aria-label="Subir" style={{ ...linkButton, textDecoration: "none", fontSize: 15, padding: 4 }} disabled={busy !== null || index === 0} onClick={() => act(piece.id, "up")}>
-                  ↑
-                </button>
-                <button
-                  type="button"
-                  title="Bajar"
-                  aria-label="Bajar"
-                  style={{ ...linkButton, textDecoration: "none", fontSize: 15, padding: 4 }}
-                  disabled={busy !== null || index === approved.length - 1}
-                  onClick={() => act(piece.id, "down")}
-                >
-                  ↓
-                </button>
-              </span>
+              {piece.editionLabel ? <Pill tone={piece.pinned || order === 0 ? "green" : "grey"}>{piece.editionLabel}</Pill> : <Pill tone="grey">Más adelante</Pill>}
+              {!piece.pinned && (
+                <span style={{ display: "flex", gap: 2 }}>
+                  <button type="button" title="Subir" aria-label="Subir" style={{ ...linkButton, textDecoration: "none", fontSize: 15, padding: 4 }} disabled={busy !== null || order === 0} onClick={() => act(piece.id, "up")}>
+                    ↑
+                  </button>
+                  <button
+                    type="button"
+                    title="Bajar"
+                    aria-label="Bajar"
+                    style={{ ...linkButton, textDecoration: "none", fontSize: 15, padding: 4 }}
+                    disabled={busy !== null || order === queued.length - 1}
+                    onClick={() => act(piece.id, "down")}
+                  >
+                    ↓
+                  </button>
+                </span>
+              )}
               <button type="button" style={linkButton} disabled={busy !== null} onClick={() => setEditing(piece.id)}>
                 Editar
               </button>
-              <button
-                type="button"
-                style={linkButton}
-                disabled={busy !== null}
-                onClick={() => confirm("¿Quitar esta pieza del banco? No vuelve a salir.") && act(piece.id, "remove")}
-              >
-                Quitar
-              </button>
+              {!piece.pinned && (
+                <button
+                  type="button"
+                  style={linkButton}
+                  disabled={busy !== null}
+                  onClick={() => confirm("¿Quitar esta pieza del banco? No vuelve a salir.") && act(piece.id, "remove")}
+                >
+                  Quitar
+                </button>
+              )}
             </div>
-          ),
-        )}
+          );
+        })}
       </>
     );
   };
@@ -444,7 +531,9 @@ export default function MesaAdmin({ data }: { data: MesaAdminData }) {
       <p style={{ ...mutedText, marginTop: 0 }}>
         Con lo que trae cada edición, la IA escribe 5 asuntos con su segunda línea (la gris en la bandeja) y el saludo. Elige uno o pide otros.
       </p>
-      {data.editions.map((edition) => (
+      {data.editions.map((edition) => {
+        const out = edition.send !== null && edition.send.status !== "QUEUED";
+        return (
         <div key={edition.number} style={{ border: "1px solid #e3e1dc", borderRadius: 12, padding: 16, marginBottom: 12 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
             <b style={{ fontSize: 15 }}>
@@ -452,7 +541,14 @@ export default function MesaAdmin({ data }: { data: MesaAdminData }) {
             </b>
             <span style={{ ...mutedText, fontSize: 12 }}>{edition.slots.map((s) => MESA_SECTIONS[s.section].name).join(" · ")}</span>
           </div>
-          {!edition.complete ? (
+          {out ? (
+            edition.subject ? (
+              <>
+                <p style={{ ...mutedText, margin: "0 0 8px" }}>{edition.send?.status === "SENT" ? "Salió con este asunto:" : "Está saliendo con este asunto:"}</p>
+                <PieceBody section="ASUNTO" content={edition.subject.content} />
+              </>
+            ) : null
+          ) : !edition.complete ? (
             <p style={{ ...mutedText, margin: 0 }}>Primero aprueba las piezas de esta edición: el asunto sale de ellas.</p>
           ) : (
             <>
@@ -465,9 +561,12 @@ export default function MesaAdmin({ data }: { data: MesaAdminData }) {
                       <button type="button" style={linkButton} disabled={busy !== null} onClick={() => setEditing(edition.subject!.id)}>
                         Editar
                       </button>
-                      <button type="button" style={linkButton} disabled={busy !== null} onClick={() => act(edition.subject!.id, "remove")}>
-                        Cambiar
-                      </button>
+                      {/* Scheduled: another one replaces it («Usar este»), it isn't dropped. */}
+                      {!edition.send && (
+                        <button type="button" style={linkButton} disabled={busy !== null} onClick={() => act(edition.subject!.id, "remove")}>
+                          Cambiar
+                        </button>
+                      )}
                     </span>
                   </div>
                   {editing === edition.subject.id ? (
@@ -494,7 +593,8 @@ export default function MesaAdmin({ data }: { data: MesaAdminData }) {
             </>
           )}
         </div>
-      ))}
+        );
+      })}
     </>
   );
 
@@ -502,8 +602,26 @@ export default function MesaAdmin({ data }: { data: MesaAdminData }) {
     const missingPieces = edition.slots.filter((s) => !s.pieceId).length;
     const subjectOk = edition.subject !== null && !edition.subject.outdated;
     const left = missingPieces + (subjectOk ? 0 : 1);
+    const send = edition.send;
+    const pill = send ? (
+      send.status === "QUEUED" ? (
+        <Pill tone="green">Programada</Pill>
+      ) : send.status === "SENDING" ? (
+        <Pill tone="amber">Saliendo</Pill>
+      ) : (
+        <Pill tone="grey">Enviada</Pill>
+      )
+    ) : left === 0 ? (
+      <Pill tone="green">Lista</Pill>
+    ) : (
+      <Pill tone={index === 0 ? "amber" : "grey"}>{left === 1 ? "Falta 1" : `Faltan ${left}`}</Pill>
+    );
     return (
-      <div key={edition.number} style={{ border: "1px solid #e3e1dc", borderRadius: 12, padding: 14 }}>
+      <section
+        key={edition.number}
+        aria-label={`Edición ${edition.number}`}
+        style={{ display: "flex", flexDirection: "column", border: `1px solid ${send?.status === "QUEUED" ? "#a7dcc5" : "#e3e1dc"}`, borderRadius: 12, padding: 14 }}
+      >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 10 }}>
           <b style={{ fontSize: 14 }}>
             Edición {edition.number}
@@ -511,7 +629,7 @@ export default function MesaAdmin({ data }: { data: MesaAdminData }) {
               {edition.label.charAt(0).toUpperCase() + edition.label.slice(1)}
             </small>
           </b>
-          {left === 0 ? <Pill tone="green">Lista</Pill> : <Pill tone={index === 0 ? "amber" : "grey"}>{left === 1 ? "Falta 1" : `Faltan ${left}`}</Pill>}
+          {pill}
         </div>
         {edition.slots.map((slot) => (
           <div key={slot.section} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderTop: "1px solid #f3f1ec", fontSize: 13 }}>
@@ -537,16 +655,207 @@ export default function MesaAdmin({ data }: { data: MesaAdminData }) {
             </button>
           )}
         </div>
-      </div>
+        <div style={{ marginTop: "auto", paddingTop: 10, borderTop: "1px solid #f3f1ec", display: "grid", gap: 8 }}>
+          {send ? (
+            <>
+              <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.45, color: "#33363d" }}>
+                {send.status === "QUEUED" ? (
+                  <>
+                    Sale el <b>{send.scheduledAt ? bogotaDateTime(new Date(send.scheduledAt)) : "día elegido"}</b>
+                  </>
+                ) : send.status === "SENDING" ? (
+                  "Está saliendo ahora"
+                ) : (
+                  <>Salió el {bogotaDateTime(new Date(send.sentAt ?? send.scheduledAt ?? Date.now()))}</>
+                )}
+                {send.segmentName && <> · a «{send.segmentName}»</>}
+              </p>
+              <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                <a href={previewHref(edition.number)} target="_blank" rel="noreferrer" style={smallLink}>
+                  Ver el correo
+                </a>
+                {send.status === "QUEUED" ? (
+                  <>
+                    <button type="button" style={smallLink} disabled={busy !== null} onClick={() => openPanel(edition, "test")}>
+                      Enviarme una prueba
+                    </button>
+                    <button
+                      type="button"
+                      style={{ ...smallLink, color: "#a5471a" }}
+                      disabled={busy !== null}
+                      onClick={() => confirm(`¿Cancelar el envío de la edición ${edition.number}? Sus piezas vuelven al banco.`) && cancelSend(edition.number)}
+                    >
+                      Cancelar el envío
+                    </button>
+                  </>
+                ) : (
+                  <Link href={`/admin/crm/broadcasts/${send.id}`} style={smallLink}>
+                    Ver el envío
+                  </Link>
+                )}
+              </div>
+            </>
+          ) : left === 0 ? (
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+              <button type="button" style={{ ...primaryButtonStyle, padding: "6px 14px" }} disabled={busy !== null} onClick={() => openPanel(edition, "schedule")}>
+                Programar el envío
+              </button>
+              <a href={previewHref(edition.number)} target="_blank" rel="noreferrer" style={smallLink}>
+                Ver el correo
+              </a>
+            </div>
+          ) : (
+            <p style={{ margin: 0, fontSize: 12.5, color: "#8a8478" }}>Cuando esté lista, aquí la programas.</p>
+          )}
+        </div>
+      </section>
     );
   };
 
+  const sendPanel = () => {
+    if (!panel) return null;
+    const edition = data.editions.find((e) => e.number === panel.edition);
+    if (!edition) return null;
+    const selected = segments.find((s) => s.id === segmentId);
+    const hint: CSSProperties = { ...mutedText, fontSize: 12, fontWeight: 400 };
+    return (
+      <section
+        aria-label={panel.mode === "schedule" ? "Programar el envío" : "Enviarme una prueba"}
+        style={{ marginTop: 14, padding: 18, borderRadius: 12, border: "1px solid #12966b", boxShadow: "0 0 0 2px #e3f6ee" }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
+          <b style={{ fontSize: 15 }}>
+            {panel.mode === "schedule" ? "Programar" : "Probar"} la edición {edition.number} · {edition.label}
+          </b>
+          <button type="button" style={linkButton} onClick={() => setPanel(null)}>
+            Cerrar
+          </button>
+        </div>
+        {panel.mode === "schedule" &&
+          (segments.length === 0 ? (
+            <p style={{ ...mutedText, marginBottom: 0 }}>
+              Para programarla hace falta un segmento: <Link href="/admin/crm/segments">créalo en Segmentos</Link>.
+            </p>
+          ) : (
+            <div style={{ display: "grid", gap: 14, marginTop: 14 }}>
+              <label style={{ display: "grid", gap: 4, fontSize: 13, fontWeight: 600 }}>
+                A quién le llega
+                <select value={segmentId} onChange={(e) => setSegmentId(e.target.value)} style={fieldStyle}>
+                  {segments.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} — {s.memberCount.toLocaleString("es-CO")} {s.memberCount === 1 ? "persona" : "personas"}
+                    </option>
+                  ))}
+                </select>
+                <span style={hint}>
+                  Solo le llega a quien aceptó recibir novedades. ¿Otro grupo? <Link href="/admin/crm/segments">Créalo en Segmentos</Link>.
+                </span>
+              </label>
+              <label style={{ display: "grid", gap: 4, fontSize: 13, fontWeight: 600 }}>
+                Día y hora (hora de Colombia)
+                <input type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} style={{ ...fieldStyle, width: "auto", maxWidth: 260 }} />
+                <span style={hint}>Hasta esa hora puedes cancelarlo, y sus piezas vuelven al banco.</span>
+              </label>
+              <div>
+                <button type="button" style={primaryButtonStyle} disabled={busy !== null || !segmentId || !when} onClick={() => schedule(edition.number)}>
+                  {busy === "send" ? "Programando…" : selected ? `Programar para «${selected.name}»` : "Programar"}
+                </button>
+              </div>
+            </div>
+          ))}
+        <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid #efece7" }}>
+          <b style={{ fontSize: 13 }}>{panel.mode === "schedule" ? "Antes, mírala en tu correo" : "Mírala en tu correo"}</b>
+          <div style={{ display: "flex", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
+            <input
+              type="email"
+              aria-label="Correo para la prueba"
+              value={testTo}
+              onChange={(e) => setTestTo(e.target.value)}
+              placeholder="tu@correo.com"
+              style={{ ...fieldStyle, flex: 1, minWidth: 220, width: "auto" }}
+            />
+            <button type="button" style={secondaryButtonStyle} disabled={busy !== null || !testTo.trim()} onClick={() => sendTest(edition.number)}>
+              {busy === "test" ? "Enviando…" : "Enviarme una prueba"}
+            </button>
+          </div>
+          <span style={hint}>Llega con «[Prueba]» en el asunto, y sus botones no guardan votos.</span>
+          {notice && <p style={{ margin: "8px 0 0", fontSize: 13, fontWeight: 600, color: "#0d6e4f" }}>{notice}</p>}
+        </div>
+        {alert("send")}
+      </section>
+    );
+  };
+
+  const answersCard = (sent: MesaSentView[]) => (
+    <section aria-label="Lo que respondieron" style={cardStyle}>
+      <CardTitle aside={<span style={mutedText}>Cada respuesta queda guardada con la persona</span>}>Lo que respondieron</CardTitle>
+      {sent.map((edition) => (
+        <div key={edition.edition} style={{ padding: "14px 0", borderTop: "1px solid #efece7" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
+            <b style={{ fontSize: 14 }}>
+              Edición {edition.edition} · {edition.label}
+            </b>
+            <span style={{ ...mutedText, fontSize: 12.5 }}>
+              {edition.status === "SENDING" ? "Saliendo · " : ""}
+              {edition.sent.toLocaleString("es-CO")} enviados
+              {edition.openRate !== null && <> · {edition.openRate}% abrió</>} ·{" "}
+              <Link href={`/admin/crm/broadcasts/${edition.broadcastId}`} style={{ color: "inherit" }}>
+                Ver el envío
+              </Link>
+            </span>
+          </div>
+          {edition.mito && (
+            <p style={{ margin: "10px 0 0", fontSize: 13.5, color: "#33363d", display: "flex", gap: 8, alignItems: "baseline" }}>
+              {nail(MESA_SECTIONS.MITO.color)}
+              <span>
+                «{edition.mito.statement}» —{" "}
+                {edition.mito.total === 0 ? (
+                  "nadie respondió todavía"
+                ) : (
+                  <>
+                    <b>{edition.mito.rightPct}% acertó</b> · {edition.mito.total === 1 ? "1 respuesta" : `${edition.mito.total.toLocaleString("es-CO")} respuestas`}
+                  </>
+                )}
+              </span>
+            </p>
+          )}
+          {edition.termometro && (
+            <div style={{ marginTop: 10 }}>
+              <p style={{ margin: "0 0 8px", fontSize: 13.5, color: "#33363d", display: "flex", gap: 8, alignItems: "baseline" }}>
+                {nail(MESA_SECTIONS.TERMOMETRO.color)}
+                <span>
+                  {edition.termometro.question} · <b>{edition.termometro.total === 1 ? "1 voto" : `${edition.termometro.total.toLocaleString("es-CO")} votos`}</b>
+                </span>
+              </p>
+              <div style={{ display: "grid", gap: 6, paddingLeft: 18 }}>
+                {edition.termometro.options.map((option, i) => (
+                  <div key={i} style={{ display: "grid", gridTemplateColumns: "minmax(90px, 180px) 1fr 44px", alignItems: "center", gap: 10, fontSize: 13 }}>
+                    <span>{option}</span>
+                    <span style={{ height: 8, borderRadius: 999, background: "#f3efe6", overflow: "hidden" }}>
+                      <span style={{ display: "block", height: "100%", width: `${edition.termometro!.pcts[i]}%`, borderRadius: 999, background: MESA_SECTIONS.TERMOMETRO.color }} />
+                    </span>
+                    <b style={{ textAlign: "right" }}>{edition.termometro!.pcts[i]}%</b>
+                  </div>
+                ))}
+              </div>
+              {edition.termometro.cities.length > 0 && (
+                <p style={{ ...mutedText, margin: "8px 0 0 18px", fontSize: 12.5 }}>
+                  {edition.termometro.cities.map((c) => `${c.label}: «${c.top}» ${c.pct}% (${c.total})`).join(" · ")}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      ))}
+    </section>
+  );
+
   return (
     <div style={{ maxWidth: 900 }}>
-      <h1 style={{ fontSize: 24, marginBottom: 4 }}>La Mesa</h1>
-      <p style={{ color: "#5b5f6b", marginTop: 0 }}>
-        El correo de Nail Fest, cada 15 días, el jueves. La IA propone las piezas de cada sección; tú solo apruebas o pides otra idea. Todavía no se
-        envía nada: aquí se arma el banco.
+      <h1 style={{ fontSize: 20, margin: 0 }}>La Mesa</h1>
+      <p style={{ color: "#5b5f6b", margin: "4px 0 0", maxWidth: 720 }}>
+        El correo de Nail Fest, cada 15 días, el jueves. La IA propone las piezas; tú apruebas, programas la edición y sale sola a la hora que elijas. No
+        sale nada que no programes.
       </p>
 
       {!data.keyReady && (
@@ -591,10 +900,18 @@ export default function MesaAdmin({ data }: { data: MesaAdminData }) {
         <p style={{ ...mutedText, marginTop: 0 }}>Rotan solas: una para jugar y una para el oficio. El termómetro sale en todas.</p>
         {alert("editions")}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12, marginTop: 14 }}>{data.editions.map(editionBox)}</div>
-        <p style={{ margin: "12px 0 0", fontSize: 12.5, color: "#5b5f6b", display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-          {nail(MESA_COMMUNITY.galeria.color, 9, 12)} La galería y {nail(MESA_COMMUNITY.consultorio.color, 9, 12)} El Consultorio salen solos, con lo que manda la comunidad.
-        </p>
+        {sendPanel()}
+        <div style={{ display: "grid", gap: 4, marginTop: 12, fontSize: 12.5, color: "#5b5f6b" }}>
+          <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            {nail(MESA_COMMUNITY.consultorio.color, 9, 12)} El Consultorio sale solo, con las preguntas de la comunidad, mientras sea público.
+          </span>
+          <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            {nail(MESA_COMMUNITY.galeria.color, 9, 12)} La galería se suma cuando la comunidad pueda mandar sus fotos.
+          </span>
+        </div>
       </div>
+
+      {data.sent.length > 0 && answersCard(data.sent)}
 
       <div style={cardStyle}>
         <CardTitle aside={<span style={mutedText}>El número es cuántas hay aprobadas · en naranja, las que necesita una próxima edición</span>}>El banco</CardTitle>
@@ -656,7 +973,7 @@ export default function MesaAdmin({ data }: { data: MesaAdminData }) {
           <li>Con el tono de La Mesa: cercano, de tú, frases cortas.</li>
           <li>No repite lo que ya salió, lo que está en el banco ni lo que descartaste.</li>
           <li>Si no está segura de un dato, no lo propone. Igual léelo antes de aprobar: tú das la última palabra.</li>
-          <li>Los resultados del termómetro serán siempre los votos reales; la IA solo escribe la frase que los resume.</li>
+          <li>Los resultados del termómetro son siempre los votos reales, contados cuando sale la edición siguiente.</li>
         </ul>
       </div>
     </div>

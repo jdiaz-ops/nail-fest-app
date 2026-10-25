@@ -19,6 +19,8 @@ export interface SendEmailInput {
   attachments?: EmailAttachment[];
   /** From OrgSettings.replyToEmail (see /admin/settings/contact) — omit to fall back to the From address. */
   replyTo?: string;
+  /** The sender's name in the inbox instead of "Nail Fest" — La Mesa's "La Mesa · Nail Fest". */
+  fromName?: string;
 }
 
 export interface EmailProvider {
@@ -34,6 +36,9 @@ export interface EmailProvider {
 // Nail Fest..." shows up FROM "Nail Fest", not "tickets" — shared by
 // both providers (ses.ts/resend.ts) so they never drift. Left alone if
 // the env var was already hand-written with a display name.
-export function friendlyFrom(email: string): string {
-  return email.includes("<") ? email : `Nail Fest <${email}>`;
+export function friendlyFrom(email: string, name?: string): string {
+  if (!name) return email.includes("<") ? email : `Nail Fest <${email}>`;
+  // Another name for this send: same address, quoted so a "·" or a comma can't break the header.
+  const address = email.includes("<") ? email.slice(email.indexOf("<") + 1, email.indexOf(">")).trim() : email.trim();
+  return `"${name.replace(/["\\]/g, "")}" <${address}>`;
 }

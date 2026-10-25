@@ -111,14 +111,20 @@ export function nextEdition(firstEditionOn: Date, today: Date): number {
 
 /** Which edition each approved piece goes out in: those of a section take,
  * in their order, the next editions that use it — from `from` on, up to
- * `horizon` editions ahead. A piece further back has none yet. */
-export function assignEditions(queues: Partial<Record<MesaPieceSection, { id: string }[]>>, from: number, horizon = 36): Map<string, number> {
+ * `horizon` editions ahead. A piece further back has none yet. The editions
+ * in `skip` (scheduled or sent) already hold their own pieces. */
+export function assignEditions(
+  queues: Partial<Record<MesaPieceSection, { id: string }[]>>,
+  from: number,
+  horizon = 36,
+  skip: ReadonlySet<number> = new Set(),
+): Map<string, number> {
   const assigned = new Map<string, number>();
   for (const section of MESA_PIECE_SECTIONS) {
     const queue = queues[section] ?? [];
     let next = 0;
     for (let edition = from; edition < from + horizon && next < queue.length; edition++) {
-      if (sectionsOf(edition).includes(section)) assigned.set(queue[next++]!.id, edition);
+      if (!skip.has(edition) && sectionsOf(edition).includes(section)) assigned.set(queue[next++]!.id, edition);
     }
   }
   return assigned;
@@ -135,4 +141,32 @@ export function longDate(day: Date): string {
 /** "5 nov" */
 export function shortDate(day: Date): string {
   return `${day.getUTCDate()} ${MONTHS[day.getUTCMonth()]!.slice(0, 3)}`;
+}
+
+/** "jue 5 nov" */
+export function tinyDate(day: Date): string {
+  return `${WEEKDAYS[day.getUTCDay()]!.slice(0, 3)} ${shortDate(day)}`;
+}
+
+// Times for the team, always in Bogotá (UTC−5, no daylight saving).
+const BOGOTA_OFFSET_MS = 5 * 3_600_000;
+
+/** "jue 5 nov, 7:00 a. m.", in Bogotá. */
+export function bogotaDateTime(date: Date): string {
+  const local = new Date(date.getTime() - BOGOTA_OFFSET_MS);
+  const hour = local.getUTCHours();
+  const minutes = String(local.getUTCMinutes()).padStart(2, "0");
+  return `${tinyDate(local)}, ${hour % 12 === 0 ? 12 : hour % 12}:${minutes} ${hour < 12 ? "a. m." : "p. m."}`;
+}
+
+/** A date-and-time field's value showing that instant in Bogotá: "2026-11-05T07:00". */
+export function bogotaInputValue(date: Date): string {
+  return new Date(date.getTime() - BOGOTA_OFFSET_MS).toISOString().slice(0, 16);
+}
+
+/** A date-and-time field's value ("2026-11-05T07:00") read as Bogotá time; null when it isn't one. */
+export function fromBogotaInput(value: string): Date | null {
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) return null;
+  const date = new Date(`${value}:00-05:00`);
+  return Number.isNaN(date.getTime()) ? null : date;
 }

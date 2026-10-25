@@ -75,6 +75,8 @@ model Person {
   reviews               Review[]
   // Her community account (the Consultorio), when its email is this one.
   communityMembers      CommunityMember[]
+  // What she answered in La Mesa's email (Mito o verdad, El termómetro).
+  mesaVotes             MesaVote[]
 
   @@index([phone])
   @@index([city])
@@ -902,12 +904,20 @@ model EmailBroadcast {
   // kept to cancel it if the broadcast is edited or deleted first. Null
   // = not scheduled with QStash; the daily send-due cron still covers it.
   qstashMessageId       String?
+  // La Mesa (2026-10-25): the edition this send is — a segment broadcast
+  // with no bodyText, scheduled from CRM → Broadcasts → La Mesa. Its email
+  // is built from the edition's pieces (lib/mesa/email.ts), and
+  // `mesaContent` freezes them when the first chunk goes out, so every
+  // recipient gets the same edition even if a piece is edited mid-send.
+  mesaEdition           Int?
+  mesaContent           Json?
   createdAt             DateTime              @default(now())
   sentAt                DateTime?
 
   logs EmailLog[]
 
   @@index([status, scheduleKind])
+  @@index([mesaEdition])
 }
 
 enum EmailLogStatus {
@@ -2756,15 +2766,42 @@ model MesaPiece {
   topic      String?
   // Among the approved of its section: they go out in this order.
   position   Int             @default(0)
-  // A subject line's edition (ASUNTO); for the rest, the edition that sent
-  // it, once La Mesa sends — then it leaves the queue for good.
+  // A subject line's edition (ASUNTO); for the rest, the edition that takes
+  // it once that edition is scheduled — it leaves the queue then, comes back
+  // if the send is cancelled, and stays for good once it went out.
   edition    Int?
   approvedAt DateTime?
   createdAt  DateTime        @default(now())
   updatedAt  DateTime        @updatedAt
 
+  votes MesaVote[]
+
   @@index([section, status, position])
   @@index([edition])
+}
+
+// An answer from La Mesa's email (2026-10-25): Mito o verdad or El
+// termómetro, one per person and piece — tapping another option changes it.
+// Kept with the person, so over the editions the answers add up to what the
+// team knows about each one (segments, the yearly report); outside the team
+// they only ever show as totals.
+model MesaVote {
+  id        String    @id @default(cuid())
+  piece     MesaPiece @relation(fields: [pieceId], references: [id], onDelete: Cascade)
+  pieceId   String
+  person    Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
+  personId  String
+  // The edition whose email she tapped it in.
+  edition   Int
+  // The option, as shown: Mito o verdad 0 = «Mito», 1 = «Verdad»; El
+  // termómetro, the index of its option.
+  option    Int
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([pieceId, personId])
+  @@index([edition])
+  @@index([personId])
 }
 
 // One row ("singleton"): edition 1's day (a Thursday); the rest follow

@@ -15,6 +15,8 @@ import { markEmailInvalid } from "@/lib/contactHygiene";
 import { REVIEW_LINK_TAG, reviewUrl } from "@/lib/reviews";
 import { tagOwnLinksInHtml, tagOwnLinksInText, slugifyForCampaign } from "@/lib/outboundLinkTagging";
 import { publicEventName } from "@/lib/eventDisplayName";
+import { mesaEmail, type MesaEditionSnapshot } from "@/lib/mesa/email";
+import { MESA_FROM_NAME, buildMesaSnapshot, mesaBaseUrl, recipientFor } from "@/lib/mesa/sends";
 
 const CONCURRENCY = 10;
 // How many recipients one chunk sends before either finishing or handing
@@ -261,17 +263,24 @@ export async function sendEventBroadcast(
  * original /admin/crm/broadcasts flow — plain text, MARKETING consent,
  * an unsubscribe link) — same chunked-with-QStash-continuation mechanism
  * as sendEventBroadcast above, see its own comment for the full
- * reasoning; this is IMMEDIATE-only (no scheduling on this flow, see
- * BroadcastComposer.tsx), so the only callers are /api/broadcasts'
- * own POST handler and this file's QStash continuation. */
+ * reasoning. A plain one is IMMEDIATE (see BroadcastComposer.tsx): its
+ * callers are /api/broadcasts' own POST handler and this file's QStash
+ * continuation. A La Mesa edition (mesaEdition, 2026-10-25) is the one
+ * scheduled kind: the cron or QStash starts it at its time (see
+ * sendDueEventBroadcasts below), the edition freezes into mesaContent
+ * when its recipients do, and each person gets La Mesa's own email
+ * (lib/mesa/email.ts) instead of the plain-text one. */
 export async function sendSegmentEmailBroadcast(
   broadcastId: string
 ): Promise<{ sent: number; skippedNoConsent: number; remaining: number; backgrounded: boolean; locked: boolean; total: number }> {
   const broadcast = await db.emailBroadcast.findUniqueOrThrow({ where: { id: broadcastId } });
   if (!broadcast.segmentId) throw new Error("sendSegmentEmailBroadcast called on a broadcast with no segmentId");
-  if (!broadcast.bodyText) throw new Error("sendSegmentEmailBroadcast called on a broadcast with no bodyText");
+  if (!broadcast.bodyText && broadcast.mesaEdition === null) throw new Error("sendSegmentEmailBroadcast called on a broadcast with no bodyText");
+  // Cancelled while this call was on its way (La Mesa's «Cancelar el envío»): nothing goes out.
+  if (broadcast.status === "CANCELLED") return { sent: 0, skippedNoConsent: 0, remaining: 0, backgrounded: false, locked: false, total: 0 };
 
   const retryPass = Array.isArray(broadcast.retryPersonIds);
+  let mesa = broadcast.mesaContent as unknown as MesaEditionSnapshot | null;
   let recipientIds: string[];
   if (retryPass) {
     recipientIds = broadcast.retryPersonIds as unknown as string[];
@@ -281,10 +290,18 @@ export async function sendSegmentEmailBroadcast(
     const segment = await db.segmentDefinition.findUniqueOrThrow({ where: { id: broadcast.segmentId } });
     const people = await resolveSegment(segment.filter as unknown as SegmentFilter);
     recipientIds = people.map((p) => p.id);
-    await db.emailBroadcast.update({
-      where: { id: broadcast.id },
-      data: { status: "SENDING", recipientPersonIds: recipientIds },
+    // La Mesa: the edition freezes now, with its recipients — every chunk
+    // and every retry sends this same one.
+    if (broadcast.mesaEdition !== null) mesa = await buildMesaSnapshot(broadcast.mesaEdition);
+    const started = await db.emailBroadcast.updateMany({
+      where: { id: broadcast.id, status: { not: "CANCELLED" } },
+      data: {
+        status: "SENDING",
+        recipientPersonIds: recipientIds,
+        ...(mesa ? { mesaContent: mesa as unknown as Prisma.InputJsonValue, subject: mesa.subject } : {}),
+      },
     });
+    if (started.count === 0) return { sent: 0, skippedNoConsent: 0, remaining: 0, backgrounded: false, locked: false, total: 0 };
   }
 
   let sent = 0;
@@ -328,18 +345,20 @@ export async function sendSegmentEmailBroadcast(
             return;
           }
           const unsubscribeUrl = buildUnsubscribeUrl(person.id);
-          // Same reasoning as sendEventBroadcast's own comment — tag the
-          // admin-authored bodyText before it's wrapped with the
+          // La Mesa's own email: her name, her city's results, her signed
+          // vote links; its links to the site carry the edition's tags.
+          // Otherwise — same reasoning as sendEventBroadcast's own comment —
+          // tag the admin-authored bodyText before it's wrapped with the
           // unsubscribe footer, not the fully-assembled output, so the
           // unsubscribe link itself never picks up a campaign tag.
-          const utmParams = { source: "email", medium: "broadcast_marketing", campaign: slugifyForCampaign(broadcast.subject) };
-          const taggedBodyText = tagOwnLinksInText(broadcast.bodyText!, utmParams);
-          const content = broadcastEmail({
-            firstName: person.firstName ?? "",
-            subject: broadcast.subject,
-            bodyText: taggedBodyText,
-            unsubscribeUrl,
-          });
+          const content = mesa
+            ? mesaEmail(mesa, recipientFor(person), { baseUrl: mesaBaseUrl() })
+            : broadcastEmail({
+                firstName: person.firstName ?? "",
+                subject: broadcast.subject,
+                bodyText: tagOwnLinksInText(broadcast.bodyText!, { source: "email", medium: "broadcast_marketing", campaign: slugifyForCampaign(broadcast.subject) }),
+                unsubscribeUrl,
+              });
           try {
             const result = await emailProvider.sendMarketing({
               to: person.email,
@@ -347,6 +366,7 @@ export async function sendSegmentEmailBroadcast(
               text: content.text,
               html: content.html,
               listUnsubscribeHeader: `<${unsubscribeUrl}>`,
+              ...(mesa ? { fromName: MESA_FROM_NAME } : {}),
             });
             await db.emailLog.create({
               data: {
@@ -570,14 +590,14 @@ export async function getEmailBroadcastStats(broadcastId: string): Promise<Email
 }
 
 /** Every QUEUED, non-immediate broadcast whose computed due time has
- * arrived — see /api/broadcasts/send-due, the cron entry point. Only
- * event-scoped broadcasts support scheduling today (see
- * BroadcastComposer.tsx's own comment — a segment broadcast is always
- * IMMEDIATE), so this only ever needs sendEventBroadcast. */
+ * arrived — see /api/broadcasts/send-due, the cron entry point. The
+ * event-scoped ones, and La Mesa's editions (a segment broadcast with a
+ * mesaEdition, AT_DATETIME — the only scheduled segment send; a plain one
+ * is always IMMEDIATE, see BroadcastComposer.tsx). */
 export async function sendDueEventBroadcasts(now: Date = new Date()): Promise<{ processed: number; armed: number }> {
   const { resolveDueAt, isDue } = await import("@/lib/broadcastSchedule");
   const candidates = await db.emailBroadcast.findMany({
-    where: { status: "QUEUED", eventId: { not: null }, scheduleKind: { not: "IMMEDIATE" } },
+    where: { status: "QUEUED", scheduleKind: { not: "IMMEDIATE" }, OR: [{ eventId: { not: null } }, { mesaEdition: { not: null }, segmentId: { not: null } }] },
     include: { event: true },
   });
   let processed = 0;
@@ -606,7 +626,8 @@ export async function sendDueEventBroadcasts(now: Date = new Date()): Promise<{ 
       continue;
     }
     try {
-      await sendEventBroadcast(b.id);
+      if (b.eventId) await sendEventBroadcast(b.id);
+      else await sendSegmentEmailBroadcast(b.id);
       processed++;
     } catch (err) {
       console.error("sendDueEventBroadcasts: failed to send", b.id, err);
