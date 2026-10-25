@@ -204,6 +204,8 @@ export interface YoutubeVideoFacts {
   durationSeconds: number | null;
   views: number;
   privacy: string;
+  /** Its tags on YouTube, as the channel wrote them. */
+  tags: string[];
 }
 
 /** What each video is (up to 50 at a time); upcoming lives are left out. */
@@ -212,7 +214,7 @@ export async function fetchVideos(key: string, ids: string[]): Promise<YoutubeVi
   const body = await call<{
     items?: {
       id: string;
-      snippet?: { title?: string; description?: string; publishedAt?: string; liveBroadcastContent?: string };
+      snippet?: { title?: string; description?: string; publishedAt?: string; liveBroadcastContent?: string; tags?: string[] };
       contentDetails?: { duration?: string };
       statistics?: { viewCount?: string };
       status?: { privacyStatus?: string };
@@ -231,6 +233,7 @@ export async function fetchVideos(key: string, ids: string[]): Promise<YoutubeVi
         durationSeconds: isoDurationSeconds(v.contentDetails?.duration),
         views: Number.isFinite(views) ? views : 0,
         privacy: v.status?.privacyStatus ?? "public",
+        tags: (v.snippet?.tags ?? []).filter((t) => typeof t === "string" && t.trim()).slice(0, 30),
       };
     });
 }

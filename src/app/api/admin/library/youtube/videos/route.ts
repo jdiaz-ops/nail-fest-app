@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth/guard";
-import { decideSchema, passToLibrary, setAside } from "@/lib/library/youtubeImport";
+import { decideSchema, passToLibrary, publishAnyway, setAside, takeOut } from "@/lib/library/youtubeImport";
 
 // What the team decides about the videos brought from YouTube: to the
-// library (hidden, by default), set aside, or back to review.
+// library (hidden, by default), set aside, back to review — or, over the
+// autopilot, published anyway or taken out of the library.
 export async function POST(req: NextRequest) {
   const auth = await requireUser(["ADMIN"]);
   if ("response" in auth) return auth.response;
@@ -19,5 +20,7 @@ export async function POST(req: NextRequest) {
       throw error;
     }
   }
+  if (input.action === "publicar") return NextResponse.json({ ok: true, count: await publishAnyway(input.ids) });
+  if (input.action === "quitar") return NextResponse.json({ ok: true, count: await takeOut(input.ids) });
   return NextResponse.json({ ok: true, count: await setAside(input.ids, input.action === "revisar") });
 }

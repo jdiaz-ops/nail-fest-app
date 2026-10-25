@@ -2475,6 +2475,15 @@ model LibrarySettings {
   youtubeUploadsId     String?
   youtubeApiKey        String?
   youtubeImportedAt    DateTime?
+  // The autopilot (2026-10-25): Claude reviews each video brought from the
+  // channel, writes its title and description the library's way and
+  // publishes the ones worth it, by itself (lib/library/youtubeAutopilot.ts)
+  // — on unless the team switches it off.
+  youtubeAutopilot     Boolean   @default(true)
+  // The last time it reviewed videos.
+  youtubeAutopilotAt   DateTime?
+  // Claude's key pasted in the tab, for when Vercel has no ANTHROPIC_API_KEY.
+  claudeApiKey         String?
   updatedAt            DateTime  @updatedAt
 }
 
@@ -2496,10 +2505,26 @@ model LibraryYoutubeVideo {
   short           Boolean       @default(false)
   // The theme its title suggests (lib/library/youtube.ts), for the team.
   suggestedTheme  String?
+  // Its tags on YouTube: one more clue for the autopilot.
+  youtubeTags     String[]      @default([])
   // "PENDING" (to review) | "ADDED" (passed to the library) | "DISCARDED"
   status          String        @default("PENDING")
+  // Who decided: "ia" (the autopilot) | "equipo"; null while it waits.
+  decidedBy       String?
   libraryVideo    LibraryVideo? @relation(fields: [libraryVideoId], references: [id], onDelete: SetNull)
   libraryVideoId  String?       @unique
+  // The autopilot's review: whether it's worth publishing, why (a short
+  // phrase for the team) and what it proposed — its title, description,
+  // theme, level, kind, topics and instructor.
+  aiReviewedAt    DateTime?
+  aiKeep          Boolean?
+  aiReason        String?
+  aiProposal      Json?
+  // A run working on it (two runs never take the same video), the tries
+  // that failed — after three it waits for the team — and the last problem.
+  aiClaimedAt     DateTime?
+  aiAttempts      Int           @default(0)
+  aiError         String?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 

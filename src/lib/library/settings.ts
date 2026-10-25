@@ -22,6 +22,9 @@ const DEFAULTS: LibrarySettings = {
   youtubeUploadsId: null,
   youtubeApiKey: null,
   youtubeImportedAt: null,
+  youtubeAutopilot: true,
+  youtubeAutopilotAt: null,
+  claudeApiKey: null,
   updatedAt: new Date(0),
 };
 
@@ -68,6 +71,10 @@ export type LibrarySettingsPatch = Partial<{
   youtubeUploadsId: string;
   youtubeApiKey: string;
   youtubeImportedAt: Date;
+  // Its autopilot (lib/library/youtubeAutopilot.ts).
+  youtubeAutopilot: boolean;
+  youtubeAutopilotAt: Date;
+  claudeApiKey: string | null;
 }>;
 
 export async function updateLibrarySettings(patch: LibrarySettingsPatch): Promise<LibrarySettings> {

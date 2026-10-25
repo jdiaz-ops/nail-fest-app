@@ -101,7 +101,7 @@ password from `/admin/settings/users` won't reset it back.
 
 ## Ongoing: the background crons
 
-All three are declared in `vercel.json`'s `crons` array, so there's nothing
+They're all declared in `vercel.json`'s `crons` array, so there's nothing
 to click in the Vercel dashboard — they're created automatically on deploy
 as long as `CRON_SECRET` is set (see the env var table above):
 
@@ -114,6 +114,12 @@ as long as `CRON_SECRET` is set (see the env var table above):
 - **`/api/broadcasts/send-due`** — sends every scheduled event broadcast
   (from an event's "Correos del evento" section) whose real send time,
   fixed or relative to the event's own start/end, has arrived.
+- **`/api/library/youtube-autopilot`** — every 10 minutes: brings the
+  team's YouTube channel's new uploads (every 6 hours) and lets Claude
+  review the waiting ones and publish the ones worth it in the library
+  (Editar biblioteca → YouTube → Piloto automático). Needs
+  `ANTHROPIC_API_KEY`, or a Claude key pasted in that tab; switched off
+  there, it does nothing.
 
 The two `send-due` crons run every 5 minutes (`*/5 * * * *`) — the
 project is on Vercel Pro, which allows per-minute crons. The other crons
@@ -121,7 +127,7 @@ stay daily. If the project ever goes back to Hobby, every cron in
 `vercel.json` must be once a day again: Vercel rejects the whole deploy if
 any single entry exceeds what the plan allows (that bit `send-due` once).
 
-All three routes still accept a manual `POST` for on-demand testing without
+Every one of these routes still accepts a manual `POST` for on-demand testing without
 waiting for the schedule:
 
 ```bash

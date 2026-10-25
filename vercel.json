@@ -24,6 +24,10 @@
     {
       "path": "/api/cuponera/sync",
       "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/library/youtube-autopilot",
+      "schedule": "*/10 * * * *"
     }
   ]
 }

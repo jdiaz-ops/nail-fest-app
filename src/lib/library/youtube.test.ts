@@ -86,7 +86,7 @@ describe("reading the channel", () => {
           items: [
             {
               id: "v1",
-              snippet: { title: "Francesa con polygel", description: "Paso a paso", publishedAt: "2024-03-03T15:00:00Z", liveBroadcastContent: "none" },
+              snippet: { title: "Francesa con polygel", description: "Paso a paso", publishedAt: "2024-03-03T15:00:00Z", liveBroadcastContent: "none", tags: ["polygel", "uñas"] },
               contentDetails: { duration: "PT58S" },
               statistics: { viewCount: "12345" },
               status: { privacyStatus: "public" },
@@ -105,6 +105,7 @@ describe("reading the channel", () => {
         durationSeconds: 58,
         views: 12345,
         privacy: "public",
+        tags: ["polygel", "uñas"],
       },
     ]);
   });
