@@ -20,13 +20,14 @@ function plural(n: number, one: string, many: string): string {
 // the Consultorio's latest questions, the cuponera's brands, the
 // instructors, the next events. A part shows once it's public.
 export default function CommunityHub({ home, titleClass, events }: { home: CommunityHome; titleClass: string; events: Event[] }) {
+  // Biblioteca and Cortos together (2026-10-25): one door to learn.
   const tiles = [
-    home.cortos.show && {
-      href: "/biblioteca/cortos",
+    home.library.show && {
+      href: "/biblioteca",
       icon: "cortos" as const,
-      title: "Cortos",
-      text: "Aprende en un minuto: técnica, tendencias y negocio.",
-      stat: home.cortos.count ? plural(home.cortos.count, "corto", "cortos") : null,
+      title: "Biblioteca",
+      text: "Cortos, clases completas y grabaciones de maratones, gratis.",
+      stat: home.cortos.show && home.cortos.count ? plural(home.cortos.count, "corto", "cortos") : "Gratis",
       tone: "hub-tile--dark",
     },
     home.cuponera.show && {
@@ -52,14 +53,6 @@ export default function CommunityHub({ home, titleClass, events }: { home: Commu
       text: "Encuentra quién enseña en tu ciudad.",
       stat: home.instructors.count ? plural(home.instructors.count, "instructora", "instructoras") : null,
       tone: "bib-tone-mint",
-    },
-    home.library.show && {
-      href: "/biblioteca",
-      icon: "book" as const,
-      title: "Biblioteca",
-      text: "Clases completas, maratones y pasos a paso.",
-      stat: "Gratis",
-      tone: "bib-tone-lilac",
     },
   ].filter((t): t is Exclude<typeof t, false> => Boolean(t));
   if (tiles.length === 0 && events.length === 0) return null;

@@ -181,8 +181,14 @@ export const LIBRARY_TEXTS = {
   },
 
   menuSectionsTitle: { page: "menu", label: "Título de las secciones", value: "Secciones" },
-  menuHome: { page: "menu", label: "Enlace a la portada", value: "Inicio de la biblioteca" },
-  menuCuponera: { page: "menu", label: "Enlace a la cuponera", value: "Cuponera Nail Fest" },
+  // Biblioteca and Cortos together in the menu (2026-10-25): one line for
+  // the library, with its parts as buttons under it.
+  menuHome: { page: "menu", label: "Enlace a la biblioteca", value: "Biblioteca" },
+  menuLibraryHint: { page: "menu", label: "Debajo del enlace a la biblioteca", value: "Cortos, clases y grabaciones" },
+  menuMostViewed: { page: "menu", label: "Botón «Lo más visto»", value: "Lo más visto" },
+  menuRecordings: { page: "menu", label: "Botón de las grabaciones", value: "Grabaciones" },
+  menuDirectory: { page: "menu", label: "Enlace al directorio de instructoras", value: "Instructoras" },
+  menuCuponera: { page: "menu", label: "Enlace a la cuponera", value: "Cuponera" },
   menuThemesTitle: { page: "menu", label: "Título", value: "Busca por tema", section: "menuThemes" },
   menuLevelsTitle: { page: "menu", label: "Título", value: "Por nivel", section: "menuLevels" },
   menuInstructorsTitle: { page: "menu", label: "Título", value: "Por instructora", section: "menuInstructors" },

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import BrandLink, { BrandLogo } from "@/components/cuponera/BrandLink";
@@ -18,7 +18,12 @@ function Icon({ children }: { children: ReactNode }) {
 }
 
 const ICONS = {
-  home: <path d="M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z" />,
+  book: (
+    <>
+      <path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z" />
+      <path d="M4 19V5" />
+    </>
+  ),
   nailfest: (
     <>
       <rect x="3.5" y="3.5" width="7" height="7" rx="2" />
@@ -38,25 +43,6 @@ const ICONS = {
     <>
       <circle cx="12" cy="8" r="4" />
       <path d="M4 21c1-4 4-6 8-6s7 2 8 6" />
-    </>
-  ),
-  shorties: (
-    <>
-      <rect x="6" y="2.5" width="12" height="19" rx="3" />
-      <path d="M10.5 9.2v5.6l4.4-2.8z" fill="currentColor" />
-    </>
-  ),
-  fresh: <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" />,
-  trend: (
-    <>
-      <path d="M3 17l6-6 4 4 8-8" />
-      <path d="M15 7h6v6" />
-    </>
-  ),
-  camera: (
-    <>
-      <rect x="3" y="6" width="13" height="12" rx="2" />
-      <path d="M16 10.5l5-3v9l-5-3z" />
     </>
   ),
   people: (
@@ -79,8 +65,8 @@ type Current = "nailfest" | "inicio" | "shorties" | "instructoras" | "consultori
 
 function currentOf(pathname: string): Current {
   if (pathname === "/") return "nailfest";
-  if (pathname === "/biblioteca") return "inicio";
   if (pathname.startsWith("/biblioteca/cortos") || pathname.startsWith("/biblioteca/shorties")) return "shorties";
+  if (pathname === "/biblioteca" || pathname.startsWith("/biblioteca/")) return "inicio";
   if (pathname.startsWith("/instructoras")) return "instructoras";
   if (pathname.startsWith("/consultorio")) return "consultorio";
   if (pathname.startsWith("/cuponera")) return "cuponera";
@@ -102,13 +88,24 @@ function BrandChips({ brands }: { brands: CuponeraBrandCard[] }) {
   );
 }
 
+interface MenuPart {
+  href: string;
+  label: string;
+  current?: boolean;
+  badge?: string | null;
+}
+
 interface MenuLink {
   href: string;
   label: string;
+  /** A second line, smaller (the library: "Cortos, clases y grabaciones"). */
+  hint?: string;
   icon: ReactNode;
   tone: string;
   current?: boolean;
   badge?: string | null;
+  /** Its parts, as buttons under it (the library's). */
+  parts?: MenuPart[];
 }
 
 // The one menu of Nail Fest (the library's, approved 2026-10-24; on every
@@ -173,18 +170,24 @@ export default function LibraryMenu({
     [
       menu.communityHome && { href: menu.communityHome, label: "Inicio Nail Fest", icon: ICONS.nailfest, tone: "bib-tone-stone", current: current === "nailfest" },
       menu.communityHome && menu.event && { href: menu.event.href, label: menu.event.label, icon: ICONS.event, tone: "bib-drawer-ic--event" },
-      menu.library && { href: "/biblioteca", label: texts.home, icon: ICONS.home, tone: "bib-tone-mint", current: current === "inicio" },
-      menu.shorties && {
-        href: "/biblioteca/cortos",
-        label: texts.shorties,
-        icon: ICONS.shorties,
-        tone: "bib-drawer-ic--dark",
-        current: current === "shorties",
-        badge: sections.badge ? texts.badge : null,
+      // Biblioteca and Cortos together (2026-10-25): the library in one line,
+      // its cortos, newest, most viewed and recordings as buttons under it.
+      menu.library && {
+        href: "/biblioteca",
+        label: texts.home,
+        hint: texts.libraryHint,
+        icon: ICONS.book,
+        tone: "bib-tone-mint",
+        current: current === "inicio",
+        parts: (
+          [
+            menu.shorties && { href: "/biblioteca/cortos", label: texts.shorties, current: current === "shorties", badge: sections.badge ? texts.badge : null },
+            menu.videos && { href: "/biblioteca/buscar?tipo=video", label: texts.newest },
+            menu.mostViewed && { href: "/biblioteca#lo-mas-visto", label: texts.mostViewed },
+            menu.recordings && { href: "/biblioteca/buscar?tipo=maraton", label: texts.recordings },
+          ] as (MenuPart | false)[]
+        ).filter((p): p is MenuPart => Boolean(p)),
       },
-      menu.videos && { href: "/biblioteca/buscar?tipo=video", label: texts.newest, icon: ICONS.fresh, tone: "bib-tone-sky" },
-      menu.mostViewed && { href: "/biblioteca#lo-mas-visto", label: texts.mostViewed, icon: ICONS.trend, tone: "bib-tone-rose" },
-      menu.recordings && { href: "/biblioteca/buscar?tipo=maraton", label: texts.recordings, icon: ICONS.camera, tone: "bib-tone-lilac" },
       menu.instructors && { href: "/instructoras", label: texts.directory, icon: ICONS.people, tone: "bib-tone-peach", current: current === "instructoras" },
       menu.consultorio && { href: "/consultorio", label: "Consultorio", icon: ICONS.chat, tone: "bib-tone-green", current: current === "consultorio" },
       menu.cuponera && { href: "/cuponera", label: texts.cuponera, icon: ICONS.tag, tone: "bib-tone-sand", current: current === "cuponera" },
@@ -261,13 +264,32 @@ export default function LibraryMenu({
             <span className="bib-label">{texts.sectionsTitle}</span>
             <div className="bib-drawer-links">
               {links.map((l) => (
-                <Link key={l.href} href={l.href} className="bib-drawer-link" aria-current={l.current ? "page" : undefined}>
-                  <span className={`bib-drawer-ic ${l.tone}`}>
-                    <Icon>{l.icon}</Icon>
-                  </span>
-                  {l.label}
-                  {l.badge && <em className="bib-new">{l.badge}</em>}
-                </Link>
+                <Fragment key={l.href}>
+                  <Link href={l.href} className="bib-drawer-link" aria-current={l.current ? "page" : undefined}>
+                    <span className={`bib-drawer-ic ${l.tone}`}>
+                      <Icon>{l.icon}</Icon>
+                    </span>
+                    {l.hint ? (
+                      <span className="bib-drawer-text">
+                        {l.label}
+                        <small>{l.hint}</small>
+                      </span>
+                    ) : (
+                      l.label
+                    )}
+                    {l.badge && <em className="bib-new">{l.badge}</em>}
+                  </Link>
+                  {l.parts && l.parts.length > 0 && (
+                    <div className="bib-drawer-parts">
+                      {l.parts.map((p) => (
+                        <Link key={p.href} href={p.href} className="bib-chip" aria-current={p.current ? "page" : undefined}>
+                          {p.label}
+                          {p.badge && <em className="bib-new">{p.badge}</em>}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </Fragment>
               ))}
             </div>
           </nav>

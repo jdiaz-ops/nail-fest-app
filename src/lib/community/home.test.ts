@@ -73,17 +73,17 @@ describe("the community's home", () => {
 
 describe("the community's menu", () => {
   const NEXT = { slug: "cucuta", name: "Nail Fest Cúcuta", publicName: null } as Event;
-  const SOME = { cortos: true, cuponera: false, consultorio: true, instructors: true, library: false };
+  const SOME = { cuponera: false, consultorio: true, instructors: true, library: true };
 
-  it("the home when it's on, the next event, then each part that's open", () => {
+  it("the home when it's on, the next event, then each part that's open — the library with its cortos", () => {
     expect(communityMenuLinks(SOME, NEXT, "/").map((l) => `${l.label} ${l.href}`)).toEqual([
       "Inicio /",
       "Nail Fest Cúcuta /cucuta",
-      "Cortos /biblioteca/cortos",
-      "Consultorio /consultorio",
+      "Biblioteca /biblioteca",
       "Instructoras /instructoras",
+      "Consultorio /consultorio",
     ]);
-    expect(communityMenuLinks(SOME, null, null).map((l) => l.href)).toEqual(["/biblioteca/cortos", "/consultorio", "/instructoras"]);
+    expect(communityMenuLinks({ ...SOME, library: false }, null, null).map((l) => l.href)).toEqual(["/instructoras", "/consultorio"]);
   });
 
   it("her way in: her account, her portal, or «Entrar» once the Consultorio is open", () => {

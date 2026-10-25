@@ -4,7 +4,7 @@ import { getCuponeraSettings } from "@/lib/cuponera/settings";
 import { getCuponeraBrandCards } from "@/lib/cuponera/data";
 import { publicEventName } from "@/lib/eventDisplayName";
 import { getNextEvent } from "@/lib/nextEvent";
-import { getCortosTopics, getInstructorCards, getLibraryMenu, getShorties, shortiesCount, type LibraryViewer } from "@/lib/library/data";
+import { getCortosTopics, getInstructorCards, getLibraryMenu, getShorties, type LibraryViewer } from "@/lib/library/data";
 import { SHORTIES_SHOWN_FROM, formatDuration, toneOf, type CortosTopic, type InstructorCard, type LibraryMenuData } from "@/lib/library/shared";
 import type { CommunityLink } from "@/components/community/icons";
 import { getConsultorioIdentity, type ConsultorioIdentity } from "./auth";
@@ -102,9 +102,8 @@ export async function getCommunityHome(viewer: LibraryViewer, nextEventId: strin
 
 // ── The community's menu ────────────────────────────────────────────────────
 
-/** The parts of Nail Fest this viewer can open: the community menu's links. */
+/** The parts of Nail Fest this viewer can open: the community's footer. */
 export interface CommunityParts {
-  cortos: boolean;
   cuponera: boolean;
   consultorio: boolean;
   instructors: boolean;
@@ -116,13 +115,8 @@ export interface CommunityParts {
 export async function getCommunityParts(viewer: LibraryViewer): Promise<CommunityParts> {
   const { config, staff } = viewer;
   const libraryOpen = config.published || staff;
-  const [cuponeraSettings, brands, cortos] = await Promise.all([
-    getCuponeraSettings(),
-    db.cuponeraBrand.count({ where: { visible: true, available: true } }),
-    libraryOpen && config.sections.shorties && !staff ? shortiesCount() : Promise.resolve(0),
-  ]);
+  const [cuponeraSettings, brands] = await Promise.all([getCuponeraSettings(), db.cuponeraBrand.count({ where: { visible: true, available: true } })]);
   return {
-    cortos: libraryOpen && (staff || (config.sections.shorties && cortos >= SHORTIES_SHOWN_FROM)),
     cuponera: (cuponeraSettings.published || staff) && brands > 0,
     consultorio: config.consultorioPublished || staff,
     instructors: config.instructorsPublished || staff,
@@ -130,17 +124,17 @@ export async function getCommunityParts(viewer: LibraryViewer): Promise<Communit
   };
 }
 
-/** The menu's links: the community home (when it's on, or the team's
- * preview of it), the next event, then each part this viewer can open. */
+/** The community's links, in the menu's order: the community home (when
+ * it's on, or the team's preview of it), the next event, then each part
+ * this viewer can open — the library with its cortos in it. */
 export function communityMenuLinks(parts: CommunityParts, nextEvent: Event | null, home: string | null): CommunityLink[] {
   const links: (CommunityLink | false)[] = [
     home !== null && { href: home, label: "Inicio", icon: "home" },
     nextEvent !== null && { href: `/${nextEvent.slug}`, label: publicEventName(nextEvent), hint: "El próximo evento", icon: "event" },
-    parts.cortos && { href: "/biblioteca/cortos", label: "Cortos", hint: "Aprende en un minuto", icon: "cortos" },
-    parts.cuponera && { href: "/cuponera", label: "Descuentos", hint: "La cuponera", icon: "tag" },
-    parts.consultorio && { href: "/consultorio", label: "Consultorio", hint: "Pregunta y responde", icon: "chat" },
+    parts.library && { href: "/biblioteca", label: "Biblioteca", hint: "Cortos, clases y grabaciones", icon: "book" },
     parts.instructors && { href: "/instructoras", label: "Instructoras", hint: "El directorio", icon: "people" },
-    parts.library && { href: "/biblioteca", label: "Biblioteca", hint: "Clases y maratones", icon: "book" },
+    parts.consultorio && { href: "/consultorio", label: "Consultorio", hint: "Pregunta y responde", icon: "chat" },
+    parts.cuponera && { href: "/cuponera", label: "Cuponera", hint: "Descuentos de las marcas", icon: "tag" },
   ];
   return links.filter((l): l is CommunityLink => Boolean(l));
 }

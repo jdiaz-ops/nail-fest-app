@@ -431,6 +431,7 @@ export interface LibraryMenuData {
   texts: {
     sectionsTitle: string;
     home: string;
+    libraryHint: string;
     shorties: string;
     badge: string;
     newest: string;

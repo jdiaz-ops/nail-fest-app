@@ -2917,6 +2917,14 @@ html:has(.bib-drawer[open]) { overflow: hidden; }
 .bib-drawer-ic { flex: none; width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; }
 .bib-drawer-ic--dark { background: var(--ink); color: #fff; }
 .bib-drawer-ic--event { background: var(--accent); color: var(--accent-ink); }
+/* The library's line (2026-10-25): its name with what's in it, and its parts
+   — Cortos, Lo nuevo, Lo más visto, Grabaciones — as buttons under it. */
+.bib-drawer-text { display: flex; flex-direction: column; gap: 1px; }
+.bib-drawer-text small { font-size: 12.5px; font-weight: 600; color: var(--ink-muted); }
+.bib-drawer-parts { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 8px 8px 54px; }
+.bib-drawer-parts .bib-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; font-size: 13px; }
+.bib-drawer-parts .bib-chip[aria-current="page"] { border-color: var(--ink); background: var(--ink); color: #fff; }
+.bib-drawer-parts .bib-new { margin-left: 0; }
 /* A brand of the cuponera: its logo, its name, its discount — a tap copies
    the code and opens its store. */
 .bib-drawer-brand { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px 5px 5px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--ink); text-decoration: none; }
