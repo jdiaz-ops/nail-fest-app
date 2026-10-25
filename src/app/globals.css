@@ -2896,10 +2896,11 @@ button.cup-card { width: 100%; padding: 0; font: inherit; text-align: left; curs
 .bib-burger { flex: none; width: 40px; height: 40px; border: 1px solid var(--border); border-radius: 12px; display: grid; place-items: center; background: var(--surface); color: var(--ink); cursor: pointer; }
 .bib-burger--dark { border: 0; border-radius: 50%; background: rgba(255, 255, 255, 0.16); color: #fff; backdrop-filter: blur(6px); }
 html:has(.bib-drawer[open]) { overflow: hidden; }
-.bib-drawer { position: fixed; inset: 0 0 0 auto; width: min(90vw, 400px); max-width: none; height: 100dvh; max-height: none; margin: 0; padding: 0; border: 0; background: var(--bg); color: var(--ink); overflow-y: auto; overscroll-behavior: contain; box-shadow: -18px 0 40px rgba(0, 0, 0, 0.2); }
+/* From the left since 2026-10-25: the ☰ is on the left of every header. */
+.bib-drawer { position: fixed; inset: 0 auto 0 0; width: min(90vw, 400px); max-width: none; height: 100dvh; max-height: none; margin: 0; padding: 0; border: 0; background: var(--bg); color: var(--ink); overflow-y: auto; overscroll-behavior: contain; box-shadow: 18px 0 40px rgba(0, 0, 0, 0.2); }
 .bib-drawer[open] { animation: bib-drawer-in 0.22s ease-out; }
 .bib-drawer::backdrop { background: rgba(14, 15, 18, 0.55); }
-@keyframes bib-drawer-in { from { transform: translateX(100%); } }
+@keyframes bib-drawer-in { from { transform: translateX(-100%); } }
 .bib-drawer-top { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border); }
 .bib-drawer-close { flex: none; width: 40px; height: 40px; border: 1px solid var(--border); border-radius: 12px; display: grid; place-items: center; background: var(--surface); color: var(--ink); cursor: pointer; }
 .bib-drawer-search { padding: 16px; background: radial-gradient(120% 80% at 100% 0%, #13968d 0%, #0f7d76 45%, #0b5c57 100%); }
@@ -2915,6 +2916,14 @@ html:has(.bib-drawer[open]) { overflow: hidden; }
 .bib-drawer-link[aria-current="page"] { background: #e6f9f7; color: var(--accent-ink); }
 .bib-drawer-ic { flex: none; width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; }
 .bib-drawer-ic--dark { background: var(--ink); color: #fff; }
+.bib-drawer-ic--event { background: var(--accent); color: var(--accent-ink); }
+/* A brand of the cuponera: its logo, its name, its discount — a tap copies
+   the code and opens its store. */
+.bib-drawer-brand { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px 5px 5px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--ink); text-decoration: none; }
+.bib-drawer-brand:hover { border-color: var(--ink); color: var(--ink); }
+.bib-drawer-brand .cup-logo { width: 28px; height: 28px; border-radius: 50%; font-size: 12px; }
+.bib-drawer-brand b { font-size: 13px; line-height: 1.2; }
+.bib-drawer-brand small { font-size: 12px; font-weight: 800; color: var(--danger); }
 .bib-new { margin-left: auto; padding: 2px 8px; border-radius: 999px; background: var(--accent-secondary); color: var(--accent-secondary-ink); font-size: 11px; font-style: normal; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; }
 .bib-drawer-themes { display: flex; flex-wrap: wrap; gap: 8px; }
 .bib-drawer-theme { display: inline-flex; align-items: center; gap: 7px; padding: 5px 12px 5px 5px; border-radius: 999px; text-decoration: none; }
@@ -3519,34 +3528,37 @@ button.pt-item { width: 100%; border: 0; border-radius: 0; background: none; fon
    the library's tones — then a taste of each part: the newest cortos and
    their topics, the Consultorio's questions, the brands' discounts, the
    instructors and the next events. The menu sits over the hero. hub-*. */
-.hub-menu { position: absolute; top: 14px; right: 14px; z-index: 2; }
-/* At the hero's foot: there's more below. */
-.hub-cue { position: relative; z-index: 1; align-self: center; display: inline-flex; flex-direction: column; align-items: center; gap: 2px; margin: -18px 0 12px; padding: 6px 14px; color: inherit; font-size: 13px; font-weight: 700; text-decoration: none; opacity: 0.9; }
-.hub-cue svg { animation: hub-cue 1.8s ease-in-out infinite; }
-@keyframes hub-cue { 50% { transform: translateY(4px); } }
-html:has(.hub) { scroll-behavior: smooth; }
+.hub-menu { position: absolute; top: 14px; left: 14px; z-index: 2; }
+/* Option B (2026-10-25): with the hub on, the hero is as tall as the event
+   needs — the doors show on a phone's first screen, without scrolling. */
+.home-hero--community .home-hero-block { padding: 18px 24px 26px; }
+.home-hero--community .home-hero-days { font-size: 46px; }
+.home-hero-soon { margin: 0; font-size: 16px; font-weight: 700; opacity: 0.9; }
+@media (min-width: 900px) {
+  .home-hero--community { min-height: min(70vh, 640px); }
+  .home-hero--community .home-hero-block { padding: 32px 48px 44px; }
+  .home-hero--community .home-hero-days { font-size: 60px; }
+}
 .hub-menu--solid .bib-burger--dark { background: rgba(11, 46, 44, 0.12); color: var(--accent-ink); }
-.hub-drawer-links .bib-drawer-link > span:last-child { display: flex; flex-direction: column; }
-.hub-drawer-links small { font-size: 12.5px; font-weight: 600; color: var(--ink-muted); }
-.hub-drawer-ic { background: #e6f9f7; color: #0b4f4b; }
 
-.hub { background: var(--bg); color: var(--ink); padding: 40px 0 8px; }
+.hub { background: var(--bg); color: var(--ink); padding: 24px 0 8px; }
 .hub :focus-visible { outline: 3px solid var(--link); outline-offset: 2px; }
 .hub-inner { max-width: 1200px; margin: 0 auto; padding: 0 20px; display: flex; flex-direction: column; gap: 44px; }
 .hub-section { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
-.hub-intro h2 { margin: 0; font-size: clamp(32px, 8vw, 46px); line-height: 1.02; letter-spacing: -0.015em; text-wrap: balance; }
-.hub-intro p { margin: 10px 0 0; max-width: 600px; color: var(--ink-muted); font-size: 15.5px; line-height: 1.55; }
+.hub-intro h2 { margin: 0; font-size: clamp(30px, 7.6vw, 46px); line-height: 1.02; letter-spacing: -0.015em; text-wrap: balance; }
+/* On a phone the doors go first: the intro and each door's line show from 720px. */
+.hub-intro p { display: none; margin: 10px 0 0; max-width: 600px; color: var(--ink-muted); font-size: 15.5px; line-height: 1.55; }
 .hub-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .hub-head h2 { margin: 0; font-size: 26px; line-height: 1.1; letter-spacing: -0.01em; text-wrap: balance; }
 .hub-head a { flex: none; color: var(--link); font-size: 14px; font-weight: 800; text-decoration: none; }
 
 .hub-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .hub-tiles--1 .hub-tile:first-child, .hub-tiles--3 .hub-tile:first-child, .hub-tiles--5 .hub-tile:first-child { grid-column: 1 / -1; }
-.hub-tile { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; min-height: 156px; padding: 16px; border-radius: 20px; text-decoration: none; transition: transform 0.15s ease, box-shadow 0.15s ease; }
+.hub-tile { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; padding: 12px 14px; border-radius: 20px; text-decoration: none; transition: transform 0.15s ease, box-shadow 0.15s ease; }
 .hub-tile:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(23, 24, 28, 0.1); }
-.hub-tile-ic { width: 42px; height: 42px; margin-bottom: 6px; border-radius: 50%; display: grid; place-items: center; background: rgba(255, 255, 255, 0.75); }
+.hub-tile-ic { width: 34px; height: 34px; margin-bottom: 2px; border-radius: 50%; display: grid; place-items: center; background: rgba(255, 255, 255, 0.75); }
 .hub-tile b { font-size: 18px; line-height: 1.15; font-weight: 900; }
-.hub-tile > span:not(.hub-tile-ic) { font-size: 13.5px; line-height: 1.4; opacity: 0.85; }
+.hub-tile > span:not(.hub-tile-ic) { display: none; font-size: 13.5px; line-height: 1.4; opacity: 0.85; }
 .hub-tile em { margin-top: auto; padding: 3px 10px; border-radius: 999px; background: rgba(255, 255, 255, 0.7); font-size: 12px; font-style: normal; font-weight: 800; }
 .hub-tile--dark { background: var(--ink); color: #fff; }
 .hub-tile--dark .hub-tile-ic { background: rgba(255, 255, 255, 0.12); color: #7fe3dc; }
@@ -3590,6 +3602,10 @@ html:has(.hub) { scroll-behavior: smooth; }
 
 @media (min-width: 720px) {
   .hub { padding: 64px 0 16px; }
+  .hub-intro p { display: block; }
+  .hub-tile { min-height: 156px; padding: 16px; }
+  .hub-tile-ic { width: 42px; height: 42px; margin-bottom: 6px; }
+  .hub-tile > span:not(.hub-tile-ic) { display: block; }
   .hub-inner { padding: 0 32px; gap: 56px; }
   .hub-head h2 { font-size: 30px; }
   .hub-tiles--3 { grid-template-columns: repeat(3, 1fr); }
@@ -3598,7 +3614,7 @@ html:has(.hub) { scroll-behavior: smooth; }
   .hub-corto { width: 168px; }
   .hub-questions, .hub-events { grid-template-columns: repeat(3, 1fr); }
   .hub-brands { grid-template-columns: repeat(8, 1fr); }
-  .hub-menu { top: 20px; right: 24px; }
+  .hub-menu { top: 20px; left: 24px; }
 }
 @media (min-width: 1000px) {
   .hub-tiles--4 { grid-template-columns: repeat(4, 1fr); }
@@ -3607,8 +3623,6 @@ html:has(.hub) { scroll-behavior: smooth; }
   .hub-tile { min-height: 200px; padding: 20px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  html:has(.hub) { scroll-behavior: auto; }
-  .hub-cue svg { animation: none; }
   .hub-tile, .hub-corto-media img { transition: none; }
   .hub-tile:hover { transform: none; }
   .hub-corto:hover .hub-corto-media img { transform: none; }

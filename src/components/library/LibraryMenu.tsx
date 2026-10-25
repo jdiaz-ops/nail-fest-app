@@ -3,6 +3,9 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import BrandLink, { BrandLogo } from "@/components/cuponera/BrandLink";
+import { collectionHref, type CuponeraCategoryLink } from "@/lib/cuponera/browse";
+import { formatPercent, type CuponeraBrandCard } from "@/lib/cuponera/shared";
 import { LIBRARY_LEVELS, type LibraryMenuData } from "@/lib/library/shared";
 import { Avatar, SearchIcon, ThemeIcon } from "./parts";
 
@@ -25,6 +28,18 @@ const ICONS = {
     </>
   ),
   chat: <path d="M20.5 11.6a8.4 8.4 0 0 1-12.3 7.5L3.5 20.5l1.4-4.6a8.4 8.4 0 1 1 15.6-4.3z" />,
+  event: (
+    <>
+      <rect x="3.5" y="5" width="17" height="15" rx="2.5" />
+      <path d="M3.5 10h17M8 3v4M16 3v4" />
+    </>
+  ),
+  person: (
+    <>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21c1-4 4-6 8-6s7 2 8 6" />
+    </>
+  ),
   shorties: (
     <>
       <rect x="6" y="2.5" width="12" height="19" rx="3" />
@@ -60,13 +75,31 @@ const ICONS = {
   ),
 };
 
-type Current = "inicio" | "shorties" | "instructoras" | null;
+type Current = "nailfest" | "inicio" | "shorties" | "instructoras" | "consultorio" | "cuponera" | null;
 
 function currentOf(pathname: string): Current {
+  if (pathname === "/") return "nailfest";
   if (pathname === "/biblioteca") return "inicio";
   if (pathname.startsWith("/biblioteca/cortos") || pathname.startsWith("/biblioteca/shorties")) return "shorties";
   if (pathname.startsWith("/instructoras")) return "instructoras";
+  if (pathname.startsWith("/consultorio")) return "consultorio";
+  if (pathname.startsWith("/cuponera")) return "cuponera";
   return null;
+}
+
+/** The cuponera's brands as chips: a tap copies the code and opens the store. */
+function BrandChips({ brands }: { brands: CuponeraBrandCard[] }) {
+  return (
+    <div className="bib-drawer-chips">
+      {brands.map((b) => (
+        <BrandLink key={b.id} brand={b} className="bib-drawer-brand">
+          <BrandLogo brand={b} size="xs" />
+          <b>{b.name}</b>
+          <small>{formatPercent(b.discountPercent)}</small>
+        </BrandLink>
+      ))}
+    </div>
+  );
 }
 
 interface MenuLink {
@@ -78,22 +111,30 @@ interface MenuLink {
   badge?: string | null;
 }
 
-// The menu of every page of the library, Cortos and the instructors'
-// directory (the approved mockup of 2026-10-24): the search, the sections,
-// and the ways to search — by theme, level, instructor and city. Only what
-// this viewer can open shows; a modal panel from the right, closed with
+// The one menu of Nail Fest (the library's, approved 2026-10-24; on every
+// page since 2026-10-25 — the home, the library, Cortos, the instructors,
+// the Consultorio, the account and the cuponera): the search, the sections,
+// the ways to search — by theme, level, instructor and city —, the brands'
+// discounts and her way in. Only what this viewer can open shows; a modal
+// panel from the left (its ☰ goes on the left of every header), closed with
 // its X, Escape, a tap outside or by following any of its links.
 export default function LibraryMenu({
   menu,
   titleClass,
   dark = false,
   onOpenChange,
+  section,
+  cuponera = null,
 }: {
   menu: LibraryMenuData;
   titleClass: string;
-  /** Cortos' version: a light button over the video. */
+  /** A light button over a photo or a video (the home's hero, Cortos). */
   dark?: boolean;
   onOpenChange?: (open: boolean) => void;
+  /** The part of Nail Fest it's opened from: the panel's name and its logo's link. */
+  section?: { label: string; href: string };
+  /** On the cuponera's pages: its brands and categories, right after the sections. */
+  cuponera?: { brands: CuponeraBrandCard[]; categories: CuponeraCategoryLink[] } | null;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
@@ -127,9 +168,11 @@ export default function LibraryMenu({
   const close = () => dialog.current?.close();
 
   const { texts, sections } = menu;
+  const place = section ?? (menu.library ? { label: "Biblioteca", href: "/biblioteca" } : { label: "Instructoras", href: "/instructoras" });
   const links = (
     [
-      menu.communityHome && { href: menu.communityHome, label: "Inicio Nail Fest", icon: ICONS.nailfest, tone: "bib-tone-stone" },
+      menu.communityHome && { href: menu.communityHome, label: "Inicio Nail Fest", icon: ICONS.nailfest, tone: "bib-tone-stone", current: current === "nailfest" },
+      menu.communityHome && menu.event && { href: menu.event.href, label: menu.event.label, icon: ICONS.event, tone: "bib-drawer-ic--event" },
       menu.library && { href: "/biblioteca", label: texts.home, icon: ICONS.home, tone: "bib-tone-mint", current: current === "inicio" },
       menu.shorties && {
         href: "/biblioteca/cortos",
@@ -143,8 +186,8 @@ export default function LibraryMenu({
       menu.mostViewed && { href: "/biblioteca#lo-mas-visto", label: texts.mostViewed, icon: ICONS.trend, tone: "bib-tone-rose" },
       menu.recordings && { href: "/biblioteca/buscar?tipo=maraton", label: texts.recordings, icon: ICONS.camera, tone: "bib-tone-lilac" },
       menu.instructors && { href: "/instructoras", label: texts.directory, icon: ICONS.people, tone: "bib-tone-peach", current: current === "instructoras" },
-      menu.consultorio && { href: "/consultorio", label: "Consultorio", icon: ICONS.chat, tone: "bib-tone-green" },
-      menu.cuponera && { href: "/cuponera", label: texts.cuponera, icon: ICONS.tag, tone: "bib-tone-sand" },
+      menu.consultorio && { href: "/consultorio", label: "Consultorio", icon: ICONS.chat, tone: "bib-tone-green", current: current === "consultorio" },
+      menu.cuponera && { href: "/cuponera", label: texts.cuponera, icon: ICONS.tag, tone: "bib-tone-sand", current: current === "cuponera" },
     ] as (MenuLink | false)[]
   ).filter((l): l is MenuLink => Boolean(l));
 
@@ -172,16 +215,16 @@ export default function LibraryMenu({
         }}
       >
         <div className="bib-drawer-top">
-          <Link href={menu.library ? "/biblioteca" : "/instructoras"} className="bib-brand">
-            {/* eslint-disable-next-line @next/next/no-img-element -- fixed logo mark */}
-            <img src="/logo.png" alt="Nail Fest" />
-            <span>{menu.library ? "Biblioteca" : "Instructoras"}</span>
-          </Link>
           <button ref={closeButton} type="button" className="bib-drawer-close" aria-label="Cerrar el menú" onClick={close}>
             <Icon>
               <path d="M6 6l12 12M18 6L6 18" />
             </Icon>
           </button>
+          <Link href={place.href} className="bib-brand">
+            {/* eslint-disable-next-line @next/next/no-img-element -- fixed logo mark */}
+            <img src="/logo.png" alt="Nail Fest" />
+            <span>{place.label}</span>
+          </Link>
         </div>
 
         {(menu.library || menu.instructors) && (
@@ -228,6 +271,26 @@ export default function LibraryMenu({
               ))}
             </div>
           </nav>
+        )}
+
+        {cuponera && cuponera.brands.length > 0 && (
+          <div className="bib-drawer-block">
+            <span className="bib-label">Descuentos por marca</span>
+            <BrandChips brands={cuponera.brands} />
+          </div>
+        )}
+
+        {cuponera && cuponera.categories.length > 0 && (
+          <div className="bib-drawer-block">
+            <span className="bib-label">Productos por categoría</span>
+            <div className="bib-drawer-chips">
+              {cuponera.categories.map((c) => (
+                <Link key={c.key} href={collectionHref(c.key)} className="bib-chip">
+                  {c.label}
+                </Link>
+              ))}
+            </div>
+          </div>
         )}
 
         {sections.themes && menu.themes.length > 0 && (
@@ -291,6 +354,16 @@ export default function LibraryMenu({
           </div>
         )}
 
+        {!cuponera && menu.brands.length > 0 && (
+          <div className="bib-drawer-block">
+            <div className="bib-drawer-head">
+              <span className="bib-label">Descuentos por marca</span>
+              <Link href="/cuponera">{texts.seeAll}</Link>
+            </div>
+            <BrandChips brands={menu.brands} />
+          </div>
+        )}
+
         {menu.signup && (
           <div className="bib-drawer-block">
             <div className="bib-signup">
@@ -300,6 +373,15 @@ export default function LibraryMenu({
                 {texts.signupButton}
               </Link>
             </div>
+          </div>
+        )}
+
+        {menu.account && (
+          <div className="bib-drawer-block">
+            <Link href={menu.account.href} className="bib-btn bib-btn-dark">
+              <Icon>{ICONS.person}</Icon>
+              {menu.account.label}
+            </Link>
           </div>
         )}
       </dialog>

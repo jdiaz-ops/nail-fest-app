@@ -3,7 +3,7 @@
 // pages, their admin (/admin/biblioteca) and the tests. No database here:
 // client components import it too.
 
-import { normalizeText, type ProductIconKind } from "@/lib/cuponera/shared";
+import { normalizeText, type CuponeraBrandCard, type ProductIconKind } from "@/lib/cuponera/shared";
 
 // ── Themes and levels ──────────────────────────────────────────────────────
 //
@@ -411,6 +411,12 @@ export interface LibraryMenuData {
    * homepageCommunity) — where it is; null while it's not on. The team
    * goes to its preview. */
   communityHome: string | null;
+  /** The next event, with the community's home (lib/community/home.ts getSiteMenu). */
+  event: { href: string; label: string } | null;
+  /** Her way in: her account, her portal, or "Entrar" once the Consultorio is open. */
+  account: { href: string; label: string } | null;
+  /** The cuponera's brands while it's public: a tap copies the code and opens the store. */
+  brands: CuponeraBrandCard[];
   shorties: boolean;
   /** "Lo nuevo", the levels: there are short videos. */
   videos: boolean;

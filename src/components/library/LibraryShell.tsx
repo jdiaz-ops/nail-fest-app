@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import PreviewToast from "@/components/cuponera/PreviewToast";
-import { getLibraryMenu, type LibraryViewer } from "@/lib/library/data";
+import type { LibraryViewer } from "@/lib/library/data";
+import { getSiteMenu } from "@/lib/community/home";
 import { fraunces } from "@/app/cuponera/fonts";
 import LibraryMenu from "./LibraryMenu";
 
@@ -21,8 +22,8 @@ export function libraryStaffNote(viewer: LibraryViewer, section: Section, hasExa
 
 // What every page of the library and the instructors' directory shares:
 // the staff banner while there's something visitors don't see, the header
-// with the menu (./LibraryMenu: the sections and ways to search this viewer
-// can open), the footer, and the note that confirms a copied code.
+// with Nail Fest's one menu (./LibraryMenu, ☰ on the left) and the logo on
+// the right, the footer, and the note that confirms a copied code.
 export default async function LibraryShell({
   section,
   viewer,
@@ -37,7 +38,7 @@ export default async function LibraryShell({
   ownerNote?: string | null;
   children: ReactNode;
 }) {
-  const menu = await getLibraryMenu(viewer);
+  const menu = await getSiteMenu(viewer);
   return (
     <main className="bib-page">
       {note && (
@@ -58,12 +59,12 @@ export default async function LibraryShell({
       )}
       <header className="bib-header">
         <div className="bib-header-inner">
+          <LibraryMenu menu={menu} titleClass={fraunces.className} section={{ label: LABELS[section], href: `/${section}` }} />
           <Link href={`/${section}`} className="bib-brand" aria-label={`${LABELS[section]} Nail Fest, inicio`}>
             {/* eslint-disable-next-line @next/next/no-img-element -- fixed logo mark */}
             <img src="/logo.png" alt="Nail Fest" />
             <span>{LABELS[section]}</span>
           </Link>
-          <LibraryMenu menu={menu} titleClass={fraunces.className} />
         </div>
       </header>
       {children}

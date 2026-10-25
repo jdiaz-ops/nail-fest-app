@@ -6,7 +6,7 @@ import { publicEventName } from "@/lib/eventDisplayName";
 import { formatPercent } from "@/lib/cuponera/shared";
 import { youtubeThumbnail } from "@/lib/library/shared";
 import { PeopleRow } from "@/components/library/parts";
-import { SiteIcon } from "./SiteMenu";
+import { SiteIcon } from "./icons";
 
 const eventDay = new Intl.DateTimeFormat("es-CO", { day: "numeric", timeZone: "America/Bogota" });
 const eventMonth = new Intl.DateTimeFormat("es-CO", { month: "short", timeZone: "America/Bogota" });

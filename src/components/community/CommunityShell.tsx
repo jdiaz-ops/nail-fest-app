@@ -1,39 +1,18 @@
 import { Fragment, type ReactNode } from "react";
 import Link from "next/link";
+import LibraryMenu from "@/components/library/LibraryMenu";
+import PreviewToast from "@/components/cuponera/PreviewToast";
 import type { ConsultorioIdentity } from "@/lib/community/auth";
-import { communityAccountLink, communityMenuLinks, getCommunityParts } from "@/lib/community/home";
+import { communityMenuLinks, getCommunityParts, getSiteMenu } from "@/lib/community/home";
 import { getLibraryViewer } from "@/lib/library/data";
 import { getNextEvent } from "@/lib/nextEvent";
 import { getOrgSettings } from "@/lib/settings";
-import SiteMenu from "./SiteMenu";
-
-/** What the header says about who's here: her name, the team, or "Entrar". */
-function whoIsHere(identity: ConsultorioIdentity | null, returnTo: string): ReactNode {
-  if (!identity) {
-    return (
-      <Link href={`/cuenta/entrar?volver=${encodeURIComponent(returnTo)}`} className="pt-link">
-        Entrar
-      </Link>
-    );
-  }
-  if (identity.kind === "TEAM") return <span className="cs-pill cs-pill--team">Equipo Nail Fest</span>;
-  if (identity.kind === "INSTRUCTOR") {
-    return (
-      <Link href="/instructoras/portal" className="pt-me">
-        {identity.instructor.name.split(" ")[0]}
-      </Link>
-    );
-  }
-  return (
-    <Link href="/cuenta" className="pt-me" aria-label={`Tu cuenta, ${identity.member.name}`}>
-      {identity.member.name.split(" ")[0]}
-    </Link>
-  );
-}
+import { fraunces } from "@/app/cuponera/fonts";
 
 // The community's pages — the Consultorio and the community account: the
-// header with who's here and the community's menu, the team's banner while
-// it isn't public, and a footer with the rest of the community.
+// header with Nail Fest's one menu (☰ on the left, the logo on the right),
+// the team's banner while it isn't public, and a footer with the rest of
+// the community.
 export default async function CommunityShell({
   section,
   identity,
@@ -44,7 +23,7 @@ export default async function CommunityShell({
 }: {
   section: "Consultorio" | "Mi cuenta";
   identity: ConsultorioIdentity | null;
-  /** Where "Entrar" brings her back to. */
+  /** Where the menu's "Entrar" brings her back to. */
   returnTo: string;
   note?: string | null;
   /** A fixed box to answer at the bottom: room for it. */
@@ -52,8 +31,11 @@ export default async function CommunityShell({
   children: ReactNode;
 }) {
   const [viewer, org, nextEvent] = await Promise.all([getLibraryViewer(), getOrgSettings(), getNextEvent()]);
-  const parts = await getCommunityParts(viewer);
+  const [menu, parts] = await Promise.all([getSiteMenu(viewer), getCommunityParts(viewer)]);
   const links = communityMenuLinks(parts, nextEvent, org.homepageCommunity ? "/" : viewer.staff ? "/?vista=comunidad" : null);
+  // Her "Entrar" brings her back to this page.
+  const site = !identity && menu.account ? { ...menu, account: { ...menu.account, href: `/cuenta/entrar?volver=${encodeURIComponent(returnTo)}` } } : menu;
+  const home = section === "Consultorio" ? "/consultorio" : "/cuenta";
   return (
     <main className={`cs-page${composer ? " cs-page--composer" : ""}`}>
       {note && (
@@ -66,15 +48,12 @@ export default async function CommunityShell({
       )}
       <header className="bib-header">
         <div className="bib-header-inner">
-          <Link href="/consultorio" className="bib-brand" aria-label={`${section} Nail Fest`}>
+          <LibraryMenu menu={site} titleClass={fraunces.className} section={{ label: section, href: home }} />
+          <Link href={home} className="bib-brand" aria-label={`${section} Nail Fest`}>
             {/* eslint-disable-next-line @next/next/no-img-element -- fixed logo mark */}
             <img src="/logo.png" alt="Nail Fest" />
             <span>{section}</span>
           </Link>
-          <div className="cs-head-actions">
-            {whoIsHere(identity, returnTo)}
-            <SiteMenu links={links} account={communityAccountLink(identity, parts.consultorio)} dark={false} />
-          </div>
         </div>
       </header>
       {children}
@@ -91,6 +70,7 @@ export default async function CommunityShell({
           <a href="/privacidad">Política de privacidad</a>
         </p>
       </footer>
+      <PreviewToast />
     </main>
   );
 }

@@ -10,11 +10,11 @@ const fraunces = Fraunces({ subsets: ["latin"], weight: ["900"] });
 import ReviewsSection from "@/components/reviews/ReviewsSection";
 import ReviewsBadge from "@/components/reviews/ReviewsBadge";
 import CommunityHub from "@/components/community/CommunityHub";
-import SiteMenu from "@/components/community/SiteMenu";
+import LibraryMenu from "@/components/library/LibraryMenu";
+import PreviewToast from "@/components/cuponera/PreviewToast";
 import { viewerCanSeeSamples } from "@/lib/reviewsViewer";
 import { getLibraryViewer } from "@/lib/library/data";
-import { communityAccountLink, communityMenuLinks, getCommunityHome, partsOf } from "@/lib/community/home";
-import { getConsultorioIdentity } from "@/lib/community/auth";
+import { getCommunityHome, getSiteMenu } from "@/lib/community/home";
 
 export const dynamic = "force-dynamic";
 
@@ -29,10 +29,8 @@ export default async function HomePage({ searchParams }: { searchParams: Record<
   // The community's home (OrgSettings.homepageCommunity): the hub under the
   // hero, and a menu over it. The team previews it at /?vista=comunidad.
   const community = orgSettings.homepageCommunity || (staff && searchParams.vista === "comunidad");
-  const [viewer, identity] = community ? await Promise.all([getLibraryViewer(), getConsultorioIdentity()]) : [null, null];
-  const hub = viewer ? await getCommunityHome(viewer, nextEvent?.id ?? null) : null;
-  const menuLinks = hub ? communityMenuLinks(partsOf(hub), nextEvent, orgSettings.homepageCommunity ? "/" : "/?vista=comunidad") : [];
-  const account = hub ? communityAccountLink(identity, hub.consultorio.show) : null;
+  const viewer = community ? await getLibraryViewer() : null;
+  const [hub, menu] = viewer ? await Promise.all([getCommunityHome(viewer, nextEvent?.id ?? null), getSiteMenu(viewer)]) : [null, null];
 
   // Venue only, no city — the city's already in the event name itself
   // (see EventForm's own "Nombre del evento" convention, e.g. "Nail Fest
@@ -59,6 +57,9 @@ export default async function HomePage({ searchParams }: { searchParams: Record<
       </div>
     )}
     <main
+      // The community's home (option B, 2026-10-25): the event as tall as
+      // it needs, so the doors to everything show on the first screen.
+      className={hub ? "home-hero--community" : undefined}
       style={{
         position: "relative",
         // 100dvh, not 100vh — same fix already used in ScanAppShell.tsx.
@@ -68,7 +69,7 @@ export default async function HomePage({ searchParams }: { searchParams: Record<
         // sits partly below the visible fold, reading as a gap under the
         // button until you scroll — 100dvh tracks the actual visible
         // height instead.
-        minHeight: "100dvh",
+        minHeight: hub ? undefined : "100dvh",
         display: "flex",
         flexDirection: "column",
         // Nothing uploaded yet → the brand teal solid, same accent/ink
@@ -117,14 +118,19 @@ export default async function HomePage({ searchParams }: { searchParams: Record<
         </>
       )}
 
-      {hub && (
+      {menu && (
         <div className={hasMedia ? "hub-menu" : "hub-menu hub-menu--solid"}>
-          <SiteMenu links={menuLinks} account={account} />
+          <LibraryMenu
+            menu={menu}
+            titleClass={fraunces.className}
+            dark
+            section={{ label: "Nail Fest", href: orgSettings.homepageCommunity ? "/" : "/?vista=comunidad" }}
+          />
         </div>
       )}
-      <div style={{ position: "relative", zIndex: 1, padding: "32px 24px 20px", textAlign: "center" }}>
+      <div style={{ position: "relative", zIndex: 1, padding: hub ? "22px 24px 6px" : "32px 24px 20px", textAlign: "center" }}>
         {/* eslint-disable-next-line @next/next/no-img-element -- fixed logo mark, not worth next/image's overhead here */}
-        <img src="/logo.png" alt="Nail Fest" style={{ height: 72, width: "auto", margin: "0 auto", display: "block" }} />
+        <img src="/logo.png" alt="Nail Fest" style={{ height: hub ? 56 : 72, width: "auto", margin: "0 auto", display: "block" }} />
         {orgSettings.homepageTagline && (
           <p
             style={{
@@ -204,6 +210,9 @@ export default async function HomePage({ searchParams }: { searchParams: Record<
               </Link>
             </div>
           </>
+        ) : hub ? (
+          // No event announced: the community goes on top.
+          <p className="home-hero-soon">Muy pronto anunciamos las próximas fechas.</p>
         ) : (
           <>
             <h1 style={{ fontSize: "clamp(28px, 7vw, 44px)", lineHeight: 1.1, margin: "0 0 12px", fontWeight: 800 }}>
@@ -215,17 +224,10 @@ export default async function HomePage({ searchParams }: { searchParams: Record<
           </>
         )}
       </div>
-      {hub && (
-        <a href="#comunidad" className="hub-cue" style={{ textShadow: hasMedia ? "0 1px 6px rgba(0,0,0,0.35)" : "none" }}>
-          Descubre tu lugar Nail Fest
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M6 9l6 6 6-6" />
-          </svg>
-        </a>
-      )}
     </main>
 
     {hub && <CommunityHub home={hub} titleClass={fraunces.className} events={hub.moreEvents} />}
+    {hub && <PreviewToast />}
 
     {/* Photo gallery — square tiles, already fully designed by whoever
         made them (photo + caption baked in); this just lays them out.

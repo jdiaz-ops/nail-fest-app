@@ -521,19 +521,17 @@ export default function ShortiesFeed({ items: firstOrder, topic, texts, menu, ti
     <>
       <header className="bib-header bib-shorts-head">
         <div className="bib-header-inner">
+          <LibraryMenu menu={menu} titleClass={titleClass} onOpenChange={onMenu} />
           <Link href="/biblioteca" className="bib-brand" aria-label="Biblioteca Nail Fest, inicio">
             {/* eslint-disable-next-line @next/next/no-img-element -- fixed logo mark */}
             <img src="/logo.png" alt="Nail Fest" />
             <span>Biblioteca</span>
           </Link>
-          <LibraryMenu menu={menu} titleClass={titleClass} onOpenChange={onMenu} />
         </div>
       </header>
 
       <div className="bib-shorts-top">
-        <Link href="/biblioteca" className="bib-shorts-round" aria-label="Volver a la biblioteca">
-          <Icon>{PATHS.back}</Icon>
-        </Link>
+        <LibraryMenu menu={menu} titleClass={titleClass} dark onOpenChange={onMenu} />
         <span className="bib-shorts-heading">
           <h1 className={`bib-shorts-title ${titleClass}`}>{texts.title}</h1>
           {topicChip}
@@ -543,7 +541,9 @@ export default function ShortiesFeed({ items: firstOrder, topic, texts, menu, ti
             </Link>
           )}
         </span>
-        <LibraryMenu menu={menu} titleClass={titleClass} dark onOpenChange={onMenu} />
+        <Link href="/biblioteca" className="bib-shorts-round" aria-label="Cerrar los cortos: volver a la biblioteca">
+          <Icon>{PATHS.close}</Icon>
+        </Link>
       </div>
 
       <aside className="bib-shorts-side">

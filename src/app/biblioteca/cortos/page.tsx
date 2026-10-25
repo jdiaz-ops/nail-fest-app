@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import PreviewToast from "@/components/cuponera/PreviewToast";
 import { libraryStaffNote } from "@/components/library/LibraryShell";
 import ShortiesFeed from "@/components/library/ShortiesFeed";
-import { getLibraryMenu, getLibraryViewer, getShorties, libraryRobots } from "@/lib/library/data";
+import { getLibraryViewer, getShorties, libraryRobots } from "@/lib/library/data";
+import { getSiteMenu } from "@/lib/community/home";
 import { SHORTIES_SIGNUP_EVERY, hasTopic, shortiesOrder, topicKey, topicsOf } from "@/lib/library/shared";
 import { fraunces } from "@/app/cuponera/fonts";
 
@@ -39,7 +40,7 @@ export default async function CortosPage({ searchParams }: { searchParams: Searc
   const viewer = await getLibraryViewer();
   const { texts, sections } = viewer.config;
   if ((!viewer.config.published || !sections.shorties) && !viewer.staff) notFound();
-  const [all, menu] = await Promise.all([getShorties(viewer), getLibraryMenu(viewer)]);
+  const [all, menu] = await Promise.all([getShorties(viewer), getSiteMenu(viewer)]);
   const first = typeof searchParams.v === "string" ? searchParams.v : null;
   const key = topicParam(searchParams);
   const topic = key ? (topicsOf(all.map((i) => i.video)).find((t) => t.key === key) ?? { key, label: key.replace(/-/g, " "), count: 0 }) : null;

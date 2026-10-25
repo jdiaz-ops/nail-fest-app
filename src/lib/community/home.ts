@@ -1,11 +1,13 @@
 import type { Event } from "@prisma/client";
 import { db } from "@/lib/db";
 import { getCuponeraSettings } from "@/lib/cuponera/settings";
+import { getCuponeraBrandCards } from "@/lib/cuponera/data";
 import { publicEventName } from "@/lib/eventDisplayName";
-import { getCortosTopics, getInstructorCards, getShorties, shortiesCount, type LibraryViewer } from "@/lib/library/data";
-import { SHORTIES_SHOWN_FROM, formatDuration, toneOf, type CortosTopic, type InstructorCard } from "@/lib/library/shared";
-import type { SiteMenuLink } from "@/components/community/SiteMenu";
-import type { ConsultorioIdentity } from "./auth";
+import { getNextEvent } from "@/lib/nextEvent";
+import { getCortosTopics, getInstructorCards, getLibraryMenu, getShorties, shortiesCount, type LibraryViewer } from "@/lib/library/data";
+import { SHORTIES_SHOWN_FROM, formatDuration, toneOf, type CortosTopic, type InstructorCard, type LibraryMenuData } from "@/lib/library/shared";
+import type { CommunityLink } from "@/components/community/icons";
+import { getConsultorioIdentity, type ConsultorioIdentity } from "./auth";
 import { countQuestions, latestQuestions, type QuestionCard } from "./data";
 
 // The homepage as the community's home (OrgSettings.homepageCommunity,
@@ -109,10 +111,6 @@ export interface CommunityParts {
   library: boolean;
 }
 
-export function partsOf(home: CommunityHome): CommunityParts {
-  return { cortos: home.cortos.show, cuponera: home.cuponera.show, consultorio: home.consultorio.show, instructors: home.instructors.show, library: home.library.show };
-}
-
 /** The same parts as the community home shows, without its contents — for
  * the menu of the other community pages (the Consultorio, the account). */
 export async function getCommunityParts(viewer: LibraryViewer): Promise<CommunityParts> {
@@ -134,8 +132,8 @@ export async function getCommunityParts(viewer: LibraryViewer): Promise<Communit
 
 /** The menu's links: the community home (when it's on, or the team's
  * preview of it), the next event, then each part this viewer can open. */
-export function communityMenuLinks(parts: CommunityParts, nextEvent: Event | null, home: string | null): SiteMenuLink[] {
-  const links: (SiteMenuLink | false)[] = [
+export function communityMenuLinks(parts: CommunityParts, nextEvent: Event | null, home: string | null): CommunityLink[] {
+  const links: (CommunityLink | false)[] = [
     home !== null && { href: home, label: "Inicio", icon: "home" },
     nextEvent !== null && { href: `/${nextEvent.slug}`, label: publicEventName(nextEvent), hint: "El próximo evento", icon: "event" },
     parts.cortos && { href: "/biblioteca/cortos", label: "Cortos", hint: "Aprende en un minuto", icon: "cortos" },
@@ -144,12 +142,31 @@ export function communityMenuLinks(parts: CommunityParts, nextEvent: Event | nul
     parts.instructors && { href: "/instructoras", label: "Instructoras", hint: "El directorio", icon: "people" },
     parts.library && { href: "/biblioteca", label: "Biblioteca", hint: "Clases y maratones", icon: "book" },
   ];
-  return links.filter((l): l is SiteMenuLink => Boolean(l));
+  return links.filter((l): l is CommunityLink => Boolean(l));
+}
+
+/** The one menu of Nail Fest, on every page (2026-10-25): the library's —
+ * its sections and ways to search — with the next event, the brands'
+ * discounts and her way in. */
+export async function getSiteMenu(viewer: LibraryViewer, now: Date = new Date()): Promise<LibraryMenuData> {
+  const [menu, nextEvent, identity, brands] = await Promise.all([
+    getLibraryMenu(viewer, now),
+    getNextEvent(),
+    getConsultorioIdentity(),
+    viewer.cuponeraLive ? getCuponeraBrandCards() : Promise.resolve([]),
+  ]);
+  const account = communityAccountLink(identity, menu.consultorio);
+  return {
+    ...menu,
+    event: nextEvent ? { href: `/${nextEvent.slug}`, label: publicEventName(nextEvent) } : null,
+    account: account && { href: account.href, label: account.label },
+    brands,
+  };
 }
 
 /** Her way in, at the menu's foot: her account, her instructor's portal,
  * or "Entrar" once the Consultorio is open. The team has the admin. */
-export function communityAccountLink(identity: ConsultorioIdentity | null, consultorio: boolean): SiteMenuLink | null {
+export function communityAccountLink(identity: ConsultorioIdentity | null, consultorio: boolean): CommunityLink | null {
   if (identity?.kind === "MEMBER") return { href: "/cuenta", label: "Mi cuenta", icon: "person" };
   if (identity?.kind === "INSTRUCTOR") return { href: "/instructoras/portal", label: "Mi portal de instructora", icon: "person" };
   if (!identity && consultorio) return { href: "/cuenta/entrar?volver=/consultorio", label: "Entrar a mi cuenta", icon: "person" };

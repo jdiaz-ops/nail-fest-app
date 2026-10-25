@@ -403,6 +403,10 @@ export async function getLibraryMenu(viewer: LibraryViewer, now: Date = new Date
     cuponera: viewer.cuponeraLive,
     consultorio: viewer.staff || viewer.config.consultorioPublished,
     communityHome: org.homepageCommunity ? "/" : viewer.staff ? "/?vista=comunidad" : null,
+    // The site's menu fills these in (lib/community/home.ts getSiteMenu).
+    event: null,
+    account: null,
+    brands: [],
     shorties: Boolean(facts) && (viewer.staff || (sections.shorties && facts!.shorties >= SHORTIES_SHOWN_FROM)),
     videos: Boolean(facts) && sections.newest && (viewer.staff || facts!.shorts > 0),
     mostViewed: Boolean(facts) && sections.mostViewed && (viewer.staff || facts!.watched >= MOST_VIEWED_FROM),

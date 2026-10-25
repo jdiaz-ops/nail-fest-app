@@ -166,6 +166,13 @@ function toBrandCard(brand: CuponeraBrand, index: number): CuponeraBrandCard {
   };
 }
 
+/** The brands as coupons, in the admin's order, without their products —
+ * for the site's menu. */
+export async function getCuponeraBrandCards(): Promise<CuponeraBrandCard[]> {
+  const brands = await db.cuponeraBrand.findMany({ where: { visible: true, available: true }, orderBy: { order: "asc" } });
+  return brands.map(toBrandCard);
+}
+
 export interface CuponeraDeal {
   product: CuponeraProduct;
   /** When it changes: midnight for the automatic daily one, the admin's
