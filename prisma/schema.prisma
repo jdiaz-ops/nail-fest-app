@@ -2505,49 +2505,49 @@ model LibrarySettings {
 // import; what the team decides stays — passed to the library (a hidden
 // LibraryVideo to finish and switch on) or set aside.
 model LibraryYoutubeVideo {
-  id              String        @id @default(cuid())
-  youtubeId       String        @unique
-  title           String
-  description     String?
-  publishedAt     DateTime
-  durationSeconds Int?
-  views           Int           @default(0)
+  id               String        @id @default(cuid())
+  youtubeId        String        @unique
+  title            String
+  description      String?
+  publishedAt      DateTime
+  durationSeconds  Int?
+  views            Int           @default(0)
   // "public" | "unlisted" | "private"
-  privacy         String        @default("public")
+  privacy          String        @default("public")
   // Three minutes or less (or #shorts): a corto; longer: a recording.
-  short           Boolean       @default(false)
+  short            Boolean       @default(false)
   // Upright (9:16) or lying (16:9), as YouTube's player says; null until asked.
-  vertical        Boolean?
+  vertical         Boolean?
   // The theme its title suggests (lib/library/youtube.ts), for the team.
-  suggestedTheme  String?
+  suggestedTheme   String?
   // Its tags on YouTube: one more clue for the autopilot.
-  youtubeTags     String[]      @default([])
+  youtubeTags      String[]      @default([])
   // The channel's playlists it's in (their names): another clue, not a rule.
-  youtubePlaylists String[]     @default([])
+  youtubePlaylists String[]      @default([])
   // "PENDING" (to review) | "ADDED" (passed to the library) | "DISCARDED"
-  status          String        @default("PENDING")
+  status           String        @default("PENDING")
   // Who decided: "ia" (the autopilot) | "equipo"; null while it waits.
-  decidedBy       String?
-  libraryVideo    LibraryVideo? @relation(fields: [libraryVideoId], references: [id], onDelete: SetNull)
-  libraryVideoId  String?       @unique
+  decidedBy        String?
+  libraryVideo     LibraryVideo? @relation(fields: [libraryVideoId], references: [id], onDelete: SetNull)
+  libraryVideoId   String?       @unique
   // The autopilot's review: whether it's worth publishing, why (a short
   // phrase for the team) and what it proposed — its title, description,
   // theme, level, kind, topics and instructor.
-  aiReviewedAt    DateTime?
-  aiKeep          Boolean?
-  aiReason        String?
-  aiProposal      Json?
+  aiReviewedAt     DateTime?
+  aiKeep           Boolean?
+  aiReason         String?
+  aiProposal       Json?
   // A run working on it (two runs never take the same video), the tries
   // that failed — after three it waits for the team — and the last problem.
-  aiClaimedAt     DateTime?
-  aiAttempts      Int           @default(0)
-  aiError         String?
+  aiClaimedAt      DateTime?
+  aiAttempts       Int           @default(0)
+  aiError          String?
   // The autopilot's version that reviewed it (null: the first one): the
   // ones it published before the current version get their themes,
   // subcategory, tags and description again.
-  aiVersion       Int?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  aiVersion        Int?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
 
   @@index([status, views])
 }
@@ -2719,4 +2719,58 @@ model ConsultorioVote {
   @@unique([answerId, memberId])
   @@unique([answerId, instructorId])
   @@unique([answerId, adminUserId])
+}
+
+// La Mesa (2026-10-25): Nail Fest's newsletter, every 15 days on Thursday.
+// Claude proposes the pieces of the sections that take turns (Mito o
+// verdad, La palabra and ¿Sabías que…? to play with; El truco and ¿Por qué
+// pasó? for the trade), El termómetro's questions and each edition's
+// subject line; the team approves them or asks for another (lib/mesa).
+// La galería and El Consultorio come from the community, not from here.
+enum MesaSection {
+  MITO
+  PALABRA
+  SABIAS
+  TRUCO
+  PORQUE
+  TERMOMETRO
+  ASUNTO
+}
+
+enum MesaPieceStatus {
+  // Proposed by Claude, waiting for the team.
+  IDEA
+  // In the bank: goes out in the next edition that uses its section.
+  APPROVED
+  // «Otra idea», or taken out of the bank: never proposed again.
+  DISCARDED
+}
+
+model MesaPiece {
+  id         String          @id @default(cuid())
+  section    MesaSection
+  status     MesaPieceStatus @default(IDEA)
+  // The piece's fields, by section (lib/mesa/sections.ts).
+  content    Json
+  // The theme it was asked with ("polygel"), if any.
+  topic      String?
+  // Among the approved of its section: they go out in this order.
+  position   Int             @default(0)
+  // A subject line's edition (ASUNTO); for the rest, the edition that sent
+  // it, once La Mesa sends — then it leaves the queue for good.
+  edition    Int?
+  approvedAt DateTime?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  @@index([section, status, position])
+  @@index([edition])
+}
+
+// One row ("singleton"): edition 1's day (a Thursday); the rest follow
+// every 14 days. A missing row is just the default (lib/mesa/data.ts).
+model MesaSettings {
+  id             String   @id
+  firstEditionOn DateTime @db.Date
+  updatedAt      DateTime @updatedAt
 }

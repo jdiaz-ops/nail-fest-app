@@ -20,6 +20,8 @@ const NAV: { href: string; label: string; adminOnly?: boolean }[] = [
   { href: "/admin/cuponera", label: "Editar cuponera", adminOnly: true },
   // «Editar instructoras» while the videos are hidden (VIDEOS_HIDDEN).
   { href: "/admin/biblioteca", label: LIBRARY_ADMIN_NAME, adminOnly: true },
+  // The newsletter's bank of pieces (2026-10-25).
+  { href: "/admin/mesa", label: "La Mesa", adminOnly: true },
   { href: "/admin/consultorio", label: "Consultorio" },
   { href: "/admin/pages", label: "Páginas", adminOnly: true },
   { href: "/admin/resenas", label: "Reseñas" },
