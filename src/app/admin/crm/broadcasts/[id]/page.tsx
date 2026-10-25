@@ -5,8 +5,6 @@ import { requirePageUser } from "@/lib/auth/guard";
 import { getBroadcastEmailStats, getBouncedRecipients, statsFor } from "@/lib/email/broadcastStats";
 import CrmPageHeader from "../../CrmPageHeader";
 import TagEngagementButton from "@/components/admin/TagEngagementButton";
-import { bogotaDateTime } from "@/lib/mesa/sections";
-import { broadcastStatus } from "../status";
 
 export const dynamic = "force-dynamic";
 
@@ -48,27 +46,7 @@ export default async function BroadcastDetailPage({ params }: { params: { id: st
       <Link href="/admin/crm/broadcasts" style={{ fontSize: 13, color: "#5b5f6b" }}>
         ← Broadcasts
       </Link>
-      <CrmPageHeader
-        title={broadcast.subject}
-        subtitle={[
-          broadcast.mesaEdition !== null ? `La Mesa · Edición ${broadcast.mesaEdition}` : null,
-          `Segmento: ${broadcast.segment?.name ?? "—"}`,
-          `Estado: ${broadcastStatus(broadcast.status).label}`,
-          broadcast.status === "QUEUED" && broadcast.scheduledAt ? `Sale el ${bogotaDateTime(broadcast.scheduledAt)}` : null,
-        ]
-          .filter(Boolean)
-          .join(" · ")}
-      />
-      {broadcast.mesaEdition !== null && (
-        <p style={{ display: "flex", gap: 16, flexWrap: "wrap", margin: "-8px 0 24px", fontSize: 13.5 }}>
-          <a href={`/api/admin/mesa/correo?edicion=${broadcast.mesaEdition}`} target="_blank" rel="noreferrer" style={{ color: "#17181c", fontWeight: 600 }}>
-            Ver el correo
-          </a>
-          <Link href="/admin/crm/broadcasts/la-mesa" style={{ color: "#17181c", fontWeight: 600 }}>
-            Abrir La Mesa
-          </Link>
-        </p>
-      )}
+      <CrmPageHeader title={broadcast.subject} subtitle={`Segmento: ${broadcast.segment?.name ?? "—"} · Estado: ${broadcast.status}`} />
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 28 }}>
         {STAT_TILES.map((tile) => (

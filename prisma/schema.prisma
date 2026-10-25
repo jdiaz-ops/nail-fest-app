@@ -904,11 +904,11 @@ model EmailBroadcast {
   // kept to cancel it if the broadcast is edited or deleted first. Null
   // = not scheduled with QStash; the daily send-due cron still covers it.
   qstashMessageId       String?
-  // La Mesa (2026-10-25): the edition this send is — a segment broadcast
-  // with no bodyText, scheduled from CRM → Broadcasts → La Mesa. Its email
-  // is built from the edition's pieces (lib/mesa/email.ts), and
-  // `mesaContent` freezes them when the first chunk goes out, so every
-  // recipient gets the same edition even if a piece is edited mid-send.
+  // La Mesa (2026-10-25): the edition this send carries — a segment
+  // broadcast with no bodyText whose email is that edition's template
+  // (lib/mesa/email.ts); `mesaContent` freezes the edition when the first
+  // chunk goes out, so every recipient gets the same one even if a piece is
+  // edited mid-send.
   mesaEdition           Int?
   mesaContent           Json?
   createdAt             DateTime              @default(now())

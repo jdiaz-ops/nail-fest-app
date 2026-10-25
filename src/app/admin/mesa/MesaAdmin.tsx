@@ -11,7 +11,6 @@ import {
   NAME_TOKEN,
   bogotaDateTime,
   contentOf,
-  fromBogotaInput,
   summaryOf,
   type MesaPieceSection,
   type MesaSectionKey,
@@ -22,11 +21,10 @@ import { CardTitle, cardStyle, mutedText, Pill, primaryButtonStyle, secondaryBut
 // editions and what each still needs; the bank, section by section, with
 // Claude's ideas — «Aprobar» or «Otra idea», and «Editar» for a word — and
 // the approved ones in the order they go out; El termómetro's questions;
-// each edition's subject line. It lives in CRM → Broadcasts: a ready
-// edition is looked at («Ver el correo», «Enviarme una prueba») and
-// scheduled to a segment at a day and time; until then nothing goes out,
-// and «Cancelar el envío» works while it hasn't started. What the readers
-// of the sent ones answered, at the end.
+// each edition's subject line. A ready edition's template is looked at
+// («Ver el correo») and tested («Enviarme una prueba»); La Mesa only builds
+// the template, nothing is sent from here. What the readers of a sent
+// edition answered, at the end.
 
 type Tab = MesaPieceSection | "ASUNTO";
 
@@ -271,24 +269,13 @@ function PieceEditor({ piece, onSave, onCancel, busy }: { piece: MesaPieceView; 
 
 // ── The screen ──────────────────────────────────────────────────────────────
 
-export interface MesaSegmentOption {
-  id: string;
-  name: string;
-  memberCount: number;
-}
-
 type ErrorAt = "key" | "editions" | "bank" | "send";
 
 export default function MesaAdmin({
   data,
-  segments,
-  defaultSegmentId,
   testEmail,
 }: {
   data: MesaAdminData;
-  segments: MesaSegmentOption[];
-  /** The segment the last edition went to. */
-  defaultSegmentId: string | null;
   /** Where «Enviarme una prueba» starts: the team's reply-to address. */
   testEmail: string;
 }) {
@@ -301,10 +288,8 @@ export default function MesaAdmin({
   const [editing, setEditing] = useState<string | null>(null);
   const [dateDraft, setDateDraft] = useState<string | null>(null);
   const [keyDraft, setKeyDraft] = useState("");
-  // «Programar el envío» / «Enviarme una prueba» for one edition.
-  const [panel, setPanel] = useState<{ edition: number; mode: "schedule" | "test" } | null>(null);
-  const [segmentId, setSegmentId] = useState(defaultSegmentId && segments.some((s) => s.id === defaultSegmentId) ? defaultSegmentId : (segments[0]?.id ?? ""));
-  const [when, setWhen] = useState("");
+  // «Enviarme una prueba» for one edition.
+  const [testing, setTesting] = useState<number | null>(null);
   const [testTo, setTestTo] = useState(testEmail);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -346,24 +331,11 @@ export default function MesaAdmin({
       "claudeKey" in body ? "key" : "editions",
     );
 
-  const openPanel = (edition: MesaEditionView, mode: "schedule" | "test") => {
-    setPanel({ edition: edition.number, mode });
-    setWhen(`${edition.day}T07:00`);
+  const openTest = (edition: number) => {
+    setTesting(edition);
     setNotice(null);
     setError(null);
   };
-  const schedule = (edition: number) =>
-    run(
-      "send",
-      async () => {
-        const at = fromBogotaInput(when);
-        if (!at) throw new Error("Elige el día y la hora.");
-        await call("/api/admin/mesa/envios", { method: "POST", body: JSON.stringify({ action: "schedule", edition, segmentId, scheduledAt: at.toISOString() }) });
-        setPanel(null);
-      },
-      "send",
-    );
-  const cancelSend = (edition: number) => run("send", () => call("/api/admin/mesa/envios", { method: "POST", body: JSON.stringify({ action: "cancel", edition }) }), "editions");
   const sendTest = (edition: number) =>
     run(
       "test",
@@ -660,9 +632,7 @@ export default function MesaAdmin({
             <>
               <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.45, color: "#33363d" }}>
                 {send.status === "QUEUED" ? (
-                  <>
-                    Sale el <b>{send.scheduledAt ? bogotaDateTime(new Date(send.scheduledAt)) : "día elegido"}</b>
-                  </>
+                  <>Programada para el {send.scheduledAt ? bogotaDateTime(new Date(send.scheduledAt)) : "día elegido"}</>
                 ) : send.status === "SENDING" ? (
                   "Está saliendo ahora"
                 ) : (
@@ -674,21 +644,7 @@ export default function MesaAdmin({
                 <a href={previewHref(edition.number)} target="_blank" rel="noreferrer" style={smallLink}>
                   Ver el correo
                 </a>
-                {send.status === "QUEUED" ? (
-                  <>
-                    <button type="button" style={smallLink} disabled={busy !== null} onClick={() => openPanel(edition, "test")}>
-                      Enviarme una prueba
-                    </button>
-                    <button
-                      type="button"
-                      style={{ ...smallLink, color: "#a5471a" }}
-                      disabled={busy !== null}
-                      onClick={() => confirm(`¿Cancelar el envío de la edición ${edition.number}? Sus piezas vuelven al banco.`) && cancelSend(edition.number)}
-                    >
-                      Cancelar el envío
-                    </button>
-                  </>
-                ) : (
+                {send.status !== "QUEUED" && (
                   <Link href={`/admin/crm/broadcasts/${send.id}`} style={smallLink}>
                     Ver el envío
                   </Link>
@@ -697,90 +653,50 @@ export default function MesaAdmin({
             </>
           ) : left === 0 ? (
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
-              <button type="button" style={{ ...primaryButtonStyle, padding: "6px 14px" }} disabled={busy !== null} onClick={() => openPanel(edition, "schedule")}>
-                Programar el envío
-              </button>
-              <a href={previewHref(edition.number)} target="_blank" rel="noreferrer" style={smallLink}>
+              <a href={previewHref(edition.number)} target="_blank" rel="noreferrer" style={{ ...primaryButtonStyle, padding: "6px 14px", textDecoration: "none" }}>
                 Ver el correo
               </a>
+              <button type="button" style={smallLink} disabled={busy !== null} onClick={() => openTest(edition.number)}>
+                Enviarme una prueba
+              </button>
             </div>
           ) : (
-            <p style={{ margin: 0, fontSize: 12.5, color: "#8a8478" }}>Cuando esté lista, aquí la programas.</p>
+            <p style={{ margin: 0, fontSize: 12.5, color: "#8a8478" }}>Cuando esté lista, aquí ves su correo.</p>
           )}
         </div>
       </section>
     );
   };
 
-  const sendPanel = () => {
-    if (!panel) return null;
-    const edition = data.editions.find((e) => e.number === panel.edition);
+  const testPanel = () => {
+    if (testing === null) return null;
+    const edition = data.editions.find((e) => e.number === testing);
     if (!edition) return null;
-    const selected = segments.find((s) => s.id === segmentId);
-    const hint: CSSProperties = { ...mutedText, fontSize: 12, fontWeight: 400 };
     return (
-      <section
-        aria-label={panel.mode === "schedule" ? "Programar el envío" : "Enviarme una prueba"}
-        style={{ marginTop: 14, padding: 18, borderRadius: 12, border: "1px solid #12966b", boxShadow: "0 0 0 2px #e3f6ee" }}
-      >
+      <section aria-label="Enviarme una prueba" style={{ marginTop: 14, padding: 18, borderRadius: 12, border: "1px solid #12966b", boxShadow: "0 0 0 2px #e3f6ee" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
           <b style={{ fontSize: 15 }}>
-            {panel.mode === "schedule" ? "Programar" : "Probar"} la edición {edition.number} · {edition.label}
+            Mira la edición {edition.number} en tu correo · {edition.label}
           </b>
-          <button type="button" style={linkButton} onClick={() => setPanel(null)}>
+          <button type="button" style={linkButton} onClick={() => setTesting(null)}>
             Cerrar
           </button>
         </div>
-        {panel.mode === "schedule" &&
-          (segments.length === 0 ? (
-            <p style={{ ...mutedText, marginBottom: 0 }}>
-              Para programarla hace falta un segmento: <Link href="/admin/crm/segments">créalo en Segmentos</Link>.
-            </p>
-          ) : (
-            <div style={{ display: "grid", gap: 14, marginTop: 14 }}>
-              <label style={{ display: "grid", gap: 4, fontSize: 13, fontWeight: 600 }}>
-                A quién le llega
-                <select value={segmentId} onChange={(e) => setSegmentId(e.target.value)} style={fieldStyle}>
-                  {segments.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} — {s.memberCount.toLocaleString("es-CO")} {s.memberCount === 1 ? "persona" : "personas"}
-                    </option>
-                  ))}
-                </select>
-                <span style={hint}>
-                  Solo le llega a quien aceptó recibir novedades. ¿Otro grupo? <Link href="/admin/crm/segments">Créalo en Segmentos</Link>.
-                </span>
-              </label>
-              <label style={{ display: "grid", gap: 4, fontSize: 13, fontWeight: 600 }}>
-                Día y hora (hora de Colombia)
-                <input type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} style={{ ...fieldStyle, width: "auto", maxWidth: 260 }} />
-                <span style={hint}>Hasta esa hora puedes cancelarlo, y sus piezas vuelven al banco.</span>
-              </label>
-              <div>
-                <button type="button" style={primaryButtonStyle} disabled={busy !== null || !segmentId || !when} onClick={() => schedule(edition.number)}>
-                  {busy === "send" ? "Programando…" : selected ? `Programar para «${selected.name}»` : "Programar"}
-                </button>
-              </div>
-            </div>
-          ))}
-        <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid #efece7" }}>
-          <b style={{ fontSize: 13 }}>{panel.mode === "schedule" ? "Antes, mírala en tu correo" : "Mírala en tu correo"}</b>
-          <div style={{ display: "flex", gap: 8, marginTop: 6, flexWrap: "wrap" }}>
-            <input
-              type="email"
-              aria-label="Correo para la prueba"
-              value={testTo}
-              onChange={(e) => setTestTo(e.target.value)}
-              placeholder="tu@correo.com"
-              style={{ ...fieldStyle, flex: 1, minWidth: 220, width: "auto" }}
-            />
-            <button type="button" style={secondaryButtonStyle} disabled={busy !== null || !testTo.trim()} onClick={() => sendTest(edition.number)}>
-              {busy === "test" ? "Enviando…" : "Enviarme una prueba"}
-            </button>
-          </div>
-          <span style={hint}>Llega con «[Prueba]» en el asunto, y sus botones no guardan votos.</span>
-          {notice && <p style={{ margin: "8px 0 0", fontSize: 13, fontWeight: 600, color: "#0d6e4f" }}>{notice}</p>}
+        <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+          <input
+            type="email"
+            aria-label="Correo para la prueba"
+            value={testTo}
+            onChange={(e) => setTestTo(e.target.value)}
+            placeholder="tu@correo.com"
+            style={{ ...fieldStyle, flex: 1, minWidth: 220, width: "auto" }}
+          />
+          <button type="button" style={secondaryButtonStyle} disabled={busy !== null || !testTo.trim()} onClick={() => sendTest(edition.number)}>
+            {busy === "test" ? "Enviando…" : "Enviarme una prueba"}
+          </button>
         </div>
+        <span style={{ ...mutedText, fontSize: 12 }}>Llega con «[Prueba]» en el asunto, y sus botones no guardan votos.</span>
+        {notice && <p style={{ margin: "8px 0 0", fontSize: 13, fontWeight: 600, color: "#0d6e4f" }}>{notice}</p>}
         {alert("send")}
       </section>
     );
@@ -852,10 +768,10 @@ export default function MesaAdmin({
 
   return (
     <div style={{ maxWidth: 900 }}>
-      <h1 style={{ fontSize: 20, margin: 0 }}>La Mesa</h1>
-      <p style={{ color: "#5b5f6b", margin: "4px 0 0", maxWidth: 720 }}>
-        El correo de Nail Fest, cada 15 días, el jueves. La IA propone las piezas; tú apruebas, programas la edición y sale sola a la hora que elijas. No
-        sale nada que no programes.
+      <h1 style={{ fontSize: 24, marginBottom: 4 }}>La Mesa</h1>
+      <p style={{ color: "#5b5f6b", marginTop: 0 }}>
+        El correo de Nail Fest, cada 15 días, el jueves. La IA propone las piezas de cada sección; tú solo apruebas o pides otra idea, y aquí queda armada la
+        plantilla de cada edición. Desde aquí no se envía nada.
       </p>
 
       {!data.keyReady && (
@@ -900,7 +816,7 @@ export default function MesaAdmin({
         <p style={{ ...mutedText, marginTop: 0 }}>Rotan solas: una para jugar y una para el oficio. El termómetro sale en todas.</p>
         {alert("editions")}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12, marginTop: 14 }}>{data.editions.map(editionBox)}</div>
-        {sendPanel()}
+        {testPanel()}
         <div style={{ display: "grid", gap: 4, marginTop: 12, fontSize: 12.5, color: "#5b5f6b" }}>
           <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
             {nail(MESA_COMMUNITY.consultorio.color, 9, 12)} El Consultorio sale solo, con las preguntas de la comunidad, mientras sea público.

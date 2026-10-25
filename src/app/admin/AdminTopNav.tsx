@@ -20,8 +20,8 @@ const NAV: { href: string; label: string; adminOnly?: boolean; also?: string[] }
   // reviews, together in one tab (2026-10-25): its page lists them, each
   // with its state (./proyectos). Their own addresses stay the same.
   { href: "/admin/proyectos", label: "Proyectos", also: ["/admin/cuponera", "/admin/biblioteca", "/admin/resenas"] },
-  // La Mesa, the newsletter, lives in CRM → Broadcasts (2026-10-25), next
-  // to the rest of the emails.
+  // The newsletter's bank of pieces (2026-10-25).
+  { href: "/admin/mesa", label: "La Mesa", adminOnly: true },
   { href: "/admin/consultorio", label: "Consultorio" },
   { href: "/admin/pages", label: "Páginas", adminOnly: true },
   { href: "/admin/settings", label: "Configuración", adminOnly: true },

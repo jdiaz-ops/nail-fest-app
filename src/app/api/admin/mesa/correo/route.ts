@@ -3,7 +3,7 @@ import { requireUser } from "@/lib/auth/guard";
 import { MesaError } from "@/lib/mesa/data";
 import { previewHtml } from "@/lib/mesa/sends";
 
-// CRM → Broadcasts → La Mesa → «Ver el correo»: the edition's email as it
+// La Mesa → «Ver el correo»: the edition's email as it
 // would go out now (as it went out, once it did), in its own tab.
 export const dynamic = "force-dynamic";
 

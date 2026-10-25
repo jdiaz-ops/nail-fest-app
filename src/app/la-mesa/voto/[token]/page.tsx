@@ -59,7 +59,9 @@ export default async function MesaVotePage({ params }: { params: { token: string
   } else if (view.termometro) {
     const t = view.termometro;
     const published = t.published && t.published.total > 0 ? t.published : null;
-    saved = published ? "Tu respuesta quedó guardada." : `Tu respuesta quedó guardada. Los resultados salen en la próxima Mesa, el ${t.nextDate}.`;
+    saved = published
+      ? "Tu respuesta quedó guardada."
+      : `Tu respuesta quedó guardada. Los resultados salen en la próxima Mesa${t.nextDate ? `, el ${t.nextDate}` : ""}.`;
     const pcts = published ? percentages(published.votes) : [];
     body = (
       <section style={{ padding: "26px 24px", background: "#fff4d6" }}>
@@ -110,7 +112,9 @@ export default async function MesaVotePage({ params }: { params: { token: string
       <div style={{ maxWidth: 520, margin: "0 auto", background: "#fff", borderRadius: 20, overflow: "hidden", boxShadow: "0 12px 34px rgba(23,24,28,.10)" }}>
         <header style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 12, padding: "20px 24px 18px", background: "#fbf6f1" }}>
           <p style={display(44)}>La Mesa</p>
-          <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: "#5b5f6b", paddingBottom: 6 }}>Edición {view.edition}</span>
+          <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: "#5b5f6b", paddingBottom: 6 }}>
+            {view.edition !== null ? `Edición ${view.edition}` : "Vista previa"}
+          </span>
         </header>
         {body}
         <div style={{ padding: "18px 24px 24px", borderTop: "1px solid #f0ece6" }}>

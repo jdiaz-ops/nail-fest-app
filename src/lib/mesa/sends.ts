@@ -3,46 +3,32 @@ import { db } from "@/lib/db";
 import { emailProvider } from "@/lib/email";
 import { visibleAnswer, visibleQuestion } from "@/lib/community/data";
 import { getCuponeraSettings } from "@/lib/cuponera/settings";
-import { bogotaDay } from "@/lib/library/data";
 import { getLibrarySettings } from "@/lib/library/settings";
-import { QSTASH_MAX_DELAY_MS, cancelScheduledSend, scheduleEventBroadcastSend } from "@/lib/qstash";
 import { getOrgSettings } from "@/lib/settings";
 import { buildUnsubscribeUrl } from "@/lib/unsubscribe";
-import { EDITIONS_AHEAD, MesaError, editionPieces, getFirstEditionOn, mesaSends, sendOf, type MesaSendView } from "./data";
+import { MesaError, editionPieces, getFirstEditionOn } from "./data";
 import { mesaEmail, type MesaConsultorioBlock, type MesaEditionSnapshot, type MesaRecipient, type MesaTermometroResults } from "./email";
-import { MESA_SECTIONS, contentOf, editionDate, longDate, nextEdition, tinyDate } from "./sections";
+import { MESA_SECTIONS, contentOf, editionDate, longDate, tinyDate } from "./sections";
 import { cityTally, tally, voteToken, voteUrl } from "./votes";
 
-// La Mesa through Broadcasts (2026-10-25): an edition is scheduled to a
-// segment at a day and time — an EmailBroadcast with its mesaEdition,
-// QUEUED, AT_DATETIME — and then it's the broadcasts' own machinery that
-// sends it (lib/broadcasts.ts: the cron or QStash at the exact time, in
-// chunks, MARKETING consent, the unsubscribe link, the stats and the
-// retries). Scheduling pins the edition's pieces to it; cancelling before
-// it starts lets them go back to the queue. Nothing goes out that the team
-// didn't schedule. Here too: the edition frozen for the email, the preview
-// and the test.
+// La Mesa's template (2026-10-25): everything an edition's email carries,
+// frozen in one object (buildMesaSnapshot), and that email for one person —
+// her name, her city's results, her signed vote links, her way out — or for
+// the team's look at it («Ver el correo», «Enviarme una prueba», whose
+// votes record nothing). La Mesa only builds the template; when an
+// EmailBroadcast carries a mesaEdition, lib/broadcasts.ts sends this email
+// with the broadcasts' own machinery (chunks, MARKETING consent, the
+// unsubscribe link, the stats and the retries).
 
-/** 7:00 a. m. in Bogotá (UTC−5 all year): when an edition goes out unless the team picks another time. */
-export const MESA_SEND_HOUR_UTC = 12;
-/** The sender's name in the inbox. */
-export const MESA_FROM_NAME = "La Mesa · Nail Fest";
 /** Who the preview and a test to an address outside the CRM are for. */
 export const MESA_SAMPLE = { firstName: "Laura", city: "Cúcuta" };
 const DAY_MS = 86_400_000;
-/** A send is scheduled at least this far ahead. */
-const LEAD_MS = 2 * 60_000;
 /** El Consultorio's block looks back this far: its most commented question, the ones waiting. */
 const CONSULTORIO_FEATURED_DAYS = 14;
 const CONSULTORIO_WAITING_DAYS = 30;
 
 export function mesaBaseUrl(): string {
   return process.env.APP_BASE_URL || "https://nailfest.lat";
-}
-
-/** Edition n's usual time: its Thursday, 7:00 a. m. in Bogotá. */
-export function defaultSendAt(firstEditionOn: Date, edition: number): Date {
-  return new Date(editionDate(firstEditionOn, edition).getTime() + MESA_SEND_HOUR_UTC * 3_600_000);
 }
 
 // ── The edition, frozen ─────────────────────────────────────────────────────
@@ -177,94 +163,5 @@ export async function sendMesaTest(edition: number, address: string, now: Date =
   const to = address.trim().toLowerCase();
   const [snapshot, person] = await Promise.all([snapshotFor(edition, now), db.person.findUnique({ where: { email: to }, select: { firstName: true, city: true } })]);
   const email = mesaEmail(snapshot, previewRecipient(person ?? MESA_SAMPLE), { baseUrl: mesaBaseUrl() });
-  await emailProvider.sendMarketing({ to, subject: `[Prueba] ${email.subject}`, text: email.text, html: email.html, fromName: MESA_FROM_NAME });
-}
-
-// ── Scheduling ──────────────────────────────────────────────────────────────
-
-/** «Programar el envío»: edition n to a segment, at that time. Its pieces
- * stay with it from now on (cancelling lets them go). */
-export async function scheduleMesaSend(input: { edition: number; segmentId: string; scheduledAt: Date }, now: Date = new Date()): Promise<{ id: string }> {
-  const { edition, segmentId, scheduledAt } = input;
-  const first = await getFirstEditionOn();
-  const next = nextEdition(first, bogotaDay(now));
-  if (edition < next || edition >= next + EDITIONS_AHEAD) throw new MesaError("Solo se programan las próximas ediciones.");
-  if (Number.isNaN(scheduledAt.getTime()) || scheduledAt.getTime() < now.getTime() + LEAD_MS) throw new MesaError("Elige una fecha y hora que todavía no haya pasado.");
-  const following = editionDate(first, edition + 1);
-  if (scheduledAt.getTime() >= following.getTime()) throw new MesaError(`Elige un día antes de la edición siguiente (${longDate(following)}).`);
-  const existing = await sendOf(edition);
-  if (existing) throw new MesaError(existing.status === "QUEUED" ? `La edición ${edition} ya está programada.` : `La edición ${edition} ya salió.`);
-  const segment = await db.segmentDefinition.findUnique({ where: { id: segmentId }, select: { id: true } });
-  if (!segment) throw new MesaError("Ese segmento ya no existe: elige otro.");
-
-  const slots = await editionPieces(edition, now);
-  if (!slots.every((s) => s.piece)) throw new MesaError(`A la edición ${edition} todavía le faltan piezas.`);
-  const ids = slots.map((s) => s.piece!.id);
-  const subjectRow = await db.mesaPiece.findFirst({ where: { section: "ASUNTO", edition, status: "APPROVED" } });
-  const subject = subjectRow ? contentOf("ASUNTO", subjectRow.content) : null;
-  if (!subject) throw new MesaError(`Elige el asunto de la edición ${edition}.`);
-  if (subject.pieceIds.join("|") !== ids.join("|")) throw new MesaError(`Cambiaron las piezas de la edición ${edition}: elige un asunto nuevo.`);
-
-  const broadcast = await db.$transaction(async (tx) => {
-    const taken = await tx.emailBroadcast.count({ where: { mesaEdition: edition, status: { in: ["QUEUED", "SENDING", "SENT"] } } });
-    if (taken > 0) throw new MesaError(`La edición ${edition} ya está programada.`);
-    const pinned = await tx.mesaPiece.updateMany({ where: { id: { in: ids }, status: "APPROVED", edition: null }, data: { edition } });
-    if (pinned.count !== ids.length) throw new MesaError("Las piezas cambiaron mientras tanto: recarga la página y vuelve a intentarlo.");
-    return tx.emailBroadcast.create({
-      data: { segmentId, subject: subject.subject, mesaEdition: edition, status: "QUEUED", scheduleKind: "AT_DATETIME", scheduledAt },
-    });
-  });
-  // Its call at the exact time when it's within QStash's reach; otherwise the
-  // 5-minute cron arms it later, and sends it anyway if that call never comes.
-  if (scheduledAt.getTime() - now.getTime() <= QSTASH_MAX_DELAY_MS) {
-    const qstashMessageId = await scheduleEventBroadcastSend(broadcast.id, scheduledAt);
-    if (qstashMessageId) await db.emailBroadcast.update({ where: { id: broadcast.id }, data: { qstashMessageId } });
-  }
-  return { id: broadcast.id };
-}
-
-/** «Cancelar el envío», while it hasn't started: its pieces go back to the queue, in their places. */
-export async function cancelMesaSend(edition: number): Promise<void> {
-  const send = await sendOf(edition);
-  if (!send) throw new MesaError(`La edición ${edition} no está programada.`);
-  if (send.status !== "QUEUED") throw new MesaError(send.status === "SENT" ? `La edición ${edition} ya salió.` : `La edición ${edition} ya empezó a salir: no se puede cancelar.`);
-  const row = await db.$transaction(async (tx) => {
-    const cancelled = await tx.emailBroadcast.updateMany({ where: { id: send.id, status: "QUEUED" }, data: { status: "CANCELLED" } });
-    if (cancelled.count === 0) throw new MesaError(`La edición ${edition} ya empezó a salir: no se puede cancelar.`);
-    await tx.mesaPiece.updateMany({ where: { edition, status: "APPROVED", section: { not: "ASUNTO" } }, data: { edition: null } });
-    return tx.emailBroadcast.findUnique({ where: { id: send.id }, select: { qstashMessageId: true } });
-  });
-  if (row?.qstashMessageId) await cancelScheduledSend(row.qstashMessageId);
-}
-
-// ── On the Broadcasts page ──────────────────────────────────────────────────
-
-export interface MesaCardView {
-  edition: number;
-  /** "jueves 5 de noviembre" */
-  label: string;
-  state: "faltan" | "lista" | "programada" | "saliendo";
-  /** What it still needs: pieces and the subject line. */
-  left: number;
-  send: MesaSendView | null;
-}
-
-/** The next edition that hasn't gone out, and where it stands. */
-export async function getMesaCard(now: Date = new Date()): Promise<MesaCardView> {
-  const [first, sends] = await Promise.all([getFirstEditionOn(), mesaSends()]);
-  const waiting = [...sends.values()].filter((s) => s.status !== "SENT").map((s) => s.edition);
-  let edition = Math.min(nextEdition(first, bogotaDay(now)), ...waiting);
-  while (sends.get(edition)?.status === "SENT") edition++;
-  const send = sends.get(edition) ?? null;
-  const [slots, subjectRow] = await Promise.all([editionPieces(edition, now), db.mesaPiece.findFirst({ where: { section: "ASUNTO", edition, status: "APPROVED" } })]);
-  const subject = subjectRow ? contentOf("ASUNTO", subjectRow.content) : null;
-  const subjectOk = subject !== null && subject.pieceIds.join("|") === slots.map((s) => s.piece?.id ?? "").join("|");
-  const left = slots.filter((s) => !s.piece).length + (subjectOk ? 0 : 1);
-  return {
-    edition,
-    label: longDate(editionDate(first, edition)),
-    state: send ? (send.status === "QUEUED" ? "programada" : "saliendo") : left === 0 ? "lista" : "faltan",
-    left,
-    send,
-  };
+  await emailProvider.sendMarketing({ to, subject: `[Prueba] ${email.subject}`, text: email.text, html: email.html });
 }

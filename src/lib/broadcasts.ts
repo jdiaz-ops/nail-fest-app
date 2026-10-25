@@ -16,7 +16,7 @@ import { REVIEW_LINK_TAG, reviewUrl } from "@/lib/reviews";
 import { tagOwnLinksInHtml, tagOwnLinksInText, slugifyForCampaign } from "@/lib/outboundLinkTagging";
 import { publicEventName } from "@/lib/eventDisplayName";
 import { mesaEmail, type MesaEditionSnapshot } from "@/lib/mesa/email";
-import { MESA_FROM_NAME, buildMesaSnapshot, mesaBaseUrl, recipientFor } from "@/lib/mesa/sends";
+import { buildMesaSnapshot, mesaBaseUrl, recipientFor } from "@/lib/mesa/sends";
 
 const CONCURRENCY = 10;
 // How many recipients one chunk sends before either finishing or handing
@@ -265,18 +265,19 @@ export async function sendEventBroadcast(
  * as sendEventBroadcast above, see its own comment for the full
  * reasoning. A plain one is IMMEDIATE (see BroadcastComposer.tsx): its
  * callers are /api/broadcasts' own POST handler and this file's QStash
- * continuation. A La Mesa edition (mesaEdition, 2026-10-25) is the one
- * scheduled kind: the cron or QStash starts it at its time (see
- * sendDueEventBroadcasts below), the edition freezes into mesaContent
- * when its recipients do, and each person gets La Mesa's own email
- * (lib/mesa/email.ts) instead of the plain-text one. */
+ * continuation. A broadcast carrying a La Mesa edition (mesaEdition,
+ * 2026-10-25) sends that edition's template instead of plain text: the
+ * edition freezes into mesaContent when its recipients do, and each person
+ * gets La Mesa's own email (lib/mesa/email.ts); scheduled (AT_DATETIME),
+ * the cron or QStash starts it at its time (see sendDueEventBroadcasts
+ * below). */
 export async function sendSegmentEmailBroadcast(
   broadcastId: string
 ): Promise<{ sent: number; skippedNoConsent: number; remaining: number; backgrounded: boolean; locked: boolean; total: number }> {
   const broadcast = await db.emailBroadcast.findUniqueOrThrow({ where: { id: broadcastId } });
   if (!broadcast.segmentId) throw new Error("sendSegmentEmailBroadcast called on a broadcast with no segmentId");
   if (!broadcast.bodyText && broadcast.mesaEdition === null) throw new Error("sendSegmentEmailBroadcast called on a broadcast with no bodyText");
-  // Cancelled while this call was on its way (La Mesa's «Cancelar el envío»): nothing goes out.
+  // Cancelled while this call was on its way: nothing goes out.
   if (broadcast.status === "CANCELLED") return { sent: 0, skippedNoConsent: 0, remaining: 0, backgrounded: false, locked: false, total: 0 };
 
   const retryPass = Array.isArray(broadcast.retryPersonIds);
@@ -291,8 +292,12 @@ export async function sendSegmentEmailBroadcast(
     const people = await resolveSegment(segment.filter as unknown as SegmentFilter);
     recipientIds = people.map((p) => p.id);
     // La Mesa: the edition freezes now, with its recipients — every chunk
-    // and every retry sends this same one.
-    if (broadcast.mesaEdition !== null) mesa = await buildMesaSnapshot(broadcast.mesaEdition);
+    // and every retry sends this same one — and its pieces become this
+    // edition's for good (they leave the queue; the votes find their edition).
+    if (broadcast.mesaEdition !== null) {
+      mesa = await buildMesaSnapshot(broadcast.mesaEdition);
+      await db.mesaPiece.updateMany({ where: { id: { in: mesa.pieces.map((piece) => piece.id) }, edition: null }, data: { edition: broadcast.mesaEdition } });
+    }
     const started = await db.emailBroadcast.updateMany({
       where: { id: broadcast.id, status: { not: "CANCELLED" } },
       data: {
@@ -366,7 +371,6 @@ export async function sendSegmentEmailBroadcast(
               text: content.text,
               html: content.html,
               listUnsubscribeHeader: `<${unsubscribeUrl}>`,
-              ...(mesa ? { fromName: MESA_FROM_NAME } : {}),
             });
             await db.emailLog.create({
               data: {

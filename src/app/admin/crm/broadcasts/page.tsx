@@ -4,62 +4,31 @@ import { countSegment, type SegmentFilter } from "@/lib/segments/builder";
 import { requirePageUser } from "@/lib/auth/guard";
 import { getBroadcastEmailStats, statsFor } from "@/lib/email/broadcastStats";
 import BroadcastComposer from "@/components/BroadcastComposer";
-import { getMesaCard, type MesaCardView } from "@/lib/mesa/sends";
-import { bogotaDateTime } from "@/lib/mesa/sections";
 import CrmPageHeader from "../CrmPageHeader";
-import BroadcastTabs from "./BroadcastTabs";
-import { broadcastStatus } from "./status";
 
 export const dynamic = "force-dynamic";
 
-/** La Mesa's next edition and where it stands, above the composer (2026-10-25). */
-function MesaCard({ card }: { card: MesaCardView }) {
-  const state = {
-    faltan: { text: card.left === 1 ? "Le falta 1 cosa" : `Le faltan ${card.left} cosas`, bg: "#fff3ea", ink: "#a5471a" },
-    lista: { text: "Lista para programar", bg: "#e3f6ee", ink: "#0d6e4f" },
-    programada: { text: "Programada", bg: "#e3f6ee", ink: "#0d6e4f" },
-    saliendo: { text: "Saliendo ahora", bg: "#fdf1e6", ink: "#8a5a1f" },
-  }[card.state];
-  const when =
-    card.state === "programada" && card.send?.scheduledAt
-      ? `Sale el ${bogotaDateTime(new Date(card.send.scheduledAt))}${card.send.segmentName ? ` a «${card.send.segmentName}»` : ""}.`
-      : `${card.label.charAt(0).toUpperCase()}${card.label.slice(1)} · el correo de Nail Fest, cada 15 días.`;
-  return (
-    <section
-      aria-label="La Mesa"
-      style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", maxWidth: 900, padding: "16px 18px", marginBottom: 28, border: "1px solid #e3e1dc", borderRadius: 12, background: "#fbf6f1" }}
-    >
-      <div style={{ flex: 1, minWidth: 240 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          <b style={{ fontSize: 15 }}>La Mesa · Edición {card.edition}</b>
-          <span style={{ padding: "2px 10px", borderRadius: 999, fontSize: 12, fontWeight: 700, background: state.bg, color: state.ink }}>{state.text}</span>
-        </div>
-        <p style={{ margin: "4px 0 0", fontSize: 13, color: "#5b5f6b" }}>{when}</p>
-      </div>
-      <Link href="/admin/crm/broadcasts/la-mesa" style={{ padding: "8px 18px", borderRadius: 999, background: "#17181c", color: "#fff", fontSize: 13, fontWeight: 600, textDecoration: "none" }}>
-        Abrir La Mesa
-      </Link>
-    </section>
-  );
-}
+const STATUS_STYLE: Record<string, { bg: string; ink: string }> = {
+  SENT: { bg: "#e8f6ef", ink: "#0e6b4c" },
+  SENDING: { bg: "#fdf1e6", ink: "#8a5a1f" },
+  DRAFT: { bg: "#f6f5f2", ink: "#5b5f6b" },
+};
 
 // ADMIN-only — see ImportPage's own comment on why this is gated again
 // here, not just hidden from CrmLayout's nav.
 export default async function BroadcastsPage() {
   await requirePageUser(["ADMIN"]);
-  const [segmentRows, broadcasts, mesa] = await Promise.all([
+  const [segmentRows, broadcasts] = await Promise.all([
     db.segmentDefinition.findMany({ orderBy: { createdAt: "desc" } }),
     // segmentId: not null — event-scoped broadcasts (see
     // /admin/events/[id]/broadcasts) have their own history under their
-    // own event, they don't belong mixed into this global list. La Mesa's
-    // editions are here too, except a cancelled one (nothing went out).
+    // own event, they don't belong mixed into this global list.
     db.emailBroadcast.findMany({
-      where: { segmentId: { not: null }, NOT: { mesaEdition: { not: null }, status: "CANCELLED" } },
+      where: { segmentId: { not: null } },
       orderBy: { createdAt: "desc" },
       take: 20,
       include: { segment: true, _count: { select: { logs: true } } },
     }),
-    getMesaCard(),
   ]);
 
   // Live member count per segment, same as Segmentos' own list — a
@@ -82,10 +51,7 @@ export default async function BroadcastsPage() {
 
   return (
     <div>
-      <BroadcastTabs />
       <CrmPageHeader title="Broadcasts" subtitle="Envía un correo a un segmento ya guardado — nunca a un filtro improvisado." />
-
-      <MesaCard card={mesa} />
 
       <BroadcastComposer segments={segments} />
 
@@ -105,7 +71,7 @@ export default async function BroadcastsPage() {
           </thead>
           <tbody>
             {broadcasts.map((b) => {
-              const style = broadcastStatus(b.status);
+              const style = STATUS_STYLE[b.status] ?? { bg: "#f6f5f2", ink: "#5b5f6b" };
               const stats = statsFor(statsByBroadcast, b.id);
               // % sobre entregados, no sobre enviados — un correo que
               // nunca se entregó no pudo haberse abierto, así que
@@ -116,11 +82,6 @@ export default async function BroadcastsPage() {
               return (
                 <tr key={b.id} style={{ borderTop: "1px solid #f0efec" }}>
                   <td style={{ padding: "10px 12px" }}>
-                    {b.mesaEdition !== null && (
-                      <span style={{ display: "inline-block", marginRight: 8, padding: "1px 8px", borderRadius: 999, background: "#fbe7d9", color: "#a5471a", fontSize: 11.5, fontWeight: 700, whiteSpace: "nowrap" }}>
-                        La Mesa · Edición {b.mesaEdition}
-                      </span>
-                    )}
                     <Link href={`/admin/crm/broadcasts/${b.id}`} style={{ color: "inherit", textDecoration: "none", fontWeight: 600 }}>
                       {b.subject}
                     </Link>
@@ -138,11 +99,8 @@ export default async function BroadcastsPage() {
                         color: style.ink,
                       }}
                     >
-                      {style.label}
+                      {b.status}
                     </span>
-                    {b.status === "QUEUED" && b.scheduledAt && (
-                      <small style={{ display: "block", marginTop: 4, fontSize: 12, color: "#5b5f6b", whiteSpace: "nowrap" }}>{bogotaDateTime(b.scheduledAt)}</small>
-                    )}
                   </td>
                   <td style={{ padding: "10px 12px" }}>{b._count.logs}</td>
                   <td style={{ padding: "10px 12px" }}>

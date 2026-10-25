@@ -102,9 +102,9 @@ async function votedPiece(pieceId: string): Promise<VotedPiece | null> {
 export async function recordVote(token: string): Promise<"saved" | "preview" | "invalid"> {
   const read = readVoteToken(token);
   if (!read) return "invalid";
+  if (read.personId === null) return "preview";
   const piece = await votedPiece(read.pieceId);
   if (!piece || read.option >= piece.options) return "invalid";
-  if (read.personId === null) return "preview";
   const person = await db.person.findUnique({ where: { id: read.personId }, select: { id: true } });
   if (!person) return "invalid";
   await db.mesaVote.upsert({
@@ -118,14 +118,15 @@ export async function recordVote(token: string): Promise<"saved" | "preview" | "
 export interface MesaVotePage {
   token: string;
   preview: boolean;
-  edition: number;
+  /** Null only in a preview of an edition that hasn't gone out. */
+  edition: number | null;
   option: number;
   mito: { statement: string; answer: "mito" | "verdad"; explanation: string; right: boolean; rightPct: number | null } | null;
   termometro: {
     question: string;
     options: string[];
-    /** "jueves 19 de noviembre": when La Mesa brings the results. */
-    nextDate: string;
+    /** "jueves 19 de noviembre": when La Mesa brings the results (null: its edition isn't set yet). */
+    nextDate: string | null;
     /** Already out in a later edition: those results. */
     published: { votes: number[]; total: number } | null;
   } | null;
@@ -136,8 +137,12 @@ export async function votePage(token: string, firstEditionOn: Date): Promise<Mes
   const read = readVoteToken(token);
   if (!read) return null;
   const piece = await db.mesaPiece.findUnique({ where: { id: read.pieceId } });
-  if (!piece || piece.edition === null) return null;
-  const base = { token, preview: read.personId === null, edition: piece.edition, option: read.option };
+  const preview = read.personId === null;
+  // A real tap comes from an edition that went out; a preview's or a test's
+  // can come before the edition has its pieces for good.
+  if (!piece || (piece.edition === null && !preview)) return null;
+  const edition = piece.edition;
+  const base = { token, preview, edition, option: read.option };
 
   if (piece.section === "MITO") {
     const c = contentOf("MITO", piece.content);
@@ -162,11 +167,14 @@ export async function votePage(token: string, firstEditionOn: Date): Promise<Mes
     const c = contentOf("TERMOMETRO", piece.content);
     if (!c || read.option >= c.options.length) return null;
     // A later edition that already brought these results.
-    const later = await db.emailBroadcast.findMany({
-      where: { mesaEdition: { gt: piece.edition, lte: piece.edition + 6 }, status: { in: ["SENDING", "SENT"] } },
-      orderBy: { mesaEdition: "asc" },
-      select: { mesaContent: true },
-    });
+    const later =
+      edition === null
+        ? []
+        : await db.emailBroadcast.findMany({
+            where: { mesaEdition: { gt: edition, lte: edition + 6 }, status: { in: ["SENDING", "SENT"] } },
+            orderBy: { mesaEdition: "asc" },
+            select: { mesaContent: true },
+          });
     const results = later.map((b) => (b.mesaContent as unknown as MesaEditionSnapshot | null)?.results).find((r) => r?.pieceId === piece.id) ?? null;
     return {
       ...base,
@@ -174,7 +182,7 @@ export async function votePage(token: string, firstEditionOn: Date): Promise<Mes
       termometro: {
         question: c.question,
         options: c.options,
-        nextDate: longDate(editionDate(firstEditionOn, piece.edition + 1)),
+        nextDate: edition === null ? null : longDate(editionDate(firstEditionOn, edition + 1)),
         published: results ? { votes: results.votes, total: results.total } : null,
       },
     };

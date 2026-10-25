@@ -4,7 +4,7 @@ import { requireUser } from "@/lib/auth/guard";
 import { MesaError } from "@/lib/mesa/data";
 import { sendMesaTest } from "@/lib/mesa/sends";
 
-// CRM → Broadcasts → La Mesa → «Enviarme una prueba»: the edition to one
+// La Mesa → «Enviarme una prueba»: the edition to one
 // address, its subject starting with [Prueba]; its votes record nothing.
 export const dynamic = "force-dynamic";
 

@@ -57,7 +57,7 @@ async function send(
   // email" route) with an uncaught exception instead of a per-recipient
   // failure. Resolving them inside this async function turns that throw
   // into an ordinary rejection like any other send failure.
-  const from = friendlyFrom(requireEnv(opts.fromEnvVar), input.fromName);
+  const from = friendlyFrom(requireEnv(opts.fromEnvVar));
   const configurationSet = requireEnv(opts.configurationSetEnvVar);
 
   // Explicit input.replyTo wins; otherwise fall back to the account-wide
