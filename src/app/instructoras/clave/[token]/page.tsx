@@ -36,7 +36,7 @@ export default async function ClavePage({ params }: { params: { token: string } 
         <h1 className={`pt-h1 ${fraunces.className}`}>{invite ? "Activa tu perfil" : "Crea una contraseña nueva"}</h1>
         {invite ? (
           <p className="pt-lede">
-            El equipo de Nail Fest hizo tu perfil en el directorio de instructoras. Con tu cuenta lo manejas tú: tu foto, lo que cuentas de ti, tus redes y tus videos.
+            El equipo de Nail Fest hizo tu perfil en el directorio de instructoras. Con tu cuenta lo manejas tú: tu foto, lo que cuentas de ti y tus redes.
             Tu usuario es <b>{link.instructor.slug}</b>.
           </p>
         ) : (

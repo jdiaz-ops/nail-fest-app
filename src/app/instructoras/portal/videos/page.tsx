@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import PortalShell from "@/components/portal/PortalShell";
 import VideoSubmitForm from "@/components/portal/VideoSubmitForm";
 import { PortalIcon } from "@/components/portal/icons";
@@ -30,6 +31,7 @@ function pillOf(s: { status: string; video: { visible: boolean } | null }): Pill
 // "Mis videos": her videos already in the library (the ones she sent and
 // the ones the team loaded for her), what she has sent and where each one
 // stands, and the form to send another (components/portal/VideoSubmitForm).
+// While El Taller is hidden (2026-10-25), it takes her back to her portal.
 export default async function MisVideosPage() {
   const { instructor, account } = await requirePortalPage();
   const [settings, videos, submissions] = await Promise.all([
@@ -37,9 +39,10 @@ export default async function MisVideosPage() {
     db.libraryVideo.findMany({ where: { instructorId: instructor.id, visible: true }, orderBy: { publishedAt: "desc" } }),
     db.instructorVideoSubmission.findMany({ where: { instructorId: instructor.id }, orderBy: { createdAt: "desc" }, include: { video: { select: { visible: true, slug: true } } } }),
   ]);
+  if (!settings.published) redirect("/instructoras/portal");
 
   return (
-    <PortalShell instructor={instructor} tab="videos">
+    <PortalShell instructor={instructor} tab="videos" videos>
       <div className="pt-wrap">
         <h1 className={`pt-h1 ${fraunces.className}`}>Mis videos</h1>
         <div className="pt-card pt-card--accent">

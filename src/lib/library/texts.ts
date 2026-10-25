@@ -142,7 +142,7 @@ export const LIBRARY_TEXTS = {
   directoryLede: {
     page: "instructoras",
     label: "Texto debajo del título",
-    value: "Encuentra instructoras de uñas por ciudad y especialidad: sus técnicas, sus videos y sus redes.",
+    value: "Encuentra instructoras de uñas por ciudad y especialidad: sus técnicas y sus redes.",
     long: true,
   },
   directorySearchPlaceholder: { page: "instructoras", label: "Texto dentro del buscador", value: "Busca por nombre, ciudad o técnica", section: "directorySearch" },
@@ -150,7 +150,7 @@ export const LIBRARY_TEXTS = {
   teachText: {
     page: "instructoras",
     label: "Texto",
-    value: "Crea tu perfil gratis: que te encuentren por tu ciudad y tu especialidad, con tus redes. Y si quieres, envía tus videos: el equipo elige cuáles salen en El Taller, en nuestras redes y en nuestro correo.",
+    value: "Crea tu perfil gratis: que te encuentren por tu ciudad y tu especialidad, con tus redes.",
     long: true,
     section: "teachCta",
   },

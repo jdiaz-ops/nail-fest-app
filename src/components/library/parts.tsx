@@ -224,8 +224,9 @@ export function PeopleRow({ people }: { people: InstructorCard[] }) {
   );
 }
 
-export function InstructorTile({ instructor, featuredLabel }: { instructor: InstructorCard; featuredLabel: string }) {
-  const meta = [instructor.videoCount === 1 ? "1 video" : `${instructor.videoCount} videos`];
+/** An instructor's card in the directory; her video count only while El Taller is public. */
+export function InstructorTile({ instructor, featuredLabel, showVideos }: { instructor: InstructorCard; featuredLabel: string; showVideos: boolean }) {
+  const meta = showVideos ? [instructor.videoCount === 1 ? "1 video" : `${instructor.videoCount} videos`] : [];
   return (
     <Link href={`/instructoras/${instructor.slug}`} className="bib-icard">
       <span className="bib-icard-photo">
@@ -248,7 +249,7 @@ export function InstructorTile({ instructor, featuredLabel }: { instructor: Inst
             ))}
           </span>
         )}
-        <small className="bib-icard-meta">{meta.join(" · ")}</small>
+        {meta.length > 0 && <small className="bib-icard-meta">{meta.join(" · ")}</small>}
       </span>
     </Link>
   );

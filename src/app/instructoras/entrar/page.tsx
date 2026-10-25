@@ -35,7 +35,7 @@ export default async function EntrarPage({ searchParams }: { searchParams: Recor
     >
       <div className="pt-wrap">
         <h1 className={`pt-h1 ${fraunces.className}`}>Entra a tu portal</h1>
-        <p className="pt-lede">Para cambiar tu perfil y enviar tus videos.</p>
+        <p className="pt-lede">Para cambiar tu perfil, tus redes y tu cuenta.</p>
         <LoginForm returnTo={returnTo} />
         {canJoin && (
           <p className="pt-center">

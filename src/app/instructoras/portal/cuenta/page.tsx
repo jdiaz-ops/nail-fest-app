@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import PortalShell from "@/components/portal/PortalShell";
 import AccountForm from "@/components/portal/AccountForm";
 import { profileAddress, requirePortalPage } from "@/lib/library/portalAuth";
+import { getLibrarySettings } from "@/lib/library/settings";
 import { fraunces } from "@/app/cuponera/fonts";
 
 export const dynamic = "force-dynamic";
@@ -11,11 +12,11 @@ export const metadata: Metadata = { title: "Cuenta · Instructoras Nail Fest", r
 // "Cuenta": her username — fixed, it's her profile's address — and
 // components/portal/AccountForm for the rest.
 export default async function CuentaPage() {
-  const { instructor, account } = await requirePortalPage();
+  const [{ instructor, account }, settings] = await Promise.all([requirePortalPage(), getLibrarySettings()]);
   const address = profileAddress(instructor.slug);
 
   return (
-    <PortalShell instructor={instructor} tab="cuenta">
+    <PortalShell instructor={instructor} tab="cuenta" videos={settings.published}>
       <div className="pt-wrap">
         <h1 className={`pt-h1 ${fraunces.className}`}>Cuenta</h1>
         <div className="pt-card">

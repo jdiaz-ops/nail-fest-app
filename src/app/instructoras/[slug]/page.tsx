@@ -119,10 +119,12 @@ export default async function InstructoraPage({ params }: { params: { slug: stri
             </div>
           )}
           <div className="bib-stats">
-            <div>
-              <b className={fraunces.className}>{videos.length}</b>
-              <span>{videos.length === 1 ? "video" : "videos"}</span>
-            </div>
+            {libraryOpen && (
+              <div>
+                <b className={fraunces.className}>{videos.length}</b>
+                <span>{videos.length === 1 ? "video" : "videos"}</span>
+              </div>
+            )}
             <div>
               <b className={fraunces.className}>{instructor.appearances.length}</b>
               <span>{instructor.appearances.length === 1 ? "evento Nail Fest" : "eventos Nail Fest"}</span>
@@ -141,7 +143,7 @@ export default async function InstructoraPage({ params }: { params: { slug: stri
           </section>
         )}
 
-        {sections.profileProducts && brands.length > 0 && (
+        {sections.profileProducts && libraryOpen && brands.length > 0 && (
           <section className="bib-section">
             <h2 className={`bib-h2 ${fraunces.className}`}>{texts.profileProductsTitle}</h2>
             <p className="bib-sub">Con descuento en la Cuponera Nail Fest.</p>

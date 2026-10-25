@@ -26,7 +26,7 @@ export default async function MiPerfilPage() {
   ];
 
   return (
-    <PortalShell instructor={instructor} tab="perfil">
+    <PortalShell instructor={instructor} tab="perfil" videos={settings.published}>
       <div className="pt-wrap">
         <h1 className={`pt-h1 ${fraunces.className}`}>Mi perfil</h1>
         <p className="pt-lede">

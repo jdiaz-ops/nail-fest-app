@@ -37,18 +37,23 @@ export default async function PortalHomePage() {
   const menu: { href: string; icon: PortalIconName; tone: string; title: string; text: string }[] = [
     { href: "/instructoras/portal/perfil", icon: "person", tone: "bib-tone-mint", title: "Mi perfil", text: "Foto, nombre, ciudad, especialidades y sobre ti" },
     { href: "/instructoras/portal/perfil#redes", icon: "link", tone: "bib-tone-peach", title: "Redes y contacto", text: "Instagram, TikTok, YouTube y WhatsApp" },
-    {
-      href: "/instructoras/portal/videos",
-      icon: "play",
-      tone: "bib-tone-lilac",
-      title: "Mis videos",
-      text: sent || published ? `${plural(sent, "enviado", "enviados")} · ${plural(published, "en El Taller", "en El Taller")}` : "Envía tu primer video",
-    },
+    // Her videos only while El Taller is public (hidden since 2026-10-25).
+    ...(settings.published
+      ? [
+          {
+            href: "/instructoras/portal/videos",
+            icon: "play" as const,
+            tone: "bib-tone-lilac",
+            title: "Mis videos",
+            text: sent || published ? `${plural(sent, "enviado", "enviados")} · ${plural(published, "en El Taller", "en El Taller")}` : "Envía tu primer video",
+          },
+        ]
+      : []),
     { href: "/instructoras/portal/cuenta", icon: "gear", tone: "bib-tone-stone", title: "Cuenta", text: "Usuario, correo, celular y contraseña" },
   ];
 
   return (
-    <PortalShell instructor={instructor} tab="inicio">
+    <PortalShell instructor={instructor} tab="inicio" videos={settings.published}>
       <div className="pt-wrap">
         <h1 className={`pt-h1 ${fraunces.className}`}>Hola, {instructor.name.split(" ")[0]}</h1>
 
@@ -130,13 +135,15 @@ export default async function PortalHomePage() {
           ))}
         </nav>
 
-        <div className="pt-card pt-card--accent">
-          <h2 className={`pt-h2 ${fraunces.className}`}>Sé instructora activa</h2>
-          <p>Envía tus videos con su ficha. El equipo elige cuáles salen en El Taller, en las redes y en el correo de Nail Fest, con tu nombre y tus redes.</p>
-          <Link href="/instructoras/portal/videos#enviar" className="bib-btn bib-btn-main bib-btn-sm">
-            Enviar un video
-          </Link>
-        </div>
+        {settings.published && (
+          <div className="pt-card pt-card--accent">
+            <h2 className={`pt-h2 ${fraunces.className}`}>Sé instructora activa</h2>
+            <p>Envía tus videos con su ficha. El equipo elige cuáles salen en El Taller, en las redes y en el correo de Nail Fest, con tu nombre y tus redes.</p>
+            <Link href="/instructoras/portal/videos#enviar" className="bib-btn bib-btn-main bib-btn-sm">
+              Enviar un video
+            </Link>
+          </div>
+        )}
       </div>
     </PortalShell>
   );

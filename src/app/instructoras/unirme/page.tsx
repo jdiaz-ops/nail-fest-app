@@ -27,7 +27,9 @@ const INCLUDES = [
   "Gratis. Lo cambias o lo pausas cuando quieras",
 ];
 
-const STEPS = ["Creas tu cuenta con usuario y contraseña.", "Completas tu perfil en 5 pasos.", "El equipo lo revisa y lo publica.", "Si quieres, envías tus videos."];
+const STEPS = ["Creas tu cuenta con usuario y contraseña.", "Completas tu perfil en 5 pasos.", "El equipo lo revisa y lo publica."];
+// Only while El Taller is public (hidden since 2026-10-25).
+const VIDEOS_STEP = "Si quieres, envías tus videos.";
 
 // nailfest.lat/instructoras/unirme — the way in for instructors: what the
 // directory gives them, how it works and how Nail Fest earns, and the
@@ -39,6 +41,7 @@ export default async function UnirmePage() {
   if (user) redirect("/instructoras/portal");
   const { texts, portalOpen } = viewer.config;
   const open = portalOpen || viewer.staff;
+  const videos = viewer.config.published || viewer.staff;
 
   return (
     <PortalShell
@@ -79,22 +82,26 @@ export default async function UnirmePage() {
             </div>
           ))}
         </div>
-        <div className="pt-card pt-card--accent">
-          <h2 className={`pt-h2 ${fraunces.className}`}>{texts.joinActiveTitle}</h2>
-          <p>{texts.joinActiveText}</p>
-        </div>
+        {videos && (
+          <div className="pt-card pt-card--accent">
+            <h2 className={`pt-h2 ${fraunces.className}`}>{texts.joinActiveTitle}</h2>
+            <p>{texts.joinActiveText}</p>
+          </div>
+        )}
         <div className="pt-card">
           <h2 className="pt-h3">Cómo funciona</h2>
           <ol className="pt-steps">
-            {STEPS.map((s) => (
+            {(videos ? [...STEPS, VIDEOS_STEP] : STEPS).map((s) => (
               <li key={s}>{s}</li>
             ))}
           </ol>
         </div>
-        <div className="pt-card pt-card--soft">
-          <h2 className="pt-h3">{texts.joinMoneyTitle}</h2>
-          <p>{texts.joinMoneyText}</p>
-        </div>
+        {videos && (
+          <div className="pt-card pt-card--soft">
+            <h2 className="pt-h3">{texts.joinMoneyTitle}</h2>
+            <p>{texts.joinMoneyText}</p>
+          </div>
+        )}
         {open && (
           <Link href="/instructoras/unirme/cuenta" className="bib-btn bib-btn-main pt-wide">
             Crear mi perfil

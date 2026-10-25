@@ -35,6 +35,7 @@ export default function PortalShell({
   tab,
   aside,
   note = null,
+  videos = false,
   children,
 }: {
   /** Logged in: her face in the header, linking to the portal. */
@@ -45,6 +46,8 @@ export default function PortalShell({
   aside?: ReactNode;
   /** The team's banner: why this page isn't what visitors see. */
   note?: string | null;
+  /** Her videos' tab: only while El Taller is public (hidden since 2026-10-25). */
+  videos?: boolean;
   children: ReactNode;
 }) {
   return (
@@ -78,7 +81,7 @@ export default function PortalShell({
       {tab && (
         <nav className="pt-tabs" aria-label="Tu portal">
           <div className="pt-tabs-inner">
-            {TABS.map((t) => (
+            {TABS.filter((t) => videos || t.key !== "videos").map((t) => (
               <Link key={t.key} href={t.href} className="pt-tab" aria-current={t.key === tab ? "page" : undefined}>
                 <PortalIcon name={t.icon} size={22} />
                 {t.label}

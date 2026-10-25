@@ -16,7 +16,7 @@ type SearchParams = Record<string, string | string[] | undefined>;
 export async function generateMetadata(): Promise<Metadata> {
   return {
     title: "El directorio de instructoras de uñas · Nail Fest",
-    description: "Encuentra instructoras de uñas por ciudad y especialidad: sus técnicas, sus videos y sus redes.",
+    description: "Encuentra instructoras de uñas por ciudad y especialidad: sus técnicas y sus redes.",
     robots: await libraryRobots("instructoras"),
   };
 }
@@ -134,7 +134,7 @@ export default async function InstructorasPage({ searchParams }: { searchParams:
             {shown.length > 0 ? (
               <div className="bib-igrid">
                 {shown.map((i) => (
-                  <InstructorTile key={i.id} instructor={i} featuredLabel={texts.featuredLabel} />
+                  <InstructorTile key={i.id} instructor={i} featuredLabel={texts.featuredLabel} showVideos={viewer.staff || viewer.config.published} />
                 ))}
               </div>
             ) : (
