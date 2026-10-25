@@ -6,7 +6,7 @@ import { PortalIcon } from "@/components/portal/icons";
 import { db } from "@/lib/db";
 import { getLibrarySettings } from "@/lib/library/settings";
 import { requirePortalPage } from "@/lib/library/portalAuth";
-import { LIBRARY_LEVELS, LIBRARY_THEMES, youtubeThumbnail } from "@/lib/library/shared";
+import { LIBRARY_THEMES, youtubeThumbnail } from "@/lib/library/shared";
 import { fraunces } from "@/app/cuponera/fonts";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +14,6 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Mis videos · Instructoras Nail Fest", robots: { index: false, follow: false } };
 
 const themeLabel = (key: string) => LIBRARY_THEMES.find((t) => t.key === key)?.label ?? key;
-const levelLabel = (key: string) => LIBRARY_LEVELS.find((l) => l.key === key)?.label ?? key;
 const day = (d: Date) => d.toLocaleDateString("es-CO", { day: "numeric", month: "short", timeZone: "America/Bogota" }).replace(".", "");
 
 type Pill = { label: string; className: string };
@@ -62,7 +61,7 @@ export default async function MisVideosPage() {
                 <span>
                   <b>{v.title}</b>
                   <small>
-                    {themeLabel(v.theme)} · {levelLabel(v.level)}
+                    {themeLabel(v.theme)}
                   </small>
                   {settings.published && (
                     <Link href={`/biblioteca/${v.slug}`} className="pt-link">
@@ -89,7 +88,7 @@ export default async function MisVideosPage() {
                   <span>
                     <b>{s.title}</b>
                     <small>
-                      {themeLabel(s.theme)} · {levelLabel(s.level)} · enviado el {day(s.createdAt)}
+                      {themeLabel(s.theme)} · enviado el {day(s.createdAt)}
                     </small>
                     <span className={`pt-pill ${pill.className}`}>
                       {pill.className === "pt-pill--live" && <PortalIcon name="check" size={13} />}

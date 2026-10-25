@@ -14,22 +14,22 @@ import {
   LIBRARY_THEMES,
   SAMPLE_SLUG_PREFIX,
   SHORTIES_SHOWN_FROM,
+  SUBCATEGORY_SHOWN_FROM,
   isKind,
-  isLevel,
   initialOf,
   isTheme,
   queryWords,
   themeOf,
-  levelLabel,
+  themesOf,
   toneOf,
   topicsOf,
   usedProductRefsOf,
   withExamples,
   type CortosTopic,
   type InstructorCard,
-  type LibraryLevel,
   type LibraryMenuData,
   type LibraryPerson,
+  type LibrarySubcategoryRef,
   type LibraryTheme,
   type LibraryVideoCard,
   type LibraryVideoKind,
@@ -122,7 +122,26 @@ async function viewCounts(ids: string[], now: Date): Promise<{ total: Map<string
   };
 }
 
-function toVideoCard(row: VideoRow, views: { total: Map<string, number>; week: Map<string, number> }): LibraryVideoCard {
+type SubcategoryRefs = Map<string, LibrarySubcategoryRef>;
+
+/** The subcategories this viewer sees on the videos: not hidden and with
+ * three videos or more — for staff always, for everyone once «Subcategorías»
+ * is on (Editar biblioteca → Textos y secciones). */
+export async function subcategoryRefs(viewer: LibraryViewer): Promise<SubcategoryRefs> {
+  if (!viewer.staff && !viewer.config.sections.subcategories) return new Map();
+  const [subs, counts] = await Promise.all([
+    db.librarySubcategory.findMany({ where: { hidden: false } }),
+    db.$queryRaw<{ key: string; n: bigint }[]>`SELECT unnest("subcategories") AS key, COUNT(*) AS n FROM "LibraryVideo" WHERE visible GROUP BY 1`,
+  ]);
+  const count = new Map(counts.map((c) => [c.key, Number(c.n)]));
+  return new Map(
+    subs
+      .filter((s) => isTheme(s.theme) && (count.get(s.key) ?? 0) >= SUBCATEGORY_SHOWN_FROM)
+      .map((s) => [s.key, { key: s.key, name: s.name, theme: s.theme as LibraryTheme }]),
+  );
+}
+
+function toVideoCard(row: VideoRow, views: { total: Map<string, number>; week: Map<string, number> }, subs: SubcategoryRefs): LibraryVideoCard {
   return {
     id: row.id,
     slug: row.slug,
@@ -130,7 +149,8 @@ function toVideoCard(row: VideoRow, views: { total: Map<string, number>; week: M
     title: row.title,
     description: row.description,
     theme: isTheme(row.theme) ? row.theme : "tecnicas",
-    level: isLevel(row.level) ? row.level : "principiante",
+    themes: themesOf({ theme: isTheme(row.theme) ? row.theme : "tecnicas", extraThemes: row.extraThemes }),
+    subcategories: row.subcategories.map((key) => subs.get(key)).filter((s): s is LibrarySubcategoryRef => Boolean(s)),
     youtubeId: row.youtubeId,
     durationSeconds: row.durationSeconds,
     instructor: row.instructor ? personOf(row.instructor) : null,
@@ -145,18 +165,21 @@ function toVideoCard(row: VideoRow, views: { total: Map<string, number>; week: M
 }
 
 /** Every visible video, newest first. */
-async function realVideoCards(now: Date): Promise<LibraryVideoCard[]> {
-  const rows = await db.libraryVideo.findMany({ where: { visible: true }, orderBy: { publishedAt: "desc" }, include: { instructor: true } });
+async function realVideoCards(viewer: LibraryViewer, now: Date): Promise<LibraryVideoCard[]> {
+  const [rows, subs] = await Promise.all([
+    db.libraryVideo.findMany({ where: { visible: true }, orderBy: { publishedAt: "desc" }, include: { instructor: true } }),
+    subcategoryRefs(viewer),
+  ]);
   const views = await viewCounts(
     rows.map((r) => r.id),
     now,
   );
-  return rows.map((row) => toVideoCard(row, views));
+  return rows.map((row) => toVideoCard(row, views, subs));
 }
 
 /** The pool a page draws from: the real videos and, for staff, the examples. */
 async function videoPool(viewer: LibraryViewer, now: Date): Promise<{ real: LibraryVideoCard[]; examples: LibraryVideoCard[] }> {
-  return { real: await realVideoCards(now), examples: viewer.staff ? sampleVideos(now) : [] };
+  return { real: await realVideoCards(viewer, now), examples: viewer.staff ? sampleVideos(now) : [] };
 }
 
 export interface LibraryHome {
@@ -190,7 +213,7 @@ export async function getLibraryHome(viewer: LibraryViewer, now: Date = new Date
 
   const counted = withExamples(real, examples, Number.MAX_SAFE_INTEGER, viewer.staff);
   const themeCounts: Partial<Record<LibraryTheme, number>> = {};
-  for (const v of counted) themeCounts[v.theme] = (themeCounts[v.theme] ?? 0) + 1;
+  for (const v of counted) for (const theme of v.themes) themeCounts[theme] = (themeCounts[theme] ?? 0) + 1;
 
   return {
     empty: real.length === 0,
@@ -277,9 +300,16 @@ export interface LibraryVideoPage {
   related: LibraryVideoCard[];
 }
 
+/** Its subcategory's first, then the ones that share a theme, then the rest. */
 function relatedTo(video: LibraryVideoCard, pool: LibraryVideoCard[]): LibraryVideoCard[] {
   const others = pool.filter((v) => v.id !== video.id && v.kind === "video");
-  return [...others.filter((v) => v.theme === video.theme), ...others.filter((v) => v.theme !== video.theme)].slice(0, RELATED_UP_TO);
+  const closeness = (v: LibraryVideoCard) =>
+    (v.subcategories.some((s) => video.subcategories.some((x) => x.key === s.key)) ? 2 : 0) + (v.themes.some((t) => video.themes.includes(t)) ? 1 : 0);
+  return others
+    .map((v, index) => ({ v, index, score: closeness(v) }))
+    .sort((a, b) => b.score - a.score || a.index - b.index)
+    .slice(0, RELATED_UP_TO)
+    .map((x) => x.v);
 }
 
 export async function getLibraryVideoPage(slug: string, viewer: LibraryViewer, now: Date = new Date()): Promise<LibraryVideoPage | null> {
@@ -292,12 +322,13 @@ export async function getLibraryVideoPage(slug: string, viewer: LibraryViewer, n
 
   const row = await db.libraryVideo.findUnique({ where: { slug }, include: { instructor: true } });
   if (!row || (!row.visible && !viewer.staff)) return null;
-  const [views, products, pool] = await Promise.all([
+  const [views, products, pool, subs] = await Promise.all([
     viewCounts([row.id], now),
     resolveUsedProducts(usedProductRefsOf(row.products), viewer.cuponeraLive),
     videoPool(viewer, now),
+    subcategoryRefs(viewer),
   ]);
-  const video = toVideoCard(row, views);
+  const video = toVideoCard(row, views, subs);
   const related = relatedTo(video, pool.real);
   return {
     video,
@@ -334,9 +365,13 @@ export function shortiesCount(): Promise<number> {
  * library's front page, the community home). Staff see the examples' too
  * while there are few real ones. */
 export async function getCortosTopics(viewer: LibraryViewer, now: Date = new Date()): Promise<CortosTopic[]> {
-  const rows = await db.libraryVideo.findMany({ where: shortiesWhere, select: { theme: true, tags: true } });
+  const [rows, subs] = await Promise.all([
+    db.libraryVideo.findMany({ where: shortiesWhere, select: { theme: true, extraThemes: true, subcategories: true, tags: true } }),
+    subcategoryRefs(viewer),
+  ]);
   const examples = viewer.staff && rows.length < SHORTIES_EXAMPLES_UP_TO ? sampleVideos(now).filter((v) => v.kind === "video") : [];
-  return topicsOf([...rows, ...examples]);
+  const real = rows.map((r) => ({ ...r, subcategories: r.subcategories.map((key) => subs.get(key)).filter((x): x is LibrarySubcategoryRef => Boolean(x)) }));
+  return topicsOf([...real, ...examples]);
 }
 
 /** Every short of the feed, newest first (the page shuffles them), with its
@@ -344,15 +379,16 @@ export async function getCortosTopics(viewer: LibraryViewer, now: Date = new Dat
 export async function getShorties(viewer: LibraryViewer, now: Date = new Date()): Promise<ShortItem[]> {
   const rows = await db.libraryVideo.findMany({ where: shortiesWhere, orderBy: { publishedAt: "desc" }, include: { instructor: true } });
   const refs = rows.map((r) => usedProductRefsOf(r.products));
-  const [views, cuponera] = await Promise.all([
+  const [views, cuponera, subs] = await Promise.all([
     viewCounts(
       rows.map((r) => r.id),
       now,
     ),
     cuponeraRows(cuponeraIdsOf(refs.flat())),
+    subcategoryRefs(viewer),
   ]);
   const items = rows.map(
-    (row, i): ShortItem => ({ video: toVideoCard(row, views), products: resolveWith(refs[i]!, cuponera, viewer.cuponeraLive), hasSteps: row.steps.length > 0 }),
+    (row, i): ShortItem => ({ video: toVideoCard(row, views, subs), products: resolveWith(refs[i]!, cuponera, viewer.cuponeraLive), hasSteps: row.steps.length > 0 }),
   );
   const examples = viewer.staff
     ? sampleVideos(now)
@@ -371,14 +407,15 @@ const MENU_PEOPLE_UP_TO = 8;
 
 async function menuVideoFacts(viewer: LibraryViewer, now: Date) {
   const since = new Date(bogotaDay(now).getTime() - 6 * DAY_MS);
-  const [byTheme, byKind, watched, shorties] = await Promise.all([
-    db.libraryVideo.groupBy({ by: ["theme"], where: { visible: true }, _count: { _all: true } }),
+  const [themed, byKind, watched, shorties] = await Promise.all([
+    db.libraryVideo.findMany({ where: { visible: true }, select: { theme: true, extraThemes: true } }),
     db.libraryVideo.groupBy({ by: ["kind"], where: { visible: true }, _count: { _all: true } }),
     db.libraryVideoDailyView.groupBy({ by: ["videoId"], where: { day: { gte: since }, views: { gt: 0 }, video: { visible: true, kind: "video" } } }),
     shortiesCount(),
   ]);
-  const themeCounts = new Map<string, number>(byTheme.map((r) => [r.theme, r._count._all]));
-  if (viewer.staff) for (const v of sampleVideos(now)) themeCounts.set(v.theme, (themeCounts.get(v.theme) ?? 0) + 1);
+  // A video counts in each of its themes.
+  const themeCounts = new Map<string, number>();
+  for (const v of [...themed, ...(viewer.staff ? sampleVideos(now) : [])]) for (const theme of themesOf(v)) themeCounts.set(theme, (themeCounts.get(theme) ?? 0) + 1);
   const kinds = new Map<string, number>(byKind.map((r) => [r.kind, r._count._all]));
   return { themeCounts, shorts: kinds.get("video") ?? 0, recordings: kinds.get("maraton") ?? 0, watched: watched.length, shorties };
 }
@@ -416,7 +453,7 @@ export async function getLibraryMenu(viewer: LibraryViewer, now: Date = new Date
     themes,
     people: people.slice(0, MENU_PEOPLE_UP_TO).map((p) => ({ slug: p.slug, name: p.name, initial: p.initial, photoUrl: p.photoUrl, tone: p.tone, city: p.city })),
     cities: [...new Set(people.map((p) => p.city))].sort((a, b) => a.localeCompare(b, "es")),
-    sections: { badge: sections.shortiesBadge, themes: sections.menuThemes, levels: sections.menuLevels, instructors: sections.menuInstructors, cities: sections.menuCities },
+    sections: { badge: sections.shortiesBadge, themes: sections.menuThemes, instructors: sections.menuInstructors, cities: sections.menuCities },
     texts: {
       sectionsTitle: texts.menuSectionsTitle,
       home: texts.menuHome,
@@ -429,7 +466,6 @@ export async function getLibraryMenu(viewer: LibraryViewer, now: Date = new Date
       directory: texts.menuDirectory,
       cuponera: texts.menuCuponera,
       themesTitle: texts.menuThemesTitle,
-      levelsTitle: texts.menuLevelsTitle,
       instructorsTitle: texts.menuInstructorsTitle,
       seeAll: texts.menuSeeAll,
       citiesTitle: texts.menuCitiesTitle,
@@ -447,12 +483,15 @@ export async function getLibraryMenu(viewer: LibraryViewer, now: Date = new Date
 export interface LibrarySearchParams {
   query: string;
   theme: LibraryTheme | null;
-  level: LibraryLevel | null;
+  /** A subcategory's key (?sub=navidad), inside the theme. */
+  sub: string | null;
   kind: LibraryVideoKind | null;
 }
 
 export interface LibrarySearchResult {
   videos: LibraryVideoCard[];
+  /** The chosen theme's subcategories in sight, the most videos first. */
+  subcategories: { key: string; name: string; count: number }[];
   instructors: InstructorCard[];
   /** From the cuponera, only while it's live. */
   products: CuponeraProduct[];
@@ -466,30 +505,41 @@ export function searchParamsOf(raw: Record<string, string | string[] | undefined
     return (Array.isArray(value) ? value[0] : value)?.slice(0, 120) ?? "";
   };
   const theme = one("tema");
-  const level = one("nivel");
+  const sub = one("sub").toLowerCase();
   const kind = one("tipo");
-  return { query: one("q").trim(), theme: isTheme(theme) ? theme : null, level: isLevel(level) ? level : null, kind: isKind(kind) ? kind : null };
+  return { query: one("q").trim(), theme: isTheme(theme) ? theme : null, sub: /^[a-z0-9-]{2,60}$/.test(sub) ? sub : null, kind: isKind(kind) ? kind : null };
 }
 
 export async function searchLibrary(params: LibrarySearchParams, viewer: LibraryViewer, now: Date = new Date()): Promise<LibrarySearchResult> {
   const words = queryWords(params.query);
   const { real, examples } = await videoPool(viewer, now);
-  const pool = [...real, ...examples].filter(
-    (v) => (!params.theme || v.theme === params.theme) && (!params.level || v.level === params.level) && (!params.kind || v.kind === params.kind),
-  );
+  const inTheme = [...real, ...examples].filter((v) => (!params.theme || v.themes.includes(params.theme)) && (!params.kind || v.kind === params.kind));
+  const subcategories = new Map<string, { key: string; name: string; count: number }>();
+  if (params.theme) {
+    for (const v of inTheme) {
+      for (const s of v.subcategories) {
+        if (s.theme !== params.theme) continue;
+        const known = subcategories.get(s.key);
+        if (known) known.count++;
+        else subcategories.set(s.key, { key: s.key, name: s.name, count: 1 });
+      }
+    }
+  }
+  const pool = params.sub ? inTheme.filter((v) => v.subcategories.some((s) => s.key === params.sub)) : inTheme;
   const videos = words.length
     ? rankBy(pool, words, (v) => [
         { text: v.title, weight: 5 },
         { text: v.tags.join(" "), weight: 4 },
-        { text: themeOf(v.theme).label, weight: 3 },
+        { text: v.subcategories.map((s) => s.name).join(" "), weight: 4 },
+        { text: v.themes.map((t) => themeOf(t).label).join(" "), weight: 3 },
         { text: v.instructor?.name, weight: 3 },
         { text: v.description, weight: 1 },
-        { text: levelLabel(v.level), weight: 1 },
         { text: v.teachersNote, weight: 1 },
       ])
     : pool;
 
-  if (!words.length) return { videos, instructors: [], products: [] };
+  const subs = [...subcategories.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, "es"));
+  if (!words.length) return { videos, subcategories: subs, instructors: [], products: [] };
 
   const [instructors, products] = await Promise.all([
     viewer.staff || viewer.config.instructorsPublished
@@ -504,7 +554,7 @@ export async function searchLibrary(params: LibrarySearchParams, viewer: Library
       : Promise.resolve([]),
     viewer.cuponeraLive ? cuponeraProductsFor(words, viewer.staff, now) : Promise.resolve([]),
   ]);
-  return { videos, instructors, products };
+  return { videos, subcategories: subs, instructors, products };
 }
 
 async function cuponeraProductsFor(words: string[], staff: boolean, now: Date): Promise<CuponeraProduct[]> {
@@ -605,10 +655,13 @@ export async function getInstructorProfile(slug: string, viewer: LibraryViewer, 
     include: { videos: { where: { visible: true }, orderBy: { publishedAt: "desc" }, include: { instructor: true } } },
   });
   if (!row || (!isListed(row) && !viewer.staff && !owner)) return null;
-  const views = await viewCounts(
-    row.videos.map((v) => v.id),
-    now,
-  );
+  const [views, subs] = await Promise.all([
+    viewCounts(
+      row.videos.map((v) => v.id),
+      now,
+    ),
+    subcategoryRefs(viewer),
+  ]);
   const products = await resolveUsedProducts(
     row.videos.flatMap((v) => usedProductRefsOf(v.products)),
     viewer.cuponeraLive,
@@ -616,7 +669,7 @@ export async function getInstructorProfile(slug: string, viewer: LibraryViewer, 
   return {
     instructor: toInstructorCard(row, row.videos.length),
     hidden: hiddenReason(row),
-    videos: row.videos.map((v) => toVideoCard(v, views)),
+    videos: row.videos.map((v) => toVideoCard(v, views, subs)),
     brands: brandsOf(products),
   };
 }

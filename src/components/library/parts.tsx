@@ -5,7 +5,6 @@ import {
   formatDuration,
   formatLength,
   formatViews,
-  levelLabel,
   themeOf,
   toneOf,
   youtubeThumbnail,
@@ -147,7 +146,7 @@ export function VideoCard({ video }: { video: LibraryVideoCard }) {
 
 /** A video as a line of the search results. */
 export function VideoRow({ video, title }: { video: LibraryVideoCard; title: ReactNode }) {
-  const parts = [video.instructor?.name ?? video.teachersNote, themeOf(video.theme).label, levelLabel(video.level)];
+  const parts = [video.instructor?.name ?? video.teachersNote, themeOf(video.theme).label, video.subcategories[0]?.name];
   if (video.durationSeconds != null) parts.push(video.kind === "maraton" ? formatLength(video.durationSeconds) : formatDuration(video.durationSeconds));
   return (
     <Link href={`/biblioteca/${video.slug}`} className="bib-row">

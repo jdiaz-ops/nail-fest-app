@@ -2,9 +2,20 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { uniqueVideoSlug } from "./admin";
 import { getLibrarySettings, updateLibrarySettings } from "./settings";
-import { LIBRARY_LEVELS, LIBRARY_THEMES, formatDuration, isTheme, themeOf, type LibraryLevel, type LibraryTheme } from "./shared";
-import { YoutubeError, cleanDescription, fetchChannel, fetchUploadsPage, fetchVideos, guessTheme, isShortVideo, parseChannel } from "./youtube";
-import { AUTOPILOT_MAX_ATTEMPTS, claudeKeyOf, countWaitingForAutopilot, libraryVideoData, proposalOf, tidyTitle, type AutopilotKind, type AutopilotProposal } from "./youtubeAutopilot";
+import { LIBRARY_THEMES, formatDuration, isTheme, themeOf, type LibraryTheme } from "./shared";
+import { YoutubeError, fetchChannel, fetchUploadsPage, fetchVideos, guessTheme, isShortVideo, parseChannel } from "./youtube";
+import {
+  AUTOPILOT_MAX_ATTEMPTS,
+  claudeKeyOf,
+  countWaitingForAutopilot,
+  countWaitingForReorder,
+  libraryVideoData,
+  proposalOf,
+  resolveSubcategory,
+  tidyTitle,
+  type AutopilotKind,
+  type AutopilotProposal,
+} from "./youtubeAutopilot";
 
 // Editar biblioteca → YouTube (2026-10-25): the team's channel connected
 // with its free Google key, its videos brought in — all of them the first
@@ -97,7 +108,6 @@ export async function importNewUploads(budgetMs: number): Promise<{ added: numbe
 }
 
 const themeKeys = LIBRARY_THEMES.map((t) => t.key) as [string, ...string[]];
-const levelKeys = LIBRARY_LEVELS.map((l) => l.key) as [string, ...string[]];
 
 /** How the chosen ones go in: as each one suggests (a corto in Cortos, a
  * long one as a recording behind the free sign-up), or all one way. */
@@ -109,7 +119,6 @@ export const decideSchema = z.discriminatedUnion("action", [
     ids: z.array(z.string().min(1)).min(1).max(200),
     // null: each one's suggested theme.
     theme: z.enum(themeKeys).nullable(),
-    level: z.enum(levelKeys),
     instructorId: z.string().min(1).nullable(),
     kind: z.enum(PASS_KINDS),
     visible: z.boolean(),
@@ -117,14 +126,16 @@ export const decideSchema = z.discriminatedUnion("action", [
   z.object({ action: z.enum(["descartar", "revisar", "publicar", "quitar"]), ids: z.array(z.string().min(1)).min(1).max(500) }),
 ]);
 
-/** A video with no proposal from the autopilot, as it came from YouTube. */
-function proposalFromYoutube(row: { title: string; description: string | null; short: boolean; suggestedTheme: string | null }): AutopilotProposal {
+/** A video with no proposal from the autopilot, as it came from YouTube —
+ * without its description there: most are old or advertising (2026-10-25). */
+function proposalFromYoutube(row: { title: string; short: boolean; suggestedTheme: string | null }): AutopilotProposal {
   const title = tidyTitle(row.title);
   return {
     title: title.length >= 3 ? title : row.title.slice(0, 140),
-    description: cleanDescription(row.description),
+    description: null,
     theme: isTheme(row.suggestedTheme) ? row.suggestedTheme : "tecnicas",
-    level: "principiante",
+    extraThemes: [],
+    subcategory: null,
     kind: row.short ? "corto" : "grabacion",
     tags: [],
     instructorId: null,
@@ -147,15 +158,14 @@ export async function passToLibrary(input: Extract<z.infer<typeof decideSchema>,
     const proposal: AutopilotProposal = {
       ...base,
       theme: (input.theme as LibraryTheme | null) ?? base.theme,
-      level: input.level as LibraryLevel,
       kind: input.kind === "sugerido" ? base.kind : KIND_OF_PASS[input.kind],
       instructorId: input.instructorId,
     };
-    const slug = await uniqueVideoSlug(proposal.title);
+    const [slug, subcategory] = await Promise.all([uniqueVideoSlug(proposal.title), resolveSubcategory(proposal.subcategory, "ia")]);
     await db.$transaction(async (tx) => {
       const { count: taken } = await tx.libraryYoutubeVideo.updateMany({ where: { id: row.id, status: "PENDING" }, data: { status: "ADDED", decidedBy: "equipo" } });
       if (!taken) return;
-      const data = libraryVideoData(row, proposal, slug, input.visible);
+      const data = libraryVideoData(row, proposal, subcategory, slug, input.visible);
       if (row.libraryVideoId) {
         // Taken out of the library before: the same video, back with these choices.
         const { slug: _slug, ...choices } = data;
@@ -187,13 +197,14 @@ export async function publishAnyway(ids: string[]): Promise<number> {
   for (const row of rows) {
     const proposal = proposalOf(row.aiProposal) ?? proposalFromYoutube(row);
     const slug = row.libraryVideoId ? null : await uniqueVideoSlug(proposal.title);
+    const subcategory = row.libraryVideoId ? null : await resolveSubcategory(proposal.subcategory, "ia");
     await db.$transaction(async (tx) => {
       const { count: taken } = await tx.libraryYoutubeVideo.updateMany({ where: { id: row.id, status: "DISCARDED" }, data: { status: "ADDED", decidedBy: "equipo" } });
       if (!taken) return;
       if (row.libraryVideoId) {
         await tx.libraryVideo.update({ where: { id: row.libraryVideoId }, data: { visible: true } });
       } else {
-        const video = await tx.libraryVideo.create({ data: libraryVideoData(row, proposal, slug!, true) });
+        const video = await tx.libraryVideo.create({ data: libraryVideoData(row, proposal, subcategory, slug!, true) });
         await tx.libraryYoutubeVideo.update({ where: { id: row.id }, data: { libraryVideoId: video.id } });
       }
       count++;
@@ -243,6 +254,12 @@ function momentLabel(date: Date): string {
 
 const KIND_LABELS: Record<AutopilotKind, string> = { corto: "Corto, en Cortos", video: "Video", grabacion: "Grabación con registro" };
 
+/** "Técnicas + Tendencias › Navidad · Corto, en Cortos · Polygel, Francesa". */
+function choiceLabel(proposal: AutopilotProposal): string {
+  const themes = [proposal.theme, ...proposal.extraThemes].map((t) => themeOf(t).label).join(" + ");
+  return [proposal.subcategory ? `${themes} › ${proposal.subcategory.name}` : themes, KIND_LABELS[proposal.kind], proposal.tags.join(", ")].filter(Boolean).join(" · ");
+}
+
 export interface YoutubeAdminVideo {
   id: string;
   youtubeId: string;
@@ -266,7 +283,7 @@ export interface YoutubeAdminVideo {
   decidedBy: "ia" | "equipo" | null;
   /** The autopilot's reason, for the team. */
   aiReason: string | null;
-  /** "Técnicas · Corto, en Cortos · Polygel, Francesa" — what the autopilot chose. */
+  /** "Técnicas + Tendencias › Navidad · Corto, en Cortos · Polygel" — what the autopilot chose. */
   aiChoiceLabel: string | null;
   /** Waiting for the autopilot (it will review it). */
   aiWaiting: boolean;
@@ -279,7 +296,7 @@ export interface YoutubeAdminVideo {
 }
 
 export async function getYoutubeAdminData() {
-  const [settings, rows, waiting] = await Promise.all([
+  const [settings, rows, waiting, reorderWaiting] = await Promise.all([
     getLibrarySettings(),
     db.libraryYoutubeVideo.findMany({
       orderBy: [{ views: "desc" }, { publishedAt: "desc" }],
@@ -287,6 +304,7 @@ export async function getYoutubeAdminData() {
       include: { libraryVideo: { select: { title: true, visible: true } } },
     }),
     countWaitingForAutopilot(),
+    countWaitingForReorder(),
   ]);
   const key = settings.youtubeApiKey;
   const claude = claudeKeyOf(settings);
@@ -309,6 +327,8 @@ export async function getYoutubeAdminData() {
       keyEnd: settings.claudeApiKey ? settings.claudeApiKey.slice(-4) : null,
       lastRunLabel: settings.youtubeAutopilotAt ? momentLabel(settings.youtubeAutopilotAt) : null,
       waiting,
+      /** Published by an earlier version, still to put in order. */
+      reorderWaiting,
     },
     videos: rows.map((r): YoutubeAdminVideo => {
       const proposal = proposalOf(r.aiProposal);
@@ -331,7 +351,7 @@ export async function getYoutubeAdminData() {
         status: r.status === "ADDED" || r.status === "DISCARDED" ? r.status : "PENDING",
         decidedBy,
         aiReason: r.aiReason,
-        aiChoiceLabel: proposal ? [themeOf(proposal.theme).label, KIND_LABELS[proposal.kind], proposal.tags.join(", ")].filter(Boolean).join(" · ") : null,
+        aiChoiceLabel: proposal ? choiceLabel(proposal) : null,
         aiWaiting: waitingForAi && r.aiAttempts < AUTOPILOT_MAX_ATTEMPTS,
         aiGaveUp: waitingForAi && r.aiAttempts >= AUTOPILOT_MAX_ATTEMPTS,
         libraryVideoId: r.libraryVideoId,

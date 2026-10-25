@@ -162,7 +162,8 @@ export const submissionSchema = z.object({
     }),
   title: z.string().trim().min(3).max(140),
   theme: z.enum(themeKeys),
-  level: z.enum(levelKeys),
+  // Not asked anymore (2026-10-25: "Nivel no va"); the column keeps a value.
+  level: z.enum(levelKeys).default("principiante"),
   description: optionalText(1000),
   /** One product per line. */
   products: z

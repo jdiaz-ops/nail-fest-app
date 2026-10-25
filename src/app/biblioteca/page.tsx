@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import LibraryShell, { libraryStaffNote } from "@/components/library/LibraryShell";
 import { PeopleRow, PlayIcon, RecordingCard, SearchForm, ThemeIcon, VideoCard } from "@/components/library/parts";
 import { getLibraryHome, getLibraryViewer, libraryRobots } from "@/lib/library/data";
-import { LIBRARY_LEVELS, LIBRARY_THEMES, SHORTIES_SHOWN_FROM, toneOf, youtubeThumbnail } from "@/lib/library/shared";
+import { LIBRARY_THEMES, SHORTIES_SHOWN_FROM, toneOf, youtubeThumbnail } from "@/lib/library/shared";
 import { fraunces } from "@/app/cuponera/fonts";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +27,7 @@ function SectionHead({ title, href, label }: { title: string; href?: string; lab
 }
 
 // nailfest.lat/biblioteca — the library's front page: the search, the way
-// into Shorties, the themes and levels, what's new and most watched, the
+// into Shorties, the themes, what's new and most watched, the
 // marathons' recordings behind the free sign-up, and the instructors. Each
 // section can be renamed or switched off in Editar biblioteca; a video's
 // page lives in ./[slug], the search and the themes in ./buscar, the feed in
@@ -106,39 +106,25 @@ export default async function BibliotecaPage() {
 
         {shown.length === 0 && <p className="bib-empty">{texts.emptyText}</p>}
 
-        {((sections.themes && themes.length > 0) || (sections.levels && shown.length > 0)) && (
+        {sections.themes && themes.length > 0 && (
           <section className="bib-section" aria-label={texts.themesTitle}>
-            {sections.themes && themes.length > 0 && (
-              <>
-                <h2 className={`bib-h2 ${fraunces.className}`}>{texts.themesTitle}</h2>
-                <div className="bib-themes">
-                  {themes.map((t) => {
-                    const count = home.themeCounts[t.key] ?? 0;
-                    return (
-                      <Link key={t.key} href={`/biblioteca/buscar?tema=${t.key}`} className={`bib-theme ${t.tile}`}>
-                        <span className="bib-theme-ic">
-                          <ThemeIcon icon={t.icon} />
-                        </span>
-                        <span>
-                          <b>{t.label}</b>
-                          <small>{count === 1 ? "1 video" : `${count} videos`}</small>
-                        </span>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-            {sections.levels && shown.length > 0 && (
-              <div className="bib-levels">
-                <span className="bib-label">Nivel</span>
-                {LIBRARY_LEVELS.map((l) => (
-                  <Link key={l.key} href={`/biblioteca/buscar?nivel=${l.key}`} className="bib-chip">
-                    {l.label}
+            <h2 className={`bib-h2 ${fraunces.className}`}>{texts.themesTitle}</h2>
+            <div className="bib-themes">
+              {themes.map((t) => {
+                const count = home.themeCounts[t.key] ?? 0;
+                return (
+                  <Link key={t.key} href={`/biblioteca/buscar?tema=${t.key}`} className={`bib-theme ${t.tile}`}>
+                    <span className="bib-theme-ic">
+                      <ThemeIcon icon={t.icon} />
+                    </span>
+                    <span>
+                      <b>{t.label}</b>
+                      <small>{count === 1 ? "1 video" : `${count} videos`}</small>
+                    </span>
                   </Link>
-                ))}
-              </div>
-            )}
+                );
+              })}
+            </div>
           </section>
         )}
 

@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import BrandLink, { BrandLogo } from "@/components/cuponera/BrandLink";
 import { collectionHref, type CuponeraCategoryLink } from "@/lib/cuponera/browse";
 import { formatPercent, type CuponeraBrandCard } from "@/lib/cuponera/shared";
-import { LIBRARY_LEVELS, type LibraryMenuData } from "@/lib/library/shared";
+import type { LibraryMenuData } from "@/lib/library/shared";
 import { Avatar, SearchIcon, ThemeIcon } from "./parts";
 
 function Icon({ children }: { children: ReactNode }) {
@@ -111,7 +111,7 @@ interface MenuLink {
 // The one menu of Nail Fest (the library's, approved 2026-10-24; on every
 // page since 2026-10-25 — the home, the library, Cortos, the instructors,
 // the Consultorio, the account and the cuponera): the search, the sections,
-// the ways to search — by theme, level, instructor and city —, the brands'
+// the ways to search — by theme, instructor and city —, the brands'
 // discounts and her way in. Only what this viewer can open shows; a modal
 // panel from the left (its ☰ goes on the left of every header), closed with
 // its X, Escape, a tap outside or by following any of its links.
@@ -326,19 +326,6 @@ export default function LibraryMenu({
                   </span>
                   <b>{t.label}</b>
                   <small aria-label={t.count === 1 ? "1 video" : `${t.count} videos`}>{t.count}</small>
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {sections.levels && menu.videos && (
-          <div className="bib-drawer-block">
-            <span className="bib-label">{texts.levelsTitle}</span>
-            <div className="bib-drawer-chips">
-              {LIBRARY_LEVELS.map((l) => (
-                <Link key={l.key} href={`/biblioteca/buscar?nivel=${l.key}`} className="bib-chip">
-                  {l.label}
                 </Link>
               ))}
             </div>

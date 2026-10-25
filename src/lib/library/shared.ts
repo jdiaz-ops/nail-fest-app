@@ -50,6 +50,29 @@ export function levelLabel(key: LibraryLevel): string {
   return LIBRARY_LEVELS.find((l) => l.key === key)!.label;
 }
 
+// The level isn't shown or asked anymore (2026-10-25: "Nivel no va. No es
+// un filtro o clasificación que quiero"); LibraryVideo.level keeps what it had.
+
+/** A video's themes beyond its main one: up to two (2026-10-25: "unos
+ * videos pueden ir en varios temas"). */
+export const EXTRA_THEMES_UP_TO = 2;
+
+/** Its themes, the main one first, without repeats. */
+export function themesOf(video: { theme: string; extraThemes?: readonly string[] }): LibraryTheme[] {
+  const all = [video.theme, ...(video.extraThemes ?? [])].filter(isTheme);
+  return [...new Set(all)].slice(0, 1 + EXTRA_THEMES_UP_TO);
+}
+
+/** A subcategory inside a theme (LibrarySubcategory): Navidad, Halloween… */
+export interface LibrarySubcategoryRef {
+  key: string;
+  name: string;
+  theme: LibraryTheme;
+}
+
+/** The library shows a subcategory once it has this many videos. */
+export const SUBCATEGORY_SHOWN_FROM = 3;
+
 /** A short vertical video, or the long recording of a marathon. */
 export type LibraryVideoKind = "video" | "maraton";
 
@@ -108,9 +131,17 @@ export function cleanTags(tags: readonly string[]): string[] {
   return out;
 }
 
-/** A video is in a topic by its theme or by one of its tags. */
-export function hasTopic(video: { theme: string; tags: readonly string[] }, key: string): boolean {
-  return video.theme === key || video.tags.some((t) => topicKey(t) === key);
+/** What a video's topics come from: its themes, its subcategory and its tags. */
+export interface TopicSource {
+  theme: string;
+  extraThemes?: readonly string[];
+  subcategories?: readonly { key: string; name: string }[];
+  tags: readonly string[];
+}
+
+/** A video is in a topic by one of its themes, its subcategory or one of its tags. */
+export function hasTopic(video: TopicSource, key: string): boolean {
+  return themesOf(video).includes(key as LibraryTheme) || (video.subcategories ?? []).some((s) => s.key === key) || video.tags.some((t) => topicKey(t) === key);
 }
 
 export interface CortosTopic {
@@ -120,13 +151,13 @@ export interface CortosTopic {
 }
 
 /** The topics some videos are in, the most videos first — a theme by its
- * name, a tag as the videos write it. */
-export function topicsOf(videos: { theme: string; tags: readonly string[] }[]): CortosTopic[] {
+ * name, a subcategory by its name, a tag as the videos write it. */
+export function topicsOf(videos: TopicSource[]): CortosTopic[] {
   const topics = new Map<string, CortosTopic>();
   for (const video of videos) {
     const keys = new Map<string, string>();
-    const theme = LIBRARY_THEMES.find((t) => t.key === video.theme);
-    if (theme) keys.set(theme.key, theme.label);
+    for (const key of themesOf(video)) keys.set(key, themeOf(key).label);
+    for (const sub of video.subcategories ?? []) if (!keys.has(sub.key)) keys.set(sub.key, sub.name);
     for (const tag of video.tags) {
       const key = topicKey(tag);
       if (key && !keys.has(key)) keys.set(key, LIBRARY_THEMES.find((t) => t.key === key)?.label ?? tag);
@@ -313,8 +344,12 @@ export interface LibraryVideoCard {
   kind: LibraryVideoKind;
   title: string;
   description: string | null;
+  /** Its main theme. */
   theme: LibraryTheme;
-  level: LibraryLevel;
+  /** All its themes, the main one first. */
+  themes: LibraryTheme[];
+  /** Its subcategory (at most one), even before the library shows it. */
+  subcategories: LibrarySubcategoryRef[];
   /** null only for the invented examples. */
   youtubeId: string | null;
   durationSeconds: number | null;
@@ -418,7 +453,7 @@ export interface LibraryMenuData {
   /** The cuponera's brands while it's public: a tap copies the code and opens the store. */
   brands: CuponeraBrandCard[];
   shorties: boolean;
-  /** "Lo nuevo", the levels: there are short videos. */
+  /** "Lo nuevo": there are short videos. */
   videos: boolean;
   mostViewed: boolean;
   recordings: boolean;
@@ -427,7 +462,7 @@ export interface LibraryMenuData {
   themes: { key: LibraryTheme; label: string; icon: LibraryThemeIcon; tile: string; count: number }[];
   people: { slug: string; name: string; initial: string; photoUrl: string | null; tone: number; city: string }[];
   cities: string[];
-  sections: { badge: boolean; themes: boolean; levels: boolean; instructors: boolean; cities: boolean };
+  sections: { badge: boolean; themes: boolean; instructors: boolean; cities: boolean };
   texts: {
     sectionsTitle: string;
     home: string;
@@ -440,7 +475,6 @@ export interface LibraryMenuData {
     directory: string;
     cuponera: string;
     themesTitle: string;
-    levelsTitle: string;
     instructorsTitle: string;
     seeAll: string;
     citiesTitle: string;

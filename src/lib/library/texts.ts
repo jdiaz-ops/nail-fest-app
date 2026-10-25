@@ -29,7 +29,6 @@ interface TextDef {
 export const LIBRARY_SECTIONS = {
   shortiesBanner: { page: "biblioteca", label: "Entrada a Cortos", hint: "El recuadro de Cortos debajo del buscador, con sus temas. Sale desde 3 cortos." },
   themes: { page: "biblioteca", label: "Explora por tema", hint: "Los ocho temas, con cuántos videos tiene cada uno." },
-  levels: { page: "biblioteca", label: "Filtro por nivel", hint: "Principiante, intermedio y avanzado, debajo de los temas." },
   newest: { page: "biblioteca", label: "Lo nuevo", hint: "Los últimos videos publicados." },
   mostViewed: { page: "biblioteca", label: "Lo más visto esta semana", hint: "Sale cuando al menos 3 videos tienen visitas en los últimos 7 días." },
   recordings: { page: "biblioteca", label: "Grabaciones de maratones", hint: "Las grabaciones largas, con su candado de registro gratis." },
@@ -42,6 +41,12 @@ export const LIBRARY_SECTIONS = {
   steps: { page: "video", label: "El paso a paso", hint: "Los pasos del video, que se ven con el registro gratis." },
   related: { page: "video", label: "Sigue con", hint: "Más videos del mismo tema." },
   // Off unless the team switches them on (2026-10-25): `off: true`.
+  subcategories: {
+    page: "biblioteca",
+    label: "Subcategorías",
+    hint: "Navidad, Halloween… dentro de cada tema, cuando tienen 3 videos o más: en los resultados del tema y en cada video.",
+    off: true,
+  },
   directorySearch: { page: "instructoras", label: "Buscador", hint: "Buscar por nombre, ciudad o técnica, debajo del título.", off: true },
   filters: { page: "instructoras", label: "Filtros", hint: "Ciudad y especialidad, arriba de las tarjetas." },
   teachCta: { page: "instructoras", label: "¿Enseñas uñas?", hint: "La invitación a crear su perfil." },
@@ -49,7 +54,6 @@ export const LIBRARY_SECTIONS = {
   profileProducts: { page: "perfil", label: "Lo que usa en sus videos", hint: "Las marcas de la cuponera que salen en sus videos." },
   appearances: { page: "perfil", label: "Ha estado en", hint: "Los eventos de Nail Fest en los que ha estado.", off: true },
   menuThemes: { page: "menu", label: "Aprende por tema", hint: "Los temas de la biblioteca, con cuántos videos tiene cada uno." },
-  menuLevels: { page: "menu", label: "Por nivel", hint: "Principiante, intermedio y avanzado.", off: true },
   menuInstructors: { page: "menu", label: "Por instructora", hint: "Las instructoras, con enlace a su perfil." },
   menuCities: { page: "menu", label: "Instructoras por ciudad", hint: "Las ciudades donde hay instructoras." },
   menuSignup: { page: "menu", label: "Registro gratis", hint: "El recuadro que invita a registrarse, al final del menú.", off: true },
@@ -193,7 +197,6 @@ export const LIBRARY_TEXTS = {
   menuDirectory: { page: "menu", label: "Enlace al directorio de instructoras", value: "Instructoras" },
   menuCuponera: { page: "menu", label: "Enlace a la cuponera", value: "Cuponera" },
   menuThemesTitle: { page: "menu", label: "Título", value: "Aprende por tema", section: "menuThemes" },
-  menuLevelsTitle: { page: "menu", label: "Título", value: "Por nivel", section: "menuLevels" },
   menuInstructorsTitle: { page: "menu", label: "Título", value: "Por instructora", section: "menuInstructors" },
   menuSeeAll: { page: "menu", label: "Enlace a todas", value: "Ver todas", section: "menuInstructors" },
   menuCitiesTitle: { page: "menu", label: "Título", value: "Instructoras por ciudad", section: "menuCities" },

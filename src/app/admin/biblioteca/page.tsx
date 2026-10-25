@@ -87,6 +87,7 @@ export default async function AdminBibliotecaPage({ searchParams }: { searchPara
             videos={data.videos}
             instructors={data.instructors}
             products={data.cuponeraProducts}
+            subcategories={data.subcategories}
             openId={searchParams.editar ?? null}
           />
         </>

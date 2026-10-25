@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SUBMISSION_TAGS_UP_TO } from "@/lib/library/portal";
-import { LIBRARY_LEVELS, LIBRARY_THEMES, VIDEO_TAG_SUGGESTIONS } from "@/lib/library/shared";
+import { LIBRARY_THEMES, VIDEO_TAG_SUGGESTIONS } from "@/lib/library/shared";
 import { ChoiceChips, send } from "./fields";
 
 // "Enviar un video" (Mis videos): her own YouTube link and its ficha, for
@@ -25,7 +25,6 @@ export default function VideoSubmitForm({ needsContentTerms }: { needsContentTer
       youtube: text("youtube"),
       title: text("title"),
       theme: text("theme"),
-      level: text("level"),
       description: text("description"),
       products: text("products"),
       tags,
@@ -55,30 +54,18 @@ export default function VideoSubmitForm({ needsContentTerms }: { needsContentTer
         <label htmlFor="vs-title">Título</label>
         <input id="vs-title" name="title" required minLength={3} maxLength={140} placeholder="Francesa invertida con cromo" aria-invalid={bad("title")} />
       </div>
-      <div className="pt-two">
-        <div className="field">
-          <label htmlFor="vs-theme">Tema</label>
-          <select id="vs-theme" name="theme" required defaultValue="" aria-invalid={bad("theme")}>
-            <option value="" disabled>
-              Elige
+      <div className="field">
+        <label htmlFor="vs-theme">Tema</label>
+        <select id="vs-theme" name="theme" required defaultValue="" aria-invalid={bad("theme")}>
+          <option value="" disabled>
+            Elige
+          </option>
+          {LIBRARY_THEMES.map((t) => (
+            <option key={t.key} value={t.key}>
+              {t.label}
             </option>
-            {LIBRARY_THEMES.map((t) => (
-              <option key={t.key} value={t.key}>
-                {t.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="field">
-          <label htmlFor="vs-level">Nivel</label>
-          <select id="vs-level" name="level" required defaultValue="principiante" aria-invalid={bad("level")}>
-            {LIBRARY_LEVELS.map((l) => (
-              <option key={l.key} value={l.key}>
-                {l.label}
-              </option>
-            ))}
-          </select>
-        </div>
+          ))}
+        </select>
       </div>
       <div className="field">
         <span className="pt-label-strong" id="vs-tags">

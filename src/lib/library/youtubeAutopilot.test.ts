@@ -7,6 +7,7 @@ import {
   contextText,
   decide,
   decisionFrom,
+  libraryVideoData,
   proposalOf,
   tidyDescription,
   tidyTitle,
@@ -38,11 +39,11 @@ const answer = (over: Partial<AutopilotAnswer> = {}): AutopilotAnswer => ({
   motivo: "Tutorial claro de francesa.",
   publicar: true,
   titulo: "Francesa con polygel paso a paso",
-  descripcion: "Una francesa limpia con polygel. Consejo: lima la línea antes de sellar.",
-  tema: "tecnicas",
-  nivel: "intermedio",
+  descripcion: "Una francesa limpia con polygel, con la línea bien marcada.",
+  temas: ["tecnicas"],
+  subcategoria: null,
+  etiquetas: ["polygel", "Francesa"],
   tipo: "corto",
-  temas: ["polygel", "Francesa"],
   instructora: null,
   ...over,
 });
@@ -51,6 +52,7 @@ const context: CurationContext = {
   channelTitle: "Nail Fest by H La Cosedora",
   instructors: [{ id: "inst1", name: "Luz Prueba", instagram: "luzprueba", city: "Cúcuta" }],
   topicsInUse: ["Polygel", "Nail art"],
+  subcategories: [{ name: "Navidad", theme: "tendencias", videos: 4 }],
 };
 
 describe("what Claude reads", () => {
@@ -64,12 +66,24 @@ describe("what Claude reads", () => {
     expect(text).not.toContain("https://");
   });
 
-  it("the channel, the directory and the topics in use", () => {
+  it("the channel, the directory, the subcategories and the tags in use", () => {
     const text = contextText(context);
     expect(text).toContain("«Nail Fest by H La Cosedora»");
     expect(text).toContain("- inst1 · Luz Prueba · @luzprueba · Cúcuta");
+    expect(text).toContain("- tendencias › Navidad · 4 videos");
     expect(text).toContain("Polygel, Nail art");
-    expect(contextText({ ...context, instructors: [], topicsInUse: [] })).toContain("(ninguna todavía)");
+    expect(contextText({ ...context, instructors: [], topicsInUse: [], subcategories: [] })).toContain("(ninguna todavía)");
+  });
+
+  it("an already published one with its title in the library", () => {
+    expect(videoText(row(), 0, "Francesa con polygel")).toContain("Título en la biblioteca: Francesa con polygel");
+    expect(videoText(row(), 0)).not.toContain("Título en la biblioteca");
+  });
+
+  it("no level anywhere; YouTube's description only to understand the video", () => {
+    expect(AUTOPILOT_SYSTEM).not.toMatch(/nivel/i);
+    expect(AUTOPILOT_SYSTEM).toContain("nunca la copies");
+    expect(AUTOPILOT_SYSTEM).toContain("una sola frase, máximo 120 caracteres");
   });
 
   it("the answer's shape: every field asked for, nothing else (structured outputs)", () => {
@@ -77,7 +91,9 @@ describe("what Claude reads", () => {
     expect(item.required).toEqual(Object.keys(item.properties));
     expect(item.additionalProperties).toBe(false);
     expect(AUTOPILOT_SCHEMA.additionalProperties).toBe(false);
-    expect(item.properties.tema.enum).toContain("errores");
+    expect(item.properties.temas.items.enum).toContain("errores");
+    expect(item.properties.subcategoria.anyOf[0]!.additionalProperties).toBe(false);
+    expect(item.properties).not.toHaveProperty("nivel");
   });
 });
 
@@ -90,12 +106,12 @@ describe("tidying what comes back", () => {
     expect(tidyTitle("a".repeat(30) + " " + "b".repeat(30) + " " + "c".repeat(30)).length).toBeLessThanOrEqual(70);
   });
 
-  it("a description without links or handles, cut after a sentence", () => {
+  it("a short description without links or handles, cut after a sentence", () => {
     expect(tidyDescription("Mira el paso a paso 👉 https://x.co @tienda #uñas")).toBe("Mira el paso a paso");
     expect(tidyDescription("")).toBeNull();
-    const long = `${"Primera frase con bastante texto para pasar el mínimo de ochenta caracteres sin problema."} ${"Segunda frase. ".repeat(20)}`;
+    const long = `Primera frase con bastante texto para pasar el mínimo. ${"Segunda frase. ".repeat(20)}`;
     const cut = tidyDescription(long)!;
-    expect(cut.length).toBeLessThanOrEqual(240);
+    expect(cut.length).toBeLessThanOrEqual(140);
     expect(cut.endsWith(".")).toBe(true);
   });
 });
@@ -104,21 +120,49 @@ describe("a decision, checked against what the library accepts", () => {
   const ids = new Set(["inst1"]);
 
   it("as Claude wrote it, tidy", () => {
-    const d = decisionFrom(answer({ temas: ["#polygel", "Francesa", "francesa", "  nail   art "], instructora: "inst1" }), row(), ids);
+    const d = decisionFrom(
+      answer({
+        temas: ["tecnicas", "tendencias", "tecnicas", "otro", "negocio"],
+        subcategoria: { nombre: "navidad 🎄", tema: "tendencias" },
+        etiquetas: ["#polygel", "Francesa", "francesa", "  nail   art ", "Navidad", "Técnicas"],
+        instructora: "inst1",
+      }),
+      row(),
+      ids,
+    );
     expect(d).toEqual({
       youtubeId: "abc123def45",
       keep: true,
       reason: "Tutorial claro de francesa.",
       proposal: {
         title: "Francesa con polygel paso a paso",
-        description: "Una francesa limpia con polygel. Consejo: lima la línea antes de sellar.",
+        description: "Una francesa limpia con polygel, con la línea bien marcada.",
         theme: "tecnicas",
-        level: "intermedio",
+        extraThemes: ["tendencias", "negocio"],
+        subcategory: { name: "Navidad", theme: "tendencias" },
         kind: "corto",
+        // Neither the subcategory nor a theme again.
         tags: ["Polygel", "Francesa", "Nail art"],
         instructorId: "inst1",
       },
     });
+  });
+
+  it("no theme that exists: YouTube's suggestion; a subcategory too short: none", () => {
+    const d = decisionFrom(answer({ temas: ["otro"], subcategoria: { nombre: "x", tema: "nada" } }), row({ suggestedTheme: "errores" }), ids);
+    expect(d.proposal.theme).toBe("errores");
+    expect(d.proposal.extraThemes).toEqual([]);
+    expect(d.proposal.subcategory).toBeNull();
+  });
+
+  it("into the library: the subcategory's theme is always one of its themes", () => {
+    const { proposal } = decisionFrom(answer({ temas: ["tecnicas", "negocio", "productos"] }), row(), ids);
+    const data = libraryVideoData({ youtubeId: "abc123def45", durationSeconds: 58, publishedAt: new Date("2024-03-03") }, proposal, { key: "navidad", name: "Navidad", theme: "tendencias" }, "francesa", true);
+    expect(data.theme).toBe("tecnicas");
+    expect(data.extraThemes).toEqual(["tendencias", "negocio"]);
+    expect(data.subcategories).toEqual(["navidad"]);
+    expect(data).not.toHaveProperty("level");
+    expect(data.inShorties).toBe(true);
   });
 
   it("three minutes or less is a corto; a longer one never is", () => {
@@ -127,20 +171,19 @@ describe("a decision, checked against what the library accepts", () => {
     expect(decisionFrom(answer({ tipo: "grabacion" }), row({ short: false, durationSeconds: 5400 }), ids).proposal.kind).toBe("grabacion");
   });
 
-  it("nothing invented: an unknown instructor, theme or level falls back", () => {
-    const d = decisionFrom(answer({ instructora: "nadie", tema: "otro", nivel: "experta" }), row({ suggestedTheme: "errores" }), ids);
-    expect(d.proposal.instructorId).toBeNull();
-    expect(d.proposal.theme).toBe("errores");
-    expect(d.proposal.level).toBe("principiante");
+  it("nothing invented: an instructor who isn't in the directory is none", () => {
+    expect(decisionFrom(answer({ instructora: "nadie" }), row(), ids).proposal.instructorId).toBeNull();
   });
 
   it("an empty title takes YouTube's, tidy", () => {
     expect(decisionFrom(answer({ titulo: "💅💅" }), row(), ids).proposal.title).toBe("Uñas acrílicas paso a paso");
   });
 
-  it("kept as JSON and read back", () => {
-    const { proposal } = decisionFrom(answer(), row(), ids);
+  it("kept as JSON and read back — the first version's too", () => {
+    const { proposal } = decisionFrom(answer({ subcategoria: { nombre: "Halloween", tema: "tendencias" } }), row(), ids);
     expect(proposalOf(JSON.parse(JSON.stringify(proposal)))).toEqual(proposal);
+    const first = { title: "Francesa", description: null, theme: "tecnicas", level: "intermedio", kind: "corto", tags: ["Polygel"], instructorId: null };
+    expect(proposalOf(first)).toMatchObject({ title: "Francesa", extraThemes: [], subcategory: null });
     expect(proposalOf({ title: "x" })).toBeNull();
     expect(proposalOf(null)).toBeNull();
   });
@@ -193,6 +236,16 @@ describe("asking Claude", () => {
     // Only the videos asked about.
     expect([...decisions.keys()]).toEqual(["abc123def45", "zzz999yyy88"]);
     expect(decisions.get("zzz999yyy88")).toMatchObject({ keep: false, reason: "Es un sorteo." });
+  });
+
+  it("putting published ones in order: without stills, with less thinking", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(new Uint8Array(5000), { status: 200, headers: { "content-type": "image/jpeg" } })));
+    const { client, calls } = fakeClient([() => message([answer()])]);
+    await decide(client, [{ ...row(), libraryTitle: "Francesa con polygel" }], context, { stills: false, fallbacks: true, effort: "low" });
+    expect((calls[0]!.output_config as { effort: string }).effort).toBe("low");
+    const content = (calls[0]!.messages as { content: { type: string; text?: string }[] }[])[0]!.content;
+    expect(content.some((c) => c.type === "image")).toBe(false);
+    expect(content[0]!.text).toContain("Título en la biblioteca: Francesa con polygel");
   });
 
   it("declined as a whole: asked again one by one; one declined alone has no decision", async () => {

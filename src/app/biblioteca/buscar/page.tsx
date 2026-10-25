@@ -5,7 +5,7 @@ import LibraryShell, { libraryStaffNote } from "@/components/library/LibraryShel
 import UsedProducts from "@/components/library/UsedProducts";
 import { PeopleRow, SearchIcon, VideoRow } from "@/components/library/parts";
 import { getLibraryViewer, libraryRobots, searchLibrary, searchParamsOf, type LibrarySearchParams } from "@/lib/library/data";
-import { LIBRARY_LEVELS, LIBRARY_THEMES, levelLabel, themeOf, type UsedProduct } from "@/lib/library/shared";
+import { LIBRARY_THEMES, themeOf, type UsedProduct } from "@/lib/library/shared";
 import { highlightParts } from "@/lib/cuponera/browse";
 import { discountPercent, type CuponeraProduct } from "@/lib/cuponera/shared";
 import { fraunces } from "@/app/cuponera/fonts";
@@ -20,16 +20,17 @@ export async function generateMetadata({ searchParams }: { searchParams: SearchP
   return { title: `${titleOf(params)} · Biblioteca Nail Fest`, robots: (await libraryRobots("biblioteca")) ?? { index: false, follow: true } };
 }
 
-function titleOf(params: LibrarySearchParams): string {
+function titleOf(params: LibrarySearchParams, subName: string | null = null): string {
   if (params.query) return `Resultados para «${params.query}»`;
   if (params.kind === "maraton") return "Grabaciones de maratones";
-  const parts = [params.theme ? themeOf(params.theme).label : null, params.level ? levelLabel(params.level) : null].filter(Boolean);
+  const parts = [params.theme ? themeOf(params.theme).label : null, subName].filter(Boolean);
   return parts.length ? parts.join(" · ") : "Todos los videos";
 }
 
-/** The same search with one filter changed (null removes it). */
-function hrefWith(params: LibrarySearchParams, change: Partial<Record<"q" | "tema" | "nivel" | "tipo" | "ver", string | null>>): string {
-  const current: Record<string, string | null> = { q: params.query || null, tema: params.theme, nivel: params.level, tipo: params.kind, ...change };
+/** The same search with one filter changed (null removes it); another theme
+ * leaves the subcategory behind. */
+function hrefWith(params: LibrarySearchParams, change: Partial<Record<"q" | "tema" | "sub" | "tipo" | "ver", string | null>>): string {
+  const current: Record<string, string | null> = { q: params.query || null, tema: params.theme, sub: "tema" in change ? null : params.sub, tipo: params.kind, ...change };
   const query = Object.entries(current)
     .filter((e): e is [string, string] => Boolean(e[1]))
     .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
@@ -61,8 +62,9 @@ function asUsed(p: CuponeraProduct): UsedProduct {
 }
 
 // nailfest.lat/biblioteca/buscar — the library's search and its browsing
-// by theme, level or kind (?q= &tema= &nivel= &tipo=). A search looks in
-// the videos, the instructors and, while the cuponera is live, its products.
+// by theme, its subcategories or kind (?q= &tema= &sub= &tipo=). A search
+// looks in the videos, the instructors and, while the cuponera is live, its
+// products.
 export default async function BibliotecaBuscarPage({ searchParams }: { searchParams: SearchParams }) {
   const viewer = await getLibraryViewer();
   if (!viewer.config.published && !viewer.staff) notFound();
@@ -75,6 +77,7 @@ export default async function BibliotecaBuscarPage({ searchParams }: { searchPar
   const total = result.videos.length + result.instructors.length + result.products.length;
   const hasExamples = result.videos.some((v) => v.sample) || result.instructors.some((i) => i.sample);
   const show = (t: Tab) => tab === "todo" || tab === t;
+  const subName = result.subcategories.find((s) => s.key === params.sub)?.name ?? null;
 
   return (
     <LibraryShell section="biblioteca" viewer={viewer} note={libraryStaffNote(viewer, "biblioteca", hasExamples)}>
@@ -87,14 +90,14 @@ export default async function BibliotecaBuscarPage({ searchParams }: { searchPar
             </label>
             <input id="bib-q" name="q" type="search" placeholder={texts.searchPlaceholder} defaultValue={params.query} enterKeyHint="search" autoComplete="off" />
             {params.theme && <input type="hidden" name="tema" value={params.theme} />}
-            {params.level && <input type="hidden" name="nivel" value={params.level} />}
+            {params.sub && <input type="hidden" name="sub" value={params.sub} />}
             {params.kind && <input type="hidden" name="tipo" value={params.kind} />}
           </form>
         </div>
       </div>
 
       <div className="bib-wrap">
-        <h1 className={`bib-h1 ${fraunces.className}`}>{titleOf(params)}</h1>
+        <h1 className={`bib-h1 ${fraunces.className}`}>{titleOf(params, subName)}</h1>
         <p className="bib-found">
           {searching ? (
             <>
@@ -134,16 +137,18 @@ export default async function BibliotecaBuscarPage({ searchParams }: { searchPar
                 </Link>
               ))}
             </div>
-            <div className="bib-chips">
-              <Link href={hrefWith(params, { nivel: null })} className={`bib-chip${params.level ? "" : " is-on"}`}>
-                Todos los niveles
-              </Link>
-              {LIBRARY_LEVELS.map((l) => (
-                <Link key={l.key} href={hrefWith(params, { nivel: l.key })} className={`bib-chip${params.level === l.key ? " is-on" : ""}`}>
-                  {l.label}
+            {params.theme && result.subcategories.length > 0 && (
+              <div className="bib-chips" aria-label={`Subcategorías de ${themeOf(params.theme).label}`}>
+                <Link href={hrefWith(params, { sub: null })} className={`bib-chip${params.sub ? "" : " is-on"}`}>
+                  Todo {themeOf(params.theme).label}
                 </Link>
-              ))}
-            </div>
+                {result.subcategories.map((s) => (
+                  <Link key={s.key} href={hrefWith(params, { sub: s.key })} className={`bib-chip${params.sub === s.key ? " is-on" : ""}`}>
+                    {s.name} <small>{s.count}</small>
+                  </Link>
+                ))}
+              </div>
+            )}
           </>
         )}
 

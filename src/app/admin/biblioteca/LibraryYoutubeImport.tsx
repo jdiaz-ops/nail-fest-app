@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import { useRouter } from "next/navigation";
 import type { AutopilotReport } from "@/lib/library/youtubeAutopilot";
 import type { YoutubeAdminData, YoutubeAdminVideo } from "@/lib/library/youtubeImport";
-import { LIBRARY_LEVELS, LIBRARY_THEMES, youtubeThumbnail } from "@/lib/library/shared";
+import { LIBRARY_THEMES, youtubeThumbnail } from "@/lib/library/shared";
 import { CardTitle, cardStyle, mutedText, Pill, primaryButtonStyle, secondaryButtonStyle, Switch } from "../cuponera/ui";
 import { FormError } from "./ui";
 
@@ -37,6 +37,16 @@ const KINDS = [
 ] as const;
 
 const PAGE = 60;
+
+/** How the autopilot goes while the tab watches it; remaining: null until the first round says it. */
+interface PilotRun {
+  reviewed: number;
+  published: number;
+  discarded: number;
+  reordered: number;
+  remaining: number | null;
+  reorderRemaining: number | null;
+}
 
 const field: CSSProperties = { display: "flex", flexDirection: "column", gap: 4, fontSize: 12, fontWeight: 600, color: "#5b5f6b" };
 const control: CSSProperties = { padding: "7px 10px", border: "1px solid #e3e1dc", borderRadius: 8, fontSize: 13, background: "#fff", color: "#17181c" };
@@ -83,7 +93,7 @@ export default function LibraryYoutubeImport({ data, instructors }: { data: Yout
   const [claudeKey, setClaudeKey] = useState("");
   const [keyEditing, setKeyEditing] = useState(false);
   // remaining: null until the first round says it.
-  const [pilotRun, setPilotRun] = useState<{ reviewed: number; published: number; discarded: number; remaining: number | null } | null>(null);
+  const [pilotRun, setPilotRun] = useState<PilotRun | null>(null);
   const [pilotError, setPilotError] = useState<string | null>(null);
   const [pilotNotice, setPilotNotice] = useState<string | null>(null);
   const running = useRef(false);
@@ -95,7 +105,6 @@ export default function LibraryYoutubeImport({ data, instructors }: { data: Yout
   const [shown, setShown] = useState(PAGE);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [theme, setTheme] = useState("");
-  const [level, setLevel] = useState<string>("principiante");
   const [instructorId, setInstructorId] = useState("");
   const [kind, setKind] = useState<(typeof KINDS)[number]["key"]>("sugerido");
   const [visible, setVisible] = useState(false);
@@ -139,7 +148,7 @@ export default function LibraryYoutubeImport({ data, instructors }: { data: Yout
     running.current = true;
     setPilotError(null);
     setPilotNotice(null);
-    const totals: { reviewed: number; published: number; discarded: number; remaining: number | null } = { reviewed: 0, published: 0, discarded: 0, remaining: null };
+    const totals: PilotRun = { reviewed: 0, published: 0, discarded: 0, reordered: 0, remaining: null, reorderRemaining: null };
     setPilotRun({ ...totals });
     try {
       for (;;) {
@@ -152,26 +161,29 @@ export default function LibraryYoutubeImport({ data, instructors }: { data: Yout
         totals.reviewed += round.reviewed + round.linked;
         totals.published += round.published;
         totals.discarded += round.discarded;
+        totals.reordered += round.reordered;
         totals.remaining = round.remaining;
+        totals.reorderRemaining = round.reorderRemaining;
         setPilotRun({ ...totals });
         router.refresh();
         if (round.problem) {
           if (round.problem !== "off") setPilotError(round.message);
           break;
         }
-        if (round.remaining === 0) break;
+        if (round.remaining === 0 && round.reorderRemaining === 0) break;
         // Nothing moved this round (another run has them, or they failed): it goes on by itself.
-        if (round.reviewed + round.linked === 0) {
+        if (round.reviewed + round.linked + round.reordered === 0) {
           if (round.failed > 0) setPilotError("La IA no pudo revisar algunos videos: lo vuelve a intentar sola en unos minutos.");
           break;
         }
       }
     } finally {
-      if (totals.reviewed > 0) {
-        setPilotNotice(
-          `Listo: la IA revisó ${many(totals.reviewed, "video", "videos")}: ${many(totals.published, "publicado", "publicados")} y ${many(totals.discarded, "descartado", "descartados")}.`,
-        );
-      }
+      const done = [
+        totals.reviewed > 0 &&
+          `la IA revisó ${many(totals.reviewed, "video", "videos")}: ${many(totals.published, "publicado", "publicados")} y ${many(totals.discarded, "descartado", "descartados")}`,
+        totals.reordered > 0 && `ordenó ${many(totals.reordered, "video que ya había publicado", "videos que ya había publicado")}`,
+      ].filter(Boolean);
+      if (done.length) setPilotNotice(`Listo: ${done.join("; ")}.`);
       setPilotRun(null);
       running.current = false;
       router.refresh();
@@ -180,7 +192,7 @@ export default function LibraryYoutubeImport({ data, instructors }: { data: Yout
 
   // Opening the tab with videos waiting: the autopilot gets going.
   useEffect(() => {
-    if (pilot.on && pilot.keySource && pilot.waiting > 0) void runPilot();
+    if (pilot.on && pilot.keySource && pilot.waiting + pilot.reorderWaiting > 0) void runPilot();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- once, when the tab opens
   }, []);
 
@@ -244,7 +256,7 @@ export default function LibraryYoutubeImport({ data, instructors }: { data: Yout
       return;
     }
     router.refresh();
-    if (on && pilot.keySource && pilot.waiting > 0) void runPilot();
+    if (on && pilot.keySource && pilot.waiting + pilot.reorderWaiting > 0) void runPilot();
   }
 
   async function saveClaudeKey() {
@@ -260,7 +272,7 @@ export default function LibraryYoutubeImport({ data, instructors }: { data: Yout
     setKeyEditing(false);
     setPilotNotice("Listo: la llave de Claude quedó guardada.");
     router.refresh();
-    if (pilot.on && pilot.waiting > 0) void runPilot();
+    if (pilot.on && pilot.waiting + pilot.reorderWaiting > 0) void runPilot();
   }
 
   async function decide(action: "pasar" | "descartar" | "revisar" | "publicar" | "quitar") {
@@ -270,7 +282,7 @@ export default function LibraryYoutubeImport({ data, instructors }: { data: Yout
     setNotice(null);
     const body =
       action === "pasar"
-        ? { action, ids: chosen, theme: theme || null, level, instructorId: instructorId || null, kind, visible }
+        ? { action, ids: chosen, theme: theme || null, instructorId: instructorId || null, kind, visible }
         : { action, ids: chosen };
     const result = await send("/api/admin/library/youtube/videos", "POST", body);
     setBusy(null);
@@ -295,7 +307,15 @@ export default function LibraryYoutubeImport({ data, instructors }: { data: Yout
   }
 
   const needsKey = !pilot.keySource || keyEditing;
-  const reviewedShare = pilotRun && pilotRun.remaining !== null ? pilotRun.reviewed / Math.max(1, pilotRun.reviewed + pilotRun.remaining) : null;
+  // Putting the published ones in order once the new ones are done.
+  const reordering = pilotRun !== null && pilotRun.remaining === 0 && (pilotRun.reorderRemaining ?? 0) > 0;
+  const reviewedShare = !pilotRun
+    ? null
+    : reordering
+      ? pilotRun.reordered / Math.max(1, pilotRun.reordered + (pilotRun.reorderRemaining ?? 0))
+      : pilotRun.remaining !== null
+        ? pilotRun.reviewed / Math.max(1, pilotRun.reviewed + pilotRun.remaining)
+        : null;
 
   return (
     <div>
@@ -403,9 +423,10 @@ export default function LibraryYoutubeImport({ data, instructors }: { data: Yout
             Piloto automático
           </CardTitle>
           <p style={{ ...mutedText, marginTop: 0 }}>
-            La IA revisa cada video de tu canal y publica en la biblioteca los que le sirven a una manicurista: les pone título y descripción al estilo de la
-            biblioteca, su tema, su nivel y sus temas. Deja por fuera los sorteos, los anuncios de fechas, los vlogs y lo que no es de uñas, y te dice por
-            qué. Cada 6 horas trae sola los videos nuevos del canal. Todo lo puedes cambiar abajo.
+            La IA revisa cada video de tu canal y publica en la biblioteca los que le sirven a una manicurista: les pone título y una descripción corta al
+            estilo de la biblioteca, sus temas, su subcategoría (Navidad, Halloween…) y sus etiquetas para la búsqueda y los cortos. Deja por fuera los
+            sorteos, los anuncios de fechas, los vlogs y lo que no es de uñas, y te dice por qué. Cada 6 horas trae sola los videos nuevos del canal.
+            Todo lo puedes cambiar abajo o en Videos.
           </p>
 
           {!pilot.on ? (
@@ -456,9 +477,17 @@ export default function LibraryYoutubeImport({ data, instructors }: { data: Yout
           ) : pilotRun ? (
             <div role="status">
               <div style={{ fontSize: 13, marginBottom: 6 }}>
-                La IA está revisando… {many(pilotRun.reviewed, "listo", "listos")} · {many(pilotRun.published, "publicado", "publicados")} ·{" "}
-                {many(pilotRun.discarded, "descartado", "descartados")}
-                {pilotRun.remaining !== null && ` · faltan ${pilotRun.remaining}`}
+                {reordering ? (
+                  <>
+                    La IA está ordenando los que ya había publicado… {many(pilotRun.reordered, "listo", "listos")} · faltan {pilotRun.reorderRemaining}
+                  </>
+                ) : (
+                  <>
+                    La IA está revisando… {many(pilotRun.reviewed, "listo", "listos")} · {many(pilotRun.published, "publicado", "publicados")} ·{" "}
+                    {many(pilotRun.discarded, "descartado", "descartados")}
+                    {pilotRun.remaining !== null && ` · faltan ${pilotRun.remaining}`}
+                  </>
+                )}
               </div>
               <ProgressBar share={reviewedShare} />
               <p style={{ ...mutedText, fontSize: 12, margin: "6px 0 0" }}>Puedes cerrar esta página: la IA sigue sola cada 10 minutos.</p>
@@ -469,6 +498,11 @@ export default function LibraryYoutubeImport({ data, instructors }: { data: Yout
                 <p style={{ fontSize: 13, margin: "0 0 8px" }}>
                   Faltan {many(pilot.waiting, "video", "videos")} por revisar: la IA sigue sola cada 10 minutos, aunque cierres esta página.
                 </p>
+              ) : pilot.reorderWaiting > 0 ? (
+                <p style={{ fontSize: 13, margin: "0 0 8px" }}>
+                  La IA está ordenando {many(pilot.reorderWaiting, "video que ya había publicado", "videos que ya había publicado")}: sus temas, su subcategoría,
+                  sus etiquetas y una descripción corta. Sigue sola cada 10 minutos.
+                </p>
               ) : (
                 <p style={{ fontSize: 13, margin: "0 0 8px" }}>
                   Al día. La IA publicó {many(counts.aiPublished, "video", "videos")} y dejó por fuera {counts.aiDiscarded}.
@@ -476,9 +510,9 @@ export default function LibraryYoutubeImport({ data, instructors }: { data: Yout
                 </p>
               )}
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                {pilot.waiting > 0 && (
+                {pilot.waiting + pilot.reorderWaiting > 0 && (
                   <button type="button" style={primaryButtonStyle} disabled={busy !== null} onClick={() => void runPilot()}>
-                    Revisar ahora
+                    {pilot.waiting > 0 ? "Revisar ahora" : "Ordenar ahora"}
                   </button>
                 )}
                 {pilot.keySource === "admin" && (
@@ -626,16 +660,6 @@ export default function LibraryYoutubeImport({ data, instructors }: { data: Yout
                     {LIBRARY_THEMES.map((t) => (
                       <option key={t.key} value={t.key}>
                         {t.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div style={field}>
-                  <label htmlFor="yt-level">Nivel</label>
-                  <select id="yt-level" style={control} value={level} onChange={(e) => setLevel(e.target.value)}>
-                    {LIBRARY_LEVELS.map((l) => (
-                      <option key={l.key} value={l.key}>
-                        {l.label}
                       </option>
                     ))}
                   </select>

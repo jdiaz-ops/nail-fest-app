@@ -5,7 +5,6 @@ import Link from "next/link";
 import { showCuponeraNotice } from "@/components/cuponera/PreviewLink";
 import {
   formatDuration,
-  levelLabel,
   shortiesSlides,
   shuffled,
   themeOf,
@@ -628,7 +627,7 @@ export default function ShortiesFeed({ items: firstOrder, topic, texts, menu, ti
           const theme = themeOf(video.theme);
           const descriptionOpen = openDescription === video.id;
           const longDescription = (video.description?.length ?? 0) > DESCRIPTION_CLAMP;
-          const tags = video.tags.filter((t) => topicKey(t) !== video.theme);
+          const tags = video.tags.filter((t) => topicKey(t) !== video.theme && !video.subcategories.some((s) => s.key === topicKey(t)));
           return (
             <section key={video.id} className="bib-short" aria-label={video.title}>
               <div className="bib-short-frame">
@@ -729,12 +728,16 @@ export default function ShortiesFeed({ items: firstOrder, topic, texts, menu, ti
                     <Link href={`${CORTOS}?tema=${theme.key}`} className="bib-short-topic" aria-current={topic?.key === theme.key ? "true" : undefined}>
                       {theme.label}
                     </Link>
+                    {video.subcategories.map((sub) => (
+                      <Link key={sub.key} href={`${CORTOS}?tema=${sub.key}`} className="bib-short-topic" aria-current={topic?.key === sub.key ? "true" : undefined}>
+                        {sub.name}
+                      </Link>
+                    ))}
                     {tags.map((tag) => (
                       <Link key={tag} href={`${CORTOS}?tema=${topicKey(tag)}`} className="bib-short-topic" aria-current={topic?.key === topicKey(tag) ? "true" : undefined}>
                         {tag}
                       </Link>
                     ))}
-                    <span>{levelLabel(video.level)}</span>
                     {length && <span>{length}</span>}
                   </span>
                 </div>

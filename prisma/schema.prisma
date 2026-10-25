@@ -2342,8 +2342,15 @@ model LibraryVideo {
   kind            String      @default("video")
   title           String
   description     String?
-  // Theme and level keys from lib/library/shared.ts.
+  // Theme and level keys from lib/library/shared.ts. The level isn't shown
+  // or asked anymore (2026-10-25: "Nivel no va"); it stays as it was.
   theme           String
+  // The other themes it also belongs to, up to two besides `theme` (its
+  // main one) — 2026-10-25: "unos videos pueden ir en varios temas".
+  extraThemes     String[]    @default([])
+  // Its subcategory inside a theme (LibrarySubcategory.key): Navidad,
+  // Halloween… At most one.
+  subcategories   String[]    @default([])
   level           String      @default("principiante")
   youtubeId       String
   durationSeconds Int?
@@ -2525,10 +2532,33 @@ model LibraryYoutubeVideo {
   aiClaimedAt     DateTime?
   aiAttempts      Int           @default(0)
   aiError         String?
+  // The autopilot's version that reviewed it (null: the first one): the
+  // ones it published before the current version get their themes,
+  // subcategory, tags and description again.
+  aiVersion       Int?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
   @@index([status, views])
+}
+
+// Subcategories inside a theme (2026-10-25): Navidad, Halloween… The
+// autopilot creates one when a group is clear and reuses the ones there
+// are; the team renames (a name that exists joins them), moves, hides or
+// deletes them. The library shows one once it has three videos.
+model LibrarySubcategory {
+  id        String   @id @default(cuid())
+  // "navidad" — its name's topicKey; what LibraryVideo.subcategories keeps.
+  key       String   @unique
+  name      String
+  // The theme it's inside (a key from lib/library/shared.ts).
+  theme     String
+  // "ia" | "equipo"
+  createdBy String   @default("ia")
+  // Hidden by the team: not shown, and the autopilot doesn't use it.
+  hidden    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // ── The community: accounts and the Consultorio (2026-10-24) ───────────────

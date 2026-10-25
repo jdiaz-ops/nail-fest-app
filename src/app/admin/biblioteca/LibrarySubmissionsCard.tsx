@@ -3,12 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { AdminSubmission } from "@/lib/library/admin";
-import { LIBRARY_LEVELS, LIBRARY_THEMES, youtubeThumbnail } from "@/lib/library/shared";
+import { LIBRARY_THEMES, youtubeThumbnail } from "@/lib/library/shared";
 import { api, CardTitle, cardStyle, mutedText, primaryButtonStyle, secondaryButtonStyle } from "../cuponera/ui";
 import { FormError, rowStyle } from "./ui";
 
 const themeLabel = (key: string) => LIBRARY_THEMES.find((t) => t.key === key)?.label ?? key;
-const levelLabel = (key: string) => LIBRARY_LEVELS.find((l) => l.key === key)?.label ?? key;
 
 // Editar biblioteca → Videos → "Enviados por instructoras": what they sent
 // from their portal, waiting for the team. "Aceptar y editar" makes it a
@@ -53,7 +52,7 @@ export default function LibrarySubmissionsCard({ submissions }: { submissions: A
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 700, fontSize: 14 }}>{s.title}</div>
             <div style={{ ...mutedText, fontSize: 12 }}>
-              {s.instructorName} · {themeLabel(s.theme)} · {levelLabel(s.level)} · {s.createdAtLabel}
+              {s.instructorName} · {themeLabel(s.theme)} · {s.createdAtLabel}
             </div>
             {s.description && <p style={{ fontSize: 13, margin: "6px 0 0", lineHeight: 1.45 }}>{s.description}</p>}
             {s.tags.length > 0 && <div style={{ ...mutedText, fontSize: 12, marginTop: 4 }}>Etiquetas: {s.tags.join(", ")}</div>}

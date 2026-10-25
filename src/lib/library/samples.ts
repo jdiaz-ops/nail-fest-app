@@ -1,4 +1,4 @@
-import { SAMPLE_SLUG_PREFIX, type InstructorCard, type LibraryLevel, type LibraryTheme, type LibraryVideoCard, type UsedProduct } from "./shared";
+import { SAMPLE_SLUG_PREFIX, type InstructorCard, type LibraryLevel, type LibrarySubcategoryRef, type LibraryTheme, type LibraryVideoCard, type UsedProduct } from "./shared";
 
 // Invented examples, for staff only (asked on 2026-10-24: "ponle videos y
 // demás muestras inventados por ahora mientras se va poblando"). They fill
@@ -394,7 +394,14 @@ const SAMPLE_TAGS: Record<string, string[]> = {
   "maraton-navidad": ["Nail art"],
 };
 
+// Two examples in a special date's subcategory.
+const SAMPLE_SUBCATEGORIES: Record<string, LibrarySubcategoryRef> = {
+  "amor-y-amistad": { key: "amor-y-amistad", name: "Amor y Amistad", theme: "tendencias" },
+  "maraton-navidad": { key: "navidad", name: "Navidad", theme: "tendencias" },
+};
+
 function toCard(v: SampleVideo, now: Date): LibraryVideoCard {
+  const sub = SAMPLE_SUBCATEGORIES[v.key];
   return {
     id: `sample-${v.key}`,
     slug: sampleVideoSlug(v.key),
@@ -402,7 +409,8 @@ function toCard(v: SampleVideo, now: Date): LibraryVideoCard {
     title: v.title,
     description: v.description,
     theme: v.theme,
-    level: v.level,
+    themes: sub && sub.theme !== v.theme ? [v.theme, sub.theme] : [v.theme],
+    subcategories: sub ? [sub] : [],
     youtubeId: null,
     durationSeconds: v.seconds,
     instructor: v.instructor ? person(v.instructor) : null,

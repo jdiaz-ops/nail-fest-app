@@ -10,7 +10,6 @@ const MESSAGES: Record<string, string> = {
   youtube: "Pega el enlace de tu video en YouTube.",
   title: "Ponle un título (al menos 3 letras).",
   theme: "Elige el tema.",
-  level: "Elige el nivel.",
   description: "La descripción va hasta 1.000 caracteres.",
 };
 

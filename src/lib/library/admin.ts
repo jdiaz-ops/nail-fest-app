@@ -5,6 +5,7 @@ import { getLibrarySettings } from "./settings";
 import { resolveSections, resolveTexts } from "./texts";
 import { phoneOf, profileStatus, youtubeChannelOf, type ProfileStatus } from "./portal";
 import {
+  EXTRA_THEMES_UP_TO,
   LIBRARY_LEVELS,
   LIBRARY_THEMES,
   RESERVED_INSTRUCTOR_SLUGS,
@@ -55,7 +56,18 @@ export const videoInputSchema = z.object({
       return seconds;
     }),
   theme: z.enum(themeKeys),
-  level: z.enum(levelKeys),
+  // Up to two more themes besides the main one.
+  extraThemes: z
+    .array(z.enum(themeKeys))
+    .max(EXTRA_THEMES_UP_TO)
+    .default([]),
+  // Its subcategory (a LibrarySubcategory key), at most one.
+  subcategories: z
+    .array(z.string().min(1).max(60))
+    .max(1)
+    .default([]),
+  // Not asked anymore (2026-10-25: "Nivel no va"); the column keeps its value.
+  level: z.enum(levelKeys).optional(),
   instructorId: z.string().min(1).nullish(),
   teachersNote: optionalText(80),
   description: optionalText(1000),
@@ -187,7 +199,12 @@ export interface AdminVideo {
   title: string;
   description: string | null;
   theme: string;
-  level: string;
+  /** Up to two more themes. */
+  extraThemes: string[];
+  /** Its subcategory's key (at most one). */
+  subcategories: string[];
+  /** Who put it in: the autopilot from YouTube, the team, or an instructor from her portal. */
+  origin: "ia" | "equipo" | "instructora";
   youtubeId: string;
   durationSeconds: number | null;
   instructorId: string | null;
@@ -227,6 +244,17 @@ export interface AdminInstructor {
   submittedAtLabel: string | null;
   /** Her portal account, when she has one — never public. */
   account: { email: string; phone: string; resetRequestedLabel: string | null; lastLoginLabel: string | null } | null;
+}
+
+/** A subcategory inside a theme (Navidad, Halloween…), with its videos. */
+export interface AdminSubcategory {
+  id: string;
+  key: string;
+  name: string;
+  theme: string;
+  hidden: boolean;
+  createdBy: "ia" | "equipo";
+  videos: number;
 }
 
 /** A video an instructor sent from her portal, waiting for the team. */
@@ -285,9 +313,12 @@ export interface AdminCuponeraProduct {
 }
 
 export async function getLibraryAdminData() {
-  const [settings, videos, instructors, classes, leads, products, views] = await Promise.all([
+  const [settings, videos, instructors, classes, leads, products, views, subcategories] = await Promise.all([
     getLibrarySettings(),
-    db.libraryVideo.findMany({ orderBy: { publishedAt: "desc" }, include: { instructor: { select: { name: true } } } }),
+    db.libraryVideo.findMany({
+      orderBy: { publishedAt: "desc" },
+      include: { instructor: { select: { name: true } }, youtubeImport: { select: { decidedBy: true } }, submission: { select: { id: true } } },
+    }),
     db.instructor.findMany({
       orderBy: [{ featured: "desc" }, { name: "asc" }],
       include: { _count: { select: { videos: true } }, account: { select: { email: true, phone: true, resetRequestedAt: true, lastLoginAt: true } } },
@@ -300,6 +331,7 @@ export async function getLibraryAdminData() {
       orderBy: { name: "asc" },
     }),
     db.libraryVideoDailyView.groupBy({ by: ["videoId"], _sum: { views: true } }),
+    db.librarySubcategory.findMany({ orderBy: [{ theme: "asc" }, { name: "asc" }] }),
   ]);
   const viewsById = new Map(views.map((v) => [v.videoId, v._sum.views ?? 0]));
   const now = Date.now();
@@ -331,7 +363,9 @@ export async function getLibraryAdminData() {
         title: v.title,
         description: v.description,
         theme: v.theme,
-        level: v.level,
+        extraThemes: v.extraThemes,
+        subcategories: v.subcategories,
+        origin: v.youtubeImport?.decidedBy === "ia" ? "ia" : v.submission ? "instructora" : "equipo",
         youtubeId: v.youtubeId,
         durationSeconds: v.durationSeconds,
         instructorId: v.instructorId,
@@ -344,6 +378,17 @@ export async function getLibraryAdminData() {
         inShorties: v.inShorties,
         tags: v.tags,
         views: viewsById.get(v.id) ?? 0,
+      }),
+    ),
+    subcategories: subcategories.map(
+      (sub): AdminSubcategory => ({
+        id: sub.id,
+        key: sub.key,
+        name: sub.name,
+        theme: sub.theme,
+        hidden: sub.hidden,
+        createdBy: sub.createdBy === "ia" ? "ia" : "equipo",
+        videos: videos.filter((v) => v.subcategories.includes(sub.key)).length,
       }),
     ),
     instructors: instructors.map(

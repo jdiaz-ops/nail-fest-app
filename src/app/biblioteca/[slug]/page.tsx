@@ -8,7 +8,7 @@ import ShareButton from "@/components/library/ShareButton";
 import ViewPing from "@/components/library/ViewPing";
 import { Avatar, SampleBadge, VideoCard } from "@/components/library/parts";
 import { getLibraryVideoPage, getLibraryViewer, libraryRobots } from "@/lib/library/data";
-import { VIEWS_SHOWN_FROM, formatDuration, formatLength, formatViews, levelLabel, themeOf, toneOf, topicKey } from "@/lib/library/shared";
+import { VIEWS_SHOWN_FROM, formatDuration, formatLength, formatViews, themeOf, toneOf, topicKey, type LibraryTheme } from "@/lib/library/shared";
 import { fraunces } from "@/app/cuponera/fonts";
 
 export const dynamic = "force-dynamic";
@@ -26,7 +26,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 }
 
 // A video's page: the video (played from YouTube), who teaches it, its
-// theme, level and topics (a topic opens its cortos), "Lo que usó" with the
+// themes, subcategory and topics (a topic opens its cortos), "Lo que usó" with the
 // cuponera's discounts, the step by step behind the free sign-up, and more
 // of the same theme.
 export default async function BibliotecaVideoPage({ params }: { params: { slug: string } }) {
@@ -68,14 +68,18 @@ export default async function BibliotecaVideoPage({ params }: { params: { slug: 
           <h1 className={`bib-title ${fraunces.className}`}>{video.title}</h1>
           <div className="bib-meta">
             {video.sample && <SampleBadge />}
-            <Link href={`/biblioteca/buscar?tema=${video.theme}`} className="bib-tag">
-              {theme.label}
-            </Link>
-            <Link href={`/biblioteca/buscar?nivel=${video.level}`} className="bib-tag">
-              {levelLabel(video.level)}
-            </Link>
+            {video.themes.map((key) => (
+              <Link key={key} href={`/biblioteca/buscar?tema=${key}`} className="bib-tag">
+                {key === video.theme ? theme.label : themeOf(key).label}
+              </Link>
+            ))}
+            {video.subcategories.map((sub) => (
+              <Link key={sub.key} href={`/biblioteca/buscar?tema=${sub.theme}&sub=${sub.key}`} className="bib-tag">
+                {sub.name}
+              </Link>
+            ))}
             {video.tags
-              .filter((tag) => topicKey(tag) !== video.theme)
+              .filter((tag) => !video.themes.includes(topicKey(tag) as LibraryTheme) && !video.subcategories.some((s) => s.key === topicKey(tag)))
               .map((tag) => (
                 <Link
                   key={tag}
