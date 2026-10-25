@@ -30,10 +30,10 @@ const STATUS_TABS = [
 ] as const;
 
 const KINDS = [
-  { key: "sugerido", label: "Como sugiere cada uno: cortos a Cortos, largos como grabación con registro" },
+  { key: "sugerido", label: "Como sugiere cada uno: cortos a Cortos, largos como grabación" },
   { key: "corto", label: "Corto, en Cortos" },
   { key: "video", label: "Video, fuera de Cortos" },
-  { key: "maraton", label: "Grabación con registro gratis" },
+  { key: "maraton", label: "Grabación" },
 ] as const;
 
 const PAGE = 60;

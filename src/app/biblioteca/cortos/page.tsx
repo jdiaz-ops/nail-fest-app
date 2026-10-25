@@ -85,7 +85,7 @@ export default async function CortosPage({ searchParams }: { searchParams: Searc
         }}
         menu={menu}
         titleClass={fraunces.className}
-        signupEvery={sections.shortiesSignup && (viewer.staff || !viewer.unlocked) ? SHORTIES_SIGNUP_EVERY : null}
+        signupEvery={sections.shortiesSignup && viewer.asksSignup ? SHORTIES_SIGNUP_EVERY : null}
         unlocked={viewer.unlocked}
         profiles={viewer.staff || viewer.config.instructorsPublished}
         showUsed={sections.used}

@@ -8,6 +8,7 @@ import { SAMPLE_PRODUCTS } from "@/lib/cuponera/sampleData";
 import { classifyProduct, lookFor, type CuponeraProduct } from "@/lib/cuponera/shared";
 import { hasLibraryAccess } from "./access";
 import { getLibrarySettings, libraryConfigOf, type LibraryConfig } from "./settings";
+import { LIBRARY_SIGNUP } from "./texts";
 import { sampleInstructors, sampleVideoDetail, sampleVideos } from "./samples";
 import { rankBy, rankLoosely, type SearchField } from "./search";
 import {
@@ -68,13 +69,18 @@ export interface LibraryViewer {
   /** The cuponera is public (or this is staff): "Lo que usó" shows its
    * discounts, codes and store links. */
   cuponeraLive: boolean;
-  /** Signed up (or staff): the recordings and the step by steps open. */
+  /** Signed up, staff, or the library asks for no sign-up (LIBRARY_SIGNUP):
+   * the recordings and the step by steps open. */
   unlocked: boolean;
+  /** The sign-up's padlocks and invitations show: to whoever hasn't signed
+   * up and, as a preview, to staff — only while the library asks for it. */
+  asksSignup: boolean;
 }
 
 export async function getLibraryViewer(): Promise<LibraryViewer> {
   const [staff, settings, cuponera] = await Promise.all([viewerCanSeeSamples(), getLibrarySettings(), getCuponeraSettings()]);
-  return { staff, config: libraryConfigOf(settings), cuponeraLive: cuponera.published || staff, unlocked: staff || hasLibraryAccess() };
+  const unlocked = !LIBRARY_SIGNUP || staff || hasLibraryAccess();
+  return { staff, config: libraryConfigOf(settings), cuponeraLive: cuponera.published || staff, unlocked, asksSignup: LIBRARY_SIGNUP && (staff || !unlocked) };
 }
 
 /** Indexed only once the page is public; the preview never is. */
@@ -448,7 +454,7 @@ export async function getLibraryMenu(viewer: LibraryViewer, now: Date = new Date
     videos: Boolean(facts) && sections.newest && (viewer.staff || facts!.shorts > 0),
     mostViewed: Boolean(facts) && sections.mostViewed && (viewer.staff || facts!.watched >= MOST_VIEWED_FROM),
     recordings: Boolean(facts) && sections.recordings && (viewer.staff || facts!.recordings > 0),
-    signup: library && sections.menuSignup && (viewer.staff || !viewer.unlocked),
+    signup: library && sections.menuSignup && viewer.asksSignup,
     popularSearches: library ? popularSearches : [],
     themes,
     people: people.slice(0, MENU_PEOPLE_UP_TO).map((p) => ({ slug: p.slug, name: p.name, initial: p.initial, photoUrl: p.photoUrl, tone: p.tone, city: p.city })),

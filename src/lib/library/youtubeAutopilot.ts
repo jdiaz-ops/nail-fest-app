@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { uniqueVideoSlug } from "./admin";
 import { listedInstructor } from "./data";
 import { getLibrarySettings, updateLibrarySettings } from "./settings";
+import { LIBRARY_SIGNUP } from "./texts";
 import {
   EXTRA_THEMES_UP_TO,
   LIBRARY_THEMES,
@@ -174,7 +175,7 @@ La subcategoría (una o ninguna): un grupo dentro de un tema que una manicurista
 
 Las etiquetas (de 3 a 6): las palabras clave con las que se busca y se encuentra el video en la búsqueda y en los cortos: la técnica, el producto, la forma, el estilo, el efecto, el color (Polygel, Francesa, Almendra, Cromo, Baby boomer, Nude…). Cortas, en singular y con la primera letra en mayúscula. Usa primero las de esta lista y las que ya tiene la biblioteca, escritas igual: ${VIDEO_TAG_SUGGESTIONS.join(", ")}. No repitas el tema ni la subcategoría. Crea una nueva solo si hace falta.
 
-El tipo: «corto» si dura 3 minutos o menos (te lo digo en cada video); «video» si es una clase o un tutorial más largo; «grabacion» si es la grabación de un directo, una maratón o una clase larga (en vivo, live, masterclass, o más de 40 minutos): esas quedan detrás del registro gratis de la biblioteca.
+El tipo: «corto» si dura 3 minutos o menos (te lo digo en cada video); «video» si es una clase o un tutorial más largo; «grabacion» si es la grabación de un directo, una maratón o una clase larga (en vivo, live, masterclass, o más de 40 minutos).
 
 La instructora: el id de una instructora del directorio solo si el título, la descripción o las etiquetas la nombran (por su nombre o su @). Si el video no nombra a nadie y la dueña del canal está en el directorio (su nombre o su @ coinciden con los del canal), es ella. Si no, null. Nunca adivines.
 
@@ -530,8 +531,9 @@ export function libraryVideoData(
     youtubeId: row.youtubeId,
     durationSeconds: row.durationSeconds,
     instructorId: proposal.instructorId,
-    // A recording stays behind the free sign-up; only a corto goes to Cortos.
-    gated: proposal.kind === "grabacion",
+    // A recording asks for the free sign-up only while the library asks for
+    // one (LIBRARY_SIGNUP: off); only a corto goes to Cortos.
+    gated: LIBRARY_SIGNUP && proposal.kind === "grabacion",
     inShorties: proposal.kind === "corto",
     tags: proposal.tags,
     visible,

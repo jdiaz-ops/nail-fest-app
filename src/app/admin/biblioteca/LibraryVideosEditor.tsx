@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import type { AdminCuponeraProduct, AdminInstructor, AdminSubcategory, AdminVideo } from "@/lib/library/admin";
 import { scoreFields } from "@/lib/library/search";
+import { LIBRARY_SIGNUP } from "@/lib/library/texts";
 import {
   EXTRA_THEMES_UP_TO,
   LIBRARY_THEMES,
@@ -534,7 +535,7 @@ export default function LibraryVideosEditor({
                       {v.origin === "ia" && <Pill tone="green">Publicado por la IA</Pill>}
                       {v.origin === "instructora" && <Pill tone="pink">De una instructora</Pill>}
                       {v.kind === "maraton" && <Pill tone="grey">Grabación</Pill>}
-                      {v.gated && <Pill tone="amber">Con registro</Pill>}
+                      {LIBRARY_SIGNUP && v.gated && <Pill tone="amber">Con registro</Pill>}
                       {v.kind === "video" && !v.inShorties && <Pill tone="grey">Fuera de Cortos</Pill>}
                       {v.products.length > 0 && <Pill tone="green">{v.products.length === 1 ? "1 producto" : `${v.products.length} productos`}</Pill>}
                       {!v.visible && <Pill tone="red">Oculto</Pill>}
@@ -809,7 +810,7 @@ function VideoForm({
                 type="radio"
                 name="video-kind"
                 checked={d.kind === value}
-                onChange={() => setD((x) => ({ ...x, kind: value, gated: id ? x.gated : value === "maraton" }))}
+                onChange={() => setD((x) => ({ ...x, kind: value, gated: id ? x.gated : LIBRARY_SIGNUP && value === "maraton" }))}
               />
               {label}
             </label>
@@ -951,7 +952,9 @@ function VideoForm({
           onChange={(e) => set("steps", e.target.value)}
         />
       </div>
-      <Check checked={d.gated} onChange={(v) => set("gated", v)} label="Pide registro gratis para verlo" hint="El video se ve después de dejar nombre y correo (lo normal en las grabaciones)." />
+      {LIBRARY_SIGNUP && (
+        <Check checked={d.gated} onChange={(v) => set("gated", v)} label="Pide registro gratis para verlo" hint="El video se ve después de dejar nombre y correo (lo normal en las grabaciones)." />
+      )}
       <Check checked={d.visible} onChange={(v) => set("visible", v)} label="Visible en la biblioteca" />
       {d.kind === "video" && (
         <Check

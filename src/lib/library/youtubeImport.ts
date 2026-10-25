@@ -286,7 +286,7 @@ function momentLabel(date: Date): string {
   return `${part("day")} ${part("month").replace(/\./g, "")} · ${part("hour")}:${part("minute")}`;
 }
 
-const KIND_LABELS: Record<AutopilotKind, string> = { corto: "Corto, en Cortos", video: "Video", grabacion: "Grabación con registro" };
+const KIND_LABELS: Record<AutopilotKind, string> = { corto: "Corto, en Cortos", video: "Video", grabacion: "Grabación" };
 
 /** "Técnicas + Tendencias › Navidad · Corto, en Cortos · Polygel, Francesa". */
 function choiceLabel(proposal: AutopilotProposal): string {

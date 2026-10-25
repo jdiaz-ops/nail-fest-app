@@ -3,6 +3,14 @@
 // secciones), with the usual text — what shows while the admin leaves it
 // empty. No database here: the admin's form imports it too.
 
+/** Whether the library asks for its free sign-up. Off since 2026-10-25
+ * («No me interesa nada gated»): every recording and step by step opens for
+ * everyone, no padlock or invitation shows (not even in the team's
+ * preview), the admin hides the sign-up's switches, texts and «Pide
+ * registro gratis», and /biblioteca/registro sends people back. The
+ * sign-ups already made and each video's `gated` stay as they were. */
+export const LIBRARY_SIGNUP = false;
+
 export type LibraryPage = "biblioteca" | "shorties" | "video" | "instructoras" | "perfil" | "portal" | "menu" | "formularios";
 
 export const LIBRARY_PAGES: { key: LibraryPage; label: string; hint: string }[] = [
@@ -13,7 +21,7 @@ export const LIBRARY_PAGES: { key: LibraryPage; label: string; hint: string }[] 
   { key: "perfil", label: "Perfil de cada instructora", hint: "nailfest.lat/instructoras/<instructora>" },
   { key: "portal", label: "Portal de instructoras", hint: "Crear perfil (nailfest.lat/instructoras/unirme) y los términos que aceptan" },
   { key: "menu", label: "Menú", hint: "El menú de la biblioteca y del directorio de instructoras" },
-  { key: "formularios", label: "Formularios", hint: "Registro gratis y postulación de instructoras" },
+  { key: "formularios", label: "Formularios", hint: LIBRARY_SIGNUP ? "Registro gratis y postulación de instructoras" : "Postulación de instructoras" },
 ];
 
 interface TextDef {
@@ -24,6 +32,8 @@ interface TextDef {
   long?: boolean;
   /** The section it belongs to: shown under that section's switch. */
   section?: LibrarySectionKey;
+  /** Only for the free sign-up: hidden in the admin while it's off (LIBRARY_SIGNUP). */
+  signup?: true;
 }
 
 export const LIBRARY_SECTIONS = {
@@ -31,14 +41,14 @@ export const LIBRARY_SECTIONS = {
   themes: { page: "biblioteca", label: "Explora por tema", hint: "Los ocho temas, con cuántos videos tiene cada uno." },
   newest: { page: "biblioteca", label: "Lo nuevo", hint: "Los últimos videos publicados." },
   mostViewed: { page: "biblioteca", label: "Lo más visto esta semana", hint: "Sale cuando al menos 3 videos tienen visitas en los últimos 7 días." },
-  recordings: { page: "biblioteca", label: "Grabaciones de maratones", hint: "Las grabaciones largas, con su candado de registro gratis." },
-  signup: { page: "biblioteca", label: "Registro gratis", hint: "El recuadro que invita a registrarse." },
+  recordings: { page: "biblioteca", label: "Grabaciones de maratones", hint: "Las grabaciones largas de las maratones y los directos." },
+  signup: { page: "biblioteca", label: "Registro gratis", hint: "El recuadro que invita a registrarse.", signup: true },
   instructorsRow: { page: "biblioteca", label: "Aprende con", hint: "Las instructoras, con enlace a su perfil." },
   shorties: { page: "shorties", label: "Cortos", hint: "Apagado, no sale en la portada ni en el menú, y su página no abre para el público." },
   shortiesBadge: { page: "shorties", label: "Etiqueta «Nuevo»", hint: "En la entrada de la portada y en el menú." },
-  shortiesSignup: { page: "shorties", label: "Invitación a registrarse", hint: "Sale cada 6 videos a quien no se ha registrado." },
+  shortiesSignup: { page: "shorties", label: "Invitación a registrarse", hint: "Sale cada 6 videos a quien no se ha registrado.", signup: true },
   used: { page: "video", label: "Lo que usó", hint: "Los productos del video, con el descuento y el código de la cuponera." },
-  steps: { page: "video", label: "El paso a paso", hint: "Los pasos del video, que se ven con el registro gratis." },
+  steps: { page: "video", label: "El paso a paso", hint: "Los pasos del video, uno por uno." },
   related: { page: "video", label: "Sigue con", hint: "Más videos del mismo tema." },
   // Off unless the team switches them on (2026-10-25): `off: true`.
   subcategories: {
@@ -56,8 +66,8 @@ export const LIBRARY_SECTIONS = {
   menuThemes: { page: "menu", label: "Aprende por tema", hint: "Los temas de la biblioteca, con cuántos videos tiene cada uno." },
   menuInstructors: { page: "menu", label: "Por instructora", hint: "Las instructoras, con enlace a su perfil." },
   menuCities: { page: "menu", label: "Instructoras por ciudad", hint: "Las ciudades donde hay instructoras." },
-  menuSignup: { page: "menu", label: "Registro gratis", hint: "El recuadro que invita a registrarse, al final del menú.", off: true },
-} as const satisfies Record<string, { page: LibraryPage; label: string; hint: string; off?: true }>;
+  menuSignup: { page: "menu", label: "Registro gratis", hint: "El recuadro que invita a registrarse, al final del menú.", off: true, signup: true },
+} as const satisfies Record<string, { page: LibraryPage; label: string; hint: string; off?: true; signup?: true }>;
 
 export type LibrarySectionKey = keyof typeof LIBRARY_SECTIONS;
 
@@ -73,7 +83,7 @@ export const LIBRARY_TEXTS = {
   newestTitle: { page: "biblioteca", label: "Título", value: "Lo nuevo", section: "newest" },
   mostViewedTitle: { page: "biblioteca", label: "Título", value: "Lo más visto esta semana", section: "mostViewed" },
   recordingsTitle: { page: "biblioteca", label: "Título", value: "Grabaciones de maratones", section: "recordings" },
-  lockedLabel: { page: "biblioteca", label: "Candado de las grabaciones", value: "Gratis con registro", section: "recordings" },
+  lockedLabel: { page: "biblioteca", label: "Candado de las grabaciones", value: "Gratis con registro", section: "recordings", signup: true },
   signupTitle: { page: "biblioteca", label: "Título", value: "Regístrate gratis", section: "signup" },
   signupText: { page: "biblioteca", label: "Texto", value: "Ve las grabaciones completas de las maratones.", long: true, section: "signup" },
   signupButton: { page: "biblioteca", label: "Botón", value: "Registrarme", section: "signup" },
@@ -110,8 +120,15 @@ export const LIBRARY_TEXTS = {
   usedSubtitle: { page: "video", label: "Texto debajo", value: "Con descuento en la Cuponera Nail Fest.", section: "used" },
   buyButton: { page: "video", label: "Botón de cada producto", value: "Comprar", section: "used" },
   stepsTitle: { page: "video", label: "Título", value: "El paso a paso", section: "steps" },
-  stepsLockedText: { page: "video", label: "Texto antes del registro", value: "Los pasos de esta técnica, uno por uno. Gratis con tu registro.", long: true, section: "steps" },
-  stepsButton: { page: "video", label: "Botón", value: "Ver el paso a paso", section: "steps" },
+  stepsLockedText: {
+    page: "video",
+    label: "Texto antes del registro",
+    value: "Los pasos de esta técnica, uno por uno. Gratis con tu registro.",
+    long: true,
+    section: "steps",
+    signup: true,
+  },
+  stepsButton: { page: "video", label: "Botón", value: "Ver el paso a paso", section: "steps", signup: true },
   relatedTitle: { page: "video", label: "Título", value: "Sigue con", section: "related" },
 
   directoryTitle: { page: "instructoras", label: "Título", value: "El directorio de instructoras de uñas" },
@@ -201,12 +218,13 @@ export const LIBRARY_TEXTS = {
   menuSeeAll: { page: "menu", label: "Enlace a todas", value: "Ver todas", section: "menuInstructors" },
   menuCitiesTitle: { page: "menu", label: "Título", value: "Instructoras por ciudad", section: "menuCities" },
 
-  signupFormTitle: { page: "formularios", label: "Registro gratis: título", value: "Regístrate gratis" },
+  signupFormTitle: { page: "formularios", label: "Registro gratis: título", value: "Regístrate gratis", signup: true },
   signupFormText: {
     page: "formularios",
     label: "Registro gratis: texto",
     value: "Con tu registro ves las grabaciones completas de las maratones.",
     long: true,
+    signup: true,
   },
   applyFormTitle: { page: "formularios", label: "Postulación: título", value: "Postúlate como Instructora Nail Fest" },
   applyFormText: {

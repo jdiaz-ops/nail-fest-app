@@ -19,7 +19,8 @@ function viewer(staff: boolean, config: Partial<LibraryConfig> = {}): LibraryVie
   return {
     staff,
     cuponeraLive: staff,
-    unlocked: staff,
+    unlocked: true,
+    asksSignup: false,
     config: { published: false, instructorsPublished: false, portalOpen: false, consultorioPublished: false, sections: { shorties: true }, ...config } as LibraryConfig,
   };
 }

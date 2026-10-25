@@ -28,7 +28,7 @@ function SectionHead({ title, href, label }: { title: string; href?: string; lab
 
 // nailfest.lat/biblioteca — the library's front page: the search, the way
 // into Shorties, the themes, what's new and most watched, the
-// marathons' recordings behind the free sign-up, and the instructors. Each
+// marathons' recordings (open to everyone: LIBRARY_SIGNUP), and the instructors. Each
 // section can be renamed or switched off in Editar biblioteca; a video's
 // page lives in ./[slug], the search and the themes in ./buscar, the feed in
 // ./shorties.
@@ -40,7 +40,7 @@ export default async function BibliotecaPage() {
   const shown = [...home.newest, ...home.mostViewed, ...home.recordings];
   const hasExamples = shown.some((v) => v.sample) || home.instructors.some((i) => i.sample);
   const themes = LIBRARY_THEMES.filter((t) => (home.themeCounts[t.key] ?? 0) > 0);
-  const showSignup = sections.signup && (viewer.staff || !viewer.unlocked);
+  const showSignup = sections.signup && viewer.asksSignup;
   const showShorties = sections.shorties && sections.shortiesBanner && (viewer.staff || home.shorties >= SHORTIES_SHOWN_FROM);
   // The three cards fanned out in Shorties' box: the newest shorts' stills.
   const fan = [0, 1, 2].map((i) => home.newest[i] ?? null);
@@ -157,7 +157,7 @@ export default async function BibliotecaPage() {
                 <SectionHead title={texts.recordingsTitle} href="/biblioteca/buscar?tipo=maraton" label="Ver todas" />
                 <div className="bib-mcards">
                   {home.recordings.map((v) => (
-                    <RecordingCard key={v.id} video={v} lockedLabel={texts.lockedLabel} locked={v.gated && (viewer.staff || !viewer.unlocked)} />
+                    <RecordingCard key={v.id} video={v} lockedLabel={texts.lockedLabel} locked={v.gated && viewer.asksSignup} />
                   ))}
                 </div>
               </section>

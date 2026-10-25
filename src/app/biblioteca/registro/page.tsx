@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import LibraryShell, { libraryStaffNote } from "@/components/library/LibraryShell";
 import LeadForm from "@/components/library/LeadForm";
 import { getLibraryViewer } from "@/lib/library/data";
 import { hasLibraryAccess } from "@/lib/library/access";
+import { LIBRARY_SIGNUP } from "@/lib/library/texts";
 import { fraunces } from "@/app/cuponera/fonts";
 
 export const dynamic = "force-dynamic";
@@ -20,12 +21,14 @@ function returnPath(value: string | string[] | undefined): string {
 
 // nailfest.lat/biblioteca/registro — the free sign-up that opens the
 // marathons' recordings and the step by steps (on this browser), then
-// takes the person back to the video that asked for it.
+// takes the person back to the video that asked for it. While the library
+// asks for no sign-up (LIBRARY_SIGNUP), it just takes them back.
 export default async function BibliotecaRegistroPage({ searchParams }: { searchParams: Record<string, string | string[] | undefined> }) {
   const viewer = await getLibraryViewer();
   if (!viewer.config.published && !viewer.staff) notFound();
   const { texts } = viewer.config;
   const back = returnPath(searchParams.volver);
+  if (!LIBRARY_SIGNUP) redirect(back);
   const signedUp = hasLibraryAccess();
 
   return (

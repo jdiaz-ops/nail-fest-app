@@ -27,8 +27,8 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 
 // A video's page: the video (played from YouTube), who teaches it, its
 // themes, subcategory and topics (a topic opens its cortos), "Lo que usó" with the
-// cuponera's discounts, the step by step behind the free sign-up, and more
-// of the same theme.
+// cuponera's discounts, the step by step (open to everyone while the library
+// asks for no sign-up: LIBRARY_SIGNUP), and more of the same theme.
 export default async function BibliotecaVideoPage({ params }: { params: { slug: string } }) {
   const viewer = await getLibraryViewer();
   if (!viewer.config.published && !viewer.staff) notFound();
