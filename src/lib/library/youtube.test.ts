@@ -1,5 +1,17 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanDescription, fetchChannel, fetchUploadsPage, fetchVideos, guessTheme, isoDurationSeconds, isShortVideo, parseChannel, YoutubeError } from "./youtube";
+import {
+  cleanDescription,
+  fetchChannel,
+  fetchPlaylistVideoIds,
+  fetchPlaylists,
+  fetchUploadsPage,
+  fetchVideos,
+  guessTheme,
+  isoDurationSeconds,
+  isShortVideo,
+  parseChannel,
+  YoutubeError,
+} from "./youtube";
 
 const reply = (status: number, body: unknown) => Promise.resolve(new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } }));
 
@@ -108,6 +120,28 @@ describe("reading the channel", () => {
         tags: ["polygel", "uñas"],
       },
     ]);
+  });
+
+  it("the channel's playlists, page after page, and each one's videos", async () => {
+    const fetchMock = vi.fn((input: URL) => {
+      const url = new URL(String(input));
+      if (url.pathname.endsWith("/playlists")) {
+        return url.searchParams.get("pageToken")
+          ? reply(200, { items: [{ id: "PL2", snippet: { title: "Uñas acrílicas " }, contentDetails: { itemCount: 3 } }] })
+          : reply(200, { items: [{ id: "PL1", snippet: { title: "Diseños de Navidad" }, contentDetails: { itemCount: 0 } }, { id: "PLx", snippet: {} }], nextPageToken: "P2" });
+      }
+      return url.searchParams.get("pageToken")
+        ? reply(200, { items: [{ contentDetails: { videoId: "v3" } }] })
+        : reply(200, { items: [{ contentDetails: { videoId: "v1" } }, { contentDetails: { videoId: "v2" } }], nextPageToken: "N" });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    expect(await fetchPlaylists("k", "UCabc")).toEqual([
+      { id: "PL1", title: "Diseños de Navidad", count: 0 },
+      { id: "PL2", title: "Uñas acrílicas", count: 3 },
+    ]);
+    const first = new URL(String((fetchMock.mock.calls[0] as unknown as [URL])[0]));
+    expect(first.searchParams.get("channelId")).toBe("UCabc");
+    expect(await fetchPlaylistVideoIds("k", "PL2")).toEqual(["v1", "v2", "v3"]);
   });
 
   it("what went wrong, in words: the key, the API off, the day's quota, no such channel", async () => {

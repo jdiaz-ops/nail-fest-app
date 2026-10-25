@@ -7,6 +7,7 @@ import {
   formatViews,
   handleOf,
   parseDuration,
+  queryWords,
   shortiesOrder,
   shortiesSlides,
   shuffled,
@@ -17,7 +18,7 @@ import {
   youtubeLoopEmbedUrl,
   type ShortItem,
 } from "./shared";
-import { rankBy, scoreFields } from "./search";
+import { rankBy, rankLoosely, scoreFields, stemOf } from "./search";
 import { isLibraryAccessToken, libraryAccessToken } from "./access";
 import { PUBLIC_LEAD_KINDS, leadSchema } from "./leads";
 import { resolveSections, resolveTexts, LIBRARY_PAGES, LIBRARY_SECTIONS, LIBRARY_TEXTS } from "./texts";
@@ -135,6 +136,57 @@ describe("search", () => {
 
   it("puts a word in the title before the same word in the text", () => {
     expect(rankBy(items, ["polygel"], fields)).toEqual([items[0], items[1]]);
+  });
+});
+
+describe("the search that understands", () => {
+  const videos = [
+    { title: "Extensión con polygel paso a paso", body: "" },
+    { title: "Retiro de acrílico sin dañar la uña", body: "" },
+    { title: "Semipermanente sin burbujas", body: "" },
+    { title: "Francesa invertida con cromo", body: "" },
+    { title: "Cómo calcular el precio de un servicio", body: "negocio" },
+  ];
+  const fields = (v: (typeof videos)[number]) => [
+    { text: v.title, weight: 5 },
+    { text: v.body, weight: 1 },
+  ];
+  const search = (query: string) => rankBy(videos, queryWords(query), fields).map((v) => v.title);
+
+  it("leaves out the words that say nothing — unless that's all there is", () => {
+    expect(queryWords("Cómo hacer uñas francesas")).toEqual(["francesas"]);
+    expect(queryWords("Diseños para Amor y Amistad")).toEqual(["disenos", "amor", "amistad"]);
+    expect(queryWords("uñas")).toEqual(["unas"]);
+  });
+
+  it("reads a known phrase as one", () => {
+    expect(queryWords("esmaltado permanente rojo")).toEqual(["esmaltado permanente", "rojo"]);
+  });
+
+  it("the other ways of writing the same thing", () => {
+    expect(search("poligel")).toEqual(["Extensión con polygel paso a paso"]);
+    expect(search("esmaltado permanente")).toEqual(["Semipermanente sin burbujas"]);
+    expect(search("french chrome")).toEqual(["Francesa invertida con cromo"]);
+    expect(search("cuánto cobrar")).toEqual(["Cómo calcular el precio de un servicio"]);
+  });
+
+  it("plurals and endings, and a letter off", () => {
+    expect(search("uñas acrílicas")).toEqual(["Retiro de acrílico sin dañar la uña"]);
+    expect(search("francés")).toEqual(["Francesa invertida con cromo"]);
+    expect(search("semipermanete")).toEqual(["Semipermanente sin burbujas"]);
+    expect(search("extencion")).toEqual(["Extensión con polygel paso a paso"]);
+  });
+
+  it("no false friends", () => {
+    expect(search("precio polygel")).toEqual([]);
+    expect(stemOf("geles")).toBe("gel");
+    expect(search("gel").length).toBe(1);
+  });
+
+  it("nothing with every word: the ones with most of them", () => {
+    expect(search("francesa bonita elegante")).toEqual([]);
+    expect(rankLoosely(videos, queryWords("francesa con cromo bonita"), fields).map((v) => v.title)).toEqual(["Francesa invertida con cromo"]);
+    expect(rankLoosely(videos, queryWords("polygel"), fields)).toEqual([]);
   });
 });
 

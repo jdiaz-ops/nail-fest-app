@@ -107,6 +107,7 @@ export default async function BibliotecaBuscarPage({ searchParams }: { searchPar
             <b>{result.videos.length === 1 ? "1 video" : `${result.videos.length} videos`}</b>
           )}
         </p>
+        {result.relaxed && <p className="bib-found">No hay videos con todas esas palabras: estos son los más parecidos.</p>}
 
         {searching ? (
           <div className="bib-chips">

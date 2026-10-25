@@ -2491,6 +2491,8 @@ model LibrarySettings {
   youtubeAutopilotAt   DateTime?
   // Claude's key pasted in the tab, for when Vercel has no ANTHROPIC_API_KEY.
   claudeApiKey         String?
+  // The last time the channel's playlists were read (once a day).
+  youtubePlaylistsAt   DateTime?
   updatedAt            DateTime  @updatedAt
 }
 
@@ -2514,6 +2516,8 @@ model LibraryYoutubeVideo {
   suggestedTheme  String?
   // Its tags on YouTube: one more clue for the autopilot.
   youtubeTags     String[]      @default([])
+  // The channel's playlists it's in (their names): another clue, not a rule.
+  youtubePlaylists String[]     @default([])
   // "PENDING" (to review) | "ADDED" (passed to the library) | "DISCARDED"
   status          String        @default("PENDING")
   // Who decided: "ia" (the autopilot) | "equipo"; null while it waits.

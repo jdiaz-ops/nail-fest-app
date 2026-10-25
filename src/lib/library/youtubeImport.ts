@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { uniqueVideoSlug } from "./admin";
 import { getLibrarySettings, updateLibrarySettings } from "./settings";
 import { LIBRARY_THEMES, formatDuration, isTheme, themeOf, type LibraryTheme } from "./shared";
-import { YoutubeError, fetchChannel, fetchUploadsPage, fetchVideos, guessTheme, isShortVideo, parseChannel } from "./youtube";
+import { YoutubeError, fetchChannel, fetchPlaylistVideoIds, fetchPlaylists, fetchUploadsPage, fetchVideos, guessTheme, isShortVideo, parseChannel } from "./youtube";
 import {
   AUTOPILOT_MAX_ATTEMPTS,
   claudeKeyOf,
@@ -105,6 +105,40 @@ export async function importNewUploads(budgetMs: number): Promise<{ added: numbe
   } while (pageToken && Date.now() - started < budgetMs);
   // The last page stamps youtubeImportedAt (importUploadsPage).
   return { added, complete: !pageToken };
+}
+
+/** The channel's playlists are read once a day at most. */
+export const PLAYLISTS_EVERY_MS = 24 * 60 * 60 * 1000;
+
+/** The channel's playlists, one more clue for the autopilot (2026-10-25:
+ * "no las mejores pero puede ser útil"): each video keeps the names of the
+ * lists it's in (LibraryYoutubeVideo.youtubePlaylists). */
+export async function syncPlaylists(): Promise<{ playlists: number; videos: number }> {
+  const settings = await getLibrarySettings();
+  const key = settings.youtubeApiKey;
+  if (!key || !settings.youtubeChannelId) throw new YoutubeError("channel");
+  const playlists = (await fetchPlaylists(key, settings.youtubeChannelId)).filter((p) => p.count !== 0).slice(0, 100);
+  const listsOf = new Map<string, string[]>();
+  // Four lists at a time.
+  for (let i = 0; i < playlists.length; i += 4) {
+    const batch = playlists.slice(i, i + 4);
+    const ids = await Promise.all(batch.map((p) => fetchPlaylistVideoIds(key, p.id)));
+    batch.forEach((playlist, k) => {
+      for (const id of ids[k]!) {
+        const lists = listsOf.get(id) ?? [];
+        if (!lists.includes(playlist.title)) lists.push(playlist.title);
+        listsOf.set(id, lists);
+      }
+    });
+  }
+  const rows = await db.libraryYoutubeVideo.findMany({ select: { id: true, youtubeId: true, youtubePlaylists: true } });
+  const changes = rows.flatMap((row) => {
+    const lists = (listsOf.get(row.youtubeId) ?? []).slice(0, 10);
+    return lists.join("\n") === row.youtubePlaylists.join("\n") ? [] : [db.libraryYoutubeVideo.update({ where: { id: row.id }, data: { youtubePlaylists: lists } })];
+  });
+  for (let i = 0; i < changes.length; i += 100) await db.$transaction(changes.slice(i, i + 100));
+  await updateLibrarySettings({ youtubePlaylistsAt: new Date() });
+  return { playlists: playlists.length, videos: rows.filter((r) => listsOf.has(r.youtubeId)).length };
 }
 
 const themeKeys = LIBRARY_THEMES.map((t) => t.key) as [string, ...string[]];

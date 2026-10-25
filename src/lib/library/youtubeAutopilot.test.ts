@@ -31,6 +31,7 @@ const row = (over: Partial<Parameters<typeof videoText>[0]> = {}) => ({
   short: true,
   suggestedTheme: "tecnicas",
   youtubeTags: ["uñas acrilicas"],
+  youtubePlaylists: [] as string[],
   ...over,
 });
 
@@ -73,6 +74,12 @@ describe("what Claude reads", () => {
     expect(text).toContain("- tendencias › Navidad · 4 videos");
     expect(text).toContain("Polygel, Nail art");
     expect(contextText({ ...context, instructors: [], topicsInUse: [], subcategories: [] })).toContain("(ninguna todavía)");
+  });
+
+  it("the channel's playlists it's in, as a clue", () => {
+    expect(videoText(row({ youtubePlaylists: ["Diseños de Navidad", "Uñas acrílicas"] }), 0)).toContain("Listas del canal: Diseños de Navidad, Uñas acrílicas");
+    expect(videoText(row(), 0)).not.toContain("Listas del canal");
+    expect(AUTOPILOT_SYSTEM).toContain("son una pista de su tema, su subcategoría o sus etiquetas, no una regla");
   });
 
   it("an already published one with its title in the library", () => {

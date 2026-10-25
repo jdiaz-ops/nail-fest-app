@@ -4,6 +4,7 @@
 // client components import it too.
 
 import { normalizeText, type CuponeraBrandCard, type ProductIconKind } from "@/lib/cuponera/shared";
+import { SEARCH_PHRASES, SEARCH_STOPWORDS } from "./searchWords";
 
 // ── Themes and levels ──────────────────────────────────────────────────────
 //
@@ -487,8 +488,19 @@ export interface LibraryMenuData {
 }
 
 /** Search words: accent-free, lowercase, in order. */
+/** What a search looks for: its words, its known phrases as one
+ * ("esmaltado permanente"), without the words that say nothing ("cómo",
+ * "de", "uñas"…) — unless that's all there is. */
 export function queryWords(query: string): string[] {
-  return normalizeText(query).split(" ").filter(Boolean);
+  const tokens = normalizeText(query).split(" ").filter(Boolean);
+  const terms: string[] = [];
+  for (let i = 0; i < tokens.length; ) {
+    const phrase = SEARCH_PHRASES.find((words) => words.every((word, k) => tokens[i + k] === word));
+    terms.push(phrase ? phrase.join(" ") : tokens[i]!);
+    i += phrase ? phrase.length : 1;
+  }
+  const meaningful = terms.filter((term) => !SEARCH_STOPWORDS.has(term));
+  return meaningful.length > 0 ? meaningful : terms;
 }
 
 /** The real ones, then — for staff only — invented examples up to `upTo`,

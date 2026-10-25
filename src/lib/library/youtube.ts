@@ -182,7 +182,7 @@ export async function fetchChannel(key: string, channel: { handle: string } | { 
   return { id: item.id, title: item.snippet?.title?.trim() || "Tu canal", uploadsId, videoCount: Number.isFinite(count) ? count : null };
 }
 
-/** One page (50) of the channel's uploads, newest first. */
+/** One page (50) of the channel's uploads, newest first — or of any playlist. */
 export async function fetchUploadsPage(key: string, uploadsId: string, pageToken: string | null): Promise<{ ids: string[]; nextPageToken: string | null; total: number | null }> {
   const body = await call<{ items?: { contentDetails?: { videoId?: string } }[]; nextPageToken?: string; pageInfo?: { totalResults?: number } }>(
     "playlistItems",
@@ -194,6 +194,44 @@ export async function fetchUploadsPage(key: string, uploadsId: string, pageToken
     nextPageToken: body.nextPageToken ?? null,
     total: body.pageInfo?.totalResults ?? null,
   };
+}
+
+export interface YoutubePlaylist {
+  id: string;
+  title: string;
+  /** How many videos it has; null when YouTube doesn't say. */
+  count: number | null;
+}
+
+/** The channel's public playlists, 50 per page (up to 500). */
+export async function fetchPlaylists(key: string, channelId: string): Promise<YoutubePlaylist[]> {
+  const playlists: YoutubePlaylist[] = [];
+  let pageToken: string | null = null;
+  do {
+    const body: { items?: { id: string; snippet?: { title?: string }; contentDetails?: { itemCount?: number } }[]; nextPageToken?: string } = await call(
+      "playlists",
+      { part: "snippet,contentDetails", channelId, maxResults: "50", ...(pageToken ? { pageToken } : {}) },
+      key,
+    );
+    for (const item of body.items ?? []) {
+      const title = item.snippet?.title?.trim();
+      if (title) playlists.push({ id: item.id, title, count: item.contentDetails?.itemCount ?? null });
+    }
+    pageToken = body.nextPageToken ?? null;
+  } while (pageToken && playlists.length < 500);
+  return playlists;
+}
+
+/** Every video of a playlist, page after page (up to 2,000). */
+export async function fetchPlaylistVideoIds(key: string, playlistId: string): Promise<string[]> {
+  const ids: string[] = [];
+  let pageToken: string | null = null;
+  do {
+    const page: { ids: string[]; nextPageToken: string | null } = await fetchUploadsPage(key, playlistId, pageToken);
+    ids.push(...page.ids);
+    pageToken = page.nextPageToken;
+  } while (pageToken && ids.length < 2000);
+  return ids;
 }
 
 export interface YoutubeVideoFacts {

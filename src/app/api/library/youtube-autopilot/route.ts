@@ -3,11 +3,12 @@ import { isAuthorizedCronRequest } from "@/lib/cron";
 import { getLibrarySettings } from "@/lib/library/settings";
 import { YoutubeError } from "@/lib/library/youtube";
 import { runAutopilot } from "@/lib/library/youtubeAutopilot";
-import { importNewUploads } from "@/lib/library/youtubeImport";
+import { PLAYLISTS_EVERY_MS, importNewUploads, syncPlaylists } from "@/lib/library/youtubeImport";
 
 // The YouTube autopilot by itself, every ten minutes — declared in
 // vercel.json's `crons`, same auth as every other cron here: the channel's
-// new videos every six hours, then Claude reviews and publishes the ones
+// new videos every six hours and its playlists once a day (a clue for
+// Claude), then Claude reviews and publishes the ones
 // waiting (lib/library/youtubeAutopilot.ts), three requests at the same
 // time — about 24 videos a round, so the channel's first hundreds take a
 // few hours when nobody keeps the tab open. Switched off in the tab, it
@@ -36,10 +37,19 @@ async function handle(req: NextRequest) {
       imported = { problem: error.problem };
     }
   }
+  let playlists: { playlists: number; videos: number } | { problem: string } | null = null;
+  if (!settings.youtubePlaylistsAt || started - settings.youtubePlaylistsAt.getTime() > PLAYLISTS_EVERY_MS) {
+    try {
+      playlists = await syncPlaylists();
+    } catch (error) {
+      if (!(error instanceof YoutubeError)) throw error;
+      playlists = { problem: error.problem };
+    }
+  }
   // No request starts late: the round fits in the function's five minutes —
   // after a long import, Claude goes on in the next one.
-  if (Date.now() - started > 60_000) return NextResponse.json({ ok: true, imported, skipped: "next" });
-  return NextResponse.json({ ok: true, imported, ...(await runAutopilot({ lanes: 3, budgetMs: imported ? 10_000 : 40_000 })) });
+  if (Date.now() - started > 60_000) return NextResponse.json({ ok: true, imported, playlists, skipped: "next" });
+  return NextResponse.json({ ok: true, imported, playlists, ...(await runAutopilot({ lanes: 3, budgetMs: imported || playlists ? 10_000 : 40_000 })) });
 }
 
 export const GET = handle;

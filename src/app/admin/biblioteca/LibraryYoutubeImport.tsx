@@ -87,7 +87,7 @@ export default function LibraryYoutubeImport({ data, instructors }: { data: Yout
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [progress, setProgress] = useState<{ done: number; total: number | null } | null>(null);
+  const [progress, setProgress] = useState<{ done: number; total: number | null; playlists?: boolean } | null>(null);
 
   const pilot = data.autopilot;
   const [claudeKey, setClaudeKey] = useState("");
@@ -240,6 +240,11 @@ export default function LibraryYoutubeImport({ data, instructors }: { data: Yout
         setNotice(`Listo: ${many(done, "video leído", "videos leídos")} en tu canal, ${many(added, "nuevo", "nuevos")}${pilot.on ? "." : " para revisar."}`);
       }
     } while (pageToken);
+    // The channel's playlists: one more clue for the autopilot (a failure here stops nothing).
+    if (complete) {
+      setProgress({ done, total, playlists: true });
+      await send("/api/admin/library/youtube/listas", "POST", {});
+    }
     setProgress(null);
     setBusy(null);
     router.refresh();
@@ -389,8 +394,14 @@ export default function LibraryYoutubeImport({ data, instructors }: { data: Yout
               {progress && (
                 <div style={{ margin: "8px 0 12px" }} role="status">
                   <div style={{ fontSize: 13, marginBottom: 6 }}>
-                    Trayendo videos… {progress.done}
-                    {progress.total ? ` de ${progress.total}` : ""}
+                    {progress.playlists ? (
+                      "Leyendo las listas de tu canal…"
+                    ) : (
+                      <>
+                        Trayendo videos… {progress.done}
+                        {progress.total ? ` de ${progress.total}` : ""}
+                      </>
+                    )}
                   </div>
                   <ProgressBar share={progress.total ? progress.done / progress.total : null} />
                 </div>

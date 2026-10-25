@@ -9,7 +9,7 @@ import { classifyProduct, lookFor, type CuponeraProduct } from "@/lib/cuponera/s
 import { hasLibraryAccess } from "./access";
 import { getLibrarySettings, libraryConfigOf, type LibraryConfig } from "./settings";
 import { sampleInstructors, sampleVideoDetail, sampleVideos } from "./samples";
-import { rankBy } from "./search";
+import { rankBy, rankLoosely, type SearchField } from "./search";
 import {
   LIBRARY_THEMES,
   SAMPLE_SLUG_PREFIX,
@@ -490,6 +490,8 @@ export interface LibrarySearchParams {
 
 export interface LibrarySearchResult {
   videos: LibraryVideoCard[];
+  /** No video had every word: these have most of them. */
+  relaxed: boolean;
   /** The chosen theme's subcategories in sight, the most videos first. */
   subcategories: { key: string; name: string; count: number }[];
   instructors: InstructorCard[];
@@ -526,20 +528,22 @@ export async function searchLibrary(params: LibrarySearchParams, viewer: Library
     }
   }
   const pool = params.sub ? inTheme.filter((v) => v.subcategories.some((s) => s.key === params.sub)) : inTheme;
-  const videos = words.length
-    ? rankBy(pool, words, (v) => [
-        { text: v.title, weight: 5 },
-        { text: v.tags.join(" "), weight: 4 },
-        { text: v.subcategories.map((s) => s.name).join(" "), weight: 4 },
-        { text: v.themes.map((t) => themeOf(t).label).join(" "), weight: 3 },
-        { text: v.instructor?.name, weight: 3 },
-        { text: v.description, weight: 1 },
-        { text: v.teachersNote, weight: 1 },
-      ])
-    : pool;
+  const fieldsOf = (v: LibraryVideoCard): SearchField[] => [
+    { text: v.title, weight: 5 },
+    { text: v.tags.join(" "), weight: 4 },
+    { text: v.subcategories.map((s) => s.name).join(" "), weight: 4 },
+    { text: v.themes.map((t) => themeOf(t).label).join(" "), weight: 3 },
+    { text: v.instructor?.name, weight: 3 },
+    { text: v.description, weight: 1 },
+    { text: v.teachersNote, weight: 1 },
+  ];
+  const strict = words.length ? rankBy(pool, words, fieldsOf) : pool;
+  // Nothing with every word: the closest, said so.
+  const relaxed = strict.length === 0 && words.length > 1;
+  const videos = relaxed ? rankLoosely(pool, words, fieldsOf) : strict;
 
   const subs = [...subcategories.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, "es"));
-  if (!words.length) return { videos, subcategories: subs, instructors: [], products: [] };
+  if (!words.length) return { videos, relaxed: false, subcategories: subs, instructors: [], products: [] };
 
   const [instructors, products] = await Promise.all([
     viewer.staff || viewer.config.instructorsPublished
@@ -554,7 +558,7 @@ export async function searchLibrary(params: LibrarySearchParams, viewer: Library
       : Promise.resolve([]),
     viewer.cuponeraLive ? cuponeraProductsFor(words, viewer.staff, now) : Promise.resolve([]),
   ]);
-  return { videos, subcategories: subs, instructors, products };
+  return { videos, relaxed: relaxed && videos.length > 0, subcategories: subs, instructors, products };
 }
 
 async function cuponeraProductsFor(words: string[], staff: boolean, now: Date): Promise<CuponeraProduct[]> {

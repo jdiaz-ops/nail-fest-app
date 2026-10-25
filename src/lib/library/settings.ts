@@ -25,6 +25,7 @@ const DEFAULTS: LibrarySettings = {
   youtubeAutopilot: true,
   youtubeAutopilotAt: null,
   claudeApiKey: null,
+  youtubePlaylistsAt: null,
   updatedAt: new Date(0),
 };
 
@@ -75,6 +76,7 @@ export type LibrarySettingsPatch = Partial<{
   youtubeAutopilot: boolean;
   youtubeAutopilotAt: Date;
   claudeApiKey: string | null;
+  youtubePlaylistsAt: Date;
 }>;
 
 export async function updateLibrarySettings(patch: LibrarySettingsPatch): Promise<LibrarySettings> {
