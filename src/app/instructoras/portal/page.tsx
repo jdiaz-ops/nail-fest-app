@@ -5,7 +5,7 @@ import PortalShell from "@/components/portal/PortalShell";
 import { ShareLinkButton } from "@/components/portal/PortalActions";
 import { PortalIcon, type PortalIconName } from "@/components/portal/icons";
 import { db } from "@/lib/db";
-import { getLibrarySettings } from "@/lib/library/settings";
+import { getLibrarySettings, videosPublished } from "@/lib/library/settings";
 import { profileCompleteness, profileStatus } from "@/lib/library/portal";
 import { profileAddress, requirePortalPage } from "@/lib/library/portalAuth";
 import { fraunces } from "@/app/cuponera/fonts";
@@ -38,7 +38,7 @@ export default async function PortalHomePage() {
     { href: "/instructoras/portal/perfil", icon: "person", tone: "bib-tone-mint", title: "Mi perfil", text: "Foto, nombre, ciudad, especialidades y sobre ti" },
     { href: "/instructoras/portal/perfil#redes", icon: "link", tone: "bib-tone-peach", title: "Redes y contacto", text: "Instagram, TikTok, YouTube y WhatsApp" },
     // Her videos only while El Taller is public (hidden since 2026-10-25).
-    ...(settings.published
+    ...(videosPublished(settings)
       ? [
           {
             href: "/instructoras/portal/videos",
@@ -53,7 +53,7 @@ export default async function PortalHomePage() {
   ];
 
   return (
-    <PortalShell instructor={instructor} tab="inicio" videos={settings.published}>
+    <PortalShell instructor={instructor} tab="inicio" videos={videosPublished(settings)}>
       <div className="pt-wrap">
         <h1 className={`pt-h1 ${fraunces.className}`}>Hola, {instructor.name.split(" ")[0]}</h1>
 
@@ -135,7 +135,7 @@ export default async function PortalHomePage() {
           ))}
         </nav>
 
-        {settings.published && (
+        {videosPublished(settings) && (
           <div className="pt-card pt-card--accent">
             <h2 className={`pt-h2 ${fraunces.className}`}>Sé instructora activa</h2>
             <p>Envía tus videos con su ficha. El equipo elige cuáles salen en El Taller, en las redes y en el correo de Nail Fest, con tu nombre y tus redes.</p>

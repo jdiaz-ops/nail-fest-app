@@ -52,7 +52,7 @@ const QUESTIONS_UP_TO = 3;
 
 export async function getCommunityHome(viewer: LibraryViewer, nextEventId: string | null, now: Date = new Date()): Promise<CommunityHome> {
   const { config, staff } = viewer;
-  const libraryOpen = config.published || staff;
+  const libraryOpen = viewer.videos;
   const cortosOpen = libraryOpen && (config.sections.shorties || staff);
   const [cuponeraSettings, shorts, topics, brands, people, questionCount, questions, events] = await Promise.all([
     getCuponeraSettings(),
@@ -117,7 +117,7 @@ export interface CommunityParts {
  * the menu of the other community pages (the Consultorio, the account). */
 export async function getCommunityParts(viewer: LibraryViewer): Promise<CommunityParts> {
   const { config, staff } = viewer;
-  const libraryOpen = config.published || staff;
+  const libraryOpen = viewer.videos;
   const [cuponeraSettings, brands] = await Promise.all([getCuponeraSettings(), db.cuponeraBrand.count({ where: { visible: true, available: true } })]);
   return {
     cuponera: (cuponeraSettings.published || staff) && brands > 0,

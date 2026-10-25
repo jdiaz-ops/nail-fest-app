@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { AdminInstructor } from "@/lib/library/admin";
+import { VIDEOS_HIDDEN } from "@/lib/library/texts";
 import { api, BrandMark, CardTitle, cardStyle, IconButton, mutedText, Pill, primaryButtonStyle, secondaryButtonStyle, Switch } from "../cuponera/ui";
 import { Check, FormError, Sheet, linesOf, listOf, rowStyle, twoColumns } from "./ui";
 
@@ -101,7 +102,8 @@ export default function LibraryInstructorsEditor({ instructors }: { instructors:
 
   async function remove(instructor: AdminInstructor) {
     const account = instructor.account ? " y su cuenta del portal" : "";
-    if (!confirm(`¿Eliminar a ${instructor.name}${account}? Sus videos se quedan en El Taller sin su nombre. Si solo quieres que no se vea, mejor apágala.`)) return;
+    const videos = VIDEOS_HIDDEN ? "" : " Sus videos se quedan en El Taller sin su nombre.";
+    if (!confirm(`¿Eliminar a ${instructor.name}${account}?${videos} Si solo quieres que no se vea, mejor apágala.`)) return;
     setBusyId(instructor.id);
     setError(null);
     try {
@@ -215,7 +217,7 @@ export default function LibraryInstructorsEditor({ instructors }: { instructors:
           Instructoras
         </CardTitle>
         <p style={{ ...mutedText, marginTop: 0 }}>
-          Su perfil en nailfest.lat/instructoras, con sus videos. Las que se registran en el portal hacen su propio perfil y llegan a «Para revisar»; las que
+          Su perfil en nailfest.lat/instructoras{VIDEOS_HIDDEN ? "" : ", con sus videos"}. Las que se registran en el portal hacen su propio perfil y llegan a «Para revisar»; las que
           crea el equipo salen publicadas de una vez, y con «Invitar a manejar su perfil» lo pueden manejar ellas. Las destacadas salen primero.
         </p>
         {error && toReview.length === 0 && <FormError>{error}</FormError>}
@@ -231,7 +233,7 @@ export default function LibraryInstructorsEditor({ instructors }: { instructors:
               <div style={{ flex: 1, minWidth: 180 }}>
                 <div style={{ fontWeight: 600, fontSize: 14 }}>{i.name}</div>
                 <div style={{ ...mutedText, fontSize: 12 }}>
-                  {[i.city, i.specialties.join(", "), i.videoCount === 1 ? "1 video" : `${i.videoCount} videos`].filter(Boolean).join(" · ")}
+                  {[i.city, i.specialties.join(", "), !VIDEOS_HIDDEN && (i.videoCount === 1 ? "1 video" : `${i.videoCount} videos`)].filter(Boolean).join(" · ")}
                 </div>
                 <div style={{ display: "flex", gap: 6, marginTop: 4, flexWrap: "wrap" }}>
                   {i.status === "review" && <Pill tone="amber">Para revisar</Pill>}

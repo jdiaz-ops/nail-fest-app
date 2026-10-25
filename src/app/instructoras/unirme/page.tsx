@@ -41,7 +41,7 @@ export default async function UnirmePage() {
   if (user) redirect("/instructoras/portal");
   const { texts, portalOpen } = viewer.config;
   const open = portalOpen || viewer.staff;
-  const videos = viewer.config.published || viewer.staff;
+  const videos = viewer.videos;
 
   return (
     <PortalShell

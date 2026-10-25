@@ -5,7 +5,7 @@ import PortalShell from "@/components/portal/PortalShell";
 import VideoSubmitForm from "@/components/portal/VideoSubmitForm";
 import { PortalIcon } from "@/components/portal/icons";
 import { db } from "@/lib/db";
-import { getLibrarySettings } from "@/lib/library/settings";
+import { getLibrarySettings, videosPublished } from "@/lib/library/settings";
 import { requirePortalPage } from "@/lib/library/portalAuth";
 import { LIBRARY_THEMES, youtubeThumbnail } from "@/lib/library/shared";
 import { fraunces } from "@/app/cuponera/fonts";
@@ -39,7 +39,7 @@ export default async function MisVideosPage() {
     db.libraryVideo.findMany({ where: { instructorId: instructor.id, visible: true }, orderBy: { publishedAt: "desc" } }),
     db.instructorVideoSubmission.findMany({ where: { instructorId: instructor.id }, orderBy: { createdAt: "desc" }, include: { video: { select: { visible: true, slug: true } } } }),
   ]);
-  if (!settings.published) redirect("/instructoras/portal");
+  if (!videosPublished(settings)) redirect("/instructoras/portal");
 
   return (
     <PortalShell instructor={instructor} tab="videos" videos>
@@ -66,7 +66,7 @@ export default async function MisVideosPage() {
                   <small>
                     {themeLabel(v.theme)}
                   </small>
-                  {settings.published && (
+                  {videosPublished(settings) && (
                     <Link href={`/biblioteca/${v.slug}`} className="pt-link">
                       Ver en El Taller
                     </Link>

@@ -134,7 +134,7 @@ export default async function InstructorasPage({ searchParams }: { searchParams:
             {shown.length > 0 ? (
               <div className="bib-igrid">
                 {shown.map((i) => (
-                  <InstructorTile key={i.id} instructor={i} featuredLabel={texts.featuredLabel} showVideos={viewer.staff || viewer.config.published} />
+                  <InstructorTile key={i.id} instructor={i} featuredLabel={texts.featuredLabel} showVideos={viewer.videos} />
                 ))}
               </div>
             ) : (

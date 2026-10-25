@@ -24,6 +24,7 @@ import {
   type LibraryMenuData,
   type ShortItem,
 } from "@/lib/library/shared";
+import { LIBRARY_ADMIN_NAME } from "@/lib/library/texts";
 import LibraryMenu from "./LibraryMenu";
 import UsedProducts from "./UsedProducts";
 import { pingView } from "./ViewPing";
@@ -730,7 +731,7 @@ export default function ShortiesFeed({
         {filterRow(true)}
         {staffNote && (
           <p className="bib-shorts-side-note">
-            <b>Vista previa del equipo.</b> {staffNote} <Link href="/admin/biblioteca">Ir a Editar El Taller</Link>
+            <b>Vista previa del equipo.</b> {staffNote} <Link href="/admin/biblioteca">Ir a {LIBRARY_ADMIN_NAME}</Link>
           </p>
         )}
       </aside>

@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import type { Instructor } from "@prisma/client";
 import { initialOf, toneOf } from "@/lib/library/shared";
+import { LIBRARY_ADMIN_NAME } from "@/lib/library/texts";
 import { PortalIcon } from "./icons";
 
 export type PortalTab = "inicio" | "perfil" | "videos" | "cuenta";
@@ -57,7 +58,7 @@ export default function PortalShell({
           <span>
             <b>Vista previa del equipo.</b> {note}
           </span>
-          <Link href="/admin/biblioteca">Ir a Editar El Taller</Link>
+          <Link href="/admin/biblioteca">Ir a {LIBRARY_ADMIN_NAME}</Link>
         </div>
       )}
       <header className="bib-header">

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import PortalShell from "@/components/portal/PortalShell";
 import ProfileEditor from "@/components/portal/ProfileEditor";
 import { SubmitReviewButton } from "@/components/portal/PortalActions";
-import { getLibrarySettings } from "@/lib/library/settings";
+import { getLibrarySettings, videosPublished } from "@/lib/library/settings";
 import { resolveTexts } from "@/lib/library/texts";
 import { profileStatus, profileValuesOf } from "@/lib/library/portal";
 import { requirePortalPage } from "@/lib/library/portalAuth";
@@ -26,7 +26,7 @@ export default async function MiPerfilPage() {
   ];
 
   return (
-    <PortalShell instructor={instructor} tab="perfil" videos={settings.published}>
+    <PortalShell instructor={instructor} tab="perfil" videos={videosPublished(settings)}>
       <div className="pt-wrap">
         <h1 className={`pt-h1 ${fraunces.className}`}>Mi perfil</h1>
         <p className="pt-lede">

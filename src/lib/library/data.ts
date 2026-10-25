@@ -8,7 +8,7 @@ import { SAMPLE_PRODUCTS } from "@/lib/cuponera/sampleData";
 import { classifyProduct, lookFor, type CuponeraProduct } from "@/lib/cuponera/shared";
 import { hasLibraryAccess } from "./access";
 import { getLibrarySettings, libraryConfigOf, type LibraryConfig } from "./settings";
-import { LIBRARY_SIGNUP } from "./texts";
+import { LIBRARY_SIGNUP, VIDEOS_HIDDEN } from "./texts";
 import { sampleInstructors, sampleVideoDetail, sampleVideos } from "./samples";
 import { rankBy, rankLoosely, type SearchField } from "./search";
 import {
@@ -76,18 +76,29 @@ export interface LibraryViewer {
   /** The sign-up's padlocks and invitations show: to whoever hasn't signed
    * up and, as a preview, to staff — only while the library asks for it. */
   asksSignup: boolean;
+  /** El Taller and every video bit (the directory's counts, «Sus videos»,
+   * the menu's sections) show: published, or the team's preview — never
+   * while the videos are hidden (VIDEOS_HIDDEN), not even to the team. */
+  videos: boolean;
 }
 
 export async function getLibraryViewer(): Promise<LibraryViewer> {
   const [staff, settings, cuponera] = await Promise.all([viewerCanSeeSamples(), getLibrarySettings(), getCuponeraSettings()]);
   const unlocked = !LIBRARY_SIGNUP || staff || hasLibraryAccess();
-  return { staff, config: libraryConfigOf(settings), cuponeraLive: cuponera.published || staff, unlocked, asksSignup: LIBRARY_SIGNUP && (staff || !unlocked) };
+  return {
+    staff,
+    config: libraryConfigOf(settings),
+    cuponeraLive: cuponera.published || staff,
+    unlocked,
+    asksSignup: LIBRARY_SIGNUP && (staff || !unlocked),
+    videos: !VIDEOS_HIDDEN && (staff || settings.published),
+  };
 }
 
 /** Indexed only once the page is public; the preview never is. */
 export async function libraryRobots(page: "biblioteca" | "instructoras") {
   const settings = await getLibrarySettings();
-  const published = page === "biblioteca" ? settings.published : settings.instructorsPublished;
+  const published = page === "biblioteca" ? settings.published && !VIDEOS_HIDDEN : settings.instructorsPublished;
   return published ? undefined : { index: false, follow: false };
 }
 
@@ -432,7 +443,7 @@ async function menuVideoFacts(viewer: LibraryViewer, now: Date) {
  * the sections and the ways to search this viewer can open. */
 export async function getLibraryMenu(viewer: LibraryViewer, now: Date = new Date()): Promise<LibraryMenuData> {
   const { texts, sections, popularSearches } = viewer.config;
-  const library = viewer.staff || viewer.config.published;
+  const library = viewer.videos;
   const instructors = viewer.staff || viewer.config.instructorsPublished;
   const [facts, people, org] = await Promise.all([
     library ? menuVideoFacts(viewer, now) : Promise.resolve(null),

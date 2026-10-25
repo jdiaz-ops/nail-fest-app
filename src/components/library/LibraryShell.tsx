@@ -3,6 +3,7 @@ import Link from "next/link";
 import PreviewToast from "@/components/cuponera/PreviewToast";
 import type { LibraryViewer } from "@/lib/library/data";
 import { getSiteMenu } from "@/lib/community/home";
+import { LIBRARY_ADMIN_NAME } from "@/lib/library/texts";
 import { fraunces } from "@/app/cuponera/fonts";
 import LibraryMenu from "./LibraryMenu";
 
@@ -47,7 +48,7 @@ export default async function LibraryShell({
           <span>
             <b>Vista previa del equipo.</b> {note}
           </span>
-          <Link href="/admin/biblioteca">Ir a Editar El Taller</Link>
+          <Link href="/admin/biblioteca">Ir a {LIBRARY_ADMIN_NAME}</Link>
         </div>
       )}
       {ownerNote && (

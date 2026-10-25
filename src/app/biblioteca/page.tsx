@@ -34,7 +34,7 @@ function SectionHead({ title, href, label }: { title: string; href?: string; lab
 // ./shorties.
 export default async function BibliotecaPage() {
   const viewer = await getLibraryViewer();
-  if (!viewer.config.published && !viewer.staff) notFound();
+  if (!viewer.videos) notFound();
   const home = await getLibraryHome(viewer);
   const { texts, sections } = viewer.config;
   const shown = [...home.newest, ...home.mostViewed, ...home.recordings];

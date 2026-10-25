@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const viewer = await getLibraryViewer();
-  const page = viewer.config.published || viewer.staff ? await getLibraryVideoPage(params.slug, viewer) : null;
+  const page = viewer.videos ? await getLibraryVideoPage(params.slug, viewer) : null;
   if (!page) return { title: "El Taller · Nail Fest", robots: { index: false, follow: false } };
   const robots = await libraryRobots("biblioteca");
   return {
@@ -31,7 +31,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 // asks for no sign-up: LIBRARY_SIGNUP), and more of the same theme.
 export default async function BibliotecaVideoPage({ params }: { params: { slug: string } }) {
   const viewer = await getLibraryViewer();
-  if (!viewer.config.published && !viewer.staff) notFound();
+  if (!viewer.videos) notFound();
   const page = await getLibraryVideoPage(params.slug, viewer);
   if (!page) notFound();
   const { video } = page;

@@ -8,8 +8,19 @@ type Key = "published" | "instructorsPublished" | "portalOpen";
 
 // Whether nailfest.lat/biblioteca and nailfest.lat/instructoras are public,
 // and whether anyone can make a profile in the instructors' portal — each
-// with its own switch, saved on the spot (same as the cuponera's).
-export default function LibraryPublishCard({ published, instructorsPublished, portalOpen }: { published: boolean; instructorsPublished: boolean; portalOpen: boolean }) {
+// with its own switch, saved on the spot (same as the cuponera's). El
+// Taller's switch isn't there while the videos are hidden (`library`).
+export default function LibraryPublishCard({
+  library,
+  published,
+  instructorsPublished,
+  portalOpen,
+}: {
+  library: boolean;
+  published: boolean;
+  instructorsPublished: boolean;
+  portalOpen: boolean;
+}) {
   const router = useRouter();
   const [state, setState] = useState({ published, instructorsPublished, portalOpen });
   const [busy, setBusy] = useState(false);
@@ -55,7 +66,7 @@ export default function LibraryPublishCard({ published, instructorsPublished, po
         Mientras se va llenando, el equipo ve ejemplos inventados (marcados «Ejemplo») en las secciones que todavía tienen poco. Al público
         solo se le muestra lo real.
       </p>
-      {line("published", "El Taller", "Público: cualquier persona lo ve en nailfest.lat/biblioteca.", hidden)}
+      {library && line("published", "El Taller", "Público: cualquier persona lo ve en nailfest.lat/biblioteca.", hidden)}
       {line("instructorsPublished", "Instructoras", "Pública: cualquier persona la ve en nailfest.lat/instructoras.", hidden)}
       {line(
         "portalOpen",

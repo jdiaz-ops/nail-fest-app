@@ -38,7 +38,7 @@ export default async function InstructoraPage({ params }: { params: { slug: stri
   const { instructor, videos, brands } = profile;
   const { texts, sections } = viewer.config;
   const handle = instructor.instagram ?? instructor.tiktok;
-  const libraryOpen = viewer.staff || viewer.config.published;
+  const libraryOpen = viewer.videos;
   // Her video's card opens the scroll of her videos from it, newest first; its page while the scroll is off.
   const herList = viewer.staff || sections.shorties ? { instructora: instructor.slug, orden: "nuevo" } : null;
   const notes = [libraryStaffNote(viewer, "instructoras", instructor.sample), viewer.staff && profile.hidden ? `${profile.hidden} Solo lo ve el equipo.` : null].filter(Boolean);

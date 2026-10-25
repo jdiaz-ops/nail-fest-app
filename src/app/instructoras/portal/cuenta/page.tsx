@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import PortalShell from "@/components/portal/PortalShell";
 import AccountForm from "@/components/portal/AccountForm";
 import { profileAddress, requirePortalPage } from "@/lib/library/portalAuth";
-import { getLibrarySettings } from "@/lib/library/settings";
+import { getLibrarySettings, videosPublished } from "@/lib/library/settings";
 import { fraunces } from "@/app/cuponera/fonts";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +16,7 @@ export default async function CuentaPage() {
   const address = profileAddress(instructor.slug);
 
   return (
-    <PortalShell instructor={instructor} tab="cuenta" videos={settings.published}>
+    <PortalShell instructor={instructor} tab="cuenta" videos={videosPublished(settings)}>
       <div className="pt-wrap">
         <h1 className={`pt-h1 ${fraunces.className}`}>Cuenta</h1>
         <div className="pt-card">

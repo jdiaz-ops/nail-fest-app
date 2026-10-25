@@ -9,6 +9,7 @@ import {
   LIBRARY_SECTION_KEYS,
   LIBRARY_TEXTS,
   LIBRARY_TEXT_KEYS,
+  VIDEOS_HIDDEN,
   type LibrarySectionKey,
   type LibraryTextKey,
   type LibraryTexts,
@@ -18,8 +19,9 @@ import { listOf } from "./ui";
 
 type Status = "idle" | "saving" | "saved" | "error";
 
-/** The sign-up's own switches and texts only while the library asks for it. */
-const inUse = (def: object) => LIBRARY_SIGNUP || !("signup" in def);
+/** The sign-up's own switches and texts only while the library asks for it;
+ * El Taller's pages, switches and texts only while its videos aren't hidden. */
+const inUse = (def: object) => (LIBRARY_SIGNUP || !("signup" in def)) && (!VIDEOS_HIDDEN || !("videos" in def));
 
 // Editar biblioteca → Textos y secciones: every title and text of the
 // library's and the instructors' pages, Cortos, the menu and the forms,
@@ -82,7 +84,7 @@ export default function LibraryTextsForm({
       <CardTitle>Textos y secciones</CardTitle>
       <p style={{ ...mutedText, marginTop: 0 }}>Página por página, de arriba abajo como se ven. Vacío = el texto de siempre (el que se ve en gris).</p>
 
-      {LIBRARY_PAGES.map((page) => {
+      {LIBRARY_PAGES.filter(inUse).map((page) => {
         const loose = LIBRARY_TEXT_KEYS.filter((k) => LIBRARY_TEXTS[k].page === page.key && !("section" in LIBRARY_TEXTS[k]) && inUse(LIBRARY_TEXTS[k]));
         const pageSections = LIBRARY_SECTION_KEYS.filter((s) => LIBRARY_SECTIONS[s].page === page.key && inUse(LIBRARY_SECTIONS[s]));
         return (

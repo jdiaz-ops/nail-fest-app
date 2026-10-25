@@ -25,7 +25,7 @@ function returnPath(value: string | string[] | undefined): string {
 // asks for no sign-up (LIBRARY_SIGNUP), it just takes them back.
 export default async function BibliotecaRegistroPage({ searchParams }: { searchParams: Record<string, string | string[] | undefined> }) {
   const viewer = await getLibraryViewer();
-  if (!viewer.config.published && !viewer.staff) notFound();
+  if (!viewer.videos) notFound();
   const { texts } = viewer.config;
   const back = returnPath(searchParams.volver);
   if (!LIBRARY_SIGNUP) redirect(back);

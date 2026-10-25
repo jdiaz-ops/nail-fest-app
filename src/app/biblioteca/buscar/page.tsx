@@ -67,7 +67,7 @@ function asUsed(p: CuponeraProduct): UsedProduct {
 // products.
 export default async function BibliotecaBuscarPage({ searchParams }: { searchParams: SearchParams }) {
   const viewer = await getLibraryViewer();
-  if (!viewer.config.published && !viewer.staff) notFound();
+  if (!viewer.videos) notFound();
   const params = searchParamsOf(searchParams);
   const result = await searchLibrary(params, viewer);
   const { texts } = viewer.config;

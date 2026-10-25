@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import type { LibraryLeadKindKey } from "@/lib/library/leads";
+import { LIBRARY_ADMIN_NAME } from "@/lib/library/texts";
 
 const SUBMIT: Record<LibraryLeadKindKey, string> = {
   REGISTRO: "Registrarme gratis",
@@ -90,7 +91,7 @@ export default function LeadForm({
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M5 12.5l4.5 4.5L19 7.5" />
         </svg>
-        <p>{sample ? "Ejemplo: con una instructora real, esto quedaría en Editar El Taller → Registros." : thanksText}</p>
+        <p>{sample ? `Ejemplo: con una instructora real, esto quedaría en ${LIBRARY_ADMIN_NAME} → Registros.` : thanksText}</p>
       </div>
     );
   }

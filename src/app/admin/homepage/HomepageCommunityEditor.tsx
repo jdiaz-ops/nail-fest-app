@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { VIDEOS_HIDDEN } from "@/lib/library/texts";
 import { postSettings, cardStyle } from "../settings/shared";
 
 // The homepage as the community's home (OrgSettings.homepageCommunity):
@@ -28,8 +29,8 @@ export default function HomepageCommunityEditor({ initialOn }: { initialOn: bool
         <div>
           <div style={{ fontWeight: 700, fontSize: 16 }}>Portada de la comunidad</div>
           <p style={{ fontSize: 13, color: "#5b5f6b", margin: "4px 0 0", maxWidth: 560, lineHeight: 1.5 }}>
-            Debajo del evento, la entrada a todo Nail Fest: cortos, descuentos, Consultorio, instructoras y El Taller, con lo más nuevo de cada uno, y un
-            menú arriba. Cada parte sale cuando ya es pública.{" "}
+            Debajo del evento, la entrada a todo Nail Fest: {VIDEOS_HIDDEN ? "descuentos, Consultorio e instructoras" : "cortos, descuentos, Consultorio, instructoras y El Taller"},
+            con lo más nuevo de cada uno, y un menú arriba. Cada parte sale cuando ya es pública.{" "}
             <a href="/?vista=comunidad" target="_blank" rel="noreferrer">
               Ver cómo queda ↗
             </a>

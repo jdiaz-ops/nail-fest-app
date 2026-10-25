@@ -1,6 +1,6 @@
 import type { LibrarySettings, Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
-import { DEFAULT_POPULAR_SEARCHES, resolveSections, resolveTexts, type LibrarySections, type LibraryTexts } from "./texts";
+import { DEFAULT_POPULAR_SEARCHES, VIDEOS_HIDDEN, resolveSections, resolveTexts, type LibrarySections, type LibraryTexts } from "./texts";
 
 export const LIBRARY_SETTINGS_ID = "singleton";
 
@@ -31,6 +31,12 @@ const DEFAULTS: LibrarySettings = {
 
 export async function getLibrarySettings(): Promise<LibrarySettings> {
   return (await db.librarySettings.findUnique({ where: { id: LIBRARY_SETTINGS_ID } })) ?? DEFAULTS;
+}
+
+/** El Taller is public — and its videos aren't hidden (VIDEOS_HIDDEN): what
+ * the instructors' portal asks before showing «Mis videos». */
+export function videosPublished(settings: Pick<LibrarySettings, "published">): boolean {
+  return settings.published && !VIDEOS_HIDDEN;
 }
 
 export interface LibraryConfig {

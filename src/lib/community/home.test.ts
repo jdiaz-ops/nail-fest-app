@@ -21,6 +21,7 @@ function viewer(staff: boolean, config: Partial<LibraryConfig> = {}): LibraryVie
     cuponeraLive: staff,
     unlocked: true,
     asksSignup: false,
+    videos: staff || Boolean(config.published),
     config: { published: false, instructorsPublished: false, portalOpen: false, consultorioPublished: false, sections: { shorties: true }, ...config } as LibraryConfig,
   };
 }

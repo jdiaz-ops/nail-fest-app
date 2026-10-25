@@ -11,16 +11,28 @@
  * sign-ups already made and each video's `gated` stay as they were. */
 export const LIBRARY_SIGNUP = false;
 
+/** Everything about videos hidden, for the team too (2026-10-25, «Esconde
+ * todo lo que tiene que ver con videos»): El Taller and its entries in the
+ * menu and the community home, the video bits of the directory, the
+ * profiles and the instructors' portal, the admin's Videos and YouTube tabs
+ * with the autopilot (its cron does nothing), and El Taller's texts and
+ * switches. Nothing is deleted: false brings it all back as it was. */
+export const VIDEOS_HIDDEN = true;
+
+/** The admin module's name: what's left in it while the videos are hidden. */
+export const LIBRARY_ADMIN_NAME = VIDEOS_HIDDEN ? "Editar instructoras" : "Editar El Taller";
+
 export type LibraryPage = "biblioteca" | "shorties" | "video" | "instructoras" | "perfil" | "portal" | "menu" | "formularios";
 
-export const LIBRARY_PAGES: { key: LibraryPage; label: string; hint: string }[] = [
-  { key: "biblioteca", label: "Portada de El Taller", hint: "nailfest.lat/biblioteca" },
-  { key: "shorties", label: "Explorar (el scroll)", hint: "nailfest.lat/biblioteca/cortos" },
-  { key: "video", label: "Página de cada video", hint: "nailfest.lat/biblioteca/<video>" },
+/** `videos`: hidden in the admin while the videos are (VIDEOS_HIDDEN). */
+export const LIBRARY_PAGES: { key: LibraryPage; label: string; hint: string; videos?: true }[] = [
+  { key: "biblioteca", label: "Portada de El Taller", hint: "nailfest.lat/biblioteca", videos: true },
+  { key: "shorties", label: "Explorar (el scroll)", hint: "nailfest.lat/biblioteca/cortos", videos: true },
+  { key: "video", label: "Página de cada video", hint: "nailfest.lat/biblioteca/<video>", videos: true },
   { key: "instructoras", label: "Directorio de instructoras", hint: "nailfest.lat/instructoras" },
   { key: "perfil", label: "Perfil de cada instructora", hint: "nailfest.lat/instructoras/<instructora>" },
   { key: "portal", label: "Portal de instructoras", hint: "Crear perfil (nailfest.lat/instructoras/unirme) y los términos que aceptan" },
-  { key: "menu", label: "Menú", hint: "El menú de El Taller y del directorio de instructoras" },
+  { key: "menu", label: "Menú", hint: VIDEOS_HIDDEN ? "El menú de todo el sitio" : "El menú de El Taller y del directorio de instructoras" },
   { key: "formularios", label: "Formularios", hint: LIBRARY_SIGNUP ? "Registro gratis y postulación de instructoras" : "Postulación de instructoras" },
 ];
 
@@ -34,6 +46,8 @@ interface TextDef {
   section?: LibrarySectionKey;
   /** Only for the free sign-up: hidden in the admin while it's off (LIBRARY_SIGNUP). */
   signup?: true;
+  /** About El Taller's videos: hidden in the admin while they are (VIDEOS_HIDDEN). */
+  videos?: true;
 }
 
 export const LIBRARY_SECTIONS = {
@@ -59,14 +73,14 @@ export const LIBRARY_SECTIONS = {
   directorySearch: { page: "instructoras", label: "Buscador", hint: "Buscar por nombre, ciudad o técnica, debajo del título.", off: true },
   filters: { page: "instructoras", label: "Filtros", hint: "Ciudad y especialidad, arriba de las tarjetas." },
   teachCta: { page: "instructoras", label: "¿Enseñas uñas?", hint: "La invitación a crear su perfil." },
-  profileVideos: { page: "perfil", label: "Sus videos", hint: "Los videos de la instructora en El Taller." },
-  profileProducts: { page: "perfil", label: "Lo que usa en sus videos", hint: "Las marcas de la cuponera que salen en sus videos." },
+  profileVideos: { page: "perfil", label: "Sus videos", hint: "Los videos de la instructora en El Taller.", videos: true },
+  profileProducts: { page: "perfil", label: "Lo que usa en sus videos", hint: "Las marcas de la cuponera que salen en sus videos.", videos: true },
   appearances: { page: "perfil", label: "Ha estado en", hint: "Los eventos de Nail Fest en los que ha estado.", off: true },
-  menuThemes: { page: "menu", label: "Aprende por tema", hint: "Los temas de El Taller, con cuántos videos tiene cada uno." },
+  menuThemes: { page: "menu", label: "Aprende por tema", hint: "Los temas de El Taller, con cuántos videos tiene cada uno.", videos: true },
   menuInstructors: { page: "menu", label: "Por instructora", hint: "Las instructoras, con enlace a su perfil." },
   menuCities: { page: "menu", label: "Instructoras por ciudad", hint: "Las ciudades donde hay instructoras." },
   menuSignup: { page: "menu", label: "Registro gratis", hint: "El recuadro que invita a registrarse, al final del menú.", off: true, signup: true },
-} as const satisfies Record<string, { page: LibraryPage; label: string; hint: string; off?: true; signup?: true }>;
+} as const satisfies Record<string, { page: LibraryPage; label: string; hint: string; off?: true; signup?: true; videos?: true }>;
 
 export type LibrarySectionKey = keyof typeof LIBRARY_SECTIONS;
 
@@ -170,19 +184,21 @@ export const LIBRARY_TEXTS = {
     value: "Para que alumnas de todo el país te encuentren por tu ciudad y por lo que enseñas, con tus redes.",
     long: true,
   },
-  joinActiveTitle: { page: "portal", label: "Instructora activa: título", value: "¿Quieres que te descubran?" },
+  joinActiveTitle: { page: "portal", label: "Instructora activa: título", value: "¿Quieres que te descubran?", videos: true },
   joinActiveText: {
     page: "portal",
     label: "Instructora activa: texto",
     value: "Sé instructora activa: envía tus videos con su ficha. El equipo elige cuáles salen en El Taller, en las redes y en el correo de Nail Fest, con tu nombre y tus redes.",
     long: true,
+    videos: true,
   },
-  joinMoneyTitle: { page: "portal", label: "Cómo gana Nail Fest: título", value: "Así gana Nail Fest" },
+  joinMoneyTitle: { page: "portal", label: "Cómo gana Nail Fest: título", value: "Así gana Nail Fest", videos: true },
   joinMoneyText: {
     page: "portal",
     label: "Cómo gana Nail Fest: texto",
     value: "Tu perfil es gratis y no recibes pagos. Algunos productos de los videos tienen enlaces con descuento, y Nail Fest puede recibir una comisión de la marca por esas compras.",
     long: true,
+    videos: true,
   },
   termsText: {
     page: "portal",
@@ -209,15 +225,16 @@ export const LIBRARY_TEXTS = {
       "Nail Fest puede recibir una comisión de las marcas por las compras hechas con los enlaces con descuento que acompañan los videos.",
     ].join("\n\n"),
     long: true,
+    videos: true,
   },
 
   menuSectionsTitle: { page: "menu", label: "Título de las secciones", value: "Secciones" },
   // Biblioteca and Cortos together in the menu (2026-10-25): one line for
   // the library, with its parts as buttons under it.
-  menuHome: { page: "menu", label: "Enlace a El Taller", value: "El Taller" },
-  menuLibraryHint: { page: "menu", label: "Debajo del enlace a El Taller", value: "Clases gratis de uñas" },
-  menuMostViewed: { page: "menu", label: "Botón «Lo más visto»", value: "Lo más visto" },
-  menuRecordings: { page: "menu", label: "Botón de las grabaciones", value: "Grabaciones" },
+  menuHome: { page: "menu", label: "Enlace a El Taller", value: "El Taller", videos: true },
+  menuLibraryHint: { page: "menu", label: "Debajo del enlace a El Taller", value: "Clases gratis de uñas", videos: true },
+  menuMostViewed: { page: "menu", label: "Botón «Lo más visto»", value: "Lo más visto", videos: true },
+  menuRecordings: { page: "menu", label: "Botón de las grabaciones", value: "Grabaciones", videos: true },
   menuDirectory: { page: "menu", label: "Enlace al directorio de instructoras", value: "Instructoras" },
   menuCuponera: { page: "menu", label: "Enlace a la cuponera", value: "Cuponera" },
   menuThemesTitle: { page: "menu", label: "Título", value: "Aprende por tema", section: "menuThemes" },

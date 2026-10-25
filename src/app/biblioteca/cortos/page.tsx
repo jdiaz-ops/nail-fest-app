@@ -5,6 +5,7 @@ import { libraryStaffNote } from "@/components/library/LibraryShell";
 import ShortiesFeed from "@/components/library/ShortiesFeed";
 import { getLibraryViewer, getShorties, libraryRobots, rankVideos } from "@/lib/library/data";
 import { getSiteMenu } from "@/lib/community/home";
+import { LIBRARY_ADMIN_NAME } from "@/lib/library/texts";
 import {
   LIBRARY_THEMES,
   SHORTIES_SIGNUP_EVERY,
@@ -76,7 +77,7 @@ export async function generateMetadata({ searchParams }: { searchParams: SearchP
 export default async function CortosPage({ searchParams }: { searchParams: SearchParams }) {
   const viewer = await getLibraryViewer();
   const { texts, sections } = viewer.config;
-  if ((!viewer.config.published || !sections.shorties) && !viewer.staff) notFound();
+  if (!viewer.videos || (!sections.shorties && !viewer.staff)) notFound();
   const [all, menu] = await Promise.all([getShorties(viewer), getSiteMenu(viewer)]);
   const first = one(searchParams, "v") || null;
   const query = one(searchParams, "q");
@@ -115,7 +116,7 @@ export default async function CortosPage({ searchParams }: { searchParams: Searc
           : "/biblioteca/buscar";
   const notes = [
     libraryStaffNote(viewer, "biblioteca", items.some((i) => i.video.sample)),
-    viewer.staff && !sections.shorties ? `${texts.shortiesTitle} está apagado en Editar El Taller: solo lo ve el equipo.` : null,
+    viewer.staff && !sections.shorties ? `${texts.shortiesTitle} está apagado en ${LIBRARY_ADMIN_NAME}: solo lo ve el equipo.` : null,
   ].filter(Boolean);
 
   return (

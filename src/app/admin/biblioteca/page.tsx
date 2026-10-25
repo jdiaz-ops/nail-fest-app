@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requirePageUser } from "@/lib/auth/guard";
 import { getLibraryAdminData } from "@/lib/library/admin";
+import { LIBRARY_ADMIN_NAME, VIDEOS_HIDDEN } from "@/lib/library/texts";
 import { countYoutubeToReview, getYoutubeAdminData } from "@/lib/library/youtubeImport";
 import LibraryPublishCard from "./LibraryPublishCard";
 import LibraryVideosEditor from "./LibraryVideosEditor";
@@ -13,9 +14,13 @@ import LibraryYoutubeImport from "./LibraryYoutubeImport";
 export const dynamic = "force-dynamic";
 
 // No "Clases" tab since 2026-10-24: profiles don't carry classes (its
-// editor, LibraryClassesEditor, stays for if they come back).
-const TABS = ["videos", "youtube", "instructoras", "registros", "textos"] as const;
-type Tab = (typeof TABS)[number];
+// editor, LibraryClassesEditor, stays for if they come back). No Videos and
+// YouTube tabs while the videos are hidden (VIDEOS_HIDDEN): their editors
+// stay, with everything in them, for when they come back.
+const ALL_TABS = ["videos", "youtube", "instructoras", "registros", "textos"] as const;
+type Tab = (typeof ALL_TABS)[number];
+const TABS: readonly Tab[] = VIDEOS_HIDDEN ? ["instructoras", "registros", "textos"] : ALL_TABS;
+const FIRST_TAB: Tab = VIDEOS_HIDDEN ? "instructoras" : "videos";
 
 // "Editar biblioteca" — the editor of nailfest.lat/biblioteca and
 // nailfest.lat/instructoras, a top-level nav item next to Editar cuponera
@@ -24,8 +29,12 @@ type Tab = (typeof TABS)[number];
 // people send from the forms, and every text and section of the pages.
 export default async function AdminBibliotecaPage({ searchParams }: { searchParams: { tab?: string; editar?: string } }) {
   await requirePageUser(["ADMIN"]);
-  const tab: Tab = (TABS as readonly string[]).includes(searchParams.tab ?? "") ? (searchParams.tab as Tab) : "videos";
-  const [data, youtubeToReview, youtube] = await Promise.all([getLibraryAdminData(), countYoutubeToReview(), tab === "youtube" ? getYoutubeAdminData() : null]);
+  const tab: Tab = (TABS as readonly string[]).includes(searchParams.tab ?? "") ? (searchParams.tab as Tab) : FIRST_TAB;
+  const [data, youtubeToReview, youtube] = await Promise.all([
+    getLibraryAdminData(),
+    VIDEOS_HIDDEN ? 0 : countYoutubeToReview(),
+    tab === "youtube" ? getYoutubeAdminData() : null,
+  ]);
   const pending = Object.values(data.pendingLeads).reduce((a, b) => a + b, 0);
   // Each profile to approve and each password request is one thing to do.
   const toReview = data.instructors.filter((i) => i.status === "review").length + data.instructors.filter((i) => i.account?.resetRequestedLabel).length;
@@ -39,25 +48,41 @@ export default async function AdminBibliotecaPage({ searchParams }: { searchPara
 
   return (
     <div style={{ maxWidth: 900 }}>
-      <h1 style={{ fontSize: 24, marginBottom: 4 }}>Editar El Taller</h1>
-      <p style={{ color: "#5b5f6b", marginTop: 0, marginBottom: 4 }}>
-        El Taller (los videos) en nailfest.lat/biblioteca y el directorio de instructoras en nailfest.lat/instructoras: los videos y grabaciones (y
-        los que envían las instructoras), los perfiles de las instructoras (y los que llegan del portal para revisar), lo que llega de los
-        formularios y los textos de cada página.
-      </p>
+      <h1 style={{ fontSize: 24, marginBottom: 4 }}>{LIBRARY_ADMIN_NAME}</h1>
+      {VIDEOS_HIDDEN ? (
+        <p style={{ color: "#5b5f6b", marginTop: 0, marginBottom: 4 }}>
+          El directorio de instructoras en nailfest.lat/instructoras: los perfiles de las instructoras (y los que llegan del portal para revisar), lo
+          que llega de los formularios y los textos de cada página.
+        </p>
+      ) : (
+        <p style={{ color: "#5b5f6b", marginTop: 0, marginBottom: 4 }}>
+          El Taller (los videos) en nailfest.lat/biblioteca y el directorio de instructoras en nailfest.lat/instructoras: los videos y grabaciones (y
+          los que envían las instructoras), los perfiles de las instructoras (y los que llegan del portal para revisar), lo que llega de los
+          formularios y los textos de cada página.
+        </p>
+      )}
       <p style={{ fontSize: 13, marginTop: 0 }}>
-        <a href="/biblioteca" target="_blank" rel="noreferrer">
-          Ver El Taller ↗
-        </a>
-        {" · "}
+        {!VIDEOS_HIDDEN && (
+          <>
+            <a href="/biblioteca" target="_blank" rel="noreferrer">
+              Ver El Taller ↗
+            </a>
+            {" · "}
+          </>
+        )}
         <a href="/instructoras" target="_blank" rel="noreferrer">
           Ver las instructoras ↗
         </a>
       </p>
 
-      <LibraryPublishCard published={data.settings.published} instructorsPublished={data.settings.instructorsPublished} portalOpen={data.settings.portalOpen} />
+      <LibraryPublishCard
+        library={!VIDEOS_HIDDEN}
+        published={data.settings.published}
+        instructorsPublished={data.settings.instructorsPublished}
+        portalOpen={data.settings.portalOpen}
+      />
 
-      <nav aria-label="Secciones de Editar El Taller" style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 24 }}>
+      <nav aria-label={`Secciones de ${LIBRARY_ADMIN_NAME}`} style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 24 }}>
         {TABS.map((t) => (
           <Link
             key={t}

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAuthorizedCronRequest } from "@/lib/cron";
 import { getLibrarySettings } from "@/lib/library/settings";
+import { VIDEOS_HIDDEN } from "@/lib/library/texts";
 import { YoutubeError } from "@/lib/library/youtube";
 import { runAutopilot } from "@/lib/library/youtubeAutopilot";
 import { PLAYLISTS_EVERY_MS, fillOrientations, importNewUploads, syncPlaylists } from "@/lib/library/youtubeImport";
@@ -13,6 +14,7 @@ import { PLAYLISTS_EVERY_MS, fillOrientations, importNewUploads, syncPlaylists }
 // time — about 24 videos a round, so the channel's first hundreds take a
 // few hours when nobody keeps the tab open. Switched off in the tab, it only
 // asks YouTube the shape (upright or lying) of the videos that don't have it.
+// While the videos are hidden (VIDEOS_HIDDEN), not even that: nothing at all.
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
@@ -22,6 +24,7 @@ async function handle(req: NextRequest) {
   if (!isAuthorizedCronRequest(req)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
+  if (VIDEOS_HIDDEN) return NextResponse.json({ ok: true, skipped: "videos hidden" });
   const settings = await getLibrarySettings();
   let shapes: number | { problem: string } = 0;
   try {
