@@ -2,11 +2,10 @@
 
 import { usePathname } from "next/navigation";
 import type { AdminRole } from "@prisma/client";
-import { LIBRARY_ADMIN_NAME } from "@/lib/library/texts";
 import AdminNavLink from "./AdminNavLink";
 import LogoutButton from "./LogoutButton";
 
-const NAV: { href: string; label: string; adminOnly?: boolean }[] = [
+const NAV: { href: string; label: string; adminOnly?: boolean; also?: string[] }[] = [
   { href: "/admin", label: "Resumen" },
   { href: "/admin/events", label: "Eventos" },
   { href: "/admin/crm", label: "CRM" },
@@ -17,14 +16,14 @@ const NAV: { href: string; label: string; adminOnly?: boolean }[] = [
   // EventModuleShell.
   { href: "/admin/homepage", label: "Editar homepage", adminOnly: true },
   { href: "/admin/links", label: "Editar Links", adminOnly: true },
-  { href: "/admin/cuponera", label: "Editar cuponera", adminOnly: true },
-  // «Editar instructoras» while the videos are hidden (VIDEOS_HIDDEN).
-  { href: "/admin/biblioteca", label: LIBRARY_ADMIN_NAME, adminOnly: true },
+  // The cuponera, the instructors' directory (Editar instructoras) and the
+  // reviews, together in one tab (2026-10-25): its page lists them, each
+  // with its state (./proyectos). Their own addresses stay the same.
+  { href: "/admin/proyectos", label: "Proyectos", also: ["/admin/cuponera", "/admin/biblioteca", "/admin/resenas"] },
   // The newsletter's bank of pieces (2026-10-25).
   { href: "/admin/mesa", label: "La Mesa", adminOnly: true },
   { href: "/admin/consultorio", label: "Consultorio" },
   { href: "/admin/pages", label: "Páginas", adminOnly: true },
-  { href: "/admin/resenas", label: "Reseñas" },
   { href: "/admin/settings", label: "Configuración", adminOnly: true },
 ];
 
@@ -62,7 +61,7 @@ export default function AdminTopNav({ userLabel, role, children }: { userLabel: 
         >
           <span style={{ color: "#fff", fontWeight: 700, marginRight: 20, whiteSpace: "nowrap" }}>Nail Fest</span>
           {nav.map((item) => (
-            <AdminNavLink key={item.href} href={item.href} label={item.label} />
+            <AdminNavLink key={item.href} href={item.href} label={item.label} also={item.also} />
           ))}
           <div style={{ flex: 1 }} />
           <span style={{ color: "#8a8478", fontSize: 13, whiteSpace: "nowrap" }}>{userLabel}</span>
