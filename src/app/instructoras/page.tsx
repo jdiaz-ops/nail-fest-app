@@ -74,15 +74,17 @@ export default async function InstructorasPage({ searchParams }: { searchParams:
         <div className="bib-hero-inner">
           <h1 className={`bib-hero-title ${fraunces.className}`}>{texts.directoryTitle}</h1>
           <p className="bib-hero-lede">{texts.directoryLede}</p>
-          <form className="bib-search" role="search" action="/instructoras" method="get">
-            <SearchIcon />
-            <label htmlFor="bib-q" className="bib-sr">
-              Buscar instructoras
-            </label>
-            <input id="bib-q" name="q" type="search" placeholder={texts.directorySearchPlaceholder} defaultValue={query} enterKeyHint="search" autoComplete="off" />
-            {city && <input type="hidden" name="ciudad" value={city} />}
-            {specialty && <input type="hidden" name="especialidad" value={specialty} />}
-          </form>
+          {sections.directorySearch && (
+            <form className="bib-search" role="search" action="/instructoras" method="get">
+              <SearchIcon />
+              <label htmlFor="bib-q" className="bib-sr">
+                Buscar instructoras
+              </label>
+              <input id="bib-q" name="q" type="search" placeholder={texts.directorySearchPlaceholder} defaultValue={query} enterKeyHint="search" autoComplete="off" />
+              {city && <input type="hidden" name="ciudad" value={city} />}
+              {specialty && <input type="hidden" name="especialidad" value={specialty} />}
+            </form>
+          )}
         </div>
       </section>
 

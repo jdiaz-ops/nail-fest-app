@@ -411,7 +411,7 @@ export async function getLibraryMenu(viewer: LibraryViewer, now: Date = new Date
     videos: Boolean(facts) && sections.newest && (viewer.staff || facts!.shorts > 0),
     mostViewed: Boolean(facts) && sections.mostViewed && (viewer.staff || facts!.watched >= MOST_VIEWED_FROM),
     recordings: Boolean(facts) && sections.recordings && (viewer.staff || facts!.recordings > 0),
-    signup: library && sections.signup && (viewer.staff || !viewer.unlocked),
+    signup: library && sections.menuSignup && (viewer.staff || !viewer.unlocked),
     popularSearches: library ? popularSearches : [],
     themes,
     people: people.slice(0, MENU_PEOPLE_UP_TO).map((p) => ({ slug: p.slug, name: p.name, initial: p.initial, photoUrl: p.photoUrl, tone: p.tone, city: p.city })),

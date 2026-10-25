@@ -41,16 +41,19 @@ export const LIBRARY_SECTIONS = {
   used: { page: "video", label: "Lo que usó", hint: "Los productos del video, con el descuento y el código de la cuponera." },
   steps: { page: "video", label: "El paso a paso", hint: "Los pasos del video, que se ven con el registro gratis." },
   related: { page: "video", label: "Sigue con", hint: "Más videos del mismo tema." },
+  // Off unless the team switches them on (2026-10-25): `off: true`.
+  directorySearch: { page: "instructoras", label: "Buscador", hint: "Buscar por nombre, ciudad o técnica, debajo del título.", off: true },
   filters: { page: "instructoras", label: "Filtros", hint: "Ciudad y especialidad, arriba de las tarjetas." },
   teachCta: { page: "instructoras", label: "¿Enseñas uñas?", hint: "La invitación a crear su perfil." },
   profileVideos: { page: "perfil", label: "Sus videos", hint: "Los videos de la instructora en la biblioteca." },
   profileProducts: { page: "perfil", label: "Lo que usa en sus videos", hint: "Las marcas de la cuponera que salen en sus videos." },
-  appearances: { page: "perfil", label: "Ha estado en", hint: "Los eventos de Nail Fest en los que ha estado." },
-  menuThemes: { page: "menu", label: "Busca por tema", hint: "Los temas, con cuántos videos tiene cada uno." },
-  menuLevels: { page: "menu", label: "Por nivel", hint: "Principiante, intermedio y avanzado." },
+  appearances: { page: "perfil", label: "Ha estado en", hint: "Los eventos de Nail Fest en los que ha estado.", off: true },
+  menuThemes: { page: "menu", label: "Aprende por tema", hint: "Los temas de la biblioteca, con cuántos videos tiene cada uno." },
+  menuLevels: { page: "menu", label: "Por nivel", hint: "Principiante, intermedio y avanzado.", off: true },
   menuInstructors: { page: "menu", label: "Por instructora", hint: "Las instructoras, con enlace a su perfil." },
   menuCities: { page: "menu", label: "Instructoras por ciudad", hint: "Las ciudades donde hay instructoras." },
-} as const satisfies Record<string, { page: LibraryPage; label: string; hint: string }>;
+  menuSignup: { page: "menu", label: "Registro gratis", hint: "El recuadro que invita a registrarse, al final del menú.", off: true },
+} as const satisfies Record<string, { page: LibraryPage; label: string; hint: string; off?: true }>;
 
 export type LibrarySectionKey = keyof typeof LIBRARY_SECTIONS;
 
@@ -114,7 +117,7 @@ export const LIBRARY_TEXTS = {
     value: "Encuentra instructoras de uñas por ciudad y especialidad: sus técnicas, sus videos y sus redes.",
     long: true,
   },
-  directorySearchPlaceholder: { page: "instructoras", label: "Texto dentro del buscador", value: "Busca por nombre, ciudad o técnica" },
+  directorySearchPlaceholder: { page: "instructoras", label: "Texto dentro del buscador", value: "Busca por nombre, ciudad o técnica", section: "directorySearch" },
   teachTitle: { page: "instructoras", label: "Título", value: "¿Enseñas uñas?", section: "teachCta" },
   teachText: {
     page: "instructoras",
@@ -189,7 +192,7 @@ export const LIBRARY_TEXTS = {
   menuRecordings: { page: "menu", label: "Botón de las grabaciones", value: "Grabaciones" },
   menuDirectory: { page: "menu", label: "Enlace al directorio de instructoras", value: "Instructoras" },
   menuCuponera: { page: "menu", label: "Enlace a la cuponera", value: "Cuponera" },
-  menuThemesTitle: { page: "menu", label: "Título", value: "Busca por tema", section: "menuThemes" },
+  menuThemesTitle: { page: "menu", label: "Título", value: "Aprende por tema", section: "menuThemes" },
   menuLevelsTitle: { page: "menu", label: "Título", value: "Por nivel", section: "menuLevels" },
   menuInstructorsTitle: { page: "menu", label: "Título", value: "Por instructora", section: "menuInstructors" },
   menuSeeAll: { page: "menu", label: "Enlace a todas", value: "Ver todas", section: "menuInstructors" },
@@ -237,8 +240,14 @@ export function resolveTexts(saved: unknown): LibraryTexts {
   ) as LibraryTexts;
 }
 
-/** Every section is on unless the admin switched it off. */
+/** What the admin switched on or off; the rest as they come — on, but for
+ * the ones marked `off`. */
 export function resolveSections(saved: unknown): LibrarySections {
   const map = saved && typeof saved === "object" ? (saved as Record<string, unknown>) : {};
-  return Object.fromEntries(LIBRARY_SECTION_KEYS.map((key) => [key, map[key] !== false])) as LibrarySections;
+  return Object.fromEntries(
+    LIBRARY_SECTION_KEYS.map((key) => {
+      const value = map[key];
+      return [key, typeof value === "boolean" ? value : !("off" in LIBRARY_SECTIONS[key])];
+    }),
+  ) as LibrarySections;
 }
