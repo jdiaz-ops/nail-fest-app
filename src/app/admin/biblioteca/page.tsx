@@ -1,18 +1,20 @@
 import Link from "next/link";
 import { requirePageUser } from "@/lib/auth/guard";
 import { getLibraryAdminData } from "@/lib/library/admin";
+import { countYoutubeToReview, getYoutubeAdminData } from "@/lib/library/youtubeImport";
 import LibraryPublishCard from "./LibraryPublishCard";
 import LibraryVideosEditor from "./LibraryVideosEditor";
 import LibraryInstructorsEditor from "./LibraryInstructorsEditor";
 import LibraryLeadsList from "./LibraryLeadsList";
 import LibrarySubmissionsCard from "./LibrarySubmissionsCard";
 import LibraryTextsForm from "./LibraryTextsForm";
+import LibraryYoutubeImport from "./LibraryYoutubeImport";
 
 export const dynamic = "force-dynamic";
 
 // No "Clases" tab since 2026-10-24: profiles don't carry classes (its
 // editor, LibraryClassesEditor, stays for if they come back).
-const TABS = ["videos", "instructoras", "registros", "textos"] as const;
+const TABS = ["videos", "youtube", "instructoras", "registros", "textos"] as const;
 type Tab = (typeof TABS)[number];
 
 // "Editar biblioteca" — the editor of nailfest.lat/biblioteca and
@@ -22,13 +24,14 @@ type Tab = (typeof TABS)[number];
 // people send from the forms, and every text and section of the pages.
 export default async function AdminBibliotecaPage({ searchParams }: { searchParams: { tab?: string; editar?: string } }) {
   await requirePageUser(["ADMIN"]);
-  const data = await getLibraryAdminData();
   const tab: Tab = (TABS as readonly string[]).includes(searchParams.tab ?? "") ? (searchParams.tab as Tab) : "videos";
+  const [data, youtubeToReview, youtube] = await Promise.all([getLibraryAdminData(), countYoutubeToReview(), tab === "youtube" ? getYoutubeAdminData() : null]);
   const pending = Object.values(data.pendingLeads).reduce((a, b) => a + b, 0);
   // Each profile to approve and each password request is one thing to do.
   const toReview = data.instructors.filter((i) => i.status === "review").length + data.instructors.filter((i) => i.account?.resetRequestedLabel).length;
   const labels: Record<Tab, string> = {
     videos: data.submissions.length > 0 ? `Videos (${data.videos.length} · ${data.submissions.length} por revisar)` : `Videos (${data.videos.length})`,
+    youtube: youtubeToReview > 0 ? `YouTube (${youtubeToReview} por revisar)` : "YouTube",
     instructoras: toReview > 0 ? `Instructoras (${data.instructors.length} · ${toReview} por revisar)` : `Instructoras (${data.instructors.length})`,
     registros: pending > 0 ? `Registros (${pending} sin atender)` : "Registros",
     textos: "Textos y secciones",
@@ -88,6 +91,7 @@ export default async function AdminBibliotecaPage({ searchParams }: { searchPara
           />
         </>
       )}
+      {tab === "youtube" && youtube && <LibraryYoutubeImport data={youtube} instructors={data.instructors.map((i) => ({ id: i.id, name: i.name }))} />}
       {tab === "instructoras" && <LibraryInstructorsEditor instructors={data.instructors} />}
       {tab === "registros" && <LibraryLeadsList leads={data.leads} pending={data.pendingLeads} />}
       {tab === "textos" && (

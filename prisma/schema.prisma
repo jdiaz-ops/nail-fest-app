@@ -2370,8 +2370,9 @@ model LibraryVideo {
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
-  dailyViews LibraryVideoDailyView[]
-  submission InstructorVideoSubmission?
+  dailyViews    LibraryVideoDailyView[]
+  submission    InstructorVideoSubmission?
+  youtubeImport LibraryYoutubeVideo?
 
   @@index([visible, publishedAt])
 }
@@ -2448,23 +2449,61 @@ model LibraryLead {
 // changed and the sections switched off are JSON maps (lib/library/settings.ts
 // has every key and its usual text): there are dozens, across four pages.
 model LibrarySettings {
-  id                   String   @id
+  id                   String    @id
   // nailfest.lat/biblioteca for everyone; hidden = staff only, 404 for the rest.
-  published            Boolean  @default(false)
+  published            Boolean   @default(false)
   // nailfest.lat/instructoras, the same way.
-  instructorsPublished Boolean  @default(false)
+  instructorsPublished Boolean   @default(false)
   // Anyone can make a profile at nailfest.lat/instructoras/unirme; closed =
   // staff only, while the instructors the team invites can still get in.
-  portalOpen           Boolean  @default(false)
+  portalOpen           Boolean   @default(false)
   // nailfest.lat/consultorio for everyone; hidden = staff only, 404 for the rest.
-  consultorioPublished Boolean  @default(false)
+  consultorioPublished Boolean   @default(false)
   // Text key → the admin's text.
-  texts                Json     @default("{}")
+  texts                Json      @default("{}")
   // Section key → false when switched off.
-  sections             Json     @default("{}")
+  sections             Json      @default("{}")
   // "Lo más buscado" under the search box.
-  popularSearches      String[] @default([])
-  updatedAt            DateTime @updatedAt
+  popularSearches      String[]  @default([])
+  // The team's YouTube channel, brought into the library (Editar biblioteca
+  // → YouTube, 2026-10-25): what was typed ("@hlacosedora"), the channel it
+  // is and its uploads, and the free Google key it's read with (YouTube
+  // Data API v3) — used here only, never sent back whole.
+  youtubeChannel       String?
+  youtubeChannelId     String?
+  youtubeChannelTitle  String?
+  youtubeUploadsId     String?
+  youtubeApiKey        String?
+  youtubeImportedAt    DateTime?
+  updatedAt            DateTime  @updatedAt
+}
+
+// A video of the team's YouTube channel, brought in to review (Editar
+// biblioteca → YouTube): the newest titles, durations and views on every
+// import; what the team decides stays — passed to the library (a hidden
+// LibraryVideo to finish and switch on) or set aside.
+model LibraryYoutubeVideo {
+  id              String        @id @default(cuid())
+  youtubeId       String        @unique
+  title           String
+  description     String?
+  publishedAt     DateTime
+  durationSeconds Int?
+  views           Int           @default(0)
+  // "public" | "unlisted" | "private"
+  privacy         String        @default("public")
+  // Three minutes or less (or #shorts): a corto; longer: a recording.
+  short           Boolean       @default(false)
+  // The theme its title suggests (lib/library/youtube.ts), for the team.
+  suggestedTheme  String?
+  // "PENDING" (to review) | "ADDED" (passed to the library) | "DISCARDED"
+  status          String        @default("PENDING")
+  libraryVideo    LibraryVideo? @relation(fields: [libraryVideoId], references: [id], onDelete: SetNull)
+  libraryVideoId  String?       @unique
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([status, views])
 }
 
 // ── The community: accounts and the Consultorio (2026-10-24) ───────────────

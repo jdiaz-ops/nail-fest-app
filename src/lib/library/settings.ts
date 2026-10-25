@@ -16,6 +16,12 @@ const DEFAULTS: LibrarySettings = {
   texts: {},
   sections: {},
   popularSearches: DEFAULT_POPULAR_SEARCHES,
+  youtubeChannel: null,
+  youtubeChannelId: null,
+  youtubeChannelTitle: null,
+  youtubeUploadsId: null,
+  youtubeApiKey: null,
+  youtubeImportedAt: null,
   updatedAt: new Date(0),
 };
 
@@ -55,6 +61,13 @@ export type LibrarySettingsPatch = Partial<{
   texts: Record<string, string>;
   sections: Record<string, boolean>;
   popularSearches: string[];
+  // The YouTube channel (lib/library/youtubeImport.ts).
+  youtubeChannel: string;
+  youtubeChannelId: string;
+  youtubeChannelTitle: string;
+  youtubeUploadsId: string;
+  youtubeApiKey: string;
+  youtubeImportedAt: Date;
 }>;
 
 export async function updateLibrarySettings(patch: LibrarySettingsPatch): Promise<LibrarySettings> {
