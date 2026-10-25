@@ -46,7 +46,7 @@ export default function PrivacyPolicyForm({ initialText, initialCommunityText }:
           style={{ fontFamily: "inherit", resize: "vertical" }}
         />
         <span style={{ fontSize: 12, color: "#5b5f6b" }}>
-          La biblioteca y los cortos, las instructoras, el Consultorio, los correos y sus encuestas, y la galería. Una línea que empieza con «## » es un
+          El Taller y Explorar, las instructoras, el Consultorio, los correos y sus encuestas, y la galería. Una línea que empieza con «## » es un
           título; {"{correo}"} se cambia por el correo de respuesta de Configuración.{" "}
           {community.trim() !== COMMUNITY_PRIVACY_TEXT && (
             <button type="button" onClick={() => setCommunity(COMMUNITY_PRIVACY_TEXT)} style={{ border: 0, background: "none", padding: 0, color: "#007a74", fontWeight: 700, cursor: "pointer" }}>

@@ -136,7 +136,7 @@ export function cleanTags(tags: readonly string[]): string[] {
 export interface TopicSource {
   theme: string;
   extraThemes?: readonly string[];
-  subcategories?: readonly { key: string; name: string }[];
+  subcategories?: readonly { key: string; name: string; theme?: string }[];
   tags: readonly string[];
 }
 
@@ -172,6 +172,108 @@ export function topicsOf(videos: TopicSource[]): CortosTopic[] {
   return [...topics.values()].sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, "es"));
 }
 
+// ── The scroll's filters ─────────────────────────────────────────────────────
+
+// The scroll's address ("/biblioteca/shorties" until 2026-10-24).
+export const FEED_PATH = "/biblioteca/cortos";
+
+/** What the scroll shows: one topic (?tema=), one instructor's videos
+ * (?instructora=), a search (?q=), the newest first (?orden=nuevo). */
+export interface FeedFilters {
+  topic: { key: string; label: string } | null;
+  person: { slug: string; name: string } | null;
+  query: string;
+  newest: boolean;
+  /** No video had every word of the search: the closest ones. */
+  relaxed: boolean;
+}
+
+type FeedParam = "v" | "tema" | "instructora" | "q" | "orden";
+
+/** The scroll's address with these parameters (a null one left out). */
+export function feedHref(params: Partial<Record<FeedParam, string | null>>): string {
+  const query = (["v", "tema", "instructora", "q", "orden"] as const)
+    .filter((key) => params[key])
+    .map((key) => `${key}=${encodeURIComponent(params[key]!)}`)
+    .join("&");
+  return query ? `${FEED_PATH}?${query}` : FEED_PATH;
+}
+
+/** The filters as the address's parameters. */
+export function feedParams(filters: FeedFilters): Record<Exclude<FeedParam, "v">, string | null> {
+  return { tema: filters.topic?.key ?? null, instructora: filters.person?.slug ?? null, q: filters.query || null, orden: filters.newest ? "nuevo" : null };
+}
+
+/** An instructor among the scroll's filters, with how many videos are hers. */
+export interface FeedPerson extends Pick<LibraryPerson, "name" | "initial" | "photoUrl" | "tone"> {
+  slug: string;
+  count: number;
+}
+
+/** A list in its order from the chosen one (?v=) on, the ones before it
+ * after the last: tapping a card of a list, the scroll goes on with the
+ * next ones (2026-10-25: "una vez que entras a un video puedes escrolear
+ * el tema"). */
+export function startAt(items: ShortItem[], first: string | null): ShortItem[] {
+  const index = first ? items.findIndex((i) => i.video.slug === first) : -1;
+  return index > 0 ? [...items.slice(index), ...items.slice(0, index)] : items;
+}
+
+/** Where a video's card takes you: the scroll from that video with the
+ * list it was in (its theme, the search, her videos…), or its own page
+ * while the scroll is off (null). */
+export function watchHref(slug: string, list: Partial<Record<Exclude<FeedParam, "v">, string | null>> | null): string {
+  return list ? feedHref({ ...list, v: slug }) : `/biblioteca/${slug}`;
+}
+
+// Inside a theme, its topics shown in the row; a tag shows from two videos.
+const ROW_TOPICS_UP_TO = 12;
+const ROW_TAG_FROM = 2;
+
+/** The row of chips over the scroll (2026-10-25: "buenos filtros tema
+ * categoría"): at the top, the themes and then the most common topics;
+ * inside a theme — or one of its subcategories or tags — that theme, its
+ * subcategories and its most common tags, the chosen one among them. */
+export interface FeedRow {
+  /** The theme the row is inside of; null at the top. */
+  theme: CortosTopic | null;
+  chips: CortosTopic[];
+}
+
+export function feedRow(videos: TopicSource[], active: string | null): FeedRow {
+  const topics = topicsOf(videos);
+  const themeKeys = new Set<string>(LIBRARY_THEMES.map((t) => t.key));
+  const subKeys = new Set(videos.flatMap((v) => (v.subcategories ?? []).map((s) => s.key)));
+  const others = (list: CortosTopic[]) => list.filter((t) => !themeKeys.has(t.key) && (subKeys.has(t.key) || t.count >= ROW_TAG_FROM));
+  const top = (): FeedRow => ({
+    theme: null,
+    chips: [...LIBRARY_THEMES.map((t) => topics.find((x) => x.key === t.key)).filter((t): t is CortosTopic => Boolean(t)), ...others(topics).slice(0, ROW_TOPICS_UP_TO)],
+  });
+  if (!active) return top();
+
+  // The theme it's inside of: itself, its subcategory's, or the one most of its videos have.
+  let parent: string | null = themeKeys.has(active) ? active : null;
+  if (!parent) {
+    const sub = videos.flatMap((v) => v.subcategories ?? []).find((s) => s.key === active);
+    if (sub?.theme) parent = sub.theme;
+  }
+  if (!parent) {
+    const mains = new Map<string, number>();
+    for (const v of videos) if (hasTopic(v, active)) mains.set(v.theme, (mains.get(v.theme) ?? 0) + 1);
+    parent = [...mains].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+  }
+  const activeTopic = topics.find((t) => t.key === active);
+  if (!parent || !themeKeys.has(parent)) {
+    const row = top();
+    return activeTopic && !row.chips.some((c) => c.key === active) ? { theme: null, chips: [activeTopic, ...row.chips] } : row;
+  }
+  const inside = others(topicsOf(videos.filter((v) => hasTopic(v, parent!))));
+  // Its subcategories first (the team's), then its tags; the chosen one always in.
+  const chips = [...inside.filter((t) => subKeys.has(t.key)), ...inside.filter((t) => !subKeys.has(t.key))].slice(0, ROW_TOPICS_UP_TO);
+  if (activeTopic && active !== parent && !chips.some((c) => c.key === active)) chips.unshift(activeTopic);
+  return { theme: topics.find((t) => t.key === parent) ?? { key: parent, label: themeOf(parent as LibraryTheme).label, count: 0 }, chips };
+}
+
 // ── YouTube ─────────────────────────────────────────────────────────────────
 
 const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/;
@@ -197,6 +299,15 @@ export function youtubeIdFrom(input: string): string | null {
   if (v && YOUTUBE_ID.test(v)) return v;
   const match = url.pathname.match(/^\/(?:shorts|embed|live|v)\/([A-Za-z0-9_-]{11})(?:\/|$)/);
   return match ? match[1]! : null;
+}
+
+// YouTube's Shorts are up to three minutes.
+export const SHORT_UP_TO_SECONDS = 180;
+
+/** Upright (9:16) or lying (16:9): what YouTube said or, until it says, a
+ * video of three minutes or less that isn't a recording. */
+export function isVertical(video: { vertical: boolean | null; kind: string; durationSeconds: number | null }): boolean {
+  return video.vertical ?? (video.kind !== "maraton" && (video.durationSeconds === null || video.durationSeconds <= SHORT_UP_TO_SECONDS));
 }
 
 /** YouTube's own still of the video (480×360; a Short sits in the middle). */
@@ -354,6 +465,8 @@ export interface LibraryVideoCard {
   /** null only for the invented examples. */
   youtubeId: string | null;
   durationSeconds: number | null;
+  /** Upright (9:16) or lying (16:9) — isVertical(). */
+  vertical: boolean;
   instructor: LibraryPerson | null;
   teachersNote: string | null;
   /** Its topics ("Polygel"…) — see topicsOf(). */

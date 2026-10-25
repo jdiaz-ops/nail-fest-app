@@ -7,6 +7,7 @@ import { getInstructorProfile, getLibraryViewer, libraryRobots } from "@/lib/lib
 import { getPortalUser } from "@/lib/library/portalAuth";
 import { whatsappUrl, youtubeChannelUrl } from "@/lib/library/portal";
 import { formatPercent } from "@/lib/cuponera/shared";
+import { watchHref } from "@/lib/library/shared";
 import { fraunces } from "@/app/cuponera/fonts";
 
 export const dynamic = "force-dynamic";
@@ -38,6 +39,8 @@ export default async function InstructoraPage({ params }: { params: { slug: stri
   const { texts, sections } = viewer.config;
   const handle = instructor.instagram ?? instructor.tiktok;
   const libraryOpen = viewer.staff || viewer.config.published;
+  // Her video's card opens the scroll of her videos from it, newest first; its page while the scroll is off.
+  const herList = viewer.staff || sections.shorties ? { instructora: instructor.slug, orden: "nuevo" } : null;
   const notes = [libraryStaffNote(viewer, "instructoras", instructor.sample), viewer.staff && profile.hidden ? `${profile.hidden} Solo lo ve el equipo.` : null].filter(Boolean);
   const ownerNote =
     owner && !viewer.staff
@@ -132,7 +135,7 @@ export default async function InstructoraPage({ params }: { params: { slug: stri
             <h2 className={`bib-h2 ${fraunces.className}`}>{texts.profileVideosTitle}</h2>
             <div className="bib-vgrid">
               {videos.map((v) => (
-                <VideoCard key={v.id} video={v} />
+                <VideoCard key={v.id} video={v} href={watchHref(v.slug, herList)} />
               ))}
             </div>
           </section>

@@ -20,7 +20,7 @@ export default function LibraryPublishCard({ published, instructorsPublished, po
       if (next && !confirm("¿Abrir el registro? Cualquier instructora podrá crear su perfil en nailfest.lat/instructoras/unirme. Cada perfil sale solo cuando el equipo lo aprueba.")) return;
       if (!next && !confirm("¿Cerrar el registro? Nadie nuevo podrá crear su perfil; las que ya tienen cuenta siguen entrando.")) return;
     } else {
-      const where = key === "published" ? "la biblioteca en nailfest.lat/biblioteca" : "el directorio en nailfest.lat/instructoras";
+      const where = key === "published" ? "El Taller en nailfest.lat/biblioteca" : "el directorio en nailfest.lat/instructoras";
       if (next && !confirm(`¿Publicar ${where}? Cualquier persona podrá verla. Los ejemplos inventados nunca se muestran al público.`)) return;
       if (!next && !confirm("¿Volver a ocultarla? Solo el equipo podrá verla.")) return;
     }
@@ -55,7 +55,7 @@ export default function LibraryPublishCard({ published, instructorsPublished, po
         Mientras se va llenando, el equipo ve ejemplos inventados (marcados «Ejemplo») en las secciones que todavía tienen poco. Al público
         solo se le muestra lo real.
       </p>
-      {line("published", "Biblioteca", "Pública: cualquier persona la ve en nailfest.lat/biblioteca.", hidden)}
+      {line("published", "El Taller", "Público: cualquier persona lo ve en nailfest.lat/biblioteca.", hidden)}
       {line("instructorsPublished", "Instructoras", "Pública: cualquier persona la ve en nailfest.lat/instructoras.", hidden)}
       {line(
         "portalOpen",

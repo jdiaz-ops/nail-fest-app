@@ -90,7 +90,7 @@ export default function LeadForm({
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <path d="M5 12.5l4.5 4.5L19 7.5" />
         </svg>
-        <p>{sample ? "Ejemplo: con una instructora real, esto quedaría en Editar biblioteca → Registros." : thanksText}</p>
+        <p>{sample ? "Ejemplo: con una instructora real, esto quedaría en Editar El Taller → Registros." : thanksText}</p>
       </div>
     );
   }

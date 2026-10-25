@@ -3,9 +3,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import LibraryShell, { libraryStaffNote } from "@/components/library/LibraryShell";
 import UsedProducts from "@/components/library/UsedProducts";
-import { PeopleRow, SearchIcon, VideoRow } from "@/components/library/parts";
+import { PeopleRow, PlayIcon, SearchIcon, VideoCard, VideoRow } from "@/components/library/parts";
 import { getLibraryViewer, libraryRobots, searchLibrary, searchParamsOf, type LibrarySearchParams } from "@/lib/library/data";
-import { LIBRARY_THEMES, themeOf, type UsedProduct } from "@/lib/library/shared";
+import { FEED_PATH, LIBRARY_THEMES, feedHref, themeOf, watchHref, type UsedProduct } from "@/lib/library/shared";
 import { highlightParts } from "@/lib/cuponera/browse";
 import { discountPercent, type CuponeraProduct } from "@/lib/cuponera/shared";
 import { fraunces } from "@/app/cuponera/fonts";
@@ -17,7 +17,7 @@ type Tab = "todo" | "videos" | "instructoras" | "productos";
 
 export async function generateMetadata({ searchParams }: { searchParams: SearchParams }): Promise<Metadata> {
   const params = searchParamsOf(searchParams);
-  return { title: `${titleOf(params)} · Biblioteca Nail Fest`, robots: (await libraryRobots("biblioteca")) ?? { index: false, follow: true } };
+  return { title: `${titleOf(params)} · El Taller Nail Fest`, robots: (await libraryRobots("biblioteca")) ?? { index: false, follow: true } };
 }
 
 function titleOf(params: LibrarySearchParams, subName: string | null = null): string {
@@ -78,6 +78,12 @@ export default async function BibliotecaBuscarPage({ searchParams }: { searchPar
   const hasExamples = result.videos.some((v) => v.sample) || result.instructors.some((i) => i.sample);
   const show = (t: Tab) => tab === "todo" || tab === t;
   const subName = result.subcategories.find((s) => s.key === params.sub)?.name ?? null;
+  // The same videos one after another, in the scroll (the recordings alone have no scroll of their own).
+  const scrollHref = params.query ? feedHref({ q: params.query }) : params.sub ? feedHref({ tema: params.sub }) : params.theme ? feedHref({ tema: params.theme }) : params.kind ? null : FEED_PATH;
+  // A video's card opens the scroll from it, with this list after it (2026-10-25): the
+  // results in their order, a theme or its subcategory newest first. Its page while the scroll is off.
+  const scrollOpen = viewer.config.sections.shorties || viewer.staff;
+  const list = !scrollOpen ? null : searching ? { q: params.query } : params.kind ? {} : { tema: params.sub ?? params.theme, orden: "nuevo" };
 
   return (
     <LibraryShell section="biblioteca" viewer={viewer} note={libraryStaffNote(viewer, "biblioteca", hasExamples)}>
@@ -108,6 +114,12 @@ export default async function BibliotecaBuscarPage({ searchParams }: { searchPar
           )}
         </p>
         {result.relaxed && <p className="bib-found">No hay videos con todas esas palabras: estos son los más parecidos.</p>}
+        {viewer.config.sections.shorties && scrollHref && result.videos.length > 1 && (
+          <Link href={scrollHref} className="bib-btn bib-btn-dark bib-btn-sm bib-to-scroll">
+            <PlayIcon size={14} />
+            Verlos uno tras otro en {texts.shortiesTitle}
+          </Link>
+        )}
 
         {searching ? (
           <div className="bib-chips">
@@ -128,7 +140,7 @@ export default async function BibliotecaBuscarPage({ searchParams }: { searchPar
           </div>
         ) : (
           <>
-            <div className="bib-chips">
+            <div className="bib-chips bib-chips--line">
               <Link href={hrefWith(params, { tema: null })} className={`bib-chip${params.theme ? "" : " is-on"}`}>
                 Todos los temas
               </Link>
@@ -139,7 +151,7 @@ export default async function BibliotecaBuscarPage({ searchParams }: { searchPar
               ))}
             </div>
             {params.theme && result.subcategories.length > 0 && (
-              <div className="bib-chips" aria-label={`Subcategorías de ${themeOf(params.theme).label}`}>
+              <div className="bib-chips bib-chips--line" aria-label={`Subcategorías de ${themeOf(params.theme).label}`}>
                 <Link href={hrefWith(params, { sub: null })} className={`bib-chip${params.sub ? "" : " is-on"}`}>
                   Todo {themeOf(params.theme).label}
                 </Link>
@@ -155,12 +167,22 @@ export default async function BibliotecaBuscarPage({ searchParams }: { searchPar
 
         {show("videos") && result.videos.length > 0 && (
           <section className="bib-section">
-            {searching && <h2 className={`bib-h2 ${fraunces.className}`}>Videos</h2>}
-            <div className="bib-rows">
-              {result.videos.map((v) => (
-                <VideoRow key={v.id} video={v} title={searching ? <Highlighted text={v.title} query={params.query} /> : v.title} />
-              ))}
-            </div>
+            {searching ? (
+              <>
+                <h2 className={`bib-h2 ${fraunces.className}`}>Videos</h2>
+                <div className="bib-rows">
+                  {result.videos.map((v) => (
+                    <VideoRow key={v.id} video={v} title={<Highlighted text={v.title} query={params.query} />} href={watchHref(v.slug, list)} />
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="bib-vgrid bib-vgrid--roomy">
+                {result.videos.map((v) => (
+                  <VideoCard key={v.id} video={v} href={watchHref(v.slug, list)} />
+                ))}
+              </div>
+            )}
           </section>
         )}
 

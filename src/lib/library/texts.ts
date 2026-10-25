@@ -14,13 +14,13 @@ export const LIBRARY_SIGNUP = false;
 export type LibraryPage = "biblioteca" | "shorties" | "video" | "instructoras" | "perfil" | "portal" | "menu" | "formularios";
 
 export const LIBRARY_PAGES: { key: LibraryPage; label: string; hint: string }[] = [
-  { key: "biblioteca", label: "Portada de la biblioteca", hint: "nailfest.lat/biblioteca" },
-  { key: "shorties", label: "Cortos", hint: "nailfest.lat/biblioteca/cortos" },
+  { key: "biblioteca", label: "Portada de El Taller", hint: "nailfest.lat/biblioteca" },
+  { key: "shorties", label: "Explorar (el scroll)", hint: "nailfest.lat/biblioteca/cortos" },
   { key: "video", label: "Página de cada video", hint: "nailfest.lat/biblioteca/<video>" },
   { key: "instructoras", label: "Directorio de instructoras", hint: "nailfest.lat/instructoras" },
   { key: "perfil", label: "Perfil de cada instructora", hint: "nailfest.lat/instructoras/<instructora>" },
   { key: "portal", label: "Portal de instructoras", hint: "Crear perfil (nailfest.lat/instructoras/unirme) y los términos que aceptan" },
-  { key: "menu", label: "Menú", hint: "El menú de la biblioteca y del directorio de instructoras" },
+  { key: "menu", label: "Menú", hint: "El menú de El Taller y del directorio de instructoras" },
   { key: "formularios", label: "Formularios", hint: LIBRARY_SIGNUP ? "Registro gratis y postulación de instructoras" : "Postulación de instructoras" },
 ];
 
@@ -37,33 +37,32 @@ interface TextDef {
 }
 
 export const LIBRARY_SECTIONS = {
-  shortiesBanner: { page: "biblioteca", label: "Entrada a Cortos", hint: "El recuadro de Cortos debajo del buscador, con sus temas. Sale desde 3 cortos." },
+  shortiesBanner: { page: "biblioteca", label: "Entrada a Explorar", hint: "El recuadro de Explorar debajo del buscador, con los temas más vistos. Sale desde 3 videos." },
   themes: { page: "biblioteca", label: "Explora por tema", hint: "Los ocho temas, con cuántos videos tiene cada uno." },
   newest: { page: "biblioteca", label: "Lo nuevo", hint: "Los últimos videos publicados." },
   mostViewed: { page: "biblioteca", label: "Lo más visto esta semana", hint: "Sale cuando al menos 3 videos tienen visitas en los últimos 7 días." },
   recordings: { page: "biblioteca", label: "Grabaciones de maratones", hint: "Las grabaciones largas de las maratones y los directos." },
   signup: { page: "biblioteca", label: "Registro gratis", hint: "El recuadro que invita a registrarse.", signup: true },
   instructorsRow: { page: "biblioteca", label: "Aprende con", hint: "Las instructoras, con enlace a su perfil." },
-  shorties: { page: "shorties", label: "Cortos", hint: "Apagado, no sale en la portada ni en el menú, y su página no abre para el público." },
+  shorties: { page: "shorties", label: "Explorar", hint: "Apagado, no sale en la portada ni en el menú, y su página no abre para el público." },
   shortiesBadge: { page: "shorties", label: "Etiqueta «Nuevo»", hint: "En la entrada de la portada y en el menú." },
   shortiesSignup: { page: "shorties", label: "Invitación a registrarse", hint: "Sale cada 6 videos a quien no se ha registrado.", signup: true },
   used: { page: "video", label: "Lo que usó", hint: "Los productos del video, con el descuento y el código de la cuponera." },
   steps: { page: "video", label: "El paso a paso", hint: "Los pasos del video, uno por uno." },
   related: { page: "video", label: "Sigue con", hint: "Más videos del mismo tema." },
-  // Off unless the team switches them on (2026-10-25): `off: true`.
+  // On since 2026-10-25 (the team said yes); `off: true` keeps one off until the team switches it on.
   subcategories: {
     page: "biblioteca",
     label: "Subcategorías",
-    hint: "Navidad, Halloween… dentro de cada tema, cuando tienen 3 videos o más: en los resultados del tema y en cada video.",
-    off: true,
+    hint: "Navidad, Halloween… dentro de cada tema, cuando tienen 3 videos o más: en la página del tema, en Explorar y en cada video.",
   },
   directorySearch: { page: "instructoras", label: "Buscador", hint: "Buscar por nombre, ciudad o técnica, debajo del título.", off: true },
   filters: { page: "instructoras", label: "Filtros", hint: "Ciudad y especialidad, arriba de las tarjetas." },
   teachCta: { page: "instructoras", label: "¿Enseñas uñas?", hint: "La invitación a crear su perfil." },
-  profileVideos: { page: "perfil", label: "Sus videos", hint: "Los videos de la instructora en la biblioteca." },
+  profileVideos: { page: "perfil", label: "Sus videos", hint: "Los videos de la instructora en El Taller." },
   profileProducts: { page: "perfil", label: "Lo que usa en sus videos", hint: "Las marcas de la cuponera que salen en sus videos." },
   appearances: { page: "perfil", label: "Ha estado en", hint: "Los eventos de Nail Fest en los que ha estado.", off: true },
-  menuThemes: { page: "menu", label: "Aprende por tema", hint: "Los temas de la biblioteca, con cuántos videos tiene cada uno." },
+  menuThemes: { page: "menu", label: "Aprende por tema", hint: "Los temas de El Taller, con cuántos videos tiene cada uno." },
   menuInstructors: { page: "menu", label: "Por instructora", hint: "Las instructoras, con enlace a su perfil." },
   menuCities: { page: "menu", label: "Instructoras por ciudad", hint: "Las ciudades donde hay instructoras." },
   menuSignup: { page: "menu", label: "Registro gratis", hint: "El recuadro que invita a registrarse, al final del menú.", off: true, signup: true },
@@ -74,12 +73,19 @@ export type LibrarySectionKey = keyof typeof LIBRARY_SECTIONS;
 export const LIBRARY_SECTION_KEYS = Object.keys(LIBRARY_SECTIONS) as LibrarySectionKey[];
 
 export const LIBRARY_TEXTS = {
-  homeTitle: { page: "biblioteca", label: "Título", value: "Biblioteca Nail Fest" },
-  homeLede: { page: "biblioteca", label: "Texto debajo del título", value: "Técnicas, negocio y bioseguridad, explicadas por instructoras Nail Fest. Gratis.", long: true },
+  // «Biblioteca Nail Fest» until 2026-10-25.
+  homeTitle: { page: "biblioteca", label: "Título", value: "El Taller Nail Fest" },
+  homeLede: { page: "biblioteca", label: "Texto debajo del título", value: "Clases gratis de uñas con las instructoras Nail Fest: técnicas, negocio y bioseguridad.", long: true },
   searchPlaceholder: { page: "biblioteca", label: "Texto dentro del buscador", value: "Busca una técnica o un producto" },
-  shortiesBannerText: { page: "biblioteca", label: "Texto", value: "Videos cortos al azar, uno tras otro. Desliza y aprende.", long: true, section: "shortiesBanner" },
-  shortiesBannerButton: { page: "biblioteca", label: "Botón", value: "Ver los cortos", section: "shortiesBanner" },
-  themesTitle: { page: "biblioteca", label: "Título", value: "Explora por tema", section: "themes" },
+  shortiesBannerText: {
+    page: "biblioteca",
+    label: "Texto",
+    value: "Todos los videos, uno tras otro: cortos, clases y grabaciones. Elige un tema y desliza.",
+    long: true,
+    section: "shortiesBanner",
+  },
+  shortiesBannerButton: { page: "biblioteca", label: "Botón", value: "Empezar a ver", section: "shortiesBanner" },
+  themesTitle: { page: "biblioteca", label: "Título", value: "Aprende por tema", section: "themes" },
   newestTitle: { page: "biblioteca", label: "Título", value: "Lo nuevo", section: "newest" },
   mostViewedTitle: { page: "biblioteca", label: "Título", value: "Lo más visto esta semana", section: "mostViewed" },
   recordingsTitle: { page: "biblioteca", label: "Título", value: "Grabaciones de maratones", section: "recordings" },
@@ -90,8 +96,9 @@ export const LIBRARY_TEXTS = {
   instructorsRowTitle: { page: "biblioteca", label: "Título", value: "Aprende con", section: "instructorsRow" },
   emptyText: { page: "biblioteca", label: "Mientras no haya videos", value: "Muy pronto: estamos preparando los primeros videos con las instructoras Nail Fest.", long: true },
 
-  shortiesTitle: { page: "shorties", label: "Nombre", value: "Cortos" },
-  shortiesSubtitle: { page: "shorties", label: "Texto debajo del nombre (en computador)", value: "Videos cortos al azar. Desliza o usa las flechas." },
+  // "Cortos" until 2026-10-25, when every video went in: long or short.
+  shortiesTitle: { page: "shorties", label: "Nombre", value: "Explorar" },
+  shortiesSubtitle: { page: "shorties", label: "Texto debajo del nombre (en computador)", value: "Todos los videos, uno tras otro. Elige un tema, desliza o usa las flechas." },
   shortiesHint: { page: "shorties", label: "Aviso del primer video", value: "Desliza hacia arriba para ver otro" },
   shortiesSound: { page: "shorties", label: "Botón del sonido", value: "Activar sonido" },
   shortiesProfile: { page: "shorties", label: "Botón del perfil", value: "Su perfil" },
@@ -100,10 +107,10 @@ export const LIBRARY_TEXTS = {
   shortiesShare: { page: "shorties", label: "Botón de compartir", value: "Compartir" },
   shortiesStepsLink: { page: "shorties", label: "Enlace al final de «Lo que usó»", value: "Ver el paso a paso completo" },
   shortiesEndTitle: { page: "shorties", label: "Al terminar: título", value: "Ya los viste todos" },
-  shortiesEndText: { page: "shorties", label: "Al terminar: texto", value: "Puedes verlos otra vez en otro orden o seguir en la biblioteca.", long: true },
+  shortiesEndText: { page: "shorties", label: "Al terminar: texto", value: "Puedes verlos otra vez en otro orden o seguir en El Taller.", long: true },
   shortiesEndAgain: { page: "shorties", label: "Al terminar: botón para repetir", value: "Verlos otra vez en otro orden" },
-  shortiesEndLibrary: { page: "shorties", label: "Al terminar: botón a la biblioteca", value: "Ir a la biblioteca" },
-  shortiesEmpty: { page: "shorties", label: "Mientras no haya cortos", value: "Muy pronto: estamos preparando los primeros cortos.", long: true },
+  shortiesEndLibrary: { page: "shorties", label: "Al terminar: botón a El Taller", value: "Ir al Taller" },
+  shortiesEmpty: { page: "shorties", label: "Mientras no haya videos", value: "Muy pronto: estamos preparando los primeros videos.", long: true },
   shortiesBadgeLabel: { page: "shorties", label: "Etiqueta", value: "Nuevo", section: "shortiesBadge" },
   shortiesSignupTitle: { page: "shorties", label: "Título", value: "¿Te están sirviendo?", section: "shortiesSignup" },
   shortiesSignupText: {
@@ -143,7 +150,7 @@ export const LIBRARY_TEXTS = {
   teachText: {
     page: "instructoras",
     label: "Texto",
-    value: "Crea tu perfil gratis: que te encuentren por tu ciudad y tu especialidad, con tus redes. Y si quieres, envía tus videos: el equipo elige cuáles salen en la biblioteca, en nuestras redes y en nuestro correo.",
+    value: "Crea tu perfil gratis: que te encuentren por tu ciudad y tu especialidad, con tus redes. Y si quieres, envía tus videos: el equipo elige cuáles salen en El Taller, en nuestras redes y en nuestro correo.",
     long: true,
     section: "teachCta",
   },
@@ -167,7 +174,7 @@ export const LIBRARY_TEXTS = {
   joinActiveText: {
     page: "portal",
     label: "Instructora activa: texto",
-    value: "Sé instructora activa: envía tus videos con su ficha. El equipo elige cuáles salen en la biblioteca, en las redes y en el correo de Nail Fest, con tu nombre y tus redes.",
+    value: "Sé instructora activa: envía tus videos con su ficha. El equipo elige cuáles salen en El Taller, en las redes y en el correo de Nail Fest, con tu nombre y tus redes.",
     long: true,
   },
   joinMoneyTitle: { page: "portal", label: "Cómo gana Nail Fest: título", value: "Así gana Nail Fest" },
@@ -185,7 +192,7 @@ export const LIBRARY_TEXTS = {
       "Tu perfil lo escribes y lo cuidas tú: tu nombre, tu foto, tu ciudad, tus especialidades, lo que cuentas de ti y tus redes. Lo que publiques tiene que ser verdad y ser tuyo. Puedes cambiarlo o pausarlo cuando quieras, y pedirnos que lo borremos.",
       "El equipo de Nail Fest revisa cada perfil antes de publicarlo. Puede no publicarlo, pedirte cambios u ocultarlo si no cumple estos términos.",
       "Estar en el directorio no te garantiza alumnas, ventas, invitaciones a eventos, maratones ni ningún otro espacio de Nail Fest.",
-      "Nail Fest no te cobra ni te paga. Algunos productos de la biblioteca tienen enlaces con descuento de la Cuponera Nail Fest, y Nail Fest puede recibir una comisión de la marca por esas compras.",
+      "Nail Fest no te cobra ni te paga. Algunos productos de los videos de El Taller tienen enlaces con descuento de la Cuponera Nail Fest, y Nail Fest puede recibir una comisión de la marca por esas compras.",
       "Tu correo y tu celular no se publican: son para que entres a tu cuenta y para escribirte sobre tu perfil. Lo demás de tu perfil es público mientras esté publicado. Tratamos tus datos según nuestra política de privacidad (nailfest.lat/privacidad).",
       "Si tienes dudas o quieres borrar tu perfil, escríbenos por WhatsApp.",
     ].join("\n\n"),
@@ -196,9 +203,9 @@ export const LIBRARY_TEXTS = {
     label: "Permiso de uso de contenido (se acepta con el primer video; deja una línea en blanco entre párrafos)",
     value: [
       "Al enviar un video desde tu portal confirmas que es tuyo: lo grabaste tú o tienes permiso de quienes aparecen, y no usa música ni contenido de otras personas sin permiso.",
-      "Le das permiso a Nail Fest, sin costo, para mostrar ese video y sus imágenes en la biblioteca, en sus redes sociales y en sus correos, siempre con tu nombre y tus redes. El video sigue siendo tuyo y sigue en tu canal de YouTube: las vistas son tuyas.",
+      "Le das permiso a Nail Fest, sin costo, para mostrar ese video y sus imágenes en El Taller (la biblioteca de videos de Nail Fest), en sus redes sociales y en sus correos, siempre con tu nombre y tus redes. El video sigue siendo tuyo y sigue en tu canal de YouTube: las vistas son tuyas.",
       "Nail Fest elige qué videos publica y puede no publicar alguno. Enviar un video no garantiza que salga, ni pagos, ni invitaciones a eventos.",
-      "Puedes pedirnos que retiremos un video tuyo cuando quieras: lo quitamos de la biblioteca y no lo usamos en publicaciones nuevas.",
+      "Puedes pedirnos que retiremos un video tuyo cuando quieras: lo quitamos de El Taller y no lo usamos en publicaciones nuevas.",
       "Nail Fest puede recibir una comisión de las marcas por las compras hechas con los enlaces con descuento que acompañan los videos.",
     ].join("\n\n"),
     long: true,
@@ -207,8 +214,8 @@ export const LIBRARY_TEXTS = {
   menuSectionsTitle: { page: "menu", label: "Título de las secciones", value: "Secciones" },
   // Biblioteca and Cortos together in the menu (2026-10-25): one line for
   // the library, with its parts as buttons under it.
-  menuHome: { page: "menu", label: "Enlace a la biblioteca", value: "Biblioteca" },
-  menuLibraryHint: { page: "menu", label: "Debajo del enlace a la biblioteca", value: "Cortos, clases y grabaciones" },
+  menuHome: { page: "menu", label: "Enlace a El Taller", value: "El Taller" },
+  menuLibraryHint: { page: "menu", label: "Debajo del enlace a El Taller", value: "Clases gratis de uñas" },
   menuMostViewed: { page: "menu", label: "Botón «Lo más visto»", value: "Lo más visto" },
   menuRecordings: { page: "menu", label: "Botón de las grabaciones", value: "Grabaciones" },
   menuDirectory: { page: "menu", label: "Enlace al directorio de instructoras", value: "Instructoras" },

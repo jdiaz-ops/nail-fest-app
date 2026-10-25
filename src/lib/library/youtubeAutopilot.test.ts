@@ -164,12 +164,19 @@ describe("a decision, checked against what the library accepts", () => {
 
   it("into the library: the subcategory's theme is always one of its themes", () => {
     const { proposal } = decisionFrom(answer({ temas: ["tecnicas", "negocio", "productos"] }), row(), ids);
-    const data = libraryVideoData({ youtubeId: "abc123def45", durationSeconds: 58, publishedAt: new Date("2024-03-03") }, proposal, { key: "navidad", name: "Navidad", theme: "tendencias" }, "francesa", true);
+    const data = libraryVideoData(
+      { youtubeId: "abc123def45", durationSeconds: 58, vertical: true, publishedAt: new Date("2024-03-03") },
+      proposal,
+      { key: "navidad", name: "Navidad", theme: "tendencias" },
+      "francesa",
+      true,
+    );
     expect(data.theme).toBe("tecnicas");
     expect(data.extraThemes).toEqual(["tendencias", "negocio"]);
     expect(data.subcategories).toEqual(["navidad"]);
     expect(data).not.toHaveProperty("level");
     expect(data.inShorties).toBe(true);
+    expect(data.vertical).toBe(true);
   });
 
   it("three minutes or less is a corto; a longer one never is", () => {

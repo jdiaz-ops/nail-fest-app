@@ -42,7 +42,7 @@ export default async function PortalHomePage() {
       icon: "play",
       tone: "bib-tone-lilac",
       title: "Mis videos",
-      text: sent || published ? `${plural(sent, "enviado", "enviados")} · ${plural(published, "en la biblioteca", "en la biblioteca")}` : "Envía tu primer video",
+      text: sent || published ? `${plural(sent, "enviado", "enviados")} · ${plural(published, "en El Taller", "en El Taller")}` : "Envía tu primer video",
     },
     { href: "/instructoras/portal/cuenta", icon: "gear", tone: "bib-tone-stone", title: "Cuenta", text: "Usuario, correo, celular y contraseña" },
   ];
@@ -132,7 +132,7 @@ export default async function PortalHomePage() {
 
         <div className="pt-card pt-card--accent">
           <h2 className={`pt-h2 ${fraunces.className}`}>Sé instructora activa</h2>
-          <p>Envía tus videos con su ficha. El equipo elige cuáles salen en la biblioteca, en las redes y en el correo de Nail Fest, con tu nombre y tus redes.</p>
+          <p>Envía tus videos con su ficha. El equipo elige cuáles salen en El Taller, en las redes y en el correo de Nail Fest, con tu nombre y tus redes.</p>
           <Link href="/instructoras/portal/videos#enviar" className="bib-btn bib-btn-main bib-btn-sm">
             Enviar un video
           </Link>

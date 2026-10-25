@@ -165,7 +165,7 @@ export default function LibraryMenu({
   const close = () => dialog.current?.close();
 
   const { texts, sections } = menu;
-  const place = section ?? (menu.library ? { label: "Biblioteca", href: "/biblioteca" } : { label: "Instructoras", href: "/instructoras" });
+  const place = section ?? (menu.library ? { label: "El Taller", href: "/biblioteca" } : { label: "Instructoras", href: "/instructoras" });
   const links = (
     [
       menu.communityHome && { href: menu.communityHome, label: "Inicio Nail Fest", icon: ICONS.nailfest, tone: "bib-tone-stone", current: current === "nailfest" },
@@ -182,7 +182,7 @@ export default function LibraryMenu({
         parts: (
           [
             menu.shorties && { href: "/biblioteca/cortos", label: texts.shorties, current: current === "shorties", badge: sections.badge ? texts.badge : null },
-            menu.videos && { href: "/biblioteca/buscar?tipo=video", label: texts.newest },
+            menu.videos && { href: "/biblioteca/buscar", label: texts.newest },
             menu.mostViewed && { href: "/biblioteca#lo-mas-visto", label: texts.mostViewed },
             menu.recordings && { href: "/biblioteca/buscar?tipo=maraton", label: texts.recordings },
           ] as (MenuPart | false)[]
@@ -235,7 +235,7 @@ export default function LibraryMenu({
             <form className="bib-search" role="search" action={menu.library ? "/biblioteca/buscar" : "/instructoras"} method="get" onSubmit={close}>
               <SearchIcon size={18} />
               <label htmlFor={searchId} className="bib-sr">
-                {menu.library ? "Buscar en la biblioteca" : "Buscar instructoras"}
+                {menu.library ? "Buscar en El Taller" : "Buscar instructoras"}
               </label>
               <input
                 id={searchId}

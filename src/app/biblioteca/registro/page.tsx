@@ -10,7 +10,7 @@ import { fraunces } from "@/app/cuponera/fonts";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = { title: "Regístrate gratis · Biblioteca Nail Fest", robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: "Regístrate gratis · El Taller Nail Fest", robots: { index: false, follow: false } };
 
 /** Back to the library page that asked for the sign-up (a corto keeps
  * its ?v= and its topic) — never anywhere else. */

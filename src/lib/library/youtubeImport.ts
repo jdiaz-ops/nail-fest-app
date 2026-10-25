@@ -2,7 +2,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { uniqueVideoSlug } from "./admin";
 import { getLibrarySettings, updateLibrarySettings } from "./settings";
-import { LIBRARY_THEMES, formatDuration, isTheme, themeOf, type LibraryTheme } from "./shared";
+import { LIBRARY_THEMES, formatDuration, isTheme, isVertical, themeOf, type LibraryTheme } from "./shared";
 import { YoutubeError, fetchChannel, fetchPlaylistVideoIds, fetchPlaylists, fetchUploadsPage, fetchVideos, guessTheme, isShortVideo, parseChannel } from "./youtube";
 import {
   AUTOPILOT_MAX_ATTEMPTS,
@@ -70,6 +70,8 @@ export async function importUploadsPage(pageToken: string | null): Promise<{ add
         privacy: v.privacy,
         short: isShortVideo(v.durationSeconds, v.title),
         youtubeTags: v.tags,
+        // A shape YouTube didn't give this time doesn't erase the one it gave.
+        ...(v.vertical === null ? {} : { vertical: v.vertical }),
       };
       // An upsert: the autopilot's import and the tab's may run at once.
       return db.libraryYoutubeVideo.upsert({
@@ -105,6 +107,38 @@ export async function importNewUploads(budgetMs: number): Promise<{ added: numbe
   } while (pageToken && Date.now() - started < budgetMs);
   // The last page stamps youtubeImportedAt (importUploadsPage).
   return { added, complete: !pageToken };
+}
+
+// The videos whose shape is asked to YouTube in one go (50 per request).
+const ORIENTATIONS_UP_TO = 200;
+
+/** Upright or lying, for the videos that don't know yet — brought in before
+ * YouTube was asked (2026-10-25), pasted in the admin, sent by an instructor
+ * — 50 per request; one YouTube doesn't answer for (removed, private, a
+ * live) keeps what its kind and length say (isVertical). */
+export async function fillOrientations(): Promise<number> {
+  const key = (await getLibrarySettings()).youtubeApiKey;
+  if (!key) return 0;
+  const [imports, videos] = await Promise.all([
+    db.libraryYoutubeVideo.findMany({ where: { vertical: null }, select: { youtubeId: true, short: true }, take: ORIENTATIONS_UP_TO }),
+    db.libraryVideo.findMany({ where: { vertical: null }, select: { youtubeId: true, kind: true, durationSeconds: true }, take: ORIENTATIONS_UP_TO }),
+  ]);
+  const ids = [...new Set([...imports, ...videos].map((r) => r.youtubeId))].slice(0, ORIENTATIONS_UP_TO);
+  for (let i = 0; i < ids.length; i += 50) {
+    const batch = ids.slice(i, i + 50);
+    const said = new Map((await fetchVideos(key, batch)).map((v) => [v.youtubeId, v.vertical]));
+    await db.$transaction(
+      batch.flatMap((id) => {
+        const imported = imports.find((r) => r.youtubeId === id);
+        const video = videos.find((r) => r.youtubeId === id);
+        return [
+          ...(imported ? [db.libraryYoutubeVideo.update({ where: { youtubeId: id }, data: { vertical: said.get(id) ?? imported.short } })] : []),
+          ...(video ? [db.libraryVideo.updateMany({ where: { youtubeId: id, vertical: null }, data: { vertical: said.get(id) ?? isVertical({ ...video, vertical: null }) } })] : []),
+        ];
+      }),
+    );
+  }
+  return ids.length;
 }
 
 /** The channel's playlists are read once a day at most. */
@@ -286,9 +320,9 @@ function momentLabel(date: Date): string {
   return `${part("day")} ${part("month").replace(/\./g, "")} · ${part("hour")}:${part("minute")}`;
 }
 
-const KIND_LABELS: Record<AutopilotKind, string> = { corto: "Corto, en Cortos", video: "Video", grabacion: "Grabación" };
+const KIND_LABELS: Record<AutopilotKind, string> = { corto: "Corto", video: "Video", grabacion: "Grabación" };
 
-/** "Técnicas + Tendencias › Navidad · Corto, en Cortos · Polygel, Francesa". */
+/** "Técnicas + Tendencias › Navidad · Corto · Polygel, Francesa". */
 function choiceLabel(proposal: AutopilotProposal): string {
   const themes = [proposal.theme, ...proposal.extraThemes].map((t) => themeOf(t).label).join(" + ");
   return [proposal.subcategory ? `${themes} › ${proposal.subcategory.name}` : themes, KIND_LABELS[proposal.kind], proposal.tags.join(", ")].filter(Boolean).join(" · ");
@@ -317,7 +351,7 @@ export interface YoutubeAdminVideo {
   decidedBy: "ia" | "equipo" | null;
   /** The autopilot's reason, for the team. */
   aiReason: string | null;
-  /** "Técnicas + Tendencias › Navidad · Corto, en Cortos · Polygel" — what the autopilot chose. */
+  /** "Técnicas + Tendencias › Navidad · Corto · Polygel" — what the autopilot chose. */
   aiChoiceLabel: string | null;
   /** Waiting for the autopilot (it will review it). */
   aiWaiting: boolean;

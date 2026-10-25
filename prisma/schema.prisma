@@ -2354,6 +2354,10 @@ model LibraryVideo {
   level           String      @default("principiante")
   youtubeId       String
   durationSeconds Int?
+  // Its picture on YouTube: upright (9:16, true) or lying (16:9, false);
+  // null until YouTube says (lib/library/youtubeImport.ts fillOrientations)
+  // — meanwhile its kind and length decide (shared.ts isVertical).
+  vertical        Boolean?
   instructorId    String?
   instructor      Instructor? @relation(fields: [instructorId], references: [id], onDelete: SetNull)
   // A marathon's teachers ("4 instructoras"), shown instead of one name.
@@ -2512,6 +2516,8 @@ model LibraryYoutubeVideo {
   privacy         String        @default("public")
   // Three minutes or less (or #shorts): a corto; longer: a recording.
   short           Boolean       @default(false)
+  // Upright (9:16) or lying (16:9), as YouTube's player says; null until asked.
+  vertical        Boolean?
   // The theme its title suggests (lib/library/youtube.ts), for the team.
   suggestedTheme  String?
   // Its tags on YouTube: one more clue for the autopilot.

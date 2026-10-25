@@ -25,14 +25,14 @@ const many = (n: number, one: string, more: string) => `${n} ${n === 1 ? one : m
 
 const STATUS_TABS = [
   { key: "PENDING", label: "Por revisar" },
-  { key: "ADDED", label: "En la biblioteca" },
+  { key: "ADDED", label: "En El Taller" },
   { key: "DISCARDED", label: "Descartados" },
 ] as const;
 
 const KINDS = [
-  { key: "sugerido", label: "Como sugiere cada uno: cortos a Cortos, largos como grabación" },
-  { key: "corto", label: "Corto, en Cortos" },
-  { key: "video", label: "Video, fuera de Cortos" },
+  { key: "sugerido", label: "Como sugiere cada uno: corto, video o grabación" },
+  { key: "corto", label: "Corto" },
+  { key: "video", label: "Video" },
   { key: "maraton", label: "Grabación" },
 ] as const;
 
@@ -298,13 +298,13 @@ export default function LibraryYoutubeImport({ data, instructors }: { data: Yout
     const count = Number(result.data.count ?? 0);
     setNotice(
       action === "pasar"
-        ? `Listo: ${many(count, "video pasó", "videos pasaron")} a la biblioteca${visible ? " y ya se ven" : ", ocultos. Termínalos y préndelos en Videos"}.`
+        ? `Listo: ${many(count, "video pasó", "videos pasaron")} al Taller${visible ? " y ya se ven" : ", ocultos. Termínalos y préndelos en Videos"}.`
         : action === "descartar"
           ? `Listo: ${many(count, "video descartado", "videos descartados")}.`
           : action === "publicar"
-            ? `Listo: ${many(count, "video publicado", "videos publicados")} en la biblioteca.`
+            ? `Listo: ${many(count, "video publicado", "videos publicados")} en El Taller.`
             : action === "quitar"
-              ? `Listo: ${many(count, "video salió", "videos salieron")} de la biblioteca (quedan ocultos en Videos, nada se borró).`
+              ? `Listo: ${many(count, "video salió", "videos salieron")} del Taller (quedan ocultos en Videos, nada se borró).`
               : `Listo: ${many(count, "video volvió", "videos volvieron")} a «Por revisar».`,
     );
     resetSelection();
@@ -329,7 +329,7 @@ export default function LibraryYoutubeImport({ data, instructors }: { data: Yout
         {editing ? (
           <>
             <p style={{ ...mutedText, marginTop: 0 }}>
-              Lee tu canal completo de una vez: los videos llegan aquí, los más vistos primero, y el piloto automático publica en la biblioteca los que valen
+              Lee tu canal completo de una vez: los videos llegan aquí, los más vistos primero, y el piloto automático publica en El Taller los que valen
               la pena. Tus videos siguen en tu canal y las vistas siguen siendo tuyas.
             </p>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12 }}>
@@ -434,8 +434,8 @@ export default function LibraryYoutubeImport({ data, instructors }: { data: Yout
             Piloto automático
           </CardTitle>
           <p style={{ ...mutedText, marginTop: 0 }}>
-            La IA revisa cada video de tu canal y publica en la biblioteca los que le sirven a una manicurista: les pone título y una descripción corta al
-            estilo de la biblioteca, sus temas, su subcategoría (Navidad, Halloween…) y sus etiquetas para la búsqueda y los cortos. Deja por fuera los
+            La IA revisa cada video de tu canal y publica en El Taller los que le sirven a una manicurista: les pone título y una descripción corta al
+            estilo del Taller, sus temas, su subcategoría (Navidad, Halloween…) y sus etiquetas para la búsqueda y los cortos. Deja por fuera los
             sorteos, los anuncios de fechas, los vlogs y lo que no es de uñas, y te dice por qué. Cada 6 horas trae sola los videos nuevos del canal.
             Todo lo puedes cambiar abajo o en Videos.
           </p>
@@ -480,7 +480,7 @@ export default function LibraryYoutubeImport({ data, instructors }: { data: Yout
                     con la cuenta de la empresa (o crea una).
                   </li>
                   <li>En «Billing», carga saldo: revisar los primeros cientos de videos cuesta unos 10 dólares, una sola vez; después, cada video nuevo cuesta centavos.</li>
-                  <li>En «API Keys», toca «Create Key», ponle «Nail Fest biblioteca» y cópiala (empieza por «sk-ant-»).</li>
+                  <li>En «API Keys», toca «Create Key», ponle «Nail Fest Taller» y cópiala (empieza por «sk-ant-»).</li>
                   <li>Pégala aquí y toca «Guardar llave».</li>
                 </ol>
               </details>
@@ -623,7 +623,7 @@ export default function LibraryYoutubeImport({ data, instructors }: { data: Yout
                       <Pill tone={v.short ? "pink" : "grey"}>{v.short ? "Corto" : "Largo"}</Pill>
                       {v.decidedBy === "ia" && v.status === "ADDED" && <Pill tone="green">Publicado por la IA</Pill>}
                       {v.decidedBy === "ia" && v.status === "DISCARDED" && <Pill tone="amber">Descartado por la IA</Pill>}
-                      {v.status === "ADDED" && v.libraryVisible === false && <Pill tone="grey">Oculto en la biblioteca</Pill>}
+                      {v.status === "ADDED" && v.libraryVisible === false && <Pill tone="grey">Oculto en El Taller</Pill>}
                       {v.status === "PENDING" && v.aiWaiting && pilot.on && <Pill tone="grey">La IA lo revisa pronto</Pill>}
                       {v.status === "PENDING" && v.aiGaveUp && <Pill tone="red">La IA no pudo revisarlo: decide tú</Pill>}
                       {v.status === "PENDING" && !(v.aiWaiting && pilot.on) && (
@@ -637,7 +637,7 @@ export default function LibraryYoutubeImport({ data, instructors }: { data: Yout
                             Terminar en Videos
                           </a>
                         ) : (
-                          <span style={{ ...mutedText, fontSize: 12 }}>Se borró de la biblioteca</span>
+                          <span style={{ ...mutedText, fontSize: 12 }}>Se borró del Taller</span>
                         ))}
                     </div>
                     {v.aiReason && (
@@ -699,11 +699,11 @@ export default function LibraryYoutubeImport({ data, instructors }: { data: Yout
               </div>
               <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, margin: "12px 0" }}>
                 <input type="checkbox" checked={visible} onChange={(e) => setVisible(e.target.checked)} />
-                Mostrarlos ya en la biblioteca (si no, entran ocultos para terminarlos en Videos)
+                Mostrarlos ya en El Taller (si no, entran ocultos para terminarlos en Videos)
               </label>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 <button type="button" style={primaryButtonStyle} disabled={busy !== null} onClick={() => decide("pasar")}>
-                  {busy === "pasar" ? "Pasando…" : "Pasar a la biblioteca"}
+                  {busy === "pasar" ? "Pasando…" : "Pasar al Taller"}
                 </button>
                 <button type="button" style={secondaryButtonStyle} disabled={busy !== null} onClick={() => decide("descartar")}>
                   Descartar
@@ -715,7 +715,7 @@ export default function LibraryYoutubeImport({ data, instructors }: { data: Yout
             <div style={stickyBar} aria-label="Lo que haces con los elegidos">
               <span style={{ fontWeight: 700, fontSize: 14 }}>{many(chosen.length, "video elegido", "videos elegidos")}</span>
               <button type="button" style={secondaryButtonStyle} disabled={busy !== null} onClick={() => decide("quitar")}>
-                {busy === "quitar" ? "Quitando…" : "Quitar de la biblioteca"}
+                {busy === "quitar" ? "Quitando…" : "Quitar del Taller"}
               </button>
               <span style={{ ...mutedText, fontSize: 12 }}>Quedan ocultos en Videos: nada se borra.</span>
             </div>

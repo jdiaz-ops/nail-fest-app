@@ -8,14 +8,15 @@ import LibraryMenu from "./LibraryMenu";
 
 type Section = "biblioteca" | "instructoras";
 
-const LABELS: Record<Section, string> = { biblioteca: "Biblioteca", instructoras: "Instructoras" };
+// The library's name: «El Taller» since 2026-10-25 (its address stays /biblioteca).
+const LABELS: Record<Section, string> = { biblioteca: "El Taller", instructoras: "Instructoras" };
 
 /** The staff banner: why this page isn't what visitors see. */
 export function libraryStaffNote(viewer: LibraryViewer, section: Section, hasExamples: boolean): string | null {
   if (!viewer.staff) return null;
   const published = section === "biblioteca" ? viewer.config.published : viewer.config.instructorsPublished;
   const notes: string[] = [];
-  if (!published) notes.push(`${section === "biblioteca" ? "La biblioteca todavía no es pública" : "El directorio de instructoras todavía no es público"}: el resto de las personas ven «página no encontrada».`);
+  if (!published) notes.push(`${section === "biblioteca" ? "El Taller todavía no es público" : "El directorio de instructoras todavía no es público"}: el resto de las personas ven «página no encontrada».`);
   if (hasExamples) notes.push("Lo marcado «Ejemplo» es inventado y solo lo ve el equipo.");
   return notes.length ? notes.join(" ") : null;
 }
@@ -46,7 +47,7 @@ export default async function LibraryShell({
           <span>
             <b>Vista previa del equipo.</b> {note}
           </span>
-          <Link href="/admin/biblioteca">Ir a Editar biblioteca</Link>
+          <Link href="/admin/biblioteca">Ir a Editar El Taller</Link>
         </div>
       )}
       {ownerNote && (

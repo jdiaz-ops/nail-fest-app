@@ -39,15 +39,15 @@ export default async function AdminBibliotecaPage({ searchParams }: { searchPara
 
   return (
     <div style={{ maxWidth: 900 }}>
-      <h1 style={{ fontSize: 24, marginBottom: 4 }}>Editar biblioteca</h1>
+      <h1 style={{ fontSize: 24, marginBottom: 4 }}>Editar El Taller</h1>
       <p style={{ color: "#5b5f6b", marginTop: 0, marginBottom: 4 }}>
-        La biblioteca de videos en nailfest.lat/biblioteca y el directorio de instructoras en nailfest.lat/instructoras: los videos y grabaciones (y
+        El Taller (los videos) en nailfest.lat/biblioteca y el directorio de instructoras en nailfest.lat/instructoras: los videos y grabaciones (y
         los que envían las instructoras), los perfiles de las instructoras (y los que llegan del portal para revisar), lo que llega de los
         formularios y los textos de cada página.
       </p>
       <p style={{ fontSize: 13, marginTop: 0 }}>
         <a href="/biblioteca" target="_blank" rel="noreferrer">
-          Ver la biblioteca ↗
+          Ver El Taller ↗
         </a>
         {" · "}
         <a href="/instructoras" target="_blank" rel="noreferrer">
@@ -57,7 +57,7 @@ export default async function AdminBibliotecaPage({ searchParams }: { searchPara
 
       <LibraryPublishCard published={data.settings.published} instructorsPublished={data.settings.instructorsPublished} portalOpen={data.settings.portalOpen} />
 
-      <nav aria-label="Secciones de Editar biblioteca" style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 24 }}>
+      <nav aria-label="Secciones de Editar El Taller" style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 24 }}>
         {TABS.map((t) => (
           <Link
             key={t}

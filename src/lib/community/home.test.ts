@@ -80,7 +80,7 @@ describe("the community's menu", () => {
     expect(communityMenuLinks(SOME, NEXT, "/").map((l) => `${l.label} ${l.href}`)).toEqual([
       "Inicio /",
       "Nail Fest Cúcuta /cucuta",
-      "Biblioteca /biblioteca",
+      "El Taller /biblioteca",
       "Instructoras /instructoras",
       "Consultorio /consultorio",
     ]);

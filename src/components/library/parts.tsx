@@ -108,10 +108,16 @@ export function ThemeIcon({ icon }: { icon: LibraryThemeIcon }) {
   }
 }
 
-/** A video's still: YouTube's own, or a gradient for the examples. */
+/** A video's still: YouTube's own, or a gradient for the examples. In an
+ * upright card, a lying video (16:9) shows whole, over its own blurred still. */
 export function VideoThumb({ video, className = "bib-thumb", showViews = true }: { video: LibraryVideoCard; className?: string; showViews?: boolean }) {
+  const boxed = className === "bib-thumb" && !video.vertical;
   return (
-    <div className={`${className} bib-ph-${toneOf(video.slug)}`}>
+    <div className={`${className}${boxed ? " bib-thumb--boxed" : ""} bib-ph-${toneOf(video.slug)}`}>
+      {video.youtubeId && boxed && (
+        // eslint-disable-next-line @next/next/no-img-element -- YouTube's still, blurred behind the whole one
+        <img className="bib-thumb-back" src={youtubeThumbnail(video.youtubeId)} alt="" loading="lazy" decoding="async" />
+      )}
       {video.youtubeId && (
         // eslint-disable-next-line @next/next/no-img-element -- YouTube's still, a remote image next/image isn't set up for
         <img src={youtubeThumbnail(video.youtubeId)} alt="" loading="lazy" decoding="async" />
@@ -131,9 +137,10 @@ function byline(video: LibraryVideoCard): string {
   return [video.instructor?.name ?? video.teachersNote, themeOf(video.theme).label].filter(Boolean).join(" · ");
 }
 
-export function VideoCard({ video }: { video: LibraryVideoCard }) {
+/** A video's card: to its page, or wherever `href` says (the scroll of its list). */
+export function VideoCard({ video, href }: { video: LibraryVideoCard; href?: string }) {
   return (
-    <Link href={`/biblioteca/${video.slug}`} className="bib-vcard">
+    <Link href={href ?? `/biblioteca/${video.slug}`} className="bib-vcard">
       <VideoThumb video={video} />
       <span className="bib-vcard-title">{video.title}</span>
       <small>
@@ -145,12 +152,12 @@ export function VideoCard({ video }: { video: LibraryVideoCard }) {
 }
 
 /** A video as a line of the search results. */
-export function VideoRow({ video, title }: { video: LibraryVideoCard; title: ReactNode }) {
+export function VideoRow({ video, title, href }: { video: LibraryVideoCard; title: ReactNode; href?: string }) {
   const parts = [video.instructor?.name ?? video.teachersNote, themeOf(video.theme).label, video.subcategories[0]?.name];
   if (video.durationSeconds != null) parts.push(video.kind === "maraton" ? formatLength(video.durationSeconds) : formatDuration(video.durationSeconds));
   return (
-    <Link href={`/biblioteca/${video.slug}`} className="bib-row">
-      <VideoThumb video={video} className={video.kind === "maraton" ? "bib-mini bib-mini--wide" : "bib-mini"} showViews={false} />
+    <Link href={href ?? `/biblioteca/${video.slug}`} className="bib-row">
+      <VideoThumb video={video} className={video.vertical ? "bib-mini" : "bib-mini bib-mini--wide"} showViews={false} />
       <span className="bib-row-text">
         <span className="bib-row-title">{title}</span>
         <small>
@@ -162,10 +169,10 @@ export function VideoRow({ video, title }: { video: LibraryVideoCard; title: Rea
   );
 }
 
-export function RecordingCard({ video, lockedLabel, locked }: { video: LibraryVideoCard; lockedLabel: string; locked: boolean }) {
+export function RecordingCard({ video, lockedLabel, locked, href }: { video: LibraryVideoCard; lockedLabel: string; locked: boolean; href?: string }) {
   const details = [video.durationSeconds != null ? formatLength(video.durationSeconds) : null, video.teachersNote ?? video.instructor?.name].filter(Boolean);
   return (
-    <Link href={`/biblioteca/${video.slug}`} className="bib-mcard">
+    <Link href={href ?? `/biblioteca/${video.slug}`} className="bib-mcard">
       <div className={`bib-mcard-media bib-ph-${toneOf(video.slug)}`}>
         {video.youtubeId && (
           // eslint-disable-next-line @next/next/no-img-element -- YouTube's still

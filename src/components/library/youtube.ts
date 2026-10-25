@@ -9,6 +9,7 @@ export interface YouTubePlayer {
   unMute(): void;
   isMuted(): boolean;
   getPlayerState(): number;
+  getCurrentTime(): number;
   destroy(): void;
 }
 

@@ -413,6 +413,7 @@ function toCard(v: SampleVideo, now: Date): LibraryVideoCard {
     subcategories: sub ? [sub] : [],
     youtubeId: null,
     durationSeconds: v.seconds,
+    vertical: v.kind !== "maraton",
     instructor: v.instructor ? person(v.instructor) : null,
     teachersNote: v.teachersNote ?? null,
     tags: SAMPLE_TAGS[v.key] ?? [],

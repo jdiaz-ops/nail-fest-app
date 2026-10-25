@@ -25,9 +25,9 @@ export default function CommunityHub({ home, titleClass, events }: { home: Commu
     home.library.show && {
       href: "/biblioteca",
       icon: "cortos" as const,
-      title: "Biblioteca",
-      text: "Cortos, clases completas y grabaciones de maratones, gratis.",
-      stat: home.cortos.show && home.cortos.count ? plural(home.cortos.count, "corto", "cortos") : "Gratis",
+      title: "El Taller",
+      text: "Clases gratis de uñas: cortos, clases completas y grabaciones de maratones.",
+      stat: home.cortos.show && home.cortos.count ? plural(home.cortos.count, "video", "videos") : "Gratis",
       tone: "hub-tile--dark",
     },
     home.cuponera.show && {
@@ -84,13 +84,17 @@ export default function CommunityHub({ home, titleClass, events }: { home: Commu
         {home.cortos.show && home.cortos.items.length > 0 && (
           <div className="hub-section">
             <div className="hub-head">
-              <h2 className={titleClass}>Cortos para aprender hoy</h2>
+              <h2 className={titleClass}>Para aprender hoy</h2>
               <Link href="/biblioteca/cortos">Ver todos</Link>
             </div>
             <div className="hub-cortos">
               {home.cortos.items.map((c) => (
                 <Link key={c.slug} href={`/biblioteca/cortos?v=${c.slug}`} className="hub-corto">
-                  <span className={`hub-corto-media bib-ph-${c.tone}`}>
+                  <span className={`hub-corto-media${c.vertical ? "" : " hub-corto-media--boxed"} bib-ph-${c.tone}`}>
+                    {c.youtubeId && !c.vertical && (
+                      // eslint-disable-next-line @next/next/no-img-element -- YouTube's still, blurred behind the whole one
+                      <img className="hub-corto-back" src={youtubeThumbnail(c.youtubeId)} alt="" loading="lazy" decoding="async" />
+                    )}
                     {c.youtubeId && (
                       // eslint-disable-next-line @next/next/no-img-element -- YouTube's own still
                       <img src={youtubeThumbnail(c.youtubeId)} alt="" loading="lazy" decoding="async" />
@@ -103,7 +107,7 @@ export default function CommunityHub({ home, titleClass, events }: { home: Commu
               ))}
             </div>
             {home.cortos.topics.length > 1 && (
-              <nav className="hub-chips" aria-label="Cortos por tema">
+              <nav className="hub-chips" aria-label="Temas de El Taller">
                 {home.cortos.topics.map((t) => (
                   <Link key={t.key} href={`/biblioteca/cortos?tema=${t.key}`}>
                     {t.label}

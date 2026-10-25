@@ -310,7 +310,8 @@ describe("Shorties", () => {
     const sections = resolveSections({});
     expect(sections.shorties && sections.shortiesBanner && sections.shortiesSignup && sections.menuThemes && sections.menuCities).toBe(true);
     expect(resolveSections({ shorties: false }).shorties).toBe(false);
-    expect(resolveTexts({}).shortiesTitle).toBe("Cortos");
+    // «Cortos» until every video went in, long or short (2026-10-25).
+    expect(resolveTexts({}).shortiesTitle).toBe("Explorar");
     expect(resolveTexts({ shortiesTitle: "Videos cortos" }).shortiesTitle).toBe("Videos cortos");
     const pages = LIBRARY_PAGES.map((p) => p.key);
     for (const def of [...Object.values(LIBRARY_TEXTS), ...Object.values(LIBRARY_SECTIONS)]) expect(pages).toContain(def.page);

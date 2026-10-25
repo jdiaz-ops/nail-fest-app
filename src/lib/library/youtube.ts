@@ -1,5 +1,5 @@
 import { normalizeText } from "@/lib/cuponera/shared";
-import type { LibraryTheme } from "./shared";
+import { SHORT_UP_TO_SECONDS, type LibraryTheme } from "./shared";
 
 // The team's YouTube channel brought into the library (Editar biblioteca →
 // YouTube, 2026-10-25): reading it with the YouTube Data API v3 and a free
@@ -25,8 +25,7 @@ export function isoDurationSeconds(iso: string | null | undefined): number | nul
   return d! * 86400 + h! * 3600 + m! * 60 + s!;
 }
 
-/** YouTube's Shorts are up to three minutes. */
-export const SHORT_UP_TO_SECONDS = 180;
+export { SHORT_UP_TO_SECONDS };
 
 /** Three minutes or less, or #shorts in its title: a corto. */
 export function isShortVideo(seconds: number | null, title: string): boolean {
@@ -244,6 +243,16 @@ export interface YoutubeVideoFacts {
   privacy: string;
   /** Its tags on YouTube, as the channel wrote them. */
   tags: string[];
+  /** Upright (9:16) or lying (16:9), from the size of YouTube's player for
+   * it; null when YouTube doesn't say. */
+  vertical: boolean | null;
+}
+
+/** Upright when YouTube's player for it is taller than wide; null when it doesn't say. */
+function shapeOf(player: { embedWidth?: string | number; embedHeight?: string | number } | undefined): boolean | null {
+  const width = Number(player?.embedWidth);
+  const height = Number(player?.embedHeight);
+  return width > 0 && height > 0 ? height > width : null;
 }
 
 /** What each video is (up to 50 at a time); upcoming lives are left out. */
@@ -256,8 +265,10 @@ export async function fetchVideos(key: string, ids: string[]): Promise<YoutubeVi
       contentDetails?: { duration?: string };
       statistics?: { viewCount?: string };
       status?: { privacyStatus?: string };
+      player?: { embedWidth?: string | number; embedHeight?: string | number };
     }[];
-  }>("videos", { part: "snippet,contentDetails,statistics,status", id: ids.slice(0, 50).join(","), maxResults: "50" }, key);
+    // maxWidth: YouTube then gives its player's size for each video — its shape.
+  }>("videos", { part: "snippet,contentDetails,statistics,status,player", id: ids.slice(0, 50).join(","), maxResults: "50", maxWidth: "1000" }, key);
   return (body.items ?? [])
     .filter((v) => v.snippet?.liveBroadcastContent !== "upcoming" && v.snippet?.liveBroadcastContent !== "live")
     .map((v) => {
@@ -272,6 +283,7 @@ export async function fetchVideos(key: string, ids: string[]): Promise<YoutubeVi
         views: Number.isFinite(views) ? views : 0,
         privacy: v.status?.privacyStatus ?? "public",
         tags: (v.snippet?.tags ?? []).filter((t) => typeof t === "string" && t.trim()).slice(0, 30),
+        vertical: shapeOf(v.player),
       };
     });
 }

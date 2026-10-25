@@ -22,6 +22,8 @@ const restoreSchema = z.object({
     level: z.string().max(40),
     youtubeId: z.string().min(1).max(40),
     durationSeconds: z.number().int().nullable(),
+    // Deleted before it was kept (2026-10-25): asked to YouTube again.
+    vertical: z.boolean().nullable().optional(),
     instructorId: z.string().max(60).nullable(),
     teachersNote: z.string().max(200).nullable(),
     products: z.array(z.unknown()).max(40),

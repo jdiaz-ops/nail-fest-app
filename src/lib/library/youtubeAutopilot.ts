@@ -515,7 +515,7 @@ function themesWith(proposal: Pick<AutopilotProposal, "theme" | "extraThemes">, 
 
 /** The library's video for a proposal, with its subcategory already looked up. */
 export function libraryVideoData(
-  row: Pick<LibraryYoutubeVideo, "youtubeId" | "durationSeconds" | "publishedAt">,
+  row: Pick<LibraryYoutubeVideo, "youtubeId" | "durationSeconds" | "vertical" | "publishedAt">,
   proposal: AutopilotProposal,
   subcategory: LibrarySubcategoryRef | null,
   slug: string,
@@ -530,6 +530,7 @@ export function libraryVideoData(
     subcategories: subcategory ? [subcategory.key] : [],
     youtubeId: row.youtubeId,
     durationSeconds: row.durationSeconds,
+    vertical: row.vertical,
     instructorId: proposal.instructorId,
     // A recording asks for the free sign-up only while the library asks for
     // one (LIBRARY_SIGNUP: off); only a corto goes to Cortos.

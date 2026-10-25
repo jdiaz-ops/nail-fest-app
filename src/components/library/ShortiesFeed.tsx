@@ -4,6 +4,11 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import Link from "next/link";
 import { showCuponeraNotice } from "@/components/cuponera/PreviewLink";
 import {
+  FEED_PATH,
+  LIBRARY_THEMES,
+  SHORT_UP_TO_SECONDS,
+  feedHref,
+  feedParams,
   formatDuration,
   shortiesSlides,
   shuffled,
@@ -12,13 +17,17 @@ import {
   topicKey,
   youtubeLoopEmbedUrl,
   youtubeThumbnail,
+  type CortosTopic,
+  type FeedFilters,
+  type FeedPerson,
+  type FeedRow,
   type LibraryMenuData,
   type ShortItem,
 } from "@/lib/library/shared";
 import LibraryMenu from "./LibraryMenu";
 import UsedProducts from "./UsedProducts";
 import { pingView } from "./ViewPing";
-import { Avatar, LockIcon, SampleBadge } from "./parts";
+import { Avatar, LockIcon, SampleBadge, SearchIcon } from "./parts";
 import { YT_STATE, loadYouTube, type YouTubePlayer } from "./youtube";
 
 export interface ShortiesTexts {
@@ -56,7 +65,8 @@ type Mode = "api" | "native" | "plain";
 // Before a short's player loads: long enough that flicking past it doesn't.
 const SETTLE_MS = 250;
 // The feed's address ("/biblioteca/shorties" until 2026-10-24).
-const CORTOS = "/biblioteca/cortos";
+const CORTOS = FEED_PATH;
+const THEME_KEYS = new Set<string>(LIBRARY_THEMES.map((t) => t.key));
 // A description longer than this gets «Ver más».
 const DESCRIPTION_CLAMP = 90;
 
@@ -104,6 +114,14 @@ const PATHS = {
     </>
   ),
   check: <path d="M5 12.5l4 4L19 7" />,
+  sliders: (
+    <>
+      <path d="M4 7h10M18 7h2M4 17h4M12 17h8" />
+      <circle cx="16" cy="7" r="2" />
+      <circle cx="10" cy="17" r="2" />
+    </>
+  ),
+  expand: <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />,
   lock: (
     <>
       <rect x="5" y="11" width="14" height="10" rx="2" />
@@ -121,18 +139,23 @@ const PATHS = {
 
 /** The playing short's YouTube player: silent at first (what every browser
  * allows on its own), looping, and — in "api" mode — without YouTube's
- * controls, since the feed's own buttons drive it. */
+ * controls, since the feed's own buttons drive it; with them when this
+ * browser needs them for the sound, or to watch it complete («Ver
+ * completo»: from where it was, with its full screen). */
 function ShortPlayer({
   youtubeId,
   title,
-  native,
+  controls,
+  start,
   onPlayer,
   onApiFail,
   onVideoError,
 }: {
   youtubeId: string;
   title: string;
-  native: boolean;
+  controls: boolean;
+  /** Seconds in, when it starts (read once). */
+  start: number;
   onPlayer: (player: YouTubePlayer | null) => void;
   onApiFail: () => void;
   onVideoError: () => void;
@@ -140,6 +163,7 @@ function ShortPlayer({
   const host = useRef<HTMLDivElement>(null);
   const callbacks = useRef({ onPlayer, onApiFail, onVideoError });
   callbacks.current = { onPlayer, onApiFail, onVideoError };
+  const startAt = useRef(start);
 
   useEffect(() => {
     const box = host.current;
@@ -159,15 +183,16 @@ function ShortPlayer({
           playerVars: {
             autoplay: 1,
             mute: 1,
-            controls: native ? 1 : 0,
+            controls: controls ? 1 : 0,
             loop: 1,
             playlist: youtubeId,
             playsinline: 1,
             rel: 0,
             iv_load_policy: 3,
-            fs: 0,
-            disablekb: 1,
+            fs: controls ? 1 : 0,
+            disablekb: controls ? 0 : 1,
             modestbranding: 1,
+            ...(startAt.current > 0 ? { start: startAt.current } : {}),
           },
           events: {
             onReady: (event) => {
@@ -194,15 +219,106 @@ function ShortPlayer({
       }
       box.textContent = "";
     };
-  }, [youtubeId, native]);
+  }, [youtubeId, controls]);
 
   return <div ref={host} className="bib-short-player" title={title} />;
 }
 
+/** The chips over the scroll (2026-10-25: "buenos filtros tema categoría"):
+ * «Filtros», what else is chosen, and the themes — or, inside one, its
+ * subcategories and topics. A chosen chip takes you one step back: a topic
+ * to its theme, a theme to everything. */
+function FilterRow({
+  row,
+  filters,
+  hrefWith,
+  onFilters,
+  wrap,
+}: {
+  row: FeedRow;
+  filters: FeedFilters;
+  hrefWith: (change: Partial<ReturnType<typeof feedParams>>) => string;
+  onFilters: (opener: HTMLElement) => void;
+  /** On a computer, beside the video: the chips wrap instead of scrolling. */
+  wrap: boolean;
+}) {
+  const nav = useRef<HTMLElement>(null);
+  const active = filters.topic?.key ?? null;
+  // The chosen chip in sight, when it's past the row's end.
+  useEffect(() => {
+    const box = nav.current;
+    const chosen = box?.querySelector<HTMLElement>('[aria-current="true"]');
+    if (!box || !chosen || wrap) return;
+    const end = chosen.getBoundingClientRect().right - box.getBoundingClientRect().left;
+    if (end > box.clientWidth - 28) box.scrollLeft += end - box.clientWidth + 72;
+  }, [wrap]);
+  const chip = (topic: CortosTopic, up: string | null) => {
+    const on = topic.key === active;
+    return (
+      <Link key={topic.key} href={hrefWith({ tema: on ? up : topic.key })} className={`bib-feedchip${on ? " is-on" : ""}`} aria-current={on ? "true" : undefined}>
+        {topic.label}
+      </Link>
+    );
+  };
+  const firstTopic = row.theme ? -1 : row.chips.findIndex((t) => !THEME_KEYS.has(t.key));
+  // A chosen filter's chip takes it off: said for screen readers too.
+  const off = (label: string) => <span className="bib-sr">{label}</span>;
+  return (
+    <nav ref={nav} className={`bib-feedrow${wrap ? " bib-feedrow--wrap" : ""}`} aria-label="Filtrar los videos">
+      <button type="button" className="bib-feedchip bib-feedchip--tool" aria-haspopup="dialog" onClick={(e) => onFilters(e.currentTarget)}>
+        <Icon size={16}>{PATHS.sliders}</Icon>
+        Filtros
+      </button>
+      {filters.person && (
+        <Link href={hrefWith({ instructora: null })} className="bib-feedchip is-on">
+          {filters.person.name}
+          <Icon size={14}>{PATHS.close}</Icon>
+          {off("(quitar)")}
+        </Link>
+      )}
+      {filters.query ? (
+        <Link href={hrefWith({ q: null })} className="bib-feedchip is-on">
+          «{filters.query}»
+          <Icon size={14}>{PATHS.close}</Icon>
+          {off("(quitar la búsqueda)")}
+        </Link>
+      ) : row.theme ? (
+        <>
+          <Link href={hrefWith({ tema: null })} className="bib-feedchip">
+            <Icon size={14}>{PATHS.back}</Icon>
+            Todo
+          </Link>
+          {chip(row.theme, null)}
+          {row.chips.map((t) => chip(t, row.theme!.key))}
+        </>
+      ) : (
+        <>
+          <Link href={hrefWith({ tema: null })} className={`bib-feedchip${active ? "" : " is-on"}`} aria-current={active ? undefined : "true"}>
+            Todo
+          </Link>
+          {row.chips.map((t, i) => (
+            <span key={t.key} className="bib-feedrow-item">
+              {i === firstTopic && i > 0 && <span className="bib-feedrow-sep" aria-hidden="true" />}
+              {chip(t, null)}
+            </span>
+          ))}
+        </>
+      )}
+    </nav>
+  );
+}
+
 interface Props {
   items: ShortItem[];
-  /** Only one topic's cortos (?tema=): its chip at the top clears it. */
-  topic: { key: string; label: string } | null;
+  /** What the scroll shows (?tema= ?instructora= ?q= ?orden=). */
+  filters: FeedFilters;
+  /** The chips on top: the themes, or the chosen one's topics. */
+  row: FeedRow;
+  /** «Filtros»: every theme and every instructor with videos here. */
+  themes: CortosTopic[];
+  people: FeedPerson[];
+  /** These same videos as a list (the search's page). */
+  listHref: string;
   texts: ShortiesTexts;
   menu: LibraryMenuData;
   titleClass: string;
@@ -224,7 +340,24 @@ interface Props {
 // silent); where even that isn't allowed, YouTube's own button takes over.
 // Each short says what it is (title and description), and its theme and
 // tags open the cortos of that topic.
-export default function ShortiesFeed({ items: firstOrder, topic, texts, menu, titleClass, signupEvery, unlocked, profiles, showUsed, showSteps, staffNote }: Props) {
+export default function ShortiesFeed({
+  items: firstOrder,
+  filters,
+  row,
+  themes,
+  people,
+  listHref,
+  texts,
+  menu,
+  titleClass,
+  signupEvery,
+  unlocked,
+  profiles,
+  showUsed,
+  showSteps,
+  staffNote,
+}: Props) {
+  const { topic } = filters;
   const [items, setItems] = useState(firstOrder);
   // Each "again" builds the feed anew: scrolling it back to the top instead
   // would land on the short that was there, now somewhere else.
@@ -251,6 +384,12 @@ export default function ShortiesFeed({ items: firstOrder, topic, texts, menu, ti
   const counted = useRef(new Set<string>());
   // The short whose whole description is open.
   const [openDescription, setOpenDescription] = useState<string | null>(null);
+  // The video watched complete, with YouTube's controls, and where it was.
+  const [full, setFull] = useState<string | null>(null);
+  const fullFrom = useRef(0);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const filtersClose = useRef<HTMLButtonElement>(null);
+  const filtersOpener = useRef<HTMLElement | null>(null);
 
   /** The player follows the pause: the person's, or something on top. */
   const apply = useCallback(() => {
@@ -409,8 +548,9 @@ export default function ShortiesFeed({ items: firstOrder, topic, texts, menu, ti
     setSettled(false);
     pausedRef.current = false;
     setPaused(false);
+    setFull(null);
     const slide = slides[active];
-    if (slide?.kind === "video") window.history.replaceState(null, "", `${CORTOS}?v=${slide.item.video.slug}${topic ? `&tema=${topic.key}` : ""}`);
+    if (slide?.kind === "video") window.history.replaceState(null, "", feedHref({ v: slide.item.video.slug, ...feedParams(filters) }));
     const timer = window.setTimeout(() => {
       setSettled(true);
       if (slide?.kind !== "video") return;
@@ -420,7 +560,7 @@ export default function ShortiesFeed({ items: firstOrder, topic, texts, menu, ti
       pingView(video.id);
     }, SETTLE_MS);
     return () => window.clearTimeout(timer);
-  }, [active, slides, unlocked, topic]);
+  }, [active, slides, unlocked, filters]);
 
   // The keyboard on a computer: arrows to move, space to pause, M for the sound.
   const keys = useRef({ goTo, togglePause, enableSound, muteSound });
@@ -478,8 +618,45 @@ export default function ShortiesFeed({ items: firstOrder, topic, texts, menu, ti
     return () => window.removeEventListener("keydown", onKey);
   }, [sheetItem, closeSheet]);
 
+  const openFilters = (opener: HTMLElement) => {
+    filtersOpener.current = opener;
+    setFiltersOpen(true);
+    hold("filters");
+  };
+  const closeFilters = useCallback(() => {
+    setFiltersOpen(false);
+    release("filters");
+    filtersOpener.current?.focus();
+  }, [release]);
+  useEffect(() => {
+    if (!filtersOpen) return;
+    filtersClose.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeFilters();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [filtersOpen, closeFilters]);
+
+  /** «Ver completo»: the same video again, with YouTube's controls and its
+   * full screen, from the second it was at — and the sound on, if it may. */
+  const watchFull = (id: string) => {
+    let at = 0;
+    try {
+      at = Math.floor(player.current?.getCurrentTime() ?? 0);
+    } catch {
+      // Gone already: from the start.
+    }
+    fullFrom.current = at;
+    soundRef.current = true;
+    setSound(true);
+    pausedRef.current = false;
+    setPaused(false);
+    setFull(id);
+  };
+
   const share = async (item: ShortItem) => {
-    const url = `${window.location.origin}${CORTOS}?v=${item.video.slug}`;
+    const url = `${window.location.origin}${feedHref({ v: item.video.slug })}`;
     if (navigator.share) {
       try {
         await navigator.share({ title: item.video.title, url });
@@ -503,16 +680,15 @@ export default function ShortiesFeed({ items: firstOrder, topic, texts, menu, ti
     setActive(0);
   };
 
-  const here = (slug?: string) => {
-    const params = [slug && `v=${slug}`, topic && `tema=${topic.key}`].filter(Boolean).join("&");
-    return params ? `${CORTOS}?${params}` : CORTOS;
-  };
-  const signupHref = (slug?: string) => `/biblioteca/registro?volver=${encodeURIComponent(here(slug))}`;
-  const topicChip = topic && (
-    <Link href={CORTOS} className="bib-shorts-topic" aria-label={`Quitar el tema ${topic.label}: ver todos los cortos`}>
-      {topic.label}
-      <Icon size={14}>{PATHS.close}</Icon>
-    </Link>
+  /** The scroll with one filter changed (null takes it off). */
+  const hrefWith = (change: Partial<ReturnType<typeof feedParams>>) => feedHref({ ...feedParams(filters), ...change });
+  const signupHref = (slug?: string) => `/biblioteca/registro?volver=${encodeURIComponent(feedHref({ v: slug ?? null, tema: topic?.key ?? null }))}`;
+  const filtered = Boolean(topic || filters.person || filters.query);
+  const filterRow = (wrap: boolean) => (
+    <>
+      <FilterRow row={row} filters={filters} hrefWith={hrefWith} onFilters={openFilters} wrap={wrap} />
+      {filters.relaxed && <p className="bib-feedrow-note">No hay videos con todas esas palabras: estos son los más parecidos.</p>}
+    </>
   );
   const sheetDiscounted = sheetItem?.products.some((p) => p.discountPercent != null && p.code) ?? false;
 
@@ -521,10 +697,10 @@ export default function ShortiesFeed({ items: firstOrder, topic, texts, menu, ti
       <header className="bib-header bib-shorts-head">
         <div className="bib-header-inner">
           <LibraryMenu menu={menu} titleClass={titleClass} onOpenChange={onMenu} />
-          <Link href="/biblioteca" className="bib-brand" aria-label="Biblioteca Nail Fest, inicio">
+          <Link href="/biblioteca" className="bib-brand" aria-label="El Taller Nail Fest, inicio">
             {/* eslint-disable-next-line @next/next/no-img-element -- fixed logo mark */}
             <img src="/logo.png" alt="Nail Fest" />
-            <span>Biblioteca</span>
+            <span>El Taller</span>
           </Link>
         </div>
       </header>
@@ -533,28 +709,28 @@ export default function ShortiesFeed({ items: firstOrder, topic, texts, menu, ti
         <LibraryMenu menu={menu} titleClass={titleClass} dark onOpenChange={onMenu} />
         <span className="bib-shorts-heading">
           <h1 className={`bib-shorts-title ${titleClass}`}>{texts.title}</h1>
-          {topicChip}
           {staffNote && (
             <Link href="/admin/biblioteca" className="bib-shorts-staff" title={staffNote}>
               Vista previa del equipo
             </Link>
           )}
         </span>
-        <Link href="/biblioteca" className="bib-shorts-round" aria-label="Cerrar los cortos: volver a la biblioteca">
+        <Link href="/biblioteca" className="bib-shorts-round" aria-label={`Cerrar ${texts.title}: volver al Taller`}>
           <Icon>{PATHS.close}</Icon>
         </Link>
+        {filterRow(false)}
       </div>
 
       <aside className="bib-shorts-side">
         <Link href="/biblioteca" className="bib-crumb">
-          ← Biblioteca
+          ← El Taller
         </Link>
         <h1 className={`bib-shorts-side-title ${titleClass}`}>{texts.title}</h1>
-        {topicChip}
         <p>{texts.subtitle}</p>
+        {filterRow(true)}
         {staffNote && (
           <p className="bib-shorts-side-note">
-            <b>Vista previa del equipo.</b> {staffNote} <Link href="/admin/biblioteca">Ir a Editar biblioteca</Link>
+            <b>Vista previa del equipo.</b> {staffNote} <Link href="/admin/biblioteca">Ir a Editar El Taller</Link>
           </p>
         )}
       </aside>
@@ -566,9 +742,9 @@ export default function ShortiesFeed({ items: firstOrder, topic, texts, menu, ti
               <span className="bib-short-card-ic">
                 <Icon size={26}>{PATHS.shorties}</Icon>
               </span>
-              <p>{topic ? `Todavía no hay cortos de ${topic.label}.` : texts.empty}</p>
-              <Link href={topic ? CORTOS : "/biblioteca"} className="bib-btn bib-btn-main">
-                {topic ? "Ver todos los cortos" : texts.endLibrary}
+              <p>{filters.query ? `No encontramos videos con «${filters.query}».` : filtered ? "Todavía no hay videos con estos filtros." : texts.empty}</p>
+              <Link href={filtered ? CORTOS : "/biblioteca"} className="bib-btn bib-btn-main">
+                {filtered ? "Ver todos los videos" : texts.endLibrary}
               </Link>
             </div>
           </section>
@@ -601,13 +777,13 @@ export default function ShortiesFeed({ items: firstOrder, topic, texts, menu, ti
                   <span className="bib-short-card-ic">
                     <Icon size={26}>{PATHS.shorties}</Icon>
                   </span>
-                  <h2 className={titleClass}>{topic ? `Ya viste los cortos de ${topic.label}` : texts.endTitle}</h2>
-                  <p>{topic ? "Puedes verlos otra vez en otro orden o seguir con todos los cortos." : texts.endText}</p>
+                  <h2 className={titleClass}>{filtered ? "Ya viste todos estos videos" : texts.endTitle}</h2>
+                  <p>{filtered ? "Puedes verlos otra vez en otro orden o seguir con todos los videos." : texts.endText}</p>
                   <button type="button" className="bib-btn bib-btn-main" onClick={again}>
                     {texts.endAgain}
                   </button>
-                  <Link href={topic ? CORTOS : "/biblioteca"} className="bib-btn bib-btn-ghost">
-                    {topic ? "Ver todos los cortos" : texts.endLibrary}
+                  <Link href={filtered ? CORTOS : "/biblioteca"} className="bib-btn bib-btn-ghost">
+                    {filtered ? "Ver todos los videos" : texts.endLibrary}
                   </Link>
                 </div>
               </section>
@@ -628,9 +804,23 @@ export default function ShortiesFeed({ items: firstOrder, topic, texts, menu, ti
           const descriptionOpen = openDescription === video.id;
           const longDescription = (video.description?.length ?? 0) > DESCRIPTION_CLAMP;
           const tags = video.tags.filter((t) => topicKey(t) !== video.theme && !video.subcategories.some((s) => s.key === topicKey(t)));
+          // Lying (16:9): in the middle, whole, over its own blurred still.
+          const wide = !video.vertical;
+          const isFull = full === video.id;
+          const fullButton = steered && !isFull && (wide || (video.durationSeconds ?? 0) > SHORT_UP_TO_SECONDS) && (
+            <button type="button" className={`bib-short-full${wide ? "" : " bib-short-full--inline"}`} onClick={() => watchFull(video.id)}>
+              <Icon size={18}>{PATHS.expand}</Icon>
+              {(video.durationSeconds ?? 0) > SHORT_UP_TO_SECONDS ? "Ver completo" : "Ver en grande"}
+              {length && <span>{length}</span>}
+            </button>
+          );
           return (
-            <section key={video.id} className="bib-short" aria-label={video.title}>
-              <div className="bib-short-frame">
+            <section key={video.id} className={`bib-short${wide ? " bib-short--wide" : ""}`} aria-label={video.title}>
+              <div className={`bib-short-frame${wide ? ` bib-ph-${toneOf(video.slug)}` : ""}`}>
+                {wide && video.youtubeId && (
+                  // eslint-disable-next-line @next/next/no-img-element -- YouTube's still, blurred behind the video
+                  <img className="bib-short-backdrop" src={youtubeThumbnail(video.youtubeId)} alt="" loading={index < 2 ? "eager" : "lazy"} decoding="async" />
+                )}
                 <div className={`bib-short-media bib-ph-${toneOf(video.slug)}`}>
                   {video.youtubeId && (
                     // eslint-disable-next-line @next/next/no-img-element -- YouTube's still, until its player loads
@@ -638,9 +828,12 @@ export default function ShortiesFeed({ items: firstOrder, topic, texts, menu, ti
                   )}
                   {live && mode !== "plain" && (
                     <ShortPlayer
+                      // «Ver completo» is a new player: YouTube's controls only come with one.
+                      key={isFull ? "full" : "feed"}
                       youtubeId={video.youtubeId!}
                       title={video.title}
-                      native={mode === "native"}
+                      controls={mode === "native" || isFull}
+                      start={isFull ? fullFrom.current : 0}
                       onPlayer={onPlayer}
                       onApiFail={onApiFail}
                       onVideoError={() => setFailed((list) => (list.includes(video.id) ? list : [...list, video.id]))}
@@ -672,8 +865,9 @@ export default function ShortiesFeed({ items: firstOrder, topic, texts, menu, ti
                     </a>
                   </div>
                 )}
-                {steered && <button type="button" className="bib-short-tap" aria-label={isActive && paused ? "Reproducir" : "Pausar"} onClick={togglePause} />}
-                {steered && isActive && paused && (
+                {steered && !isFull && <button type="button" className="bib-short-tap" aria-label={isActive && paused ? "Reproducir" : "Pausar"} onClick={togglePause} />}
+                {wide && fullButton}
+                {steered && !isFull && isActive && paused && (
                   <span className="bib-short-paused" aria-hidden="true">
                     <span>
                       <Icon size={34}>{PATHS.play}</Icon>
@@ -692,6 +886,7 @@ export default function ShortiesFeed({ items: firstOrder, topic, texts, menu, ti
                     </button>
                   ))}
                 <div className="bib-short-info">
+                  {!wide && fullButton}
                   {video.instructor ? (
                     <span className="bib-short-who">
                       {profileHref ? (
@@ -738,7 +933,7 @@ export default function ShortiesFeed({ items: firstOrder, topic, texts, menu, ti
                         {tag}
                       </Link>
                     ))}
-                    {length && <span>{length}</span>}
+                    {length && !fullButton && <span>{length}</span>}
                   </span>
                 </div>
                 {index === 0 && !scrolled && slides.length > 2 && (
@@ -791,6 +986,73 @@ export default function ShortiesFeed({ items: firstOrder, topic, texts, menu, ti
           <button type="button" aria-label="Video siguiente" disabled={active >= slides.length - 1} onClick={() => goTo(active + 1)}>
             <Icon size={24}>{PATHS.down}</Icon>
           </button>
+        </div>
+      )}
+
+      {filtersOpen && (
+        <div className="bib-sheet-scrim" onClick={closeFilters}>
+          <div className="bib-sheet bib-filters" role="dialog" aria-modal="true" aria-label="Filtros" onClick={(e) => e.stopPropagation()}>
+            <span className="bib-sheet-handle" aria-hidden="true" />
+            <div className="bib-sheet-head">
+              <h2 className={titleClass}>Filtros</h2>
+              <button ref={filtersClose} type="button" className="bib-drawer-close" aria-label="Cerrar" onClick={closeFilters}>
+                <Icon size={18}>{PATHS.close}</Icon>
+              </button>
+            </div>
+            <form className="bib-search" role="search" action={CORTOS} method="get">
+              <SearchIcon />
+              <label htmlFor="bib-feed-q" className="bib-sr">
+                Buscar en los videos
+              </label>
+              <input id="bib-feed-q" name="q" type="search" placeholder="Busca una técnica, un producto…" defaultValue={filters.query} enterKeyHint="search" autoComplete="off" />
+              {filters.person && <input type="hidden" name="instructora" value={filters.person.slug} />}
+            </form>
+            <div className="bib-filters-group">
+              <span className="bib-label">Tema</span>
+              <div className="bib-chips">
+                <Link href={hrefWith({ tema: null, q: null })} className={`bib-chip${topic || filters.query ? "" : " is-on"}`}>
+                  Todos
+                </Link>
+                {themes.map((t) => (
+                  <Link key={t.key} href={hrefWith({ tema: t.key, q: null })} className={`bib-chip${topic?.key === t.key ? " is-on" : ""}`}>
+                    {t.label} <small>{t.count}</small>
+                  </Link>
+                ))}
+              </div>
+            </div>
+            {people.length > 1 && (
+              <div className="bib-filters-group">
+                <span className="bib-label">Instructora</span>
+                <div className="bib-chips">
+                  <Link href={hrefWith({ instructora: null })} className={`bib-chip${filters.person ? "" : " is-on"}`}>
+                    Todas
+                  </Link>
+                  {people.map((p) => (
+                    <Link key={p.slug} href={hrefWith({ instructora: p.slug })} className={`bib-chip bib-chip--person${filters.person?.slug === p.slug ? " is-on" : ""}`}>
+                      <Avatar person={p} className="bib-chip-face" />
+                      {p.name} <small>{p.count}</small>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+            {!filters.query && (
+              <div className="bib-filters-group">
+                <span className="bib-label">Orden</span>
+                <div className="bib-chips">
+                  <Link href={hrefWith({ orden: null })} className={`bib-chip${filters.newest ? "" : " is-on"}`}>
+                    Al azar
+                  </Link>
+                  <Link href={hrefWith({ orden: "nuevo" })} className={`bib-chip${filters.newest ? " is-on" : ""}`}>
+                    Lo más nuevo
+                  </Link>
+                </div>
+              </div>
+            )}
+            <Link href={listHref} className="bib-btn bib-btn-line">
+              Ver estos videos en lista
+            </Link>
+          </div>
         </div>
       )}
 

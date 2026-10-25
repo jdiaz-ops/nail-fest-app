@@ -101,7 +101,7 @@ export default function VideoSubmitForm({ needsContentTerms }: { needsContentTer
       )}
       {state.sent && (
         <p className="pt-saved" role="status">
-          ¡Enviado! Quedó en revisión: el equipo decide si sale en la biblioteca.
+          ¡Enviado! Quedó en revisión: el equipo decide si sale en El Taller.
         </p>
       )}
       <button type="submit" className="bib-btn bib-btn-main pt-wide" disabled={state.sending}>

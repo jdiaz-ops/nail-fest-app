@@ -29,7 +29,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     rest.extraThemes = [...new Set(rest.extraThemes.filter((t) => t !== main))];
   }
   const data: Prisma.LibraryVideoUncheckedUpdateInput = { ...rest };
-  if (youtube !== undefined) data.youtubeId = youtube;
+  if (youtube !== undefined) {
+    data.youtubeId = youtube;
+    // Another video: its shape is asked to YouTube again (fillOrientations).
+    const current = await db.libraryVideo.findUnique({ where: { id: params.id }, select: { youtubeId: true } });
+    if (current && current.youtubeId !== youtube) data.vertical = null;
+  }
   if (duration !== undefined) data.durationSeconds = duration;
   if (products !== undefined) data.products = products as unknown as Prisma.InputJsonValue;
   const updated = await db.libraryVideo.updateMany({ where: { id: params.id }, data });

@@ -3,7 +3,7 @@ import { isAuthorizedCronRequest } from "@/lib/cron";
 import { getLibrarySettings } from "@/lib/library/settings";
 import { YoutubeError } from "@/lib/library/youtube";
 import { runAutopilot } from "@/lib/library/youtubeAutopilot";
-import { PLAYLISTS_EVERY_MS, importNewUploads, syncPlaylists } from "@/lib/library/youtubeImport";
+import { PLAYLISTS_EVERY_MS, fillOrientations, importNewUploads, syncPlaylists } from "@/lib/library/youtubeImport";
 
 // The YouTube autopilot by itself, every ten minutes — declared in
 // vercel.json's `crons`, same auth as every other cron here: the channel's
@@ -11,8 +11,8 @@ import { PLAYLISTS_EVERY_MS, importNewUploads, syncPlaylists } from "@/lib/libra
 // Claude), then Claude reviews and publishes the ones
 // waiting (lib/library/youtubeAutopilot.ts), three requests at the same
 // time — about 24 videos a round, so the channel's first hundreds take a
-// few hours when nobody keeps the tab open. Switched off in the tab, it
-// does nothing.
+// few hours when nobody keeps the tab open. Switched off in the tab, it only
+// asks YouTube the shape (upright or lying) of the videos that don't have it.
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
@@ -23,7 +23,14 @@ async function handle(req: NextRequest) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   const settings = await getLibrarySettings();
-  if (!settings.youtubeAutopilot || !settings.youtubeUploadsId || !settings.youtubeApiKey) return NextResponse.json({ ok: true, skipped: "off" });
+  let shapes: number | { problem: string } = 0;
+  try {
+    shapes = await fillOrientations();
+  } catch (error) {
+    if (!(error instanceof YoutubeError)) throw error;
+    shapes = { problem: error.problem };
+  }
+  if (!settings.youtubeAutopilot || !settings.youtubeUploadsId || !settings.youtubeApiKey) return NextResponse.json({ ok: true, shapes, skipped: "off" });
 
   const started = Date.now();
   let imported: { added: number; complete: boolean } | { problem: string } | null = null;
@@ -48,8 +55,8 @@ async function handle(req: NextRequest) {
   }
   // No request starts late: the round fits in the function's five minutes —
   // after a long import, Claude goes on in the next one.
-  if (Date.now() - started > 60_000) return NextResponse.json({ ok: true, imported, playlists, skipped: "next" });
-  return NextResponse.json({ ok: true, imported, playlists, ...(await runAutopilot({ lanes: 3, budgetMs: imported || playlists ? 10_000 : 40_000 })) });
+  if (Date.now() - started > 60_000) return NextResponse.json({ ok: true, shapes, imported, playlists, skipped: "next" });
+  return NextResponse.json({ ok: true, shapes, imported, playlists, ...(await runAutopilot({ lanes: 3, budgetMs: imported || playlists ? 10_000 : 40_000 })) });
 }
 
 export const GET = handle;

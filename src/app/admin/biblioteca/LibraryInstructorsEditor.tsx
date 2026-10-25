@@ -101,7 +101,7 @@ export default function LibraryInstructorsEditor({ instructors }: { instructors:
 
   async function remove(instructor: AdminInstructor) {
     const account = instructor.account ? " y su cuenta del portal" : "";
-    if (!confirm(`¿Eliminar a ${instructor.name}${account}? Sus videos se quedan en la biblioteca sin su nombre. Si solo quieres que no se vea, mejor apágala.`)) return;
+    if (!confirm(`¿Eliminar a ${instructor.name}${account}? Sus videos se quedan en El Taller sin su nombre. Si solo quieres que no se vea, mejor apágala.`)) return;
     setBusyId(instructor.id);
     setError(null);
     try {

@@ -23,6 +23,8 @@ export interface HomeCorto {
   tone: number;
   duration: string | null;
   instructor: string | null;
+  /** Upright (9:16) or lying (16:9): a lying one shows whole in its card. */
+  vertical: boolean;
 }
 
 export interface HomeBrand {
@@ -74,6 +76,7 @@ export async function getCommunityHome(viewer: LibraryViewer, nextEventId: strin
         tone: toneOf(video.slug),
         duration: video.durationSeconds != null ? formatDuration(video.durationSeconds) : null,
         instructor: video.instructor?.name ?? null,
+        vertical: video.vertical,
       })),
       topics: topics.slice(0, 10),
     },
@@ -131,7 +134,7 @@ export function communityMenuLinks(parts: CommunityParts, nextEvent: Event | nul
   const links: (CommunityLink | false)[] = [
     home !== null && { href: home, label: "Inicio", icon: "home" },
     nextEvent !== null && { href: `/${nextEvent.slug}`, label: publicEventName(nextEvent), hint: "El próximo evento", icon: "event" },
-    parts.library && { href: "/biblioteca", label: "Biblioteca", hint: "Cortos, clases y grabaciones", icon: "book" },
+    parts.library && { href: "/biblioteca", label: "El Taller", hint: "Clases gratis de uñas", icon: "book" },
     parts.instructors && { href: "/instructoras", label: "Instructoras", hint: "El directorio", icon: "people" },
     parts.consultorio && { href: "/consultorio", label: "Consultorio", hint: "Pregunta y responde", icon: "chat" },
     parts.cuponera && { href: "/cuponera", label: "Cuponera", hint: "Descuentos de las marcas", icon: "tag" },

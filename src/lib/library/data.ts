@@ -19,6 +19,7 @@ import {
   isKind,
   initialOf,
   isTheme,
+  isVertical,
   queryWords,
   themeOf,
   themesOf,
@@ -159,6 +160,7 @@ function toVideoCard(row: VideoRow, views: { total: Map<string, number>; week: M
     subcategories: row.subcategories.map((key) => subs.get(key)).filter((s): s is LibrarySubcategoryRef => Boolean(s)),
     youtubeId: row.youtubeId,
     durationSeconds: row.durationSeconds,
+    vertical: isVertical(row),
     instructor: row.instructor ? personOf(row.instructor) : null,
     teachersNote: row.teachersNote,
     tags: row.tags,
@@ -210,12 +212,11 @@ export async function getLibraryHome(viewer: LibraryViewer, now: Date = new Date
     shortiesCount(),
     getCortosTopics(viewer, now),
   ]);
-  const shorts = real.filter((v) => v.kind === "video");
-  const exampleShorts = examples.filter((v) => v.kind === "video");
+  // Long or short, upright or lying (2026-10-25): what's new and most watched is every kind.
   const byWeek = (list: LibraryVideoCard[]) => list.filter((v) => v.weekViews > 0).sort((a, b) => b.weekViews - a.weekViews);
-  const ranked = byWeek(shorts);
+  const ranked = byWeek(real);
   const mostViewed =
-    ranked.length >= MOST_VIEWED_FROM ? ranked.slice(0, MOST_VIEWED_UP_TO) : viewer.staff ? withExamples(ranked, byWeek(exampleShorts), MOST_VIEWED_UP_TO, true) : [];
+    ranked.length >= MOST_VIEWED_FROM ? ranked.slice(0, MOST_VIEWED_UP_TO) : viewer.staff ? withExamples(ranked, byWeek(examples), MOST_VIEWED_UP_TO, true) : [];
 
   const counted = withExamples(real, examples, Number.MAX_SAFE_INTEGER, viewer.staff);
   const themeCounts: Partial<Record<LibraryTheme, number>> = {};
@@ -223,7 +224,7 @@ export async function getLibraryHome(viewer: LibraryViewer, now: Date = new Date
 
   return {
     empty: real.length === 0,
-    newest: withExamples(shorts, exampleShorts, NEWEST_UP_TO, viewer.staff),
+    newest: withExamples(real, examples, NEWEST_UP_TO, viewer.staff),
     mostViewed,
     recordings: withExamples(
       real.filter((v) => v.kind === "maraton"),
@@ -308,7 +309,7 @@ export interface LibraryVideoPage {
 
 /** Its subcategory's first, then the ones that share a theme, then the rest. */
 function relatedTo(video: LibraryVideoCard, pool: LibraryVideoCard[]): LibraryVideoCard[] {
-  const others = pool.filter((v) => v.id !== video.id && v.kind === "video");
+  const others = pool.filter((v) => v.id !== video.id);
   const closeness = (v: LibraryVideoCard) =>
     (v.subcategories.some((s) => video.subcategories.some((x) => x.key === s.key)) ? 2 : 0) + (v.themes.some((t) => video.themes.includes(t)) ? 1 : 0);
   return others
@@ -357,12 +358,15 @@ export async function recordVideoView(videoId: string, now: Date = new Date()): 
   return true;
 }
 
-// ── Cortos ("Shorties" until 2026-10-24) ────────────────────────────────────
+// ── The scroll: Cortos ("Shorties" until 2026-10-24) ───────────────────────
+// Every visible video since 2026-10-25 — long or short, upright or lying:
+// "vamos a mostrar el contenido sin importar que sea largo corto vertical o
+// horizontal". (inShorties stays as it was, unused.)
 
 const SHORTIES_EXAMPLES_UP_TO = 12;
-const shortiesWhere = { visible: true, kind: "video", inShorties: true } satisfies Prisma.LibraryVideoWhereInput;
+const shortiesWhere = { visible: true } satisfies Prisma.LibraryVideoWhereInput;
 
-/** Real cortos: whether the public sees the way into Cortos. */
+/** Real videos in the scroll: whether the public sees the way into it. */
 export function shortiesCount(): Promise<number> {
   return db.libraryVideo.count({ where: shortiesWhere });
 }
@@ -375,7 +379,7 @@ export async function getCortosTopics(viewer: LibraryViewer, now: Date = new Dat
     db.libraryVideo.findMany({ where: shortiesWhere, select: { theme: true, extraThemes: true, subcategories: true, tags: true } }),
     subcategoryRefs(viewer),
   ]);
-  const examples = viewer.staff && rows.length < SHORTIES_EXAMPLES_UP_TO ? sampleVideos(now).filter((v) => v.kind === "video") : [];
+  const examples = viewer.staff && rows.length < SHORTIES_EXAMPLES_UP_TO ? sampleVideos(now) : [];
   const real = rows.map((r) => ({ ...r, subcategories: r.subcategories.map((key) => subs.get(key)).filter((x): x is LibrarySubcategoryRef => Boolean(x)) }));
   return topicsOf([...real, ...examples]);
 }
@@ -397,12 +401,10 @@ export async function getShorties(viewer: LibraryViewer, now: Date = new Date())
     (row, i): ShortItem => ({ video: toVideoCard(row, views, subs), products: resolveWith(refs[i]!, cuponera, viewer.cuponeraLive), hasSteps: row.steps.length > 0 }),
   );
   const examples = viewer.staff
-    ? sampleVideos(now)
-        .filter((v) => v.kind === "video")
-        .map((card): ShortItem => {
-          const detail = sampleVideoDetail(card.slug, now);
-          return { video: card, products: detail?.products ?? [], hasSteps: (detail?.steps.length ?? 0) > 0 };
-        })
+    ? sampleVideos(now).map((card): ShortItem => {
+        const detail = sampleVideoDetail(card.slug, now);
+        return { video: card, products: detail?.products ?? [], hasSteps: (detail?.steps.length ?? 0) > 0 };
+      })
     : [];
   return withExamples(items, examples, SHORTIES_EXAMPLES_UP_TO, viewer.staff);
 }
@@ -416,14 +418,14 @@ async function menuVideoFacts(viewer: LibraryViewer, now: Date) {
   const [themed, byKind, watched, shorties] = await Promise.all([
     db.libraryVideo.findMany({ where: { visible: true }, select: { theme: true, extraThemes: true } }),
     db.libraryVideo.groupBy({ by: ["kind"], where: { visible: true }, _count: { _all: true } }),
-    db.libraryVideoDailyView.groupBy({ by: ["videoId"], where: { day: { gte: since }, views: { gt: 0 }, video: { visible: true, kind: "video" } } }),
+    db.libraryVideoDailyView.groupBy({ by: ["videoId"], where: { day: { gte: since }, views: { gt: 0 }, video: { visible: true } } }),
     shortiesCount(),
   ]);
   // A video counts in each of its themes.
   const themeCounts = new Map<string, number>();
   for (const v of [...themed, ...(viewer.staff ? sampleVideos(now) : [])]) for (const theme of themesOf(v)) themeCounts.set(theme, (themeCounts.get(theme) ?? 0) + 1);
   const kinds = new Map<string, number>(byKind.map((r) => [r.kind, r._count._all]));
-  return { themeCounts, shorts: kinds.get("video") ?? 0, recordings: kinds.get("maraton") ?? 0, watched: watched.length, shorties };
+  return { themeCounts, videos: [...kinds.values()].reduce((a, b) => a + b, 0), recordings: kinds.get("maraton") ?? 0, watched: watched.length, shorties };
 }
 
 /** The menu of every page of the library and the instructors' directory:
@@ -451,7 +453,7 @@ export async function getLibraryMenu(viewer: LibraryViewer, now: Date = new Date
     account: null,
     brands: [],
     shorties: Boolean(facts) && (viewer.staff || (sections.shorties && facts!.shorties >= SHORTIES_SHOWN_FROM)),
-    videos: Boolean(facts) && sections.newest && (viewer.staff || facts!.shorts > 0),
+    videos: Boolean(facts) && sections.newest && (viewer.staff || facts!.videos > 0),
     mostViewed: Boolean(facts) && sections.mostViewed && (viewer.staff || facts!.watched >= MOST_VIEWED_FROM),
     recordings: Boolean(facts) && sections.recordings && (viewer.staff || facts!.recordings > 0),
     signup: library && sections.menuSignup && viewer.asksSignup,
@@ -507,6 +509,31 @@ export interface LibrarySearchResult {
 
 const PRODUCTS_SHOWN = 6;
 
+/** What a video is found by, and how much each part counts. */
+function videoFields(v: LibraryVideoCard): SearchField[] {
+  return [
+    { text: v.title, weight: 5 },
+    { text: v.tags.join(" "), weight: 4 },
+    { text: v.subcategories.map((s) => s.name).join(" "), weight: 4 },
+    { text: v.themes.map((t) => themeOf(t).label).join(" "), weight: 3 },
+    { text: v.instructor?.name, weight: 3 },
+    { text: v.description, weight: 1 },
+    { text: v.teachersNote, weight: 1 },
+  ];
+}
+
+/** The videos with every word, the best first — or, when none has them all,
+ * the ones with most of them (relaxed). The search's and the scroll's (?q=). */
+export function rankVideos<T>(list: T[], query: string, cardOf: (item: T) => LibraryVideoCard): { found: T[]; relaxed: boolean } {
+  const words = queryWords(query);
+  if (!words.length) return { found: list, relaxed: false };
+  const fields = (item: T) => videoFields(cardOf(item));
+  const strict = rankBy(list, words, fields);
+  if (strict.length > 0 || words.length < 2) return { found: strict, relaxed: false };
+  const loose = rankLoosely(list, words, fields);
+  return { found: loose, relaxed: loose.length > 0 };
+}
+
 export function searchParamsOf(raw: Record<string, string | string[] | undefined>): LibrarySearchParams {
   const one = (key: string) => {
     const value = raw[key];
@@ -534,19 +561,8 @@ export async function searchLibrary(params: LibrarySearchParams, viewer: Library
     }
   }
   const pool = params.sub ? inTheme.filter((v) => v.subcategories.some((s) => s.key === params.sub)) : inTheme;
-  const fieldsOf = (v: LibraryVideoCard): SearchField[] => [
-    { text: v.title, weight: 5 },
-    { text: v.tags.join(" "), weight: 4 },
-    { text: v.subcategories.map((s) => s.name).join(" "), weight: 4 },
-    { text: v.themes.map((t) => themeOf(t).label).join(" "), weight: 3 },
-    { text: v.instructor?.name, weight: 3 },
-    { text: v.description, weight: 1 },
-    { text: v.teachersNote, weight: 1 },
-  ];
-  const strict = words.length ? rankBy(pool, words, fieldsOf) : pool;
   // Nothing with every word: the closest, said so.
-  const relaxed = strict.length === 0 && words.length > 1;
-  const videos = relaxed ? rankLoosely(pool, words, fieldsOf) : strict;
+  const { found: videos, relaxed } = rankVideos(pool, params.query, (v) => v);
 
   const subs = [...subcategories.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, "es"));
   if (!words.length) return { videos, relaxed: false, subcategories: subs, instructors: [], products: [] };
@@ -564,7 +580,7 @@ export async function searchLibrary(params: LibrarySearchParams, viewer: Library
       : Promise.resolve([]),
     viewer.cuponeraLive ? cuponeraProductsFor(words, viewer.staff, now) : Promise.resolve([]),
   ]);
-  return { videos, relaxed: relaxed && videos.length > 0, subcategories: subs, instructors, products };
+  return { videos, relaxed, subcategories: subs, instructors, products };
 }
 
 async function cuponeraProductsFor(words: string[], staff: boolean, now: Date): Promise<CuponeraProduct[]> {

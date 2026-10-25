@@ -8,6 +8,7 @@ import { LIBRARY_SIGNUP } from "@/lib/library/texts";
 import {
   EXTRA_THEMES_UP_TO,
   LIBRARY_THEMES,
+  SHORT_UP_TO_SECONDS,
   VIDEO_TAGS_UP_TO,
   VIDEO_TAG_SUGGESTIONS,
   formatDuration,
@@ -303,8 +304,9 @@ export default function LibraryVideosEditor({
     return videos.filter((v) => {
       if (theme && v.theme !== theme && !v.extraThemes.includes(theme)) return false;
       if (sub && !v.subcategories.includes(sub)) return false;
-      if (kind === "cortos" && !(v.kind === "video" && v.inShorties)) return false;
-      if (kind === "videos" && !(v.kind === "video" && !v.inShorties)) return false;
+      // Every video is in the scroll (2026-10-25): by its length now.
+      if (kind === "cortos" && !(v.kind === "video" && (v.durationSeconds ?? 0) <= SHORT_UP_TO_SECONDS)) return false;
+      if (kind === "videos" && !(v.kind === "video" && (v.durationSeconds ?? 0) > SHORT_UP_TO_SECONDS)) return false;
       if (kind === "grabaciones" && v.kind !== "maraton") return false;
       if (show === "visibles" && !v.visible) return false;
       if (show === "ocultos" && v.visible) return false;
@@ -391,7 +393,7 @@ export default function LibraryVideosEditor({
           Videos y grabaciones ({videos.length})
         </CardTitle>
         <p style={{ ...mutedText, marginTop: 0 }}>
-          Todos los videos de la biblioteca: los que publicó la IA desde YouTube, los del equipo y los de las instructoras. El switch lo oculta sin borrarlo;
+          Todos los videos del Taller: los que publicó la IA desde YouTube, los del equipo y los de las instructoras. El switch lo oculta sin borrarlo;
           la papelera lo borra (con «Deshacer»). Un video puede estar en un tema principal y en dos más.
         </p>
 
@@ -501,7 +503,7 @@ export default function LibraryVideosEditor({
 
         {videos.length === 0 ? (
           <p style={{ ...mutedText, padding: "12px 0", borderTop: "1px solid #efece7", margin: 0 }}>
-            Todavía no hay videos. Mientras tanto, el equipo ve ejemplos inventados en la biblioteca.
+            Todavía no hay videos. Mientras tanto, el equipo ve ejemplos inventados en El Taller.
           </p>
         ) : list.length === 0 ? (
           <p style={{ ...mutedText, padding: "12px 0", borderTop: "1px solid #efece7", margin: 0 }}>Ningún video con estos filtros.</p>
@@ -536,7 +538,6 @@ export default function LibraryVideosEditor({
                       {v.origin === "instructora" && <Pill tone="pink">De una instructora</Pill>}
                       {v.kind === "maraton" && <Pill tone="grey">Grabación</Pill>}
                       {LIBRARY_SIGNUP && v.gated && <Pill tone="amber">Con registro</Pill>}
-                      {v.kind === "video" && !v.inShorties && <Pill tone="grey">Fuera de Cortos</Pill>}
                       {v.products.length > 0 && <Pill tone="green">{v.products.length === 1 ? "1 producto" : `${v.products.length} productos`}</Pill>}
                       {!v.visible && <Pill tone="red">Oculto</Pill>}
                       <button
@@ -550,7 +551,7 @@ export default function LibraryVideosEditor({
                       </button>
                     </div>
                   </div>
-                  <a href={`/biblioteca/${v.slug}`} target="_blank" rel="noreferrer" style={{ fontSize: 13 }} title="Ver en la biblioteca">
+                  <a href={`/biblioteca/${v.slug}`} target="_blank" rel="noreferrer" style={{ fontSize: 13 }} title="Ver en El Taller">
                     Ver ↗
                   </a>
                   <Switch checked={v.visible} disabled={busyId === v.id} label={v.visible ? `Ocultar «${v.title}»` : `Mostrar «${v.title}»`} onChange={(next) => setVisible(v, next)} />
@@ -640,7 +641,7 @@ function SubcategoriesCard({ subcategories }: { subcategories: AdminSubcategory[
     <div style={cardStyle}>
       <CardTitle>Subcategorías ({subcategories.length})</CardTitle>
       <p style={{ ...mutedText, marginTop: 0 }}>
-        Grupos dentro de un tema, como Navidad o Halloween. La IA usa estas y crea una nueva solo cuando hay un grupo claro. En la biblioteca se ven
+        Grupos dentro de un tema, como Navidad o Halloween. La IA usa estas y crea una nueva solo cuando hay un grupo claro. En El Taller se ven
         cuando tienen 3 videos o más (y con «Subcategorías» prendido en Textos y secciones). Si a una le pones el nombre de otra, se unen.
       </p>
       {subcategories.map((s) => (
@@ -670,7 +671,7 @@ function SubcategoriesCard({ subcategories }: { subcategories: AdminSubcategory[
             title={`Borrar ${s.name}`}
             disabled={busy === s.id}
             onClick={() => {
-              if (s.videos > 0 && !confirm(`¿Borrar «${s.name}»? Sus ${many(s.videos, "video se queda", "videos se quedan")} en la biblioteca, sin subcategoría.`)) return;
+              if (s.videos > 0 && !confirm(`¿Borrar «${s.name}»? Sus ${many(s.videos, "video se queda", "videos se quedan")} en El Taller, sin subcategoría.`)) return;
               void run(s.id, () => api(`/api/admin/library/subcategories/${s.id}`, { method: "DELETE" }));
             }}
           >
@@ -875,7 +876,7 @@ function VideoForm({
       <div className="field">
         <label htmlFor="video-tags">Etiquetas (hasta {VIDEO_TAGS_UP_TO})</label>
         <TagPicker id="video-tags" value={d.tags} onChange={(tags) => set("tags", tags)} suggestions={VIDEO_TAG_SUGGESTIONS} max={VIDEO_TAGS_UP_TO} />
-        <span style={{ ...mutedText, fontSize: 12 }}>Las palabras con las que se encuentra en la búsqueda; cada una abre sus cortos (nailfest.lat/biblioteca/cortos?tema=polygel).</span>
+        <span style={{ ...mutedText, fontSize: 12 }}>Las palabras con las que se encuentra en la búsqueda; cada una abre sus videos en Explorar (nailfest.lat/biblioteca/cortos?tema=polygel).</span>
       </div>
 
       <div className="field">
@@ -955,15 +956,7 @@ function VideoForm({
       {LIBRARY_SIGNUP && (
         <Check checked={d.gated} onChange={(v) => set("gated", v)} label="Pide registro gratis para verlo" hint="El video se ve después de dejar nombre y correo (lo normal en las grabaciones)." />
       )}
-      <Check checked={d.visible} onChange={(v) => set("visible", v)} label="Visible en la biblioteca" />
-      {d.kind === "video" && (
-        <Check
-          checked={d.inShorties}
-          onChange={(v) => set("inShorties", v)}
-          label="Mostrar en Cortos"
-          hint="Sale en nailfest.lat/biblioteca/cortos, los videos cortos al azar uno tras otro."
-        />
-      )}
+      <Check checked={d.visible} onChange={(v) => set("visible", v)} label="Visible en El Taller" />
       {message && <FormError>{message}</FormError>}
       <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
         <button type="button" style={secondaryButtonStyle} onClick={onClose}>

@@ -39,7 +39,7 @@ export default function LibrarySubmissionsCard({ submissions }: { submissions: A
     <div style={{ ...cardStyle, borderColor: "#d9cff6", background: "#faf8ff" }}>
       <CardTitle>Enviados por instructoras ({submissions.length})</CardTitle>
       <p style={{ ...mutedText, marginTop: 0 }}>
-        Videos que mandaron desde su portal, con su ficha. «Aceptar y editar» lo pasa a la biblioteca apagado, para que lo revises y lo prendas; en su portal sale
+        Videos que mandaron desde su portal, con su ficha. «Aceptar y editar» lo pasa al Taller apagado, para que lo revises y lo prendas; en su portal sale
         «Publicado» cuando lo prendes.
       </p>
       {error && <FormError>{error}</FormError>}

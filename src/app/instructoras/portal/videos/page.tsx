@@ -44,14 +44,14 @@ export default async function MisVideosPage() {
         <h1 className={`pt-h1 ${fraunces.className}`}>Mis videos</h1>
         <div className="pt-card pt-card--accent">
           <p>
-            Envía tus videos con su ficha. El equipo elige cuáles salen en la biblioteca, en las redes y en el correo de Nail Fest, siempre con tu nombre y tus redes. No
+            Envía tus videos con su ficha. El equipo elige cuáles salen en El Taller, en las redes y en el correo de Nail Fest, siempre con tu nombre y tus redes. No
             hay pagos ni garantía de publicación.
           </p>
         </div>
 
         {videos.length > 0 && (
           <div className="pt-card">
-            <h2 className="pt-h3">En la biblioteca</h2>
+            <h2 className="pt-h3">En El Taller</h2>
             {videos.map((v) => (
               <div key={v.id} className="pt-video">
                 <span className="pt-thumb">
@@ -65,7 +65,7 @@ export default async function MisVideosPage() {
                   </small>
                   {settings.published && (
                     <Link href={`/biblioteca/${v.slug}`} className="pt-link">
-                      Ver en la biblioteca
+                      Ver en El Taller
                     </Link>
                   )}
                 </span>

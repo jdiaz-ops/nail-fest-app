@@ -54,7 +54,7 @@ export default function PortalShell({
           <span>
             <b>Vista previa del equipo.</b> {note}
           </span>
-          <Link href="/admin/biblioteca">Ir a Editar biblioteca</Link>
+          <Link href="/admin/biblioteca">Ir a Editar El Taller</Link>
         </div>
       )}
       <header className="bib-header">

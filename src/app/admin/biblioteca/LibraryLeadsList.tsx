@@ -70,7 +70,7 @@ export default function LibraryLeadsList({ leads, pending }: { leads: AdminLead[
         Registros y solicitudes
       </CardTitle>
       <p style={{ ...mutedText, marginTop: 0 }}>
-        El registro gratis de la biblioteca y las postulaciones de instructoras. A nadie se le envió nada automático: escríbele tú y márcalo como
+        El registro gratis (ya no se pide) y las postulaciones de instructoras. A nadie se le envió nada automático: escríbele tú y márcalo como
         atendido. Entre paréntesis, los que faltan por atender.
       </p>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>

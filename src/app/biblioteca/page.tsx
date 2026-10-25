@@ -4,15 +4,15 @@ import { notFound } from "next/navigation";
 import LibraryShell, { libraryStaffNote } from "@/components/library/LibraryShell";
 import { PeopleRow, PlayIcon, RecordingCard, SearchForm, ThemeIcon, VideoCard } from "@/components/library/parts";
 import { getLibraryHome, getLibraryViewer, libraryRobots } from "@/lib/library/data";
-import { LIBRARY_THEMES, SHORTIES_SHOWN_FROM, toneOf, youtubeThumbnail } from "@/lib/library/shared";
+import { LIBRARY_THEMES, SHORTIES_SHOWN_FROM, toneOf, watchHref, youtubeThumbnail } from "@/lib/library/shared";
 import { fraunces } from "@/app/cuponera/fonts";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
-    title: "Biblioteca · Nail Fest",
-    description: "Técnicas, negocio y bioseguridad explicadas por las instructoras Nail Fest, con los productos que usan y sus descuentos.",
+    title: "El Taller · Nail Fest",
+    description: "Clases gratis de uñas con las instructoras Nail Fest: técnicas, negocio y bioseguridad, con los productos que usan y sus descuentos.",
     robots: await libraryRobots("biblioteca"),
   };
 }
@@ -41,9 +41,14 @@ export default async function BibliotecaPage() {
   const hasExamples = shown.some((v) => v.sample) || home.instructors.some((i) => i.sample);
   const themes = LIBRARY_THEMES.filter((t) => (home.themeCounts[t.key] ?? 0) > 0);
   const showSignup = sections.signup && viewer.asksSignup;
-  const showShorties = sections.shorties && sections.shortiesBanner && (viewer.staff || home.shorties >= SHORTIES_SHOWN_FROM);
+  const scrollOpen = sections.shorties && (viewer.staff || home.shorties >= SHORTIES_SHOWN_FROM);
+  const showShorties = scrollOpen && sections.shortiesBanner;
   // The three cards fanned out in Shorties' box: the newest shorts' stills.
   const fan = [0, 1, 2].map((i) => home.newest[i] ?? null);
+  // Under it, the topics with most videos (the themes have their own tiles below).
+  const popularTopics = home.cortosTopics.filter((t) => !LIBRARY_THEMES.some((x) => x.key === t.key)).slice(0, 12);
+  // A video's card opens the scroll from it, with its row after it; its page while the scroll is off.
+  const listOf = (list: { orden?: string }) => (scrollOpen ? list : null);
 
   return (
     <LibraryShell section="biblioteca" viewer={viewer} note={libraryStaffNote(viewer, "biblioteca", hasExamples)}>
@@ -91,11 +96,11 @@ export default async function BibliotecaPage() {
             </span>
           </Link>
         )}
-        {showShorties && home.cortosTopics.length > 1 && (
-          <nav className="bib-topics" aria-label={`${texts.shortiesTitle} por tema`}>
-            <span className="bib-label">{texts.shortiesTitle} por tema</span>
+        {showShorties && popularTopics.length > 1 && (
+          <nav className="bib-topics" aria-label="Temas con más videos">
+            <span className="bib-label">Temas con más videos</span>
             <div className="bib-chips bib-chips--scroll">
-              {home.cortosTopics.slice(0, 12).map((t) => (
+              {popularTopics.map((t) => (
                 <Link key={t.key} href={`/biblioteca/cortos?tema=${t.key}`} className="bib-chip">
                   {t.label}
                 </Link>
@@ -130,10 +135,10 @@ export default async function BibliotecaPage() {
 
         {sections.newest && home.newest.length > 0 && (
           <section className="bib-section">
-            <SectionHead title={texts.newestTitle} href="/biblioteca/buscar?tipo=video" label="Ver todo" />
+            <SectionHead title={texts.newestTitle} href={scrollOpen ? "/biblioteca/cortos?orden=nuevo" : "/biblioteca/buscar"} label="Ver todo" />
             <div className="bib-rail">
               {home.newest.map((v) => (
-                <VideoCard key={v.id} video={v} />
+                <VideoCard key={v.id} video={v} href={watchHref(v.slug, listOf({ orden: "nuevo" }))} />
               ))}
             </div>
           </section>
@@ -144,7 +149,7 @@ export default async function BibliotecaPage() {
             <SectionHead title={texts.mostViewedTitle} />
             <div className="bib-rail">
               {home.mostViewed.map((v) => (
-                <VideoCard key={v.id} video={v} />
+                <VideoCard key={v.id} video={v} href={watchHref(v.slug, listOf({}))} />
               ))}
             </div>
           </section>
@@ -157,7 +162,7 @@ export default async function BibliotecaPage() {
                 <SectionHead title={texts.recordingsTitle} href="/biblioteca/buscar?tipo=maraton" label="Ver todas" />
                 <div className="bib-mcards">
                   {home.recordings.map((v) => (
-                    <RecordingCard key={v.id} video={v} lockedLabel={texts.lockedLabel} locked={v.gated && viewer.asksSignup} />
+                    <RecordingCard key={v.id} video={v} lockedLabel={texts.lockedLabel} locked={v.gated && viewer.asksSignup} href={watchHref(v.slug, listOf({}))} />
                   ))}
                 </div>
               </section>

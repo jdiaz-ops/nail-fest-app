@@ -91,23 +91,22 @@ describe("reading the channel", () => {
     );
     expect(await fetchUploadsPage("k", "UUabc", null)).toEqual({ ids: ["v1", "v2"], nextPageToken: "NEXT", total: 412 });
 
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(() =>
-        reply(200, {
-          items: [
-            {
-              id: "v1",
-              snippet: { title: "Francesa con polygel", description: "Paso a paso", publishedAt: "2024-03-03T15:00:00Z", liveBroadcastContent: "none", tags: ["polygel", "uñas"] },
-              contentDetails: { duration: "PT58S" },
-              statistics: { viewCount: "12345" },
-              status: { privacyStatus: "public" },
-            },
-            { id: "v2", snippet: { title: "En vivo el jueves", liveBroadcastContent: "upcoming" }, contentDetails: { duration: "P0D" } },
-          ],
-        }),
-      ),
+    const videosCall = vi.fn((_input: URL) =>
+      reply(200, {
+        items: [
+          {
+            id: "v1",
+            snippet: { title: "Francesa con polygel", description: "Paso a paso", publishedAt: "2024-03-03T15:00:00Z", liveBroadcastContent: "none", tags: ["polygel", "uñas"] },
+            contentDetails: { duration: "PT58S" },
+            statistics: { viewCount: "12345" },
+            status: { privacyStatus: "public" },
+            player: { embedHtml: "<iframe>", embedWidth: "563", embedHeight: "1000" },
+          },
+          { id: "v2", snippet: { title: "En vivo el jueves", liveBroadcastContent: "upcoming" }, contentDetails: { duration: "P0D" } },
+        ],
+      }),
     );
+    vi.stubGlobal("fetch", videosCall);
     expect(await fetchVideos("k", ["v1", "v2"])).toEqual([
       {
         youtubeId: "v1",
@@ -118,8 +117,23 @@ describe("reading the channel", () => {
         views: 12345,
         privacy: "public",
         tags: ["polygel", "uñas"],
+        vertical: true,
       },
     ]);
+    // Its shape comes from the size YouTube gives its player.
+    const url = new URL(String(videosCall.mock.calls[0]![0]));
+    expect(url.searchParams.get("part")).toContain("player");
+    expect(url.searchParams.get("maxWidth")).toBe("1000");
+  });
+
+  it("a video's shape: upright when its player is taller than wide; unknown without sizes", async () => {
+    const item = (player?: object) => ({ id: "v1", snippet: { title: "x", liveBroadcastContent: "none" }, contentDetails: { duration: "PT12M" }, ...(player ? { player } : {}) });
+    vi.stubGlobal("fetch", vi.fn(() => reply(200, { items: [item({ embedWidth: 1000, embedHeight: 563 })] })));
+    expect((await fetchVideos("k", ["v1"]))[0]!.vertical).toBe(false);
+    vi.stubGlobal("fetch", vi.fn(() => reply(200, { items: [item({ embedHtml: "<iframe>" })] })));
+    expect((await fetchVideos("k", ["v1"]))[0]!.vertical).toBeNull();
+    vi.stubGlobal("fetch", vi.fn(() => reply(200, { items: [item()] })));
+    expect((await fetchVideos("k", ["v1"]))[0]!.vertical).toBeNull();
   });
 
   it("the channel's playlists, page after page, and each one's videos", async () => {

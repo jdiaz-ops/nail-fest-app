@@ -16,10 +16,10 @@ export const dynamic = "force-dynamic";
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const viewer = await getLibraryViewer();
   const page = viewer.config.published || viewer.staff ? await getLibraryVideoPage(params.slug, viewer) : null;
-  if (!page) return { title: "Biblioteca · Nail Fest", robots: { index: false, follow: false } };
+  if (!page) return { title: "El Taller · Nail Fest", robots: { index: false, follow: false } };
   const robots = await libraryRobots("biblioteca");
   return {
-    title: `${page.video.title} · Biblioteca Nail Fest`,
+    title: `${page.video.title} · El Taller Nail Fest`,
     description: page.video.description ?? undefined,
     robots: page.hidden || page.video.sample ? { index: false, follow: false } : robots,
   };
@@ -47,12 +47,12 @@ export default async function BibliotecaVideoPage({ params }: { params: { slug: 
       <div className="bib-stage">
         <div className="bib-stage-inner">
           <Link href={`/biblioteca/buscar?tema=${video.theme}`} className="bib-crumb">
-            ← Biblioteca · {theme.label}
+            ← El Taller · {theme.label}
           </Link>
           <VideoPlayer
             youtubeId={video.youtubeId}
             title={video.title}
-            wide={video.kind === "maraton"}
+            wide={!video.vertical}
             tone={toneOf(video.slug)}
             durationLabel={length}
             locked={video.gated && !viewer.unlocked}
