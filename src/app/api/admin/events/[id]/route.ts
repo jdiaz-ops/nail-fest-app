@@ -39,6 +39,7 @@ const patchSchema = z.object({
   zoomIsWebinar: z.boolean().optional(),
   landingBlocks: z.array(landingBlockSchema).optional(),
   useLandingBlocks: z.boolean().optional(),
+  theme: z.enum(["NAIL_FEST", "IMPARABLES"]).optional(),
   slug: z.string().optional(),
 });
 
@@ -102,6 +103,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       zoomIsWebinar: data.zoomIsWebinar ?? existing.zoomIsWebinar,
       landingBlocks: data.landingBlocks ?? parseLandingBlocks(existing.landingBlocks),
       useLandingBlocks: data.useLandingBlocks ?? existing.useLandingBlocks,
+      theme: data.theme ?? existing.theme,
       slug: data.slug,
     });
     return NextResponse.json({ ok: true, event });

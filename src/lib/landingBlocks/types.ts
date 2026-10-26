@@ -84,8 +84,11 @@ export interface FaqLandingBlock {
 
 // A section heading ("Invitado especial") with an optional one-paragraph
 // intro under it — what separates one part of the page from the next.
+// `eyebrow` is an optional small label above the title ("SPEAKERS");
+// headings saved before it existed read back with none.
 export interface HeadingLandingBlock {
   type: "heading";
+  eyebrow: string;
   title: string;
   intro: string;
 }
@@ -95,8 +98,8 @@ export interface HeadingLandingBlock {
 export type LandingTone = "teal" | "pink" | "peach";
 export const LANDING_TONES: LandingTone[] = ["teal", "pink", "peach"];
 
-export type LandingCardIcon = "none" | "gift" | "ticket" | "star" | "clock";
-export const LANDING_CARD_ICONS: LandingCardIcon[] = ["none", "gift", "ticket", "star", "clock"];
+export type LandingCardIcon = "none" | "gift" | "ticket" | "star" | "clock" | "shield";
+export const LANDING_CARD_ICONS: LandingCardIcon[] = ["none", "gift", "ticket", "star", "clock", "shield"];
 
 // A highlighted card: small uppercase eyebrow ("LLEGA TEMPRANO"), a
 // title, rich-text body, optional icon. Used for perks, raffles, a
@@ -115,7 +118,8 @@ export interface CardLandingBlock {
 }
 
 // One line of the program. A "day" row is a divider ("Domingo 2 de
-// agosto") — only `chip` and `tone` matter. A "session" row is one
+// agosto") — `chip` and `tone`, plus an optional title for the day in
+// `topic` ("De la mesa a empresaria") and its hours in `text`. A "session" row is one
 // demo/talk, laid out like the Instagram cronograma: the time, the topic
 // ("Tema"), who teaches it, and the brand behind it. `sponsored` marks a
 // brand that bought the slot — that row gets its own tinted box and a
@@ -182,6 +186,16 @@ export interface PointsLandingBlock {
   tone: LandingTone;
 }
 
+// "Tu boleta" on Manicuristas Imparables' page (EventTheme IMPARABLES):
+// today's price, the next one and when it changes, from the event's own
+// ticket types — each price stage is one ticket type with its dates
+// (lib/imparables/stages.ts). Nothing here repeats a price; `note` is the
+// small line under today's price ("IVA del 19% incluido").
+export interface PricesLandingBlock {
+  type: "prices";
+  note: string;
+}
+
 // Reseñas de asistentes (lib/reviews.ts): this event's, the previous
 // edition's in the same city, or every edition's. Renders nothing below
 // three approved reviews — see components/reviews/ReviewsSection.tsx.
@@ -213,7 +227,8 @@ export type LandingBlock = (
   | AgendaLandingBlock
   | VenueLandingBlock
   | PeopleLandingBlock
-  | PointsLandingBlock) & {
+  | PointsLandingBlock
+  | PricesLandingBlock) & {
   // Kept in the editor but left off the public page — for a section that's
   // still being filled in. Absent = visible, so every block saved before
   // this existed stays exactly as it was.
@@ -279,7 +294,7 @@ function parseOne(rec: Record<string, unknown>, result: LandingBlock[]): void {
   } else if (rec.type === "faq" && Array.isArray(rec.items)) {
     result.push({ type: "faq", title: str(rec.title), items: rec.items.filter(isFaqItem) });
   } else if (rec.type === "heading") {
-    result.push({ type: "heading", title: str(rec.title), intro: str(rec.intro) });
+    result.push({ type: "heading", eyebrow: str(rec.eyebrow), title: str(rec.title), intro: str(rec.intro) });
   } else if (rec.type === "card") {
     result.push({
       type: "card",
@@ -324,6 +339,8 @@ function parseOne(rec: Record<string, unknown>, result: LandingBlock[]): void {
   } else if (rec.type === "reviews") {
     const limit = typeof rec.limit === "number" && rec.limit >= 1 ? Math.min(12, Math.floor(rec.limit)) : 6;
     result.push({ type: "reviews", scope: rec.scope === "event" || rec.scope === "global" ? rec.scope : "previous", title: str(rec.title), limit });
+  } else if (rec.type === "prices") {
+    result.push({ type: "prices", note: str(rec.note) });
   } else if (rec.type === "reviewsBadge") {
     result.push({ type: "reviewsBadge", scope: rec.scope === "event" || rec.scope === "previous" ? rec.scope : "global" });
   }

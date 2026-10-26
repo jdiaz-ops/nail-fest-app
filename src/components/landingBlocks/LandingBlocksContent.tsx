@@ -134,8 +134,9 @@ export default function LandingBlocksContent({ blocks, venue, event }: { blocks:
           }
 
           case "heading":
-            return block.title || block.intro ? (
+            return block.title || block.intro || block.eyebrow ? (
               <div key={i} className="landing-section">
+                {block.eyebrow && <span className="landing-section-eyebrow">{block.eyebrow}</span>}
                 {block.title && <h2 className={`landing-section-title ${fraunces.className}`}>{block.title}</h2>}
                 {block.intro && <p className="landing-section-intro">{block.intro}</p>}
               </div>
@@ -265,7 +266,17 @@ function AgendaTime({ chip }: { chip: string }) {
 
 function AgendaRowView({ row }: { row: AgendaRow }) {
   if (row.kind === "day") {
-    return row.chip ? <h3 className={`landing-agenda-day landing-agenda-day--${row.tone} ${fraunces.className}`}>{row.chip}</h3> : null;
+    if (!row.chip) return null;
+    const day = <h3 className={`landing-agenda-day landing-agenda-day--${row.tone} ${fraunces.className}`}>{row.chip}</h3>;
+    // The day's own title and hours, when the program gives them.
+    if (!row.topic && !row.text) return day;
+    return (
+      <div className="landing-agenda-dayhead">
+        {day}
+        {row.topic && <strong className="landing-agenda-day-title">{row.topic}</strong>}
+        {row.text && <span className="landing-agenda-day-hours">{row.text}</span>}
+      </div>
+    );
   }
 
   // Rows saved before topic/instructor existed keep everything in `text`.
@@ -346,6 +357,13 @@ function CardIcon({ icon }: { icon: LandingCardIcon }) {
         <svg {...common}>
           <circle cx="12" cy="12" r="10" />
           <path d="M12 6v6l4 2" />
+        </svg>
+      );
+    case "shield":
+      return (
+        <svg {...common}>
+          <path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.4 7.5 9.5 4.3-1.1 7.5-4.9 7.5-9.5V6z" />
+          <path d="m8.8 12.2 2.3 2.3 4.3-4.6" />
         </svg>
       );
     default:

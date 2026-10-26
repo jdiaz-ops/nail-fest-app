@@ -9,9 +9,10 @@ describe("hidden landing blocks", () => {
       { type: "heading", title: "Agenda", intro: "" },
       { type: "nonsense", hidden: true },
     ]);
+    // Headings saved before the eyebrow existed read back with none.
     expect(blocks).toEqual([
-      { type: "heading", title: "Regalos y sorteos", intro: "", hidden: true },
-      { type: "heading", title: "Agenda", intro: "" },
+      { type: "heading", eyebrow: "", title: "Regalos y sorteos", intro: "", hidden: true },
+      { type: "heading", eyebrow: "", title: "Agenda", intro: "" },
     ]);
   });
 

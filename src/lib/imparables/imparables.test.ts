@@ -1,0 +1,186 @@
+import { existsSync } from "fs";
+import path from "path";
+import { describe, expect, it } from "vitest";
+import { landingBlockSchema } from "@/lib/landingBlocks/schema";
+import { parseLandingBlocks } from "@/lib/landingBlocks/types";
+import { castOf } from "./blocks";
+import { agendaInstant, eventWhen, readClock } from "./schedule";
+import { inDays, pesos, salesState, stageDates, type StageTicketType } from "./stages";
+import { IMPARABLES_BLOCKS, IMPARABLES_STAGES } from "./template";
+
+const TZ = "America/Bogota";
+const at = (iso: string) => new Date(iso);
+const STARTS = at("2027-06-27T09:00:00-05:00");
+
+const stages = (remaining = [3000, 3000, 3000]): StageTicketType[] =>
+  IMPARABLES_STAGES.map((s, i) => ({
+    id: `t${i}`,
+    name: s.name,
+    price: s.price,
+    status: "ON_SALE",
+    hideUntil: at(s.opensAt),
+    hideAfter: at(s.closesAt),
+    remaining: remaining[i]!,
+    order: i,
+  }));
+
+describe("salesState", () => {
+  it("takes names for the waiting list before the first stage, counting down to it", () => {
+    const state = salesState(stages(), at("2027-01-15T10:00:00-05:00"), STARTS);
+    expect(state.mode).toBe("waitlist");
+    expect(state.current).toBeNull();
+    expect(state.next?.name).toBe("Preventa");
+    expect(state.countdown).toEqual({ to: at("2027-02-27T00:00:00-05:00"), label: "La venta abre en" });
+  });
+
+  it("sells today's stage and counts down to when its price ends", () => {
+    const state = salesState(stages(), at("2027-03-01T10:00:00-05:00"), STARTS);
+    expect(state.mode).toBe("sale");
+    expect(state.current?.name).toBe("Preventa");
+    expect(state.next?.name).toBe("General");
+    expect(state.countdown).toEqual({ to: at("2027-04-01T00:00:00-05:00"), label: "Este precio termina en" });
+    expect(state.stages.map((s) => s.state)).toEqual(["current", "future", "future"]);
+  });
+
+  it("counts down to the congress in the last stage", () => {
+    const state = salesState(stages(), at("2027-06-22T10:00:00-05:00"), STARTS);
+    expect(state.current?.name).toBe("Última semana");
+    expect(state.next).toBeNull();
+    expect(state.countdown).toEqual({ to: STARTS, label: "El congreso empieza en" });
+    expect(state.stages.map((s) => s.state)).toEqual(["past", "past", "current"]);
+  });
+
+  it("closes after the last stage", () => {
+    const state = salesState(stages(), at("2027-06-28T10:00:00-05:00"), STARTS);
+    expect(state.mode).toBe("closed");
+    expect(state.countdown).toBeNull();
+  });
+
+  it("goes back to the waiting list when a stage sells out before the next one opens", () => {
+    const state = salesState(stages([0, 3000, 3000]), at("2027-03-15T10:00:00-05:00"), STARTS);
+    expect(state.mode).toBe("waitlist");
+    expect(state.stages[0]!.state).toBe("soldout");
+    expect(state.next?.name).toBe("General");
+  });
+
+  it("ignores ticket types that aren't on sale", () => {
+    const types = stages().map((t, i) => (i === 0 ? { ...t, status: "HIDDEN" } : t));
+    const state = salesState(types, at("2027-03-01T10:00:00-05:00"), STARTS);
+    expect(state.stages.map((s) => s.name)).toEqual(["General", "Última semana"]);
+    expect(state.mode).toBe("waitlist");
+  });
+});
+
+describe("how prices and dates read", () => {
+  it("writes pesos with dots", () => {
+    expect(pesos(79_900)).toBe("$79.900");
+    expect(pesos(119_900)).toBe("$119.900");
+    expect(pesos(1_000_000)).toBe("$1.000.000");
+    expect(pesos(900)).toBe("$900");
+  });
+
+  it("gives each stage its days, the last one being the day before it closes", () => {
+    const [preventa, general, ultima] = salesState(stages(), at("2027-01-01T00:00:00-05:00"), STARTS).stages;
+    expect(stageDates(preventa!, TZ)).toBe("27 feb – 31 mar");
+    expect(stageDates(general!, TZ)).toBe("1 abr – 20 jun");
+    expect(stageDates(ultima!, TZ)).toBe("21 – 26 jun");
+    expect(stageDates({ opensAt: null, closesAt: at("2027-04-01T00:00:00-05:00") }, TZ)).toBe("hasta 31 mar");
+  });
+
+  it("says how long until the price goes up in calendar days", () => {
+    const up = at("2027-04-01T00:00:00-05:00");
+    expect(inDays(up, at("2027-03-01T10:00:00-05:00"), TZ)).toBe("en 31 días");
+    expect(inDays(up, at("2027-03-31T23:30:00-05:00"), TZ)).toBe("mañana");
+    expect(inDays(at("2027-03-31T20:00:00-05:00"), at("2027-03-31T09:00:00-05:00"), TZ)).toBe("hoy");
+  });
+});
+
+describe("eventWhen", () => {
+  it("names the congress's two days and their shared hours", () => {
+    const when = eventWhen(
+      {
+        startsAt: STARTS,
+        endsAt: at("2027-06-28T14:00:00-05:00"),
+        scheduleDays: [
+          { opensAt: "2027-06-28T14:00:00.000Z", closesAt: "2027-06-28T19:00:00.000Z" },
+          { opensAt: "2027-06-27T14:00:00.000Z", closesAt: "2027-06-27T19:00:00.000Z" },
+        ],
+      },
+      TZ
+    );
+    expect(when).toEqual({
+      dates: "Domingo 27 y lunes 28 de junio de 2027",
+      hours: "9:00 a. m. a 2:00 p. m.",
+      short: "27 y 28 de junio",
+      days: ["2027-06-27", "2027-06-28"],
+    });
+  });
+
+  it("reads a single span over two days the same way", () => {
+    const when = eventWhen({ startsAt: STARTS, endsAt: at("2027-06-28T14:00:00-05:00") }, TZ);
+    expect(when.dates).toBe("Domingo 27 y lunes 28 de junio de 2027");
+    expect(when.hours).toBe("9:00 a. m. a 2:00 p. m.");
+    expect(when.days).toEqual(["2027-06-27", "2027-06-28"]);
+  });
+
+  it("leaves the hours out when the days keep different ones", () => {
+    const when = eventWhen(
+      {
+        startsAt: STARTS,
+        endsAt: null,
+        scheduleDays: [
+          { opensAt: "2027-06-27T14:00:00.000Z", closesAt: "2027-06-27T19:00:00.000Z" },
+          { opensAt: "2027-06-28T15:00:00.000Z", closesAt: "2027-06-28T19:00:00.000Z" },
+        ],
+      },
+      TZ
+    );
+    expect(when.hours).toBeNull();
+  });
+});
+
+describe("the program's hours", () => {
+  it("reads the times people write", () => {
+    expect(readClock("9:15 a. m.")).toEqual([9, 15]);
+    expect(readClock("12:05 p. m.")).toEqual([12, 5]);
+    expect(readClock("1:00 p. m.")).toEqual([13, 0]);
+    expect(readClock("12:30 a. m.")).toEqual([0, 30]);
+    expect(readClock("14:30")).toEqual([14, 30]);
+    expect(readClock("Mediodía")).toBeNull();
+  });
+
+  it("places a line of the program at its instant", () => {
+    expect(agendaInstant("2027-06-27", "9:15 a. m.", TZ)).toBe("2027-06-27T14:15:00.000Z");
+    expect(agendaInstant("2027-06-28", "1:50 p. m.", TZ)).toBe("2027-06-28T18:50:00.000Z");
+    expect(agendaInstant(undefined, "9:15 a. m.", TZ)).toBeNull();
+  });
+});
+
+describe("the template", () => {
+  it("is made of blocks the editor and the API accept as they are", () => {
+    for (const block of IMPARABLES_BLOCKS) expect(landingBlockSchema.safeParse(block).success).toBe(true);
+    expect(parseLandingBlocks(JSON.parse(JSON.stringify(IMPARABLES_BLOCKS)))).toEqual(IMPARABLES_BLOCKS);
+  });
+
+  it("has the 8 speakers and one panel, every photo in the app", () => {
+    const { speakers, panels } = castOf(IMPARABLES_BLOCKS);
+    expect(speakers.map((s) => s.name)).toEqual(["Jimena", "Pau", "Juan Tenorio", "Cris Sierra", "Maris", "Fabi", "Alejandro Salinas", "Oskar"]);
+    expect(panels).toBe(1);
+    const photos = JSON.stringify(IMPARABLES_BLOCKS).match(/\/imparables\/[a-z]+\.jpg/g) ?? [];
+    expect(photos.length).toBeGreaterThan(8);
+    for (const photo of new Set(photos)) expect(existsSync(path.join(process.cwd(), "public", photo))).toBe(true);
+  });
+
+  it("fits each day of the program between 9:00 a. m. and 2:00 p. m.", () => {
+    const agenda = IMPARABLES_BLOCKS.find((b) => b.type === "agenda");
+    if (agenda?.type !== "agenda") throw new Error("no agenda");
+    const times = agenda.rows.filter((r) => r.kind === "session").map((r) => readClock(r.chip)!);
+    for (const [h, m] of times) expect(h * 60 + m >= 9 * 60 && h * 60 + m < 14 * 60).toBe(true);
+    expect(agenda.rows.filter((r) => r.kind === "day")).toHaveLength(2);
+  });
+
+  it("chains the price stages without gaps", () => {
+    for (let i = 1; i < IMPARABLES_STAGES.length; i++) expect(IMPARABLES_STAGES[i]!.opensAt).toBe(IMPARABLES_STAGES[i - 1]!.closesAt);
+    expect(IMPARABLES_STAGES.map((s) => s.price)).toEqual([79_900, 99_900, 119_900]);
+  });
+});

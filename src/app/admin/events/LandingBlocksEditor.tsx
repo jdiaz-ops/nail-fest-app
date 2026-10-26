@@ -26,9 +26,13 @@ import {
 export default function LandingBlocksEditor({
   blocks,
   onChange,
+  theme = "NAIL_FEST",
 }: {
   blocks: LandingBlock[];
   onChange: (blocks: LandingBlock[]) => void;
+  // The event's EventTheme: Manicuristas Imparables' page offers its
+  // "Precios por etapas" block and says how it draws the others.
+  theme?: "NAIL_FEST" | "IMPARABLES";
 }) {
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [overIndex, setOverIndex] = useState<number | null>(null);
@@ -46,7 +50,7 @@ export default function LandingBlocksEditor({
             : type === "faq"
               ? { type: "faq", title: "", items: [] }
               : type === "heading"
-                ? { type: "heading", title: "", intro: "" }
+                ? { type: "heading", eyebrow: "", title: "", intro: "" }
                 : type === "card"
                   ? { type: "card", eyebrow: "", title: "", html: "", icon: "none", tone: "pink", imageUrl: "" }
                   : type === "agenda"
@@ -59,6 +63,8 @@ export default function LandingBlocksEditor({
                         ? { type: "reviews", scope: "previous", title: "", limit: 6 }
                         : type === "reviewsBadge"
                           ? { type: "reviewsBadge", scope: "global" }
+                          : type === "prices"
+                            ? { type: "prices", note: "IVA del 19% incluido" }
                       : { type: "people", items: [{ name: "", handle: "", tag: "", photoUrl: "", tone: "pink" }] };
     onChange([...blocks, block]);
   }
@@ -95,6 +101,14 @@ export default function LandingBlocksEditor({
 
   return (
     <div>
+      {theme === "IMPARABLES" && (
+        <div style={{ fontSize: 12.5, lineHeight: 1.5, color: "#3b2f12", background: "#fbf3dc", border: "1px solid #f0dca6", borderRadius: 8, padding: "10px 12px", marginBottom: 12 }}>
+          <strong>Diseño Manicuristas Imparables.</strong> Cada «Título de sección» abre una sección nueva (con fondo alterno). Una «Tarjeta
+          destacada» con foto se dibuja como la maestra de ceremonias; sin foto y seguida de «Personas», como el panel; sin foto y con una
+          lista, como una caja de puntos (con ✕ si su etiqueta empieza por «No»); sin foto, como una frase grande. Los precios salen de las
+          entradas del evento.
+        </div>
+      )}
       {blocks.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 }}>
           {blocks.map((block, i) => (
@@ -187,17 +201,20 @@ export default function LandingBlocksEditor({
               {block.type === "points" && <PointsBlockEditor block={block} onChange={(b) => updateAt(i, b)} />}
               {block.type === "reviews" && <ReviewsBlockEditor block={block} onChange={(b) => updateAt(i, b)} />}
               {block.type === "reviewsBadge" && <ReviewsBadgeBlockEditor block={block} onChange={(b) => updateAt(i, b)} />}
+              {block.type === "prices" && <PricesBlockEditor block={block} theme={theme} onChange={(b) => updateAt(i, b)} />}
             </div>
           ))}
         </div>
       )}
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-        {(Object.keys(BLOCK_LABELS) as LandingBlock["type"][]).map((type) => (
-          <button key={type} type="button" onClick={() => addBlock(type)} className="secondary" style={addButtonStyle}>
-            + {BLOCK_LABELS[type]}
-          </button>
-        ))}
+        {(Object.keys(BLOCK_LABELS) as LandingBlock["type"][])
+          .filter((type) => type !== "prices" || theme === "IMPARABLES")
+          .map((type) => (
+            <button key={type} type="button" onClick={() => addBlock(type)} className="secondary" style={addButtonStyle}>
+              + {BLOCK_LABELS[type]}
+            </button>
+          ))}
       </div>
     </div>
   );
@@ -218,6 +235,7 @@ const BLOCK_LABELS: Record<LandingBlock["type"], string> = {
   faq: "Preguntas frecuentes",
   reviews: "Reseñas de asistentes",
   reviewsBadge: "Insignia de reseñas",
+  prices: "Precios por etapas",
 };
 
 const TONE_LABELS: Record<LandingTone, string> = { teal: "Turquesa", pink: "Rosa", peach: "Durazno" };
@@ -227,6 +245,7 @@ const ICON_LABELS: Record<(typeof LANDING_CARD_ICONS)[number], string> = {
   ticket: "Boleta",
   star: "Estrella",
   clock: "Reloj",
+  shield: "Escudo (garantía)",
 };
 
 // Every image block goes through the same compression as the hero and
@@ -678,6 +697,11 @@ function HeadingBlockEditor({
 }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <input
+        value={block.eyebrow}
+        onChange={(e) => onChange({ ...block, eyebrow: e.target.value })}
+        placeholder="Etiqueta pequeña arriba (ej. SPEAKERS) — opcional"
+      />
       <input value={block.title} onChange={(e) => onChange({ ...block, title: e.target.value })} placeholder="Título (ej. Invitado especial)" />
       <textarea
         value={block.intro}
@@ -862,6 +886,18 @@ function AgendaBlockEditor({
                 style={{ flex: "1 1 180px" }}
               />
               {controls}
+              <input
+                value={row.topic}
+                onChange={(e) => updateRow(i, { ...row, topic: e.target.value })}
+                placeholder="Título del día (opcional, ej. De la mesa a empresaria)"
+                style={{ flex: "1 1 100%" }}
+              />
+              <input
+                value={row.text}
+                onChange={(e) => updateRow(i, { ...row, text: e.target.value })}
+                placeholder="Horario (opcional, ej. 9:00 a. m. a 2:00 p. m.)"
+                style={{ flex: "1 1 100%" }}
+              />
             </div>
           );
         }
@@ -941,6 +977,29 @@ function AgendaBlockEditor({
           + Día
         </button>
       </div>
+    </div>
+  );
+}
+
+// "Tu boleta": only the line under today's price is typed here — the prices
+// and their dates are the event's own ticket types (lib/imparables/stages.ts).
+function PricesBlockEditor({
+  block,
+  theme,
+  onChange,
+}: {
+  block: Extract<LandingBlock, { type: "prices" }>;
+  theme: "NAIL_FEST" | "IMPARABLES";
+  onChange: (block: LandingBlock) => void;
+}) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <input value={block.note} onChange={(e) => onChange({ ...block, note: e.target.value })} placeholder="Línea bajo el precio (ej. IVA del 19% incluido)" />
+      <p style={{ fontSize: 12, color: "#5b5f6b", margin: 0 }}>
+        El precio de hoy, el siguiente y el contador salen de la pestaña Entradas: cada etapa es un tipo de entrada con sus fechas («Ocultar
+        hasta» y «Ocultar después», en las opciones avanzadas). Antes de la primera etapa, la página muestra la lista de espera.
+        {theme !== "IMPARABLES" && " Este bloque solo se ve con el diseño Manicuristas Imparables."}
+      </p>
     </div>
   );
 }

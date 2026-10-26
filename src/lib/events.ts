@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { Prisma } from "@prisma/client";
-import type { Event, EventStatus, EventFormat } from "@prisma/client";
+import type { Event, EventStatus, EventFormat, EventTheme } from "@prisma/client";
 import { sanitizeEventDescription } from "@/lib/sanitizeHtml";
 import { createTicketType } from "@/lib/ticketTypes";
 import type { EventScheduleDay } from "@/lib/eventSchedule";
@@ -82,6 +82,8 @@ export interface EventInput {
   // See Event.landingBlocks/useLandingBlocks's own schema comments.
   landingBlocks: LandingBlock[];
   useLandingBlocks: boolean;
+  // See EventTheme's own schema comment.
+  theme: EventTheme;
   // Only used on create when the admin wants a specific URL instead of
   // the auto-generated one (e.g. matching an already-promoted link from
   // our previous ticketing platform) — left blank, the name is slugified instead.
@@ -120,6 +122,7 @@ export async function createEvent(input: EventInput): Promise<Event> {
       zoomIsWebinar: input.zoomIsWebinar,
       landingBlocks: sanitizeLandingBlocks(input.landingBlocks) as unknown as Prisma.InputJsonValue,
       useLandingBlocks: input.useLandingBlocks,
+      theme: input.theme,
     },
   });
 }
@@ -156,6 +159,7 @@ export async function updateEvent(id: string, input: EventInput): Promise<Event>
       zoomIsWebinar: input.zoomIsWebinar,
       landingBlocks: sanitizeLandingBlocks(input.landingBlocks) as unknown as Prisma.InputJsonValue,
       useLandingBlocks: input.useLandingBlocks,
+      theme: input.theme,
     },
   });
 }
@@ -216,6 +220,7 @@ export async function duplicateEvent(sourceId: string): Promise<Event> {
       zoomIsWebinar: source.zoomIsWebinar,
       landingBlocks: source.landingBlocks as Prisma.InputJsonValue,
       useLandingBlocks: source.useLandingBlocks,
+      theme: source.theme,
     },
   });
   for (const tt of source.ticketTypes.sort((a, b) => a.order - b.order)) {

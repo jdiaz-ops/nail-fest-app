@@ -15,6 +15,8 @@ const fraunces = Fraunces({ subsets: ["latin"], weight: ["600", "900"] });
 
 type EventStatus = "DRAFT" | "PUBLISHED";
 type EventFormat = "IN_PERSON" | "VIRTUAL" | "HYBRID";
+// See EventTheme's own schema comment.
+type EventTheme = "NAIL_FEST" | "IMPARABLES";
 
 export interface EventFormValues {
   id?: string;
@@ -42,6 +44,8 @@ export interface EventFormValues {
   // is the switch between it and the plain `description` field above.
   landingBlocks: LandingBlock[];
   useLandingBlocks: boolean;
+  // How the public page looks — see EventTheme's own schema comment.
+  theme: EventTheme;
   imageUrl: string | null;
   // See Event.galleryImageUrls's own schema comment.
   galleryImageUrls: string[];
@@ -82,6 +86,7 @@ export interface DuplicateSource {
   description: string;
   landingBlocks: LandingBlock[];
   useLandingBlocks: boolean;
+  theme: EventTheme;
   imageUrl: string | null;
   galleryImageUrls: string[];
   galleryTitle: string;
@@ -114,6 +119,7 @@ export default function EventForm({
   duplicateFrom,
   ticketsSlot,
   publicationActions,
+  waitlist,
 }: {
   title: string;
   initial: EventFormValues;
@@ -127,6 +133,9 @@ export default function EventForm({
   ticketsSlot?: React.ReactNode;
   // Duplicate / delete buttons for the Publicación tab (existing events).
   publicationActions?: React.ReactNode;
+  // The event's waiting list (Manicuristas Imparables' page): its CRM label
+  // and how many people carry it. Existing events only.
+  waitlist?: { label: string; count: number };
 }) {
   const router = useRouter();
   const [values, setValues] = useState(initial);
@@ -145,6 +154,9 @@ export default function EventForm({
   const [openCards, setOpenCards] = useState<Set<CardId>>(() => new Set(["contenido"]));
   const [baseline, setBaseline] = useState(() => JSON.stringify(initial));
   const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [templating, setTemplating] = useState(false);
+  // Set right before reloading on purpose (after the template), so leaving doesn't ask.
+  const leaving = useRef(false);
   const dirty = JSON.stringify(values) !== baseline;
 
   // The tab lives in the address (#pagina…) so a reload, or a link from
@@ -162,6 +174,7 @@ export default function EventForm({
   useEffect(() => {
     if (!dirty) return;
     function onBeforeUnload(e: BeforeUnloadEvent) {
+      if (leaving.current) return;
       e.preventDefault();
       e.returnValue = "";
     }
@@ -208,6 +221,35 @@ export default function EventForm({
     setValues((v) => ({ ...v, [key]: value }));
   }
 
+  // «Usar la plantilla de Manicuristas Imparables»: saved by the server
+  // (/api/admin/events/[id]/plantilla-imparables), then the editor reloads
+  // with it. Any other unsaved change would be lost, so those go first.
+  async function applyImparablesTemplate() {
+    if (!initial.id) return;
+    const saved = JSON.parse(baseline) as EventFormValues;
+    if (JSON.stringify({ ...values, theme: saved.theme, useLandingBlocks: saved.useLandingBlocks }) !== baseline) {
+      setError("Guarda tus cambios primero (botón Guardar cambios) y luego usa la plantilla.");
+      return;
+    }
+    const replaced = values.landingBlocks.length
+      ? `\n\nOjo: reemplaza los ${values.landingBlocks.length} bloques que tiene hoy el contenido.`
+      : "";
+    const ok = confirm(
+      `La página queda como el boceto: gancho, speakers, panel, maestra de ceremonias, agenda, qué incluye, ¿es para ti?, precios con garantía, preguntas y patrocinadores (ocultos hasta que haya logos).${replaced}\n\nTambién pone la bajada, la frase de cierre y el texto del botón si están vacíos, y crea las 3 etapas de precio si el evento no tiene entradas. No cambia fechas ni Zoom, y no le envía nada a nadie.`
+    );
+    if (!ok) return;
+    setTemplating(true);
+    setError(null);
+    const res = await fetch(`/api/admin/events/${initial.id}/plantilla-imparables`, { method: "POST" });
+    if (!res.ok) {
+      setTemplating(false);
+      setError("No se pudo aplicar la plantilla. Intenta de nuevo.");
+      return;
+    }
+    leaving.current = true;
+    window.location.reload();
+  }
+
   function applyDuplicate(id: string) {
     const source = duplicateFrom?.find((d) => d.id === id);
     if (!source) return;
@@ -224,6 +266,7 @@ export default function EventForm({
       description: source.description,
       landingBlocks: source.landingBlocks,
       useLandingBlocks: source.useLandingBlocks,
+      theme: source.theme,
       imageUrl: source.imageUrl,
       galleryImageUrls: source.galleryImageUrls,
       galleryTitle: source.galleryTitle,
@@ -393,6 +436,7 @@ export default function EventForm({
       description: values.description.trim(),
       landingBlocks: values.landingBlocks,
       useLandingBlocks: values.useLandingBlocks,
+      theme: values.theme,
       imageUrl: values.imageUrl,
       galleryImageUrls: values.galleryImageUrls,
       galleryTitle: values.galleryTitle.trim(),
@@ -834,6 +878,58 @@ export default function EventForm({
 
           {/* ── Página pública ───────────────────────────────────────── */}
           <div role="tabpanel" style={{ display: tab === "pagina" ? "block" : "none" }}>
+            {/* See EventTheme's own schema comment. */}
+            <div style={{ border: "1px solid #e3e1dc", borderRadius: 10, background: "#fff", padding: "14px 16px", marginBottom: 14 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                <span style={{ fontWeight: 600, fontSize: 15 }}>Diseño de la página</span>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <ChoiceButton
+                    active={values.theme === "NAIL_FEST"}
+                    // Back to the saved Nail Fest page: its content mode as it was saved, too.
+                    onClick={() => {
+                      const saved = JSON.parse(baseline) as EventFormValues;
+                      setValues((v) => ({ ...v, theme: "NAIL_FEST", useLandingBlocks: saved.theme === "NAIL_FEST" ? saved.useLandingBlocks : v.useLandingBlocks }));
+                    }}
+                    label="Nail Fest"
+                    hint="el de siempre"
+                  />
+                  <ChoiceButton
+                    active={values.theme === "IMPARABLES"}
+                    onClick={() => setValues((v) => ({ ...v, theme: "IMPARABLES", useLandingBlocks: true }))}
+                    label="Manicuristas Imparables"
+                    hint="azul y dorado"
+                  />
+                </div>
+              </div>
+              {values.theme === "IMPARABLES" && (
+                <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 10 }}>
+                  <p style={{ fontSize: 13, color: "#5b5f6b", margin: 0 }}>
+                    La portada sale del nombre público, la bajada y las fechas (con el horario por día); debajo van los bloques de
+                    «Contenido» en el estilo del congreso, y al final la frase de cierre. Los precios salen de la pestaña Entradas: cada
+                    etapa es un tipo de entrada con sus fechas, y antes de la primera la página recibe la lista de espera. La imagen de
+                    portada y el carrusel no se muestran en este diseño.
+                  </p>
+                  {isEdit && (
+                    <div>
+                      <button
+                        type="button"
+                        onClick={applyImparablesTemplate}
+                        disabled={templating}
+                        style={{ padding: "8px 16px", borderRadius: 999, border: "none", background: "#14256c", color: "#fbe3a0", fontSize: 13, fontWeight: 700, cursor: "pointer", opacity: templating ? 0.6 : 1 }}
+                      >
+                        {templating ? "Aplicando…" : "Usar la plantilla de Manicuristas Imparables"}
+                      </button>
+                    </div>
+                  )}
+                  {waitlist && (
+                    <p style={{ fontSize: 13, margin: 0 }}>
+                      <strong>Lista de espera:</strong> {waitlist.count} {waitlist.count === 1 ? "persona" : "personas"}. Están en el CRM con la
+                      etiqueta «{waitlist.label}»: para avisarles, usa esa etiqueta en un segmento.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
             <p style={{ fontSize: 13, color: "#5b5f6b", margin: "0 0 12px" }}>
               En el mismo orden en que se ve la página, de arriba hacia abajo. Toca una sección para abrirla.
             </p>
@@ -1018,7 +1114,7 @@ export default function EventForm({
                 5,
                 "Contenido",
                 values.useLandingBlocks ? (
-                  <LandingBlocksEditor blocks={values.landingBlocks} onChange={(blocks) => set("landingBlocks", blocks)} />
+                  <LandingBlocksEditor blocks={values.landingBlocks} onChange={(blocks) => set("landingBlocks", blocks)} theme={values.theme} />
                 ) : (
                   <>
                     <div style={{ padding: "12px 14px", borderRadius: 8, background: "#fff8e6", border: "1px solid #f3e2b3", fontSize: 13 }}>

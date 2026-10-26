@@ -7,6 +7,7 @@ import { parseScheduleDays } from "@/lib/eventSchedule";
 import { parseLandingBlocks } from "@/lib/landingBlocks/types";
 import { listTicketTypes } from "@/lib/ticketTypes";
 import { requirePageUser } from "@/lib/auth/guard";
+import { waitlistLabel } from "@/lib/imparables/waitlist";
 import EventForm from "../../EventForm";
 import TicketTypesSection from "../../TicketTypesSection";
 import DuplicateEventButton from "../../DuplicateEventButton";
@@ -23,6 +24,11 @@ export default async function EditEventPage({ params }: { params: { id: string }
     listTicketTypes(params.id),
   ]);
   if (!event) notFound();
+  // Manicuristas Imparables' waiting list: who carries its label.
+  const waitlist =
+    event.theme === "IMPARABLES"
+      ? { label: waitlistLabel(event), count: await db.person.count({ where: { labels: { some: { name: waitlistLabel(event) } } } }) }
+      : undefined;
 
   const baseUrl = (process.env.APP_BASE_URL ?? "").replace(/\/$/, "") || "https://tu-dominio.com";
 
@@ -45,6 +51,7 @@ export default async function EditEventPage({ params }: { params: { id: string }
           description: event.description ?? "",
           landingBlocks: parseLandingBlocks(event.landingBlocks),
           useLandingBlocks: event.useLandingBlocks,
+          theme: event.theme,
           imageUrl: event.imageUrl,
           galleryImageUrls: event.galleryImageUrls,
           galleryTitle: event.galleryTitle ?? "",
@@ -66,6 +73,7 @@ export default async function EditEventPage({ params }: { params: { id: string }
         ticketsSlot={
           <TicketTypesSection
             eventId={event.id}
+            timezone={orgSettings.timezone}
             initialTicketTypes={ticketTypes.map((t) => ({
               id: t.id,
               name: t.name,
@@ -84,6 +92,7 @@ export default async function EditEventPage({ params }: { params: { id: string }
             }))}
           />
         }
+        waitlist={waitlist}
         publicationActions={
           <>
             <DuplicateEventButton eventId={event.id} />

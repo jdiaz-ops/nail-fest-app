@@ -2,7 +2,9 @@ export type MetaStandardEventName =
   | "PageView"
   | "ViewContent"
   | "InitiateCheckout"
-  | "Purchase";
+  | "Purchase"
+  // Joined an event's waiting list (/api/lista-de-espera).
+  | "Lead";
 
 export interface MetaUserData {
   email?: string;

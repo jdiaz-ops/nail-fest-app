@@ -9,9 +9,11 @@ import { db } from "@/lib/db";
 export const REQUIRED_CONSENTS: ConsentPurpose[] = ["LOGISTICS"];
 export const OPTIONAL_CONSENTS: ConsentPurpose[] = ["MARKETING", "ADVERTISING", "WHATSAPP"];
 
+// `registrationId` is null for an answer given outside a registration —
+// joining an event's waiting list (/api/lista-de-espera).
 export async function recordConsents(params: {
   personId: string;
-  registrationId: string;
+  registrationId: string | null;
   granted: Partial<Record<ConsentPurpose, boolean>>;
 }) {
   const purposes = Object.keys(params.granted) as ConsentPurpose[];

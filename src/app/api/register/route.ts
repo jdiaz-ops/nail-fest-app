@@ -233,10 +233,24 @@ export async function POST(req: NextRequest) {
     if (!ticketType || ticketType.eventId !== event.id || ticketType.status !== "ON_SALE") {
       return NextResponse.json({ error: "invalid_ticket_type" }, { status: 400 });
     }
+    // Outside its own dates (hideUntil/hideAfter) a ticket type isn't on
+    // sale even though its status says so — the public page already hides
+    // it then (getPublicTicketTypes); this holds for a page left open past
+    // the change. A price stage (lib/imparables/stages.ts) is exactly that:
+    // its price stops being for sale the moment the next one starts.
+    const now = new Date();
+    if ((ticketType.hideUntil && now < ticketType.hideUntil) || (ticketType.hideAfter && now > ticketType.hideAfter)) {
+      return NextResponse.json({ error: "ticket_window_closed" }, { status: 400 });
+    }
     ticketCount = input.ticketCount ?? 1;
     if (ticketCount < ticketType.minPerOrder || ticketCount > ticketType.maxPerOrder) {
       return NextResponse.json({ error: "invalid_ticket_quantity" }, { status: 400 });
     }
+  } else if ((await db.ticketType.count({ where: { eventId: event.id, price: { gt: 0 } } })) > 0) {
+    // A paid event never registers anyone for free. With no ticket type
+    // picked — none on sale right now: before its first price stage, after
+    // its last — there is nothing to buy yet.
+    return NextResponse.json({ error: "no_ticket_on_sale" }, { status: 400 });
   }
 
   const customFields = input.customFields;

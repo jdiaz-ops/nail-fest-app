@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { headers } from "next/headers";
-import { Suspense } from "react";
+import { Suspense, cache } from "react";
+import type { Metadata } from "next";
 import { Fraunces } from "next/font/google";
 import { db } from "@/lib/db";
 import { probeImageDimensions } from "@/lib/imageDimensions";
@@ -22,29 +23,135 @@ import { parseSalesPageContent } from "@/lib/salesPage/types";
 import LandingBlocksContent from "@/components/landingBlocks/LandingBlocksContent";
 import { parseLandingBlocks } from "@/lib/landingBlocks/types";
 import { publicEventName } from "@/lib/eventDisplayName";
+import { getCurrentUser } from "@/lib/auth/session";
+import { zonedTimeToUtc } from "@/lib/dateFormat";
+import ImparablesPage from "@/components/imparables/ImparablesPage";
+import { imparablesPageData } from "@/lib/imparables/page";
 
 export const dynamic = "force-dynamic";
+
+// One lookup per request, shared by the page and its metadata.
+const findEvent = cache((slug: string) => db.event.findUnique({ where: { slug } }));
+
+// Manicuristas Imparables' page (EventTheme IMPARABLES) names itself in the
+// tab and in a shared link's preview; every other event keeps the site's.
+export async function generateMetadata({ params }: { params: { eventSlug: string } }): Promise<Metadata> {
+  const event = await findEvent(params.eventSlug);
+  if (!event || event.theme !== "IMPARABLES") return {};
+  const name = publicEventName(event);
+  const description = (event.subtitle ?? "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() || `${name}: un congreso de Nail Fest.`;
+  const base = process.env.APP_BASE_URL;
+  return {
+    title: `${name} · Nail Fest`,
+    description,
+    ...(base ? { metadataBase: new URL(base) } : {}),
+    openGraph: { title: name, description, images: [{ url: "/imparables/og.jpg", width: 1200, height: 630 }] },
+  };
+}
 
 // The brand's own display face for the hero's name and date numbers —
 // same one EventRegistration.tsx already loads on this page for the
 // confirmation screen, so no extra font request.
 const fraunces = Fraunces({ subsets: ["latin"], weight: ["900"] });
 
-export default async function EventLandingPage({ params }: { params: { eventSlug: string } }) {
-  const event = await db.event.findUnique({ where: { slug: params.eventSlug } });
+export default async function EventLandingPage({
+  params,
+  searchParams,
+}: {
+  params: { eventSlug: string };
+  searchParams: { fecha?: string | string[] };
+}) {
+  const event = await findEvent(params.eventSlug);
   if (!event) notFound();
+
+  // The team (anyone signed in to the admin) sees a draft as it will look,
+  // with a band that says so; on Imparables' page they can also see it as of
+  // another day (?fecha=2027-03-15: the waiting list, each price stage).
+  const fecha = typeof searchParams.fecha === "string" && /^\d{4}-\d{2}-\d{2}$/.test(searchParams.fecha) ? searchParams.fecha : null;
+  const staff = event.status === "DRAFT" || (event.theme === "IMPARABLES" && fecha) ? await getCurrentUser() : null;
 
   // Draft events (/admin/events) aren't live yet — same gate as our
   // previous ticketing platform's own Draft status. A plain 404 here would be confusing for an
   // admin double-checking a link before publishing (it looks like the
   // event doesn't exist at all instead of "not published yet"), so this
   // shows a clear message and no registration form instead of notFound().
-  if (event.status === "DRAFT") {
+  if (event.status === "DRAFT" && !staff) {
     return (
       <main style={{ maxWidth: 480, margin: "0 auto", padding: "40px 20px", textAlign: "center" }}>
         <h1>{publicEventName(event)}</h1>
         <p style={{ color: "#5b5f6b" }}>Este evento todavía no está publicado.</p>
       </main>
+    );
+  }
+
+  const draftPreview = event.status === "DRAFT";
+  // Manicuristas Imparables: its own page, same checkout.
+  if (event.theme === "IMPARABLES") {
+    const orgSettings = await getOrgSettings();
+    const simulated = staff && fecha ? zonedTimeToUtc(`${fecha}T12:00`, orgSettings.timezone) : null;
+    const now = simulated && !Number.isNaN(simulated.getTime()) ? simulated : new Date();
+    const data = await imparablesPageData(event, orgSettings.timezone, now);
+    const [professionOptions, checkoutQuestions, ticketTypes] =
+      data.sales.mode === "sale" ? await Promise.all([getOrderedProfessionOptions(), getCheckoutQuestions(), getPublicTicketTypes(event.id, now)]) : [[], [], []];
+    if (!staff) {
+      // Same landing count as every event page (see LandingView), never the team's own looks.
+      await db.landingView.create({ data: { eventId: event.id, country: headers().get("x-vercel-ip-country") } }).catch(() => null);
+    }
+    return (
+      <ImparablesPage
+        event={{
+          slug: event.slug,
+          displayName: publicEventName(event),
+          subtitle: event.subtitle,
+          city: event.city,
+          venueName: event.venueName,
+          format: event.format,
+          closingText: event.closingText,
+          registerButtonLabel: event.registerButtonLabel,
+        }}
+        blocks={data.blocks}
+        sales={data.sales}
+        when={data.when}
+        timezone={orgSettings.timezone}
+        now={now}
+        pixelId={data.pixelId}
+        whatsappUrl={data.whatsappUrl}
+        brandName={orgSettings.name}
+        preview={staff ? { draft: draftPreview, simulated: now === simulated ? simulated : null, shortcuts: data.shortcuts } : null}
+        checkout={
+          data.sales.mode === "sale" ? (
+            <Suspense>
+              <EventRegistration
+                layout="modal"
+                eventSlug={event.slug}
+                eventName={publicEventName(event)}
+                eventCity={event.city}
+                eventWhen={data.when.dates}
+                eventVenue=""
+                professionOptions={professionOptions}
+                questions={checkoutQuestions.map((q) => ({
+                  key: q.key,
+                  label: q.label,
+                  type: q.type,
+                  required: q.required,
+                  options: q.options,
+                  locked: q.locked,
+                  nameFormat: q.nameFormat,
+                  confirmEmail: q.confirmEmail,
+                }))}
+                ticketTypes={ticketTypes}
+                registerButtonLabel={event.registerButtonLabel || "Quiero mi boleta"}
+                brandName={orgSettings.name}
+                descriptionHtml={null}
+                galleryImageUrls={[]}
+                galleryTitle={null}
+                ctaNote={null}
+                closingText=""
+              />
+            </Suspense>
+          ) : null
+        }
+      />
     );
   }
 
@@ -62,10 +169,10 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
     // schema comment. Country from Vercel's edge geolocation, free, no
     // external lookup. Never let a hiccup here break the actual page —
     // this is a nice-to-have stat, not something a visitor should ever
-    // see fail as a 500.
-    db.landingView
-      .create({ data: { eventId: event.id, country: headers().get("x-vercel-ip-country") } })
-      .catch(() => null),
+    // see fail as a 500. Not counted for the team's own look at a draft.
+    draftPreview
+      ? Promise.resolve(null)
+      : db.landingView.create({ data: { eventId: event.id, country: headers().get("x-vercel-ip-country") } }).catch(() => null),
   ]);
   const questions: QuestionView[] = checkoutQuestions.map((q) => ({
     key: q.key,
@@ -131,6 +238,7 @@ export default async function EventLandingPage({ params }: { params: { eventSlug
     // on a wide screen.
     <main className="event-page">
       <MetaPixelScript pixelId={metaConnection?.pixelId ?? null} />
+      {draftPreview && <p className="event-draft-band">Vista previa: este evento está en borrador y solo lo ve el equipo.</p>}
 
       {event.imageUrl && imageDimensions && (
         // next/image, not a plain <img> — this is the single most-loaded

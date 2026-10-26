@@ -126,6 +126,15 @@ enum EventFormat {
   HYBRID
 }
 
+// How the public page looks (/[eventSlug]). NAIL_FEST is the page every
+// event has always had; IMPARABLES is Manicuristas Imparables' own blue and
+// gold page (2026-10-26, components/imparables/): the same blocks, the same
+// checkout, drawn in the congress's style, with Nail Fest as organizer.
+enum EventTheme {
+  NAIL_FEST
+  IMPARABLES
+}
+
 model Event {
   id                        String      @id @default(cuid())
   slug                      String      @unique // used in the landing URL, e.g. /bogota-2026
@@ -150,6 +159,8 @@ model Event {
   subtitle                  String?
   city                      String
   format                    EventFormat @default(IN_PERSON)
+  // See EventTheme. NAIL_FEST keeps every existing event's page as it was.
+  theme                     EventTheme  @default(NAIL_FEST)
   // Shown on the public page and in the confirmation email INSTEAD OF
   // venue/address for a VIRTUAL event (and alongside it for HYBRID) —
   // plain text the admin writes themselves (e.g. "el link de acceso
@@ -704,6 +715,8 @@ enum MetaEventName {
   ViewContent
   InitiateCheckout
   Purchase
+  // Someone joined an event's waiting list (/api/lista-de-espera).
+  Lead
 }
 
 enum MetaEventStatus {

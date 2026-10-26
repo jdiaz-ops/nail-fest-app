@@ -1,0 +1,126 @@
+// When Manicuristas Imparables happens, the way its page says it: "Domingo 27
+// y lunes 28 de junio de 2027 · 9:00 a. m. a 2:00 p. m. · hora Colombia",
+// from the event's own days (Event.scheduleDays, else startsAt–endsAt), and
+// the instant of each line of its program, so a visitor in another country
+// sees her own hour next to Colombia's. Names and hours are written here,
+// not left to the runtime's locale data, so they read the same everywhere.
+
+import { utcToZonedInputValue, zonedTimeToUtc } from "@/lib/dateFormat";
+import { parseScheduleDays } from "@/lib/eventSchedule";
+
+const WEEKDAYS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+const MONTHS = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+
+interface LocalTime {
+  /** "2027-06-27" */
+  date: string;
+  year: number;
+  month: number; // 0–11
+  day: number;
+  weekday: number; // 0 = domingo
+  hour: number;
+  minute: number;
+}
+
+function local(date: Date, timezone: string): LocalTime {
+  const value = utcToZonedInputValue(date, timezone);
+  const [y, m, d] = value.slice(0, 10).split("-").map(Number);
+  const [hh, mm] = value.slice(11, 16).split(":").map(Number);
+  return {
+    date: value.slice(0, 10),
+    year: y!,
+    month: m! - 1,
+    day: d!,
+    weekday: new Date(Date.UTC(y!, m! - 1, d!)).getUTCDay(),
+    hour: hh! % 24,
+    minute: mm!,
+  };
+}
+
+/** 9, 0 -> "9:00 a. m."; 14, 0 -> "2:00 p. m." */
+export function clock(hour: number, minute: number): string {
+  return `${hour % 12 === 0 ? 12 : hour % 12}:${String(minute).padStart(2, "0")} ${hour < 12 ? "a. m." : "p. m."}`;
+}
+
+const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+
+/** Which zone's hour the page speaks in: "hora Colombia". */
+export function zoneLabel(timezone: string): string {
+  return timezone === "America/Bogota" ? "hora Colombia" : "";
+}
+
+export interface EventWhen {
+  /** "Domingo 27 y lunes 28 de junio de 2027" */
+  dates: string;
+  /** "9:00 a. m. a 2:00 p. m." when every day keeps the same hours, else null. */
+  hours: string | null;
+  /** "27 y 28 de junio" */
+  short: string;
+  /** Each day's date where it happens ("2027-06-27"), in order: the program's days. */
+  days: string[];
+}
+
+export function eventWhen(event: { startsAt: Date; endsAt: Date | null; scheduleDays?: unknown }, timezone: string): EventWhen {
+  const spans = parseScheduleDays(event.scheduleDays)
+    .sort((a, b) => new Date(a.opensAt).getTime() - new Date(b.opensAt).getTime())
+    .map((d) => ({ opens: local(new Date(d.opensAt), timezone), closes: local(new Date(d.closesAt), timezone) }));
+  let days: LocalTime[];
+  let hours: string | null = null;
+  if (spans.length > 0) {
+    days = spans.map((s) => s.opens);
+    const first = spans[0]!;
+    const same = spans.every((s) => s.opens.hour === first.opens.hour && s.opens.minute === first.opens.minute && s.closes.hour === first.closes.hour && s.closes.minute === first.closes.minute);
+    if (same) hours = `${clock(first.opens.hour, first.opens.minute)} a ${clock(first.closes.hour, first.closes.minute)}`;
+  } else {
+    const start = local(event.startsAt, timezone);
+    const end = event.endsAt ? local(event.endsAt, timezone) : null;
+    days = [start];
+    // Every date from the first to the last (a two-day congress written as one span).
+    if (end && end.date > start.date) {
+      for (let t = Date.UTC(start.year, start.month, start.day) + 86_400_000; t <= Date.UTC(end.year, end.month, end.day); t += 86_400_000) {
+        days.push(local(new Date(t + 12 * 3_600_000), "UTC"));
+      }
+    }
+    if (end) hours = `${clock(start.hour, start.minute)} a ${clock(end.hour, end.minute)}`;
+  }
+
+  const unique = days.filter((d, i) => days.findIndex((o) => o.date === d.date) === i);
+  const first = unique[0]!;
+  const last = unique[unique.length - 1]!;
+  const sameMonth = first.month === last.month && first.year === last.year;
+  const named = (d: LocalTime) => `${WEEKDAYS[d.weekday]} ${d.day}`;
+  const monthYear = `de ${MONTHS[last.month]} de ${last.year}`;
+  let dates: string;
+  let short: string;
+  if (unique.length === 1) {
+    dates = `${named(first)} ${monthYear}`;
+    short = `${first.day} de ${MONTHS[first.month]}`;
+  } else if (unique.length === 2) {
+    dates = sameMonth ? `${named(first)} y ${named(last)} ${monthYear}` : `${named(first)} de ${MONTHS[first.month]} y ${named(last)} ${monthYear}`;
+    short = sameMonth ? `${first.day} y ${last.day} de ${MONTHS[last.month]}` : `${first.day} de ${MONTHS[first.month]} y ${last.day} de ${MONTHS[last.month]}`;
+  } else {
+    dates = sameMonth ? `del ${named(first)} al ${named(last)} ${monthYear}` : `del ${named(first)} de ${MONTHS[first.month]} al ${named(last)} ${monthYear}`;
+    short = sameMonth ? `del ${first.day} al ${last.day} de ${MONTHS[last.month]}` : `del ${first.day} de ${MONTHS[first.month]} al ${last.day} de ${MONTHS[last.month]}`;
+  }
+  return { dates: capitalize(dates), hours, short, days: unique.map((d) => d.date) };
+}
+
+/** "9:15 a. m." -> [9, 15]; "12:05 p. m." -> [12, 5]; "14:30" -> [14, 30]; anything else -> null. */
+export function readClock(chip: string): [number, number] | null {
+  const match = /^(\d{1,2})[:.](\d{2})\s*(?:([ap])\.?\s*m\.?)?/i.exec(chip.trim());
+  if (!match) return null;
+  let hour = Number(match[1]);
+  const minute = Number(match[2]);
+  const half = match[3]?.toLowerCase();
+  if (half === "p" && hour < 12) hour += 12;
+  if (half === "a" && hour === 12) hour = 0;
+  return hour < 24 && minute < 60 ? [hour, minute] : null;
+}
+
+/** The instant a line of the program starts: its day's date and its hour, where the event happens. */
+export function agendaInstant(day: string | undefined, chip: string, timezone: string): string | null {
+  const time = readClock(chip);
+  if (!day || !time) return null;
+  const instant = zonedTimeToUtc(`${day}T${String(time[0]).padStart(2, "0")}:${String(time[1]).padStart(2, "0")}`, timezone);
+  return Number.isNaN(instant.getTime()) ? null : instant.toISOString();
+}

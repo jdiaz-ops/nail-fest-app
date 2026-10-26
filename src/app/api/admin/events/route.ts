@@ -39,6 +39,7 @@ const bodySchema = z.object({
   zoomIsWebinar: z.boolean().default(false),
   landingBlocks: z.array(landingBlockSchema).default([]),
   useLandingBlocks: z.boolean().default(false),
+  theme: z.enum(["NAIL_FEST", "IMPARABLES"]).default("NAIL_FEST"),
   slug: z.string().optional(),
 });
 
@@ -90,6 +91,7 @@ export async function POST(req: NextRequest) {
     zoomIsWebinar: data.zoomIsWebinar,
     landingBlocks: data.landingBlocks,
     useLandingBlocks: data.useLandingBlocks,
+    theme: data.theme,
     slug: data.slug,
   });
   return NextResponse.json({ ok: true, event });

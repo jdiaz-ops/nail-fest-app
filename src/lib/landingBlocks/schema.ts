@@ -23,13 +23,13 @@ export const landingBlockSchema = z.discriminatedUnion("type", [
     title: z.string(),
     items: z.array(z.object({ question: z.string(), answer: z.string() })),
   }),
-  z.object({ type: z.literal("heading"), title: z.string(), intro: z.string() }),
+  z.object({ type: z.literal("heading"), eyebrow: z.string().default(""), title: z.string(), intro: z.string() }),
   z.object({
     type: z.literal("card"),
     eyebrow: z.string(),
     title: z.string(),
     html: z.string(),
-    icon: z.enum(["none", "gift", "ticket", "star", "clock"]),
+    icon: z.enum(["none", "gift", "ticket", "star", "clock", "shield"]),
     tone: z.enum(["teal", "pink", "peach"]),
     imageUrl: z.string().default(""),
   }),
@@ -71,6 +71,8 @@ export const landingBlockSchema = z.discriminatedUnion("type", [
     limit: z.number().int().min(1).max(12).default(6),
   }),
   z.object({ type: z.literal("reviewsBadge"), scope: z.enum(["event", "previous", "global"]).default("global") }),
+  // Imparables' "Tu boleta" — see PricesLandingBlock.
+  z.object({ type: z.literal("prices"), note: z.string().default("") }),
 ])
   // "Oculto" in the editor — see LandingBlock's own hidden flag.
   .and(z.object({ hidden: z.boolean().optional() }));

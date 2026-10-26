@@ -81,6 +81,11 @@ interface Props {
   // Headline of the closing band at the end of the page — the admin's own
   // Event.closingText, or the page's auto-built sentence when that's empty.
   closingText: string;
+  // "modal": only the checkout (the modal, its tracking, ?registrar=1 and
+  // the nailfest:open-registration event), for a page that draws
+  // everything else itself — Manicuristas Imparables' own page
+  // (components/imparables/). Absent = the whole page body, as always.
+  layout?: "page" | "modal";
 }
 
 // One combined checkout step (Shopify-style, per the admin's own call —
@@ -109,6 +114,7 @@ export default function EventRegistration({
   galleryTitle,
   ctaNote,
   closingText,
+  layout = "page",
 }: Props) {
   const hasTicketTypes = ticketTypes.length > 0;
   const [open, setOpen] = useState(false);
@@ -336,7 +342,11 @@ export default function EventRegistration({
                   ? "Justo se agotaron las entradas de este tipo mientras llenabas el formulario."
                   : body?.error === "invalid_ticket_quantity"
                     ? "La cantidad elegida ya no es válida — ajústala arriba."
-                    : "Algo salió mal, intenta de nuevo."
+                    : body?.error === "ticket_window_closed"
+                      ? "Este precio ya cerró. Recarga la página para ver el de hoy."
+                      : body?.error === "no_ticket_on_sale"
+                        ? "Ahora mismo no hay entradas a la venta."
+                        : "Algo salió mal, intenta de nuevo."
       );
       return;
     }
@@ -378,107 +388,111 @@ export default function EventRegistration({
 
   return (
     <>
-      {/* Two-column body on desktop (see globals.css's .event-page-body) —
-          content (inline CTA + description) on the left, a sticky info
-          card repeating date/venue/CTA on the right, same shape as our
-          previous ticketing platform's own event page reads. Below the ~900px breakpoint this
-          collapses to a single column and the sidebar is hidden entirely
-          (display:none) — the mobile experience is untouched, just the
-          inline CTA below and the floating one further down. */}
-      <div className="event-page-body">
-        <div className="event-page-content">
-          {/* Inline CTA — sits in normal page flow at the top of the
-              content column. The ref is what the floating CTA below
-              watches to know when to take over (mobile only). */}
-          <div ref={inlineButtonRef} className="event-inline-cta">
-            <button type="button" className="primary" onClick={openModal}>
-              {registerButtonLabel}
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M5 12h14M13 6l6 6-6 6" />
-              </svg>
-            </button>
-            {ctaNote && <p className="event-cta-note">{ctaNote}</p>}
+      {layout === "page" && (
+        <>
+          {/* Two-column body on desktop (see globals.css's .event-page-body) —
+              content (inline CTA + description) on the left, a sticky info
+              card repeating date/venue/CTA on the right, same shape as our
+              previous ticketing platform's own event page reads. Below the ~900px breakpoint this
+              collapses to a single column and the sidebar is hidden entirely
+              (display:none) — the mobile experience is untouched, just the
+              inline CTA below and the floating one further down. */}
+          <div className="event-page-body">
+            <div className="event-page-content">
+              {/* Inline CTA — sits in normal page flow at the top of the
+                  content column. The ref is what the floating CTA below
+                  watches to know when to take over (mobile only). */}
+              <div ref={inlineButtonRef} className="event-inline-cta">
+                <button type="button" className="primary" onClick={openModal}>
+                  {registerButtonLabel}
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M5 12h14M13 6l6 6-6 6" />
+                  </svg>
+                </button>
+                {ctaNote && <p className="event-cta-note">{ctaNote}</p>}
+              </div>
+
+              {galleryImageUrls.length > 0 && (
+                <>
+                  {galleryTitle && <h2 className={`event-gallery-title ${fraunces.className}`}>{galleryTitle}</h2>}
+                  <EventGalleryCarousel imageUrls={galleryImageUrls} />
+                </>
+              )}
+
+              {salesContent ? (
+                <div className="event-description">{salesContent}</div>
+              ) : landingBlocksContent ? (
+                <div className="event-description">{landingBlocksContent}</div>
+              ) : (
+                descriptionHtml && (
+                  // Sanitized server-side before it was ever stored
+                  // (lib/sanitizeHtml.ts, used by lib/events.ts's
+                  // createEvent/updateEvent) — this is the one place that
+                  // sanitizing has to hold, since this renders on an
+                  // unauthenticated public page.
+                  <div className="event-description" dangerouslySetInnerHTML={{ __html: descriptionHtml }} />
+                )
+              )}
+            </div>
+
+            <aside className="event-page-sidebar">
+              <div className="event-page-sidebar-card">
+                <h2>{eventName}</h2>
+                {/* Fecha/hora deliberadamente NO se repite aquí — ya está
+                    arriba del todo, en el header de la página (ver
+                    [eventSlug]/page.tsx), y quedaba redundante en esta
+                    tarjeta. La tarjeta mantiene el lugar + el CTA. */}
+                {eventVenue && (
+                  <p className="event-page-sidebar-meta">
+                    <PinIcon /> {eventVenue}
+                  </p>
+                )}
+                <button type="button" className="primary" onClick={openModal} style={{ marginTop: 4 }}>
+                  {registerButtonLabel}
+                </button>
+              </div>
+            </aside>
           </div>
 
-          {galleryImageUrls.length > 0 && (
-            <>
-              {galleryTitle && <h2 className={`event-gallery-title ${fraunces.className}`}>{galleryTitle}</h2>}
-              <EventGalleryCarousel imageUrls={galleryImageUrls} />
-            </>
+          {/* Closing band — one last CTA at the very end, after everything
+              the person scrolled through. Full-bleed via CSS (see
+              .event-closing). */}
+          <section className="event-closing" ref={closingRef}>
+            <div className="event-closing-inner">
+              <h2 className={`event-closing-title ${fraunces.className}`}>{closingText}</h2>
+              <button type="button" className="event-closing-button" onClick={openModal}>
+                {registerButtonLabel}
+              </button>
+            </div>
+            <div className="event-closing-footer" aria-hidden="true" />
+          </section>
+          <footer className="event-page-footer">
+            {/* eslint-disable-next-line @next/next/no-img-element -- fixed logo mark, same as the homepage's */}
+            <img src="/logo.png" alt={brandName} className="event-page-footer-logo" />
+            <p className="event-page-footer-tagline">Donde se reúne el mundo de las uñas</p>
+          </footer>
+
+          {/* Floating CTA — mobile only (hidden ≥900px, see globals.css's
+              .event-floating-cta — the sidebar card above is always visible
+              on desktop, so a floating bar on top of it is redundant there).
+              Only once the inline one above has scrolled out of view,
+              centered within the page's own column instead of pinned to the
+              raw viewport edge so it doesn't drift off on a wide screen. */}
+          {!open && showFloating && (
+            <div className="event-floating-cta">
+              <div style={{ width: "100%", maxWidth: 440 }}>
+                <button
+                  type="button"
+                  className="primary"
+                  onClick={openModal}
+                  style={{ boxShadow: "0 8px 24px -6px rgba(0,0,0,0.35)" }}
+                >
+                  {registerButtonLabel}
+                </button>
+              </div>
+            </div>
           )}
-
-          {salesContent ? (
-            <div className="event-description">{salesContent}</div>
-          ) : landingBlocksContent ? (
-            <div className="event-description">{landingBlocksContent}</div>
-          ) : (
-            descriptionHtml && (
-              // Sanitized server-side before it was ever stored
-              // (lib/sanitizeHtml.ts, used by lib/events.ts's
-              // createEvent/updateEvent) — this is the one place that
-              // sanitizing has to hold, since this renders on an
-              // unauthenticated public page.
-              <div className="event-description" dangerouslySetInnerHTML={{ __html: descriptionHtml }} />
-            )
-          )}
-        </div>
-
-        <aside className="event-page-sidebar">
-          <div className="event-page-sidebar-card">
-            <h2>{eventName}</h2>
-            {/* Fecha/hora deliberadamente NO se repite aquí — ya está
-                arriba del todo, en el header de la página (ver
-                [eventSlug]/page.tsx), y quedaba redundante en esta
-                tarjeta. La tarjeta mantiene el lugar + el CTA. */}
-            {eventVenue && (
-              <p className="event-page-sidebar-meta">
-                <PinIcon /> {eventVenue}
-              </p>
-            )}
-            <button type="button" className="primary" onClick={openModal} style={{ marginTop: 4 }}>
-              {registerButtonLabel}
-            </button>
-          </div>
-        </aside>
-      </div>
-
-      {/* Closing band — one last CTA at the very end, after everything
-          the person scrolled through. Full-bleed via CSS (see
-          .event-closing). */}
-      <section className="event-closing" ref={closingRef}>
-        <div className="event-closing-inner">
-          <h2 className={`event-closing-title ${fraunces.className}`}>{closingText}</h2>
-          <button type="button" className="event-closing-button" onClick={openModal}>
-            {registerButtonLabel}
-          </button>
-        </div>
-        <div className="event-closing-footer" aria-hidden="true" />
-      </section>
-      <footer className="event-page-footer">
-        {/* eslint-disable-next-line @next/next/no-img-element -- fixed logo mark, same as the homepage's */}
-        <img src="/logo.png" alt={brandName} className="event-page-footer-logo" />
-        <p className="event-page-footer-tagline">Donde se reúne el mundo de las uñas</p>
-      </footer>
-
-      {/* Floating CTA — mobile only (hidden ≥900px, see globals.css's
-          .event-floating-cta — the sidebar card above is always visible
-          on desktop, so a floating bar on top of it is redundant there).
-          Only once the inline one above has scrolled out of view,
-          centered within the page's own column instead of pinned to the
-          raw viewport edge so it doesn't drift off on a wide screen. */}
-      {!open && showFloating && (
-        <div className="event-floating-cta">
-          <div style={{ width: "100%", maxWidth: 440 }}>
-            <button
-              type="button"
-              className="primary"
-              onClick={openModal}
-              style={{ boxShadow: "0 8px 24px -6px rgba(0,0,0,0.35)" }}
-            >
-              {registerButtonLabel}
-            </button>
-          </div>
-        </div>
+        </>
       )}
 
       {open && (

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { utcToZonedInputValue, zonedTimeToUtc } from "@/lib/dateFormat";
 import TicketTypeModal, { type TicketTypeValues, EMPTY_TICKET_TYPE } from "./TicketTypeModal";
 
 export interface TicketTypeRow {
@@ -30,7 +31,12 @@ const STATUS_BADGE: Record<string, { label: string; bg: string; fg: string }> = 
   ADMIN_ONLY: { label: "Solo visible para admin", bg: "#f6f5f2", fg: "#5b5f6b" },
 };
 
-function toModalValues(t?: TicketTypeRow): TicketTypeValues {
+// The "Ocultar hasta / después" fields show and take the time where the
+// events happen (OrgSettings.timezone), like the event's own dates — not
+// UTC, and not the browser's zone: reading UTC back in made every save of a
+// ticket type move its dates by the zone's offset (2026-10-26, found while
+// making price stages out of them).
+function toModalValues(timezone: string, t?: TicketTypeRow): TicketTypeValues {
   if (!t) return EMPTY_TICKET_TYPE;
   return {
     id: t.id,
@@ -45,9 +51,9 @@ function toModalValues(t?: TicketTypeRow): TicketTypeValues {
     maxPerOrder: t.maxPerOrder,
     issuance: t.issuance as TicketTypeValues["issuance"],
     hasHideUntil: Boolean(t.hideUntil),
-    hideUntil: t.hideUntil ? t.hideUntil.slice(0, 16) : "",
+    hideUntil: t.hideUntil ? utcToZonedInputValue(new Date(t.hideUntil), timezone) : "",
     hasHideAfter: Boolean(t.hideAfter),
-    hideAfter: t.hideAfter ? t.hideAfter.slice(0, 16) : "",
+    hideAfter: t.hideAfter ? utcToZonedInputValue(new Date(t.hideAfter), timezone) : "",
     hideWhenSoldOut: t.hideWhenSoldOut,
     showRemainingOnPage: t.showRemainingOnPage,
   };
@@ -62,7 +68,15 @@ async function api(path: string, init?: RequestInit) {
   return res.json().catch(() => ({}));
 }
 
-export default function TicketTypesSection({ eventId, initialTicketTypes }: { eventId: string; initialTicketTypes: TicketTypeRow[] }) {
+export default function TicketTypesSection({
+  eventId,
+  initialTicketTypes,
+  timezone,
+}: {
+  eventId: string;
+  initialTicketTypes: TicketTypeRow[];
+  timezone: string;
+}) {
   const router = useRouter();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
@@ -82,8 +96,8 @@ export default function TicketTypesSection({ eventId, initialTicketTypes }: { ev
       minPerOrder: v.minPerOrder,
       maxPerOrder: v.maxPerOrder,
       issuance: v.issuance,
-      hideUntil: v.hasHideUntil && v.hideUntil ? new Date(v.hideUntil).toISOString() : null,
-      hideAfter: v.hasHideAfter && v.hideAfter ? new Date(v.hideAfter).toISOString() : null,
+      hideUntil: v.hasHideUntil && v.hideUntil ? zonedTimeToUtc(v.hideUntil, timezone).toISOString() : null,
+      hideAfter: v.hasHideAfter && v.hideAfter ? zonedTimeToUtc(v.hideAfter, timezone).toISOString() : null,
       hideWhenSoldOut: v.hideWhenSoldOut,
       showRemainingOnPage: v.showRemainingOnPage,
     };
@@ -209,7 +223,7 @@ export default function TicketTypesSection({ eventId, initialTicketTypes }: { ev
       {editing && (
         <Modal title="Editar tipo de entrada" onClose={() => setEditingId(null)}>
           <TicketTypeModal
-            initial={toModalValues(editing)}
+            initial={toModalValues(timezone, editing)}
             otherTypesQuantity={otherTypesQuantity(editing.id)}
             busy={busy}
             onSave={handleSave}
