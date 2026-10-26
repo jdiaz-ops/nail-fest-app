@@ -2,7 +2,7 @@ import { Cinzel, Manrope } from "next/font/google";
 import type { EventFormat } from "@prisma/client";
 import MetaPixelScript from "@/components/MetaPixelScript";
 import type { LandingBlock } from "@/lib/landingBlocks/types";
-import { zoneLabel, zoneOffset, type EventWhen } from "@/lib/imparables/schedule";
+import { coverName, zoneLabel, zoneOffset, type EventWhen } from "@/lib/imparables/schedule";
 import { dayMonth, inDays, pesos, type SalesState } from "@/lib/imparables/stages";
 import { utcToZonedInputValue } from "@/lib/dateFormat";
 import { castLine, castOf, coverOf } from "@/lib/imparables/blocks";
@@ -88,7 +88,8 @@ export default function ImparablesPage({
   /** The checkout (EventRegistration as a modal), only while a price is on sale. */
   checkout: React.ReactNode;
 }) {
-  const words = event.displayName.trim().split(/\s+/);
+  // The name is the cover's title; a date in it is left out (the dates are right below).
+  const words = coverName(event.displayName).split(/\s+/);
   const big = words.pop() ?? event.displayName;
   const pre = words.join(" ");
   const live = event.format === "VIRTUAL" ? "Congreso virtual" : event.format === "HYBRID" ? "Presencial y virtual" : "Presencial";
@@ -162,18 +163,11 @@ export default function ImparablesPage({
             <div className="imp-tag" dangerouslySetInnerHTML={{ __html: event.subtitle }} />
           )}
           {cover ? (
-            <>
-              <figure className="imp-group">
-                {/* eslint-disable-next-line @next/next/no-img-element -- admin-uploaded photo, arbitrary Blob URL */}
-                <img src={cover.url} alt={cover.caption || line.names} />
-              </figure>
-              {line.names && (
-                <p className="imp-cast">
-                  <b>{line.names}</b>
-                  {line.also && <span>{line.also}</span>}
-                </p>
-              )}
-            </>
+            // Who is in it goes only to those who can't see it.
+            <figure className="imp-group">
+              {/* eslint-disable-next-line @next/next/no-img-element -- admin-uploaded photo, arbitrary Blob URL */}
+              <img src={cover.url} alt={cover.caption || [line.names, line.also].filter(Boolean).join(", ")} />
+            </figure>
           ) : (
             speakers.length > 0 && (
               <>

@@ -49,6 +49,18 @@ export function zoneLabel(timezone: string): string {
   return timezone === "America/Bogota" ? "hora Colombia" : "";
 }
 
+/** The name on the cover: the public name without the date it may carry
+ * ("Manicuristas Imparables - 27 & 28 Junio 2027" -> "Manicuristas
+ * Imparables"), the dates being right under it. */
+export function coverName(name: string): string {
+  const base = name
+    .trim()
+    .split(/\s+[-–—|·:]\s+/)[0]!
+    .replace(/\s+(19|20)\d{2}$/, "")
+    .trim();
+  return base || name.trim();
+}
+
 export interface EventWhen {
   /** "Domingo 27 y lunes 28 de junio de 2027" */
   dates: string;

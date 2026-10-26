@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { landingBlockSchema } from "@/lib/landingBlocks/schema";
 import { parseLandingBlocks, type LandingBlock } from "@/lib/landingBlocks/types";
 import { castLine, castOf, coverOf, isPanelCard, namesIn } from "./blocks";
-import { agendaInstant, eventWhen, readClock } from "./schedule";
+import { agendaInstant, coverName, eventWhen, readClock } from "./schedule";
 import { inDays, pesos, salesState, stageDates, type StageTicketType } from "./stages";
 import { IMPARABLES_BLOCKS, IMPARABLES_GROUP_PHOTO, IMPARABLES_PANELISTS, IMPARABLES_SPEAKERS, IMPARABLES_STAGES } from "./template";
 
@@ -156,6 +156,16 @@ describe("eventWhen", () => {
     // No shared hours to show in her own hour on the cover; each day still knows when it ends.
     expect(when.span).toBeNull();
     expect(when.ends).toEqual(["2027-06-27T19:00:00.000Z", "2027-06-28T19:00:00.000Z"]);
+  });
+});
+
+describe("the name on the cover", () => {
+  it("leaves out the date the public name carries: it's right below", () => {
+    expect(coverName("Manicuristas Imparables - 27 & 28 Junio 2027")).toBe("Manicuristas Imparables");
+    expect(coverName("Manicuristas Imparables – junio 2027")).toBe("Manicuristas Imparables");
+    expect(coverName("Manicuristas Imparables 2027")).toBe("Manicuristas Imparables");
+    expect(coverName("  Manicuristas Imparables ")).toBe("Manicuristas Imparables");
+    expect(coverName("Imparables")).toBe("Imparables");
   });
 });
 

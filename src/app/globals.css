@@ -4011,22 +4011,6 @@ body:has(.imp) {
   -webkit-mask-image: linear-gradient(180deg, #000 68%, transparent 98%);
   mask-image: linear-gradient(180deg, #000 68%, transparent 98%);
 }
-.imp-cast {
-  margin: -8px auto 0;
-  max-width: 36ch;
-  font-size: 12.5px;
-  line-height: 1.5;
-  color: var(--imp-niebla);
-  text-wrap: balance;
-}
-.imp-cast b {
-  display: block;
-  font-weight: 700;
-  color: var(--imp-marfil);
-}
-.imp-cast span {
-  display: block;
-}
 .imp-when .imp-when-local {
   margin-top: 2px;
   padding-top: 6px;
