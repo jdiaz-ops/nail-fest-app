@@ -72,7 +72,8 @@ export const IMPARABLES_SPEAKERS: ImparablesSpeaker[] = [
   {
     name: "Karen",
     handle: "@karenw.trainer",
-    tag: "Creadora del Método Esencia. Tu esencia es tu marca: deja de copiar y crea tu sello.",
+    // Her talk's title goes right under her line: the line doesn't say it again (2026-10-26).
+    tag: "Creadora del Método Esencia.",
     talk: "Tu esencia es tu marca: deja de copiar y crea tu sello",
     subtitle: "Descubre lo que te hace única y conviértelo en una marca que tus clientas reconozcan y busquen.",
     photoUrl: "",

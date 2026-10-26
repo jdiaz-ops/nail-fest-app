@@ -293,6 +293,10 @@ describe("the template", () => {
     expect(castOf(IMPARABLES_BLOCKS).speakers.some((s) => s.handle === "@maris_nails_oficial")).toBe(false);
   });
 
+  it("never has a card say its talk twice: the line, then the talk's title under it", () => {
+    for (const s of IMPARABLES_SPEAKERS) expect(s.tag.toLowerCase()).not.toContain(s.talk.toLowerCase());
+  });
+
   it("puts each speaker's talk under her name in the program, with its subtitle if it has one", () => {
     const agenda = IMPARABLES_BLOCKS.find((b) => b.type === "agenda");
     if (agenda?.type !== "agenda") throw new Error("no agenda");
