@@ -9,13 +9,12 @@ import type {
   SlidesLandingBlock,
 } from "@/lib/landingBlocks/types";
 import { youtubeVideo } from "@/lib/landingBlocks/types";
-import { agendaInstant, dayEnd, zoneLabel, zoneOffset, type EventWhen } from "@/lib/imparables/schedule";
-import { dayMonth, pesos, saving, stageDates, type SalesState } from "@/lib/imparables/stages";
+import { agendaInstant, dayEnd, type EventWhen } from "@/lib/imparables/schedule";
+import { dayMonth, pesos, saving, type SalesState } from "@/lib/imparables/stages";
 import { isPanelCard, listNames, namesIn } from "@/lib/imparables/blocks";
 import { ImpIcon, Silhouette, iconForPoint, initials, instagramUrl, type ImpIconName } from "./ImpArt";
 import ImpButton from "./ImpButton";
 import ImpCountdown from "./ImpCountdown";
-import ImpLocalTime, { ImpZoneNote } from "./ImpLocalTime";
 import ImpSwipe from "./ImpSwipe";
 
 // Event.landingBlocks drawn in Manicuristas Imparables' style (EventTheme
@@ -461,7 +460,6 @@ function Agenda({ rows, context }: { rows: AgendaRow[]; context: ImparablesConte
   }
   // The n-th day of the program happens on the event's n-th day.
   const instants = days.map((d, i) => d.rows.map((row) => agendaInstant(context.when.days[i], row.chip, context.timezone)));
-  const firstInstant = instants.flat().find((instant): instant is string => Boolean(instant)) ?? null;
   // A day ends when its own header says ("9:00 a. m. a 2:00 p. m."), else when the event's day does.
   const ends = days.map((d, i) => dayEnd(d.head?.text ?? "", context.when.days[i], context.timezone) ?? context.when.ends[i] ?? null);
   const cards = days.map((d, i) => {
@@ -503,7 +501,6 @@ function Agenda({ rows, context }: { rows: AgendaRow[]; context: ImparablesConte
   return (
     <div className="imp-agenda">
       {cards}
-      {firstInstant && <ImpZoneNote zone={zoneLabel(context.timezone)} at={firstInstant} eventOffset={zoneOffset(firstInstant, context.timezone)} />}
     </div>
   );
 }
@@ -556,7 +553,6 @@ function AgendaLine({
         <span className="imp-ag-time">
           <span>{digits}</span>
           {suffix && <small>{suffix}</small>}
-          {instant && <ImpLocalTime instant={instant} eventOffset={zoneOffset(instant, timezone)} />}
           {minutes && <em className="imp-ag-dur">{minutes} min</em>}
         </span>
       )}
@@ -608,7 +604,10 @@ function Prices({ block, context }: { block: PricesLandingBlock; context: Impara
   const { sales, timezone, now, offsetMs } = context;
   if (sales.stages.length === 0) return null;
   const { current, next, countdown, normal } = sales;
-  const STATE_NOTE = { current: " · ahora", past: " · cerrada", soldout: " · agotada", future: "" } as const;
+  // Each stage says where it stands, no dates (2026-10-26): the countdown
+  // tells how long today's price lasts.
+  const STATE_NOTE = { current: "Ahora", past: "Cerrada", soldout: "Agotada", future: "Próximamente" } as const;
+  const STATE_CLASS = { current: "is-on", past: "is-off", soldout: "is-off", future: "is-soon" } as const;
   return (
     <div className="imp-prices">
       {current ? (
@@ -624,9 +623,9 @@ function Prices({ block, context }: { block: PricesLandingBlock; context: Impara
           </div>
           {saving(current, normal) > 0 && <div className="imp-now-save">Ahorras {pesos(saving(current, normal))}</div>}
           {block.note && <div className="imp-now-iva">{block.note}</div>}
-          {next?.opensAt && (
+          {next && (
             <div className="imp-now-up">
-              El {dayMonth(next.opensAt, timezone)} sube a <b>{pesos(next.price)}</b>
+              Después sube a <b>{pesos(next.price)}</b>
             </div>
           )}
           {countdown && <ImpCountdown to={countdown.to.toISOString()} label="Faltan" initialSeconds={secondsUntil(countdown.to, now)} seconds={false} offsetMs={offsetMs} />}
@@ -658,10 +657,9 @@ function Prices({ block, context }: { block: PricesLandingBlock; context: Impara
       )}
       <ol className="imp-stages">
         {sales.stages.map((stage) => (
-          <li key={stage.id} className={stage.state === "current" ? "is-on" : stage.state === "past" || stage.state === "soldout" ? "is-off" : undefined}>
+          <li key={stage.id} className={STATE_CLASS[stage.state]}>
             <span>
               <b>{stage.name}</b>
-              {stageDates(stage, timezone)}
               {STATE_NOTE[stage.state]}
             </span>
             <span className="imp-stage-p">

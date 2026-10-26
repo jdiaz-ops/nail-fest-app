@@ -4791,14 +4791,6 @@ body:has(.imp) {
   font-weight: 700;
   color: var(--imp-texto-2);
 }
-.imp-ag-local {
-  display: block;
-  margin-top: 3px;
-  font-size: 10px;
-  font-style: normal;
-  font-weight: 700;
-  color: var(--imp-texto-3);
-}
 .imp-ag-dur {
   display: block;
   margin-top: 5px;
@@ -4951,11 +4943,6 @@ body:has(.imp) {
 .imp-take strong {
   font-weight: 800;
   color: var(--imp-resalte);
-}
-.imp-tz {
-  margin: 14px 0 0;
-  font-size: 12.5px;
-  color: var(--imp-texto-2);
 }
 
 /* Cards that slide: the results and the doubts */
@@ -5298,8 +5285,12 @@ body:has(.imp) {
 .imp-stages li.is-on strong {
   color: var(--imp-resalte);
 }
+/* A stage still to come: there, but switched off */
+.imp-stages li.is-soon {
+  opacity: 0.45;
+}
 .imp-stages li.is-off {
-  opacity: 0.55;
+  opacity: 0.35;
 }
 .imp-stages li.is-off strong {
   text-decoration: line-through;
@@ -5609,9 +5600,6 @@ body:has(.imp) {
     grid-template-columns: 1fr 1fr;
     gap: 0 20px;
     align-items: start;
-  }
-  .imp-agenda .imp-tz {
-    grid-column: 1 / -1;
   }
   /* On a computer the cards sit side by side: nothing to slide. */
   .imp-swipe {

@@ -5,7 +5,7 @@ import { landingBlockSchema } from "@/lib/landingBlocks/schema";
 import { parseLandingBlocks, type LandingBlock } from "@/lib/landingBlocks/types";
 import { castLine, castOf, coverOf, isPanelCard, namesIn, panelOf } from "./blocks";
 import { agendaInstant, coverName, dayEnd, eventWhen, readClock } from "./schedule";
-import { inDays, pesos, salesState, saving, stageDates, untilDay, type StageTicketType } from "./stages";
+import { pesos, salesState, saving, untilDay, type StageTicketType } from "./stages";
 import { IMPARABLES_BLOCKS, IMPARABLES_GROUP_PHOTO, IMPARABLES_PANELISTS, IMPARABLES_SPEAKERS, IMPARABLES_STAGES } from "./template";
 
 const TZ = "America/Bogota";
@@ -109,26 +109,9 @@ describe("how prices and dates read", () => {
     expect(pesos(900)).toBe("$900");
   });
 
-  it("gives each stage its days, the last one being the day before it closes", () => {
-    const [etapa1, etapa2, etapa3, normal] = salesState(stages(), at("2027-01-01T00:00:00-05:00"), STARTS).stages;
-    expect(stageDates(etapa1!, TZ)).toBe("hasta 31 mar");
-    expect(stageDates({ opensAt: at("2027-02-27T00:00:00-05:00"), closesAt: at("2027-04-01T00:00:00-05:00") }, TZ)).toBe("27 feb – 31 mar");
-    expect(stageDates(etapa2!, TZ)).toBe("1 abr – 20 jun");
-    expect(stageDates(etapa3!, TZ)).toBe("21 – 26 jun");
-    expect(stageDates(normal!, TZ)).toBe("27 – 28 jun");
-  });
-
-  it("says the last day a stage's price holds", () => {
+  it("says the last day a stage's price holds, the day before it closes", () => {
     expect(untilDay(at("2027-04-01T00:00:00-05:00"), TZ)).toBe("31 de marzo");
     expect(untilDay(at("2027-06-27T00:00:00-05:00"), TZ)).toBe("26 de junio");
-  });
-
-  it("says how long until the price goes up in calendar days", () => {
-    const up = at("2027-04-01T00:00:00-05:00");
-    expect(inDays(up, at("2026-10-26T10:00:00-05:00"), TZ)).toBe("el 1 de abril");
-    expect(inDays(up, at("2027-03-01T10:00:00-05:00"), TZ)).toBe("en 31 días");
-    expect(inDays(up, at("2027-03-31T23:30:00-05:00"), TZ)).toBe("mañana");
-    expect(inDays(at("2027-03-31T20:00:00-05:00"), at("2027-03-31T09:00:00-05:00"), TZ)).toBe("hoy");
   });
 });
 
@@ -216,7 +199,7 @@ describe("how the page reads the blocks", () => {
 
   it("names who is under the group photo", () => {
     expect(castLine(IMPARABLES_BLOCKS)).toEqual({
-      names: "Jimena, Pau, Juan Tenorio, Cris Sierra, Maris, Fabi, Alejandro Salinas y Oskar",
+      names: "Jimena Montalban, Paula Chacón, Juan Tenorio, Cristina Sierra, Maria Carolina Sebastia Sandoval, Fabi Pinillo Martínez, Alejandro Salinas y Oskar Garzón",
       also: "con Heidy Aristizábal y el panel «El día que decidí cambiar»",
     });
   });
@@ -266,7 +249,16 @@ describe("the template", () => {
 
   it("has the 8 speakers and one panel, every photo in the app", () => {
     const { speakers, panels } = castOf(IMPARABLES_BLOCKS);
-    expect(speakers.map((s) => s.name)).toEqual(["Jimena", "Pau", "Juan Tenorio", "Cris Sierra", "Maris", "Fabi", "Alejandro Salinas", "Oskar"]);
+    expect(speakers.map((s) => s.name)).toEqual([
+      "Jimena Montalban",
+      "Paula Chacón",
+      "Juan Tenorio",
+      "Cristina Sierra",
+      "Maria Carolina Sebastia Sandoval",
+      "Fabi Pinillo Martínez",
+      "Alejandro Salinas",
+      "Oskar Garzón",
+    ]);
     expect(panels).toBe(1);
     const photos = JSON.stringify(IMPARABLES_BLOCKS).match(/\/imparables\/[a-z]+\.jpg/g) ?? [];
     expect(photos.length).toBeGreaterThan(8);
@@ -302,11 +294,11 @@ describe("the template", () => {
     }
   });
 
-  it("gives each day what she takes home and one star talk", () => {
+  it("gives each day what she takes home, every talk alike: none stands out as the star", () => {
     const agenda = IMPARABLES_BLOCKS.find((b) => b.type === "agenda");
     if (agenda?.type !== "agenda") throw new Error("no agenda");
     expect(agenda.rows.filter((r) => r.kind === "day").every((r) => r.takeaway.length > 0)).toBe(true);
-    expect(agenda.rows.filter((r) => r.star).map((r) => r.instructor || r.topic)).toEqual(["Jimena", "Panel «El día que decidí cambiar»"]);
+    expect(agenda.rows.filter((r) => r.star)).toEqual([]);
   });
 
   it("fits each day of the program between 9:00 a. m. and 2:00 p. m.", () => {

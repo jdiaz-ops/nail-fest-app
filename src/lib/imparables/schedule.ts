@@ -44,11 +44,6 @@ export function clock(hour: number, minute: number): string {
 
 const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
-/** Which zone's hour the page speaks in: "hora Colombia". */
-export function zoneLabel(timezone: string): string {
-  return timezone === "America/Bogota" ? "hora Colombia" : "";
-}
-
 /** The name on the cover: the public name without the date it may carry
  * ("Manicuristas Imparables - 27 & 28 Junio 2027" -> "Manicuristas
  * Imparables"), the dates being right under it. */
@@ -151,13 +146,6 @@ function compactDates(days: LocalTime[]): string {
   if (first.year !== last.year) return `${first.day} ${month(first)} ${first.year}${join}${last.day} ${month(last)} ${last.year}`;
   if (first.month !== last.month) return `${first.day} ${month(first)}${join}${last.day} ${month(last)} ${last.year}`;
   return `${first.day}${join}${last.day} ${month(last)} ${last.year}`;
-}
-
-/** Minutes east of UTC where the event happens, at that instant (Bogotá: −300). */
-export function zoneOffset(instant: string, timezone: string): number {
-  const date = new Date(instant);
-  const wall = new Date(`${utcToZonedInputValue(date, timezone)}:00Z`);
-  return Math.round((wall.getTime() - date.getTime()) / 60_000);
 }
 
 /** "9:15 a. m." -> [9, 15]; "12:05 p. m." -> [12, 5]; "14:30" -> [14, 30]; anything else -> null. */

@@ -3,7 +3,7 @@ import type { EventFormat } from "@prisma/client";
 import MetaPixelScript from "@/components/MetaPixelScript";
 import type { LandingBlock } from "@/lib/landingBlocks/types";
 import { coverName, type EventWhen } from "@/lib/imparables/schedule";
-import { dayMonth, inDays, pesos, saving, untilDay, type SalesState } from "@/lib/imparables/stages";
+import { dayMonth, pesos, saving, untilDay, type SalesState } from "@/lib/imparables/stages";
 import { utcToZonedInputValue } from "@/lib/dateFormat";
 import { castLine, castOf, coverOf, panelOf } from "@/lib/imparables/blocks";
 import ImparablesBlocks from "./ImparablesBlocks";
@@ -109,14 +109,21 @@ export default function ImparablesPage({
   const closing = twoLines(event.closingText?.trim() || `Nos vemos el ${when.short}.`);
   // The lowest price the congress will have, when the one about to open is it.
   const opensCheapest = next && sales.stages.every((s) => s.state === "past" || s.price >= next.price);
-  // Under the bar's price: what it saves and when it goes up — or, with no
-  // regular price to tell it against, what it goes up to.
+  // Under the bar's price: the regular one struck with what today's saves —
+  // or, with no regular price to tell it against, what comes after.
   const save = current ? saving(current, sales.normal) : 0;
-  const goesUp = next?.opensAt ? (save > 0 ? `sube ${inDays(next.opensAt, now, timezone)}` : `Sube a ${pesos(next.price)} ${inDays(next.opensAt, now, timezone)}`) : null;
   const barNote =
-    save > 0
-      ? [`Ahorras ${pesos(save)}`, goesUp].filter(Boolean).join(" · ")
-      : (goesUp ?? (current && current.id === sales.normal?.id ? "El precio durante el congreso" : "El último precio antes del congreso"));
+    save > 0 ? (
+      <>
+        Precio normal <s>{pesos(sales.normal!.price)}</s> · ahorras {pesos(save)}
+      </>
+    ) : next ? (
+      `Después sube a ${pesos(next.price)}`
+    ) : current && current.id === sales.normal?.id ? (
+      "El precio durante el congreso"
+    ) : (
+      "El último precio antes del congreso"
+    );
   // The team's preview of another day runs its countdowns on that day's clock.
   const offsetMs = preview?.simulated ? now.getTime() - Date.now() : 0;
 

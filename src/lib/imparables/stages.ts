@@ -102,12 +102,6 @@ export function dayMonth(date: Date, timezone: string): string {
   return `${d.day} de ${MONTHS[d.month]}`;
 }
 
-/** "1 abr" */
-function shortDay(date: Date, timezone: string): { day: number; month: string; monthIndex: number } {
-  const d = localDate(date, timezone);
-  return { day: d.day, month: MONTHS[d.month]!.slice(0, 3), monthIndex: d.month };
-}
-
 /** A stage's last day is the one before the instant it closes (it closes at midnight). */
 function lastDay(closesAt: Date): Date {
   return new Date(closesAt.getTime() - 60_000);
@@ -116,28 +110,4 @@ function lastDay(closesAt: Date): Date {
 /** The last day a stage's price holds: "31 de marzo". */
 export function untilDay(closesAt: Date, timezone: string): string {
   return dayMonth(lastDay(closesAt), timezone);
-}
-
-/** "27 feb – 31 mar", "21 – 26 jun", "hasta 31 mar", "desde 27 feb". */
-export function stageDates(stage: Pick<PriceStage, "opensAt" | "closesAt">, timezone: string): string {
-  const from = stage.opensAt ? shortDay(stage.opensAt, timezone) : null;
-  const to = stage.closesAt ? shortDay(lastDay(stage.closesAt), timezone) : null;
-  if (from && to) return from.monthIndex === to.monthIndex ? `${from.day} – ${to.day} ${to.month}` : `${from.day} ${from.month} – ${to.day} ${to.month}`;
-  if (to) return `hasta ${to.day} ${to.month}`;
-  if (from) return `desde ${from.day} ${from.month}`;
-  return "";
-}
-
-/** Whole calendar days between two instants' dates in `timezone` (0 = same day). */
-function calendarDays(from: Date, to: Date, timezone: string): number {
-  const a = localDate(from, timezone);
-  const b = localDate(to, timezone);
-  return Math.round((Date.UTC(b.year, b.month, b.day) - Date.UTC(a.year, a.month, a.day)) / 86_400_000);
-}
-
-/** "en 30 días", "mañana", "hoy" — or, months away, the day itself: "el 1 de abril". */
-export function inDays(to: Date, now: Date, timezone: string): string {
-  const days = calendarDays(now, to, timezone);
-  if (days > 45) return `el ${dayMonth(to, timezone)}`;
-  return days >= 2 ? `en ${days} días` : days === 1 ? "mañana" : "hoy";
 }

@@ -37,14 +37,14 @@ interface ImparablesSpeaker {
 
 export const IMPARABLES_SPEAKERS: ImparablesSpeaker[] = [
   {
-    name: "Jimena",
+    name: "Jimena Montalban",
     handle: "@jimenanails",
     tag: "La manicurista que se convirtió en empresaria. Fundadora de JimenaNails, 10 años construyendo su marca y a sí misma.",
-    talk: "De la mesa a una marca internacional",
+    talk: "Tu nombre también puede ser una marca",
     photoUrl: PHOTO("jimena"),
   },
   {
-    name: "Pau",
+    name: "Paula Chacón",
     handle: "@soypauc_tuprofe",
     tag: "De la mesa a CEO de El Imperio de las Uñas, una cadena de 7 spas.",
     talk: "Créete el cuento y cobra lo que vales",
@@ -58,22 +58,21 @@ export const IMPARABLES_SPEAKERS: ImparablesSpeaker[] = [
     photoUrl: PHOTO("juan"),
   },
   {
-    name: "Cris Sierra",
+    name: "Cristina Sierra",
     handle: "@cris_sierra17",
     tag: "Fundadora de Cristina Sierra Nail Experts: 10 sedes y más de un millón de seguidores. Una historia de superación.",
-    // Provisional title, still to be confirmed.
-    talk: "La historia detrás de 10 sedes",
+    talk: "La historia de superación detrás de 10 sedes",
     photoUrl: PHOTO("cris"),
   },
   {
-    name: "Maris",
+    name: "Maria Carolina Sebastia Sandoval",
     handle: "@maris_nails_oficial",
     tag: "De empezar desde nada en otro país a formar educadoras en toda Chile. Te enseña a vencer el miedo y atreverte a mostrarte.",
     talk: "Empezar de cero en otro país y atreverse a mostrarse",
     photoUrl: PHOTO("maris"),
   },
   {
-    name: "Fabi",
+    name: "Fabi Pinillo Martínez",
     handle: "@fabiversatill",
     tag: "Estratega de centros de belleza. Te enseña a llenar tu agenda con estrategias y contenido que traen clientas.",
     talk: "Agenda llena: estrategias y contenido que traen clientas",
@@ -87,7 +86,7 @@ export const IMPARABLES_SPEAKERS: ImparablesSpeaker[] = [
     photoUrl: PHOTO("salinas"),
   },
   {
-    name: "Oskar",
+    name: "Oskar Garzón",
     handle: "@oskarivanquebelleza",
     tag: "Te contagia la energía para creértela y sobresalir: visión, redes y la ruta final.",
     talk: "Piensa en grande y hazte ver",
@@ -119,9 +118,9 @@ const PANEL_TONES = ["pink", "teal", "peach", "pink"] as const;
 const session = (chip: string, fields: Partial<AgendaRow>): AgendaRow => ({ ...emptyAgendaRow("session"), chip, ...fields });
 const day = (chip: string, topic: string, text: string, takeaway: string): AgendaRow => ({ ...emptyAgendaRow("day"), chip, topic, text, takeaway });
 const pause = (chip: string) => session(chip, { topic: "Pausa activa" });
-const speaker = (chip: string, name: string, star = false) => {
+const speaker = (chip: string, name: string) => {
   const s = IMPARABLES_SPEAKERS.find((sp) => sp.name === name);
-  return session(chip, { instructor: name, topic: s?.talk ?? "", text: s?.subtitle ?? "", photoUrl: s?.photoUrl ?? "", star });
+  return session(chip, { instructor: name, topic: s?.talk ?? "", text: s?.subtitle ?? "", photoUrl: s?.photoUrl ?? "" });
 };
 
 // The cover's group photo: the speakers and Heidy, cut out of their photos (2026-10-26).
@@ -158,7 +157,7 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
         text: "Redes que atraen clientas, tu marca y marketing con inteligencia artificial.",
         noteLabel: "Sales sabiendo",
         note: "qué publicar primero.",
-        who: "Fabi, Alejandro Salinas y Oskar",
+        who: "Fabi Pinillo Martínez, Alejandro Salinas y Oskar Garzón",
         icon: "none",
       },
       {
@@ -167,7 +166,7 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
         text: "Cuánto cobrar, cuánto ahorrar y cómo hablar de plata con tus clientas.",
         noteLabel: "Sales sabiendo",
         note: "cuánto debe dejarte cada servicio.",
-        who: "Juan Tenorio, Pau y el panel",
+        who: "Juan Tenorio, Paula Chacón y el panel",
         icon: "none",
       },
       {
@@ -176,7 +175,7 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
         text: "Pasar de atender sola a tener salón, equipo o academia, y empezar de cero si te toca.",
         noteLabel: "Sales sabiendo",
         note: "cuál es tu primer paso.",
-        who: "Jimena, Cris Sierra y Maris",
+        who: "Jimena Montalban, Cristina Sierra y Maria Carolina Sebastia Sandoval",
         icon: "none",
       },
     ],
@@ -209,25 +208,25 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
   },
 
   // La agenda: todo cabe de 9:00 a. m. a 2:00 p. m.
-  { type: "heading", eyebrow: "Agenda", title: "Dos días que cambian tu negocio", intro: "" },
+  { type: "heading", eyebrow: "Agenda", title: "Así son los dos días", intro: "" },
   {
     type: "agenda",
     rows: [
       day(
         "Domingo 27 de junio",
-        "De la mesa a empresaria",
+        "Tu talento vale más",
         "9:00 a. m. a 2:00 p. m.",
-        "cuánto cobrar sin culpa y el camino para pasar de la mesa a tu propia marca."
+        "cuánto cobrar sin culpa y cómo hacer que tu trabajo te deje más dinero."
       ),
       withHost("9:00 a. m.", "Bienvenida", "Con Heidy Aristizábal, maestra de ceremonias"),
-      speaker("9:15 a. m.", "Jimena", true),
+      speaker("9:15 a. m.", "Jimena Montalban"),
       pause("10:15 a. m."),
-      speaker("10:25 a. m.", "Pau"),
+      speaker("10:25 a. m.", "Paula Chacón"),
       pause("11:25 a. m."),
       speaker("11:40 a. m.", "Juan Tenorio"),
       pause("12:40 p. m."),
-      speaker("12:50 p. m.", "Cris Sierra"),
-      withHost("1:50 p. m.", "Cierre y sorteo", "Con Heidy Aristizábal"),
+      speaker("12:50 p. m.", "Cristina Sierra"),
+      withHost("1:50 p. m.", "Cierre", "Con Heidy Aristizábal"),
       day(
         "Lunes 28 de junio",
         "Sobresalir y pasar a la acción",
@@ -235,16 +234,16 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
         "cómo mostrarte y llenar tu agenda, con contenido e IA, y el empujón para dar tu siguiente paso."
       ),
       withHost("9:00 a. m.", "Repaso", "Con Heidy Aristizábal"),
-      speaker("9:05 a. m.", "Maris"),
+      speaker("9:05 a. m.", "Maria Carolina Sebastia Sandoval"),
       pause("9:55 a. m."),
-      speaker("10:05 a. m.", "Fabi"),
+      speaker("10:05 a. m.", "Fabi Pinillo Martínez"),
       pause("10:55 a. m."),
       speaker("11:05 a. m.", "Alejandro Salinas"),
       pause("11:55 a. m."),
-      session("12:05 p. m.", { topic: "Panel «El día que decidí cambiar»", text: "Cuatro historias reales de transformación", star: true }),
+      session("12:05 p. m.", { topic: "Panel «El día que decidí cambiar»", text: "Cuatro historias reales de transformación" }),
       pause("12:50 p. m."),
-      speaker("1:00 p. m.", "Oskar"),
-      withHost("1:50 p. m.", "Cierre y anuncio de la próxima edición", "Con Heidy Aristizábal"),
+      speaker("1:00 p. m.", "Oskar Garzón"),
+      withHost("1:50 p. m.", "Cierre", "Con Heidy Aristizábal"),
     ],
   },
 
@@ -266,7 +265,8 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
   },
 
   // ¿Es para ti?
-  { type: "heading", eyebrow: "Para quién es", title: "¿Es para ti?", intro: "" },
+  // Hidden at the team's request (2026-10-26): kept in the editor, off the page.
+  { type: "heading", eyebrow: "Para quién es", title: "¿Es para ti?", intro: "", hidden: true },
   {
     type: "card",
     eyebrow: "Es para ti si…",
@@ -276,6 +276,7 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
     icon: "none",
     tone: "teal",
     imageUrl: "",
+    hidden: true,
   },
   {
     type: "card",
@@ -286,11 +287,12 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
     icon: "none",
     tone: "pink",
     imageUrl: "",
+    hidden: true,
   },
 
   // Tu boleta: las etapas de precio salen de las entradas del evento
   { type: "heading", eyebrow: "Tu boleta", title: "Entre más temprano, menos pagas", intro: "" },
-  { type: "prices", note: "IVA del 19% incluido" },
+  { type: "prices", note: "" },
   {
     type: "card",
     eyebrow: "Garantía sin preguntas",
@@ -302,7 +304,7 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
   },
 
   // Las dudas, en su propia voz: una respuesta y una prueba real
-  { type: "heading", eyebrow: "Si todavía dudas", title: "¿Todavía lo estás pensando?", intro: "" },
+  { type: "heading", eyebrow: "", title: "¿Todavía lo estás pensando?", intro: "" },
   {
     type: "slides",
     style: "doubts",
@@ -311,7 +313,7 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
         tag: "",
         title: "No tengo tiempo.",
         text: "Son dos mañanas, de 9:00 a. m. a 2:00 p. m., desde tu celular. Y si no puedes en vivo, tienes la repetición por 30 días.",
-        noteLabel: "Incluido",
+        noteLabel: "",
         note: "La repetición por 30 días viene con tu boleta.",
         who: "",
         icon: "clock",
@@ -320,25 +322,25 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
         tag: "",
         title: "Apenas estoy empezando.",
         text: "Es de negocio, no de técnica: te sirve desde tu primera clienta.",
-        noteLabel: "Prueba",
-        note: "Pau empezó en una mesa de manicure y hoy es CEO de El Imperio de las Uñas.",
-        who: "Pau",
+        noteLabel: "",
+        note: "Paula empezó en una mesa de manicure y hoy es CEO de El Imperio de las Uñas.",
+        who: "Paula Chacón",
         icon: "none",
       },
       {
         tag: "",
         title: "Mi caso es distinto.",
         text: "Hay caminos de todo tipo: independiente, salón, cadena, academia, y empezar de cero en otro país.",
-        noteLabel: "Prueba",
-        note: "Maris empezó desde nada y hoy forma educadoras en Chile.",
-        who: "Maris",
+        noteLabel: "",
+        note: "Maria Carolina empezó desde nada y hoy forma educadoras en Chile.",
+        who: "Maria Carolina Sebastia Sandoval",
         icon: "none",
       },
       {
         tag: "",
         title: "Ya hice cursos y no me sirvieron.",
         text: "Aquí no hay teoría: te cuentan cómo lo hicieron manicuristas que empezaron donde tú estás.",
-        noteLabel: "Garantía",
+        noteLabel: "",
         note: "Si en los primeros 30 minutos no es para ti, te devolvemos el 100%.",
         who: "",
         icon: "shield",
@@ -366,7 +368,7 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
       {
         question: "¿Sirve si estoy fuera de Colombia?",
         answer:
-          "Sí. Es 100% en vivo por Zoom, así que lo ves desde cualquier país. Las horas de la agenda están en hora Colombia y debajo te mostramos la de tu ciudad. Si necesitas ayuda para pagar desde afuera, escríbenos por WhatsApp.",
+          "Sí. Es 100% en vivo por Zoom, así que lo ves desde cualquier país. Las horas de la agenda están en hora Colombia. Si necesitas ayuda para pagar desde afuera, escríbenos por WhatsApp.",
       },
       {
         question: "¿Cómo pago?",
