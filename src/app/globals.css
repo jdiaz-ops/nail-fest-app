@@ -3947,23 +3947,6 @@ body:has(.imp) {
   filter: brightness(0);
   opacity: 0.92;
 }
-.imp-live {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
-  border-radius: 999px;
-  border: 1px solid var(--imp-tarjeta-borde);
-  color: var(--imp-resalte);
-  white-space: nowrap;
-}
-.imp-live::before {
-  content: "";
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--imp-acento);
-}
 .imp-tiara {
   display: block;
   width: 190px;
@@ -4026,28 +4009,7 @@ body:has(.imp) {
 .imp-when span {
   font-size: 12.5px;
   color: var(--imp-texto-2);
-}
-.imp-chips {
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 14px;
-}
-.imp-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 12px;
-  border-radius: 999px;
-  background: var(--imp-tarjeta);
-  border: 1px solid var(--imp-tarjeta-borde);
-  font-size: 12.5px;
-  font-weight: 700;
-}
-.imp-chip svg {
-  flex: none;
-  color: var(--imp-icono);
+  text-wrap: balance;
 }
 .imp-faces {
   display: flex;
@@ -4091,18 +4053,47 @@ body:has(.imp) {
   -webkit-mask-image: linear-gradient(180deg, #000 68%, transparent 98%);
   mask-image: linear-gradient(180deg, #000 68%, transparent 98%);
 }
-.imp-when .imp-when-local {
-  margin-top: 2px;
-  padding-top: 6px;
-  border-top: 1px dashed var(--imp-linea);
-  font-weight: 700;
+/* Under the cover's button: today's price against the regular one, until
+   when it holds — and then the guarantee, with its shield */
+.imp-deal {
+  display: grid;
+  gap: 4px;
+  margin-top: 12px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--imp-texto-2);
+  text-wrap: balance;
+}
+.imp-deal p {
+  margin: 0;
+}
+.imp-deal s {
+  text-decoration-thickness: 1.5px;
+}
+.imp-deal b {
+  font-weight: 800;
   color: var(--imp-resalte);
 }
+.imp-deal-until {
+  font-size: 13px;
+}
 .imp-once {
-  margin: 14px 0 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 8px;
+  max-width: 38ch;
+  margin: 16px auto 0;
   font-size: 13.5px;
-  font-weight: 700;
-  color: var(--imp-resalte);
+  font-weight: 600;
+  line-height: 1.45;
+  text-align: left;
+  color: var(--imp-texto);
+}
+.imp-once svg {
+  flex: none;
+  margin-top: 1px;
+  color: var(--imp-icono);
 }
 .imp-cta {
   display: flex;
@@ -5482,8 +5473,15 @@ body:has(.imp) {
   padding: 12px 16px calc(14px + env(safe-area-inset-bottom));
   background: var(--imp-fondo);
   border-top: 1px solid var(--imp-linea);
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
+  /* Down out of sight until the cover's button scrolls away (ImpStickyBar.tsx). */
+  visibility: hidden;
+  transform: translateY(110%);
+  transition: transform 0.25s ease, visibility 0s linear 0.25s;
+}
+.imp-sticky.is-on {
+  visibility: visible;
+  transform: none;
+  transition: transform 0.25s ease;
 }
 .imp-sticky-in {
   display: flex;
@@ -5660,6 +5658,8 @@ body:has(.imp) {
 
 @media (prefers-reduced-motion: reduce) {
   .imp-cta,
+  .imp-sticky,
+  .imp-sticky.is-on,
   .imp-faq-item summary i::before,
   .imp-faq-item summary i::after {
     transition: none;

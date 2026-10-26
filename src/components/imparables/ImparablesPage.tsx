@@ -2,16 +2,15 @@ import { Cinzel, Manrope } from "next/font/google";
 import type { EventFormat } from "@prisma/client";
 import MetaPixelScript from "@/components/MetaPixelScript";
 import type { LandingBlock } from "@/lib/landingBlocks/types";
-import { coverName, zoneLabel, zoneOffset, type EventWhen } from "@/lib/imparables/schedule";
-import { dayMonth, inDays, pesos, saving, type SalesState } from "@/lib/imparables/stages";
+import { coverName, type EventWhen } from "@/lib/imparables/schedule";
+import { dayMonth, inDays, pesos, saving, untilDay, type SalesState } from "@/lib/imparables/stages";
 import { utcToZonedInputValue } from "@/lib/dateFormat";
 import { castLine, castOf, coverOf } from "@/lib/imparables/blocks";
 import ImparablesBlocks from "./ImparablesBlocks";
-import { ImpIcon, Tiara, initials, type ImpIconName } from "./ImpArt";
+import { ImpIcon, Tiara, initials } from "./ImpArt";
 import ImpButton from "./ImpButton";
-import ImpCountdown from "./ImpCountdown";
-import { ImpYourHours } from "./ImpLocalTime";
 import ImpPageTracking from "./ImpPageTracking";
+import ImpStickyBar from "./ImpStickyBar";
 import ImpTitle from "./ImpTitle";
 import ImpWaitlistForm from "./ImpWaitlistForm";
 
@@ -92,19 +91,21 @@ export default function ImparablesPage({
   const words = coverName(event.displayName).split(/\s+/);
   const big = words.pop() ?? event.displayName;
   const pre = words.join(" ");
-  const live = event.format === "VIRTUAL" ? "Congreso virtual" : event.format === "HYBRID" ? "Presencial y virtual" : "Presencial";
-  const chips: { icon: ImpIconName; text: string }[] = [];
-  if (event.format !== "IN_PERSON") chips.push({ icon: "phone", text: "100% en vivo, desde tu celular" });
-  if (event.format === "VIRTUAL" && event.city) chips.push({ icon: "live", text: `Desde un set en ${event.city}` });
-  else if (event.format !== "VIRTUAL" && (event.venueName || event.city)) chips.push({ icon: "pin", text: event.venueName || event.city });
+  const liveNote = event.format === "IN_PERSON" ? "" : "100% en vivo, desde tu celular";
+  // How it happens, under the dates on the cover (the hours are in the program).
+  const how =
+    event.format === "VIRTUAL"
+      ? `Congreso virtual por Zoom · ${liveNote}`
+      : event.format === "HYBRID"
+        ? `Presencial${event.venueName || event.city ? ` en ${event.venueName || event.city}` : ""} y virtual por Zoom`
+        : event.venueName || event.city;
 
   const { cover, rest } = coverOf(blocks);
   const { speakers, panels } = castOf(blocks);
   const line = castLine(blocks);
   const cast = speakers.length ? `${speakers.length} ${speakers.length === 1 ? "speaker" : "speakers"}${panels ? (panels === 1 ? " y un panel" : ` y ${panels} paneles`) : ""}` : "";
   const buyLabel = event.registerButtonLabel?.trim() || "Quiero mi boleta";
-  const { mode, current, next, countdown } = sales;
-  const zone = zoneLabel(timezone);
+  const { mode, current, next } = sales;
   const closing = twoLines(event.closingText?.trim() || `Nos vemos el ${when.short}.`);
   // The lowest price the congress will have, when the one about to open is it.
   const opensCheapest = next && sales.stages.every((s) => s.state === "past" || s.price >= next.price);
@@ -162,7 +163,6 @@ export default function ImparablesPage({
               {/* eslint-disable-next-line @next/next/no-img-element -- fixed logo mark */}
               <img src="/logo.png" alt={brandName} /> presenta
             </span>
-            <span className="imp-live">{live}</span>
           </div>
           <Tiara />
           <ImpTitle pre={pre} big={big} />
@@ -196,31 +196,33 @@ export default function ImparablesPage({
             )
           )}
           <div className="imp-when">
-            <b>{when.dates}</b>
-            {when.hours && (
-              <span>
-                {when.hours}
-                {zone && ` · ${zone}`}
-              </span>
-            )}
-            {when.span && <ImpYourHours opensAt={when.span.opensAt} closesAt={when.span.closesAt} eventOffset={zoneOffset(when.span.opensAt, timezone)} />}
+            <b>{when.compact}</b>
+            {how && <span>{how}</span>}
           </div>
           {cta}
           {mode === "closed" && <p className="imp-closed-note">La venta de boletas está cerrada.</p>}
-          {countdown && (
-            <ImpCountdown to={countdown.to.toISOString()} label={countdown.label} initialSeconds={secondsUntil(countdown.to, now)} offsetMs={offsetMs} />
-          )}
-          {event.ctaNote?.trim() && <p className="imp-once">{event.ctaNote.trim()}</p>}
-          {/* Under the countdown, so the button stays on the first screen. */}
-          {chips.length > 0 && (
-            <div className="imp-chips">
-              {chips.map((chip) => (
-                <span className="imp-chip" key={chip.text}>
-                  <ImpIcon name={chip.icon} size={15} />
-                  {chip.text}
-                </span>
-              ))}
+          {/* Under the button: today's price against the regular one, until
+              when it holds and what comes after — then what makes buying
+              risk-free («Texto debajo del botón», a guarantee). */}
+          {mode === "sale" && current && (save > 0 || (next && current.closesAt)) && (
+            <div className="imp-deal">
+              {save > 0 && (
+                <p>
+                  Precio normal <s>{pesos(sales.normal!.price)}</s> · <b>Ahorras {pesos(save)}</b>
+                </p>
+              )}
+              {next && current.closesAt && (
+                <p className="imp-deal-until">
+                  Precio de {current.name} solo hasta el {untilDay(current.closesAt, timezone)}; después sube a {pesos(next.price)}.
+                </p>
+              )}
             </div>
+          )}
+          {event.ctaNote?.trim() && (
+            <p className="imp-once">
+              <ImpIcon name="shield" size={17} />
+              <span>{event.ctaNote.trim()}</span>
+            </p>
           )}
         </div>
       </section>
@@ -256,7 +258,7 @@ export default function ImparablesPage({
           {cta}
           <div className="imp-close-3">
             {capitalize(when.short)}
-            {chips[0] ? ` · ${chips[0].text}` : ""}
+            {liveNote ? ` · ${liveNote}` : ""}
           </div>
         </div>
       </section>
@@ -279,7 +281,7 @@ export default function ImparablesPage({
       </footer>
 
       {mode === "sale" && current && (
-        <div className="imp-sticky">
+        <ImpStickyBar>
           <div className="imp-sticky-in">
             <div className="imp-st-p">
               <b>
@@ -291,10 +293,10 @@ export default function ImparablesPage({
               Comprar
             </ImpButton>
           </div>
-        </div>
+        </ImpStickyBar>
       )}
       {mode === "waitlist" && next?.opensAt && (
-        <div className="imp-sticky">
+        <ImpStickyBar>
           <div className="imp-sticky-in">
             <div className="imp-st-p">
               <b>Lista de espera</b>
@@ -304,7 +306,7 @@ export default function ImparablesPage({
               Anotarme
             </ImpButton>
           </div>
-        </div>
+        </ImpStickyBar>
       )}
 
       {/* The checkout keeps the app's own light look: a form to fill, not a poster. */}

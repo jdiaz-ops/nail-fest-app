@@ -1002,7 +1002,7 @@ export default function EventForm({
                     />
                     <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>
                       {values.theme === "IMPARABLES"
-                        ? "En el diseño Manicuristas Imparables sale debajo del contador de la portada (ej. Imparables pasa una vez al año.). Vacío = no aparece."
+                        ? "En el diseño Manicuristas Imparables sale debajo del botón de la portada, con un escudo: una garantía o algo que dé confianza para comprar. Vacío = no aparece."
                         : "Una línea corta — para quién es el evento. Vacío = no aparece."}
                     </p>
                   </div>

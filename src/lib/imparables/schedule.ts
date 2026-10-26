@@ -68,6 +68,8 @@ export interface EventWhen {
   hours: string | null;
   /** "27 y 28 de junio" */
   short: string;
+  /** "27 & 28 Junio 2027": the cover's, as short as it gets. */
+  compact: string;
   /** Each day's date where it happens ("2027-06-27"), in order: the program's days. */
   days: string[];
   /** The first day's opening and closing instants when every day keeps the same hours: the cover shows them in a visitor's own hour. */
@@ -136,7 +138,19 @@ export function eventWhen(event: { startsAt: Date; endsAt: Date | null; schedule
     dates = sameMonth ? `del ${named(first)} al ${named(last)} ${monthYear}` : `del ${named(first)} de ${MONTHS[first.month]} al ${named(last)} ${monthYear}`;
     short = sameMonth ? `del ${first.day} al ${last.day} de ${MONTHS[last.month]}` : `del ${first.day} de ${MONTHS[first.month]} al ${last.day} de ${MONTHS[last.month]}`;
   }
-  return { dates: capitalize(dates), hours, short, days: unique.map((d) => d.date), span, ends: unique.map((d) => endOf(d.date)) };
+  return { dates: capitalize(dates), hours, short, compact: compactDates(unique), days: unique.map((d) => d.date), span, ends: unique.map((d) => endOf(d.date)) };
+}
+
+/** "27 Junio 2027", "27 & 28 Junio 2027", "27 – 29 Junio 2027", "30 Junio & 1 Julio 2027". */
+function compactDates(days: LocalTime[]): string {
+  const first = days[0]!;
+  const last = days[days.length - 1]!;
+  const month = (d: LocalTime) => capitalize(MONTHS[d.month]!);
+  const join = days.length === 2 ? " & " : " – ";
+  if (days.length === 1) return `${first.day} ${month(first)} ${first.year}`;
+  if (first.year !== last.year) return `${first.day} ${month(first)} ${first.year}${join}${last.day} ${month(last)} ${last.year}`;
+  if (first.month !== last.month) return `${first.day} ${month(first)}${join}${last.day} ${month(last)} ${last.year}`;
+  return `${first.day}${join}${last.day} ${month(last)} ${last.year}`;
 }
 
 /** Minutes east of UTC where the event happens, at that instant (Bogotá: −300). */

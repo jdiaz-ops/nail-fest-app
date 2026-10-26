@@ -21,16 +21,6 @@ export default function ImpLocalTime({ instant, eventOffset }: { instant: string
   return text ? <em className="imp-ag-local">{text}</em> : null;
 }
 
-/** On the cover, under Colombia's hours: the congress's hours where she is, when her clock isn't the event's. */
-export function ImpYourHours({ opensAt, closesAt, eventOffset }: { opensAt: string; closesAt: string; eventOffset: number }) {
-  const [text, setText] = useState<string | null>(null);
-  useEffect(() => {
-    const opens = new Date(opensAt);
-    if (-opens.getTimezoneOffset() !== eventOffset) setText(`Donde estás tú: ${clock(opens)} a ${clock(new Date(closesAt))}`);
-  }, [opensAt, closesAt, eventOffset]);
-  return text ? <span className="imp-when-local">{text}</span> : null;
-}
-
 /** The line under the program, which says whose hours those are. */
 export function ImpZoneNote({ zone, eventOffset, at }: { zone: string; eventOffset: number; at: string }) {
   const [elsewhere, setElsewhere] = useState(false);

@@ -5,7 +5,7 @@ import { landingBlockSchema } from "@/lib/landingBlocks/schema";
 import { parseLandingBlocks, type LandingBlock } from "@/lib/landingBlocks/types";
 import { castLine, castOf, coverOf, isPanelCard, namesIn } from "./blocks";
 import { agendaInstant, coverName, dayEnd, eventWhen, readClock } from "./schedule";
-import { inDays, pesos, salesState, saving, stageDates, type StageTicketType } from "./stages";
+import { inDays, pesos, salesState, saving, stageDates, untilDay, type StageTicketType } from "./stages";
 import { IMPARABLES_BLOCKS, IMPARABLES_GROUP_PHOTO, IMPARABLES_PANELISTS, IMPARABLES_SPEAKERS, IMPARABLES_STAGES } from "./template";
 
 const TZ = "America/Bogota";
@@ -118,6 +118,11 @@ describe("how prices and dates read", () => {
     expect(stageDates(normal!, TZ)).toBe("27 – 28 jun");
   });
 
+  it("says the last day a stage's price holds", () => {
+    expect(untilDay(at("2027-04-01T00:00:00-05:00"), TZ)).toBe("31 de marzo");
+    expect(untilDay(at("2027-06-27T00:00:00-05:00"), TZ)).toBe("26 de junio");
+  });
+
   it("says how long until the price goes up in calendar days", () => {
     const up = at("2027-04-01T00:00:00-05:00");
     expect(inDays(up, at("2026-10-26T10:00:00-05:00"), TZ)).toBe("el 1 de abril");
@@ -144,10 +149,19 @@ describe("eventWhen", () => {
       dates: "Domingo 27 y lunes 28 de junio de 2027",
       hours: "9:00 a. m. a 2:00 p. m.",
       short: "27 y 28 de junio",
+      compact: "27 & 28 Junio 2027",
       days: ["2027-06-27", "2027-06-28"],
       span: { opensAt: "2027-06-27T14:00:00.000Z", closesAt: "2027-06-27T19:00:00.000Z" },
       ends: ["2027-06-27T19:00:00.000Z", "2027-06-28T19:00:00.000Z"],
     });
+  });
+
+  it("writes the cover's dates as short as they get", () => {
+    const one = (startsAt: string, endsAt: string | null) => eventWhen({ startsAt: at(startsAt), endsAt: endsAt ? at(endsAt) : null }, TZ).compact;
+    expect(one("2027-06-27T09:00:00-05:00", null)).toBe("27 Junio 2027");
+    expect(one("2027-06-27T09:00:00-05:00", "2027-06-29T14:00:00-05:00")).toBe("27 – 29 Junio 2027");
+    expect(one("2027-06-30T09:00:00-05:00", "2027-07-01T14:00:00-05:00")).toBe("30 Junio & 1 Julio 2027");
+    expect(one("2026-12-31T09:00:00-05:00", "2027-01-01T14:00:00-05:00")).toBe("31 Diciembre 2026 & 1 Enero 2027");
   });
 
   it("reads a single span over two days the same way", () => {

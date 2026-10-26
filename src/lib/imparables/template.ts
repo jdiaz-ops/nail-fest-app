@@ -46,14 +46,14 @@ export const IMPARABLES_SPEAKERS: ImparablesSpeaker[] = [
   {
     name: "Pau",
     handle: "@soypauc_tuprofe",
-    tag: "De la mesa a CEO de El Imperio de las Uñas. Miedos, autosabotaje y cobrar sin culpa.",
+    tag: "De la mesa a CEO de El Imperio de las Uñas, una cadena de 7 spas.",
     talk: "Créete el cuento y cobra lo que vales",
     photoUrl: PHOTO("pau"),
   },
   {
     name: "Juan Tenorio",
     handle: "@don.juantenorio",
-    tag: "Asesor de negocios de belleza, con más de 500 salones y barberías transformados. Precios, valor y rentabilidad.",
+    tag: "Asesor de negocios de belleza, con más de 500 salones y barberías transformados.",
     talk: "Tu salón factura, pero ¿cuánto te queda?",
     photoUrl: PHOTO("juan"),
   },
@@ -68,28 +68,28 @@ export const IMPARABLES_SPEAKERS: ImparablesSpeaker[] = [
   {
     name: "Maris",
     handle: "@maris_nails_oficial",
-    tag: "De empezar desde nada a formar educadoras en toda Chile. En vivo desde Chile.",
+    tag: "De empezar desde nada en otro país a formar educadoras en toda Chile. Te enseña a vencer el miedo y atreverte a mostrarte.",
     talk: "Empezar de cero en otro país y atreverse a mostrarse",
     photoUrl: PHOTO("maris"),
   },
   {
     name: "Fabi",
     handle: "@fabiversatill",
-    tag: "Nail artist y estratega de centros de belleza. La técnica ya no es suficiente.",
+    tag: "Estratega de centros de belleza. Te enseña a llenar tu agenda con estrategias y contenido que traen clientas.",
     talk: "Agenda llena: estrategias y contenido que traen clientas",
     photoUrl: PHOTO("fabi"),
   },
   {
     name: "Alejandro Salinas",
     handle: "@salinas.beautybusiness",
-    tag: "Asesor de negocios de belleza, 15 años de experiencia en administración, finanzas y marketing.",
+    tag: "Asesor de negocios de belleza, 15 años en administración, finanzas y marketing. Te muestra cómo usar la IA para ganar tiempo y clientas.",
     talk: "IA para tu negocio: menos horas, más clientas",
     photoUrl: PHOTO("salinas"),
   },
   {
     name: "Oskar",
     handle: "@oskarivanquebelleza",
-    tag: "Empresario y creador de marca. De creértela a sobresalir: visión, redes y la ruta final.",
+    tag: "Te contagia la energía para creértela y sobresalir: visión, redes y la ruta final.",
     talk: "Piensa en grande y hazte ver",
     subtitle: "Visión, redes y la actitud para sobresalir.",
     photoUrl: PHOTO("oskar"),
@@ -141,8 +141,10 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
     eyebrow: "Por qué ahora",
     title: "La técnica ya no es suficiente.",
     intro: "Haces uñas hermosas. Pero cobrar lo que vales, llenar tu agenda y hacer crecer tu negocio no te lo enseñó nadie.",
+    // Hidden at the team's request (2026-10-26): kept in the editor, off the page.
+    hidden: true,
   },
-  { type: "card", eyebrow: "Ellas empezaron donde tú estás hoy:", title: "en una mesa de manicure.", html: "", icon: "none", tone: "pink", imageUrl: "" },
+  { type: "card", eyebrow: "Ellas empezaron donde tú estás hoy:", title: "en una mesa de manicure.", html: "", icon: "none", tone: "pink", imageUrl: "", hidden: true },
 
   // Los 3 resultados, en tarjetas que se deslizan
   { type: "heading", eyebrow: "Resultados", title: "Lo que vas a resolver en estos dos días", intro: "" },
@@ -385,8 +387,9 @@ export const IMPARABLES_FIELDS = {
   subtitle: "<p>Tienes el talento. Ya es hora de construir un negocio que crece.</p>",
   closingText: "Tienes el talento. Ahora, a construir tu negocio.",
   registerButtonLabel: "Quiero mi boleta",
-  // «Texto debajo del botón»: on this cover, the line under the countdown.
-  ctaNote: "Imparables pasa una vez al año.",
+  // «Texto debajo del botón»: on this cover, under the button with a shield —
+  // what makes buying risk-free.
+  ctaNote: "Garantía sin preguntas: si en los primeros 30 minutos del congreso sientes que no es para ti, te devolvemos el 100%.",
 };
 
 /** The price stages, as ticket types (only for an event with none yet). Dates are Bogotá's.

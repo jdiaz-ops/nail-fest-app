@@ -113,6 +113,11 @@ function lastDay(closesAt: Date): Date {
   return new Date(closesAt.getTime() - 60_000);
 }
 
+/** The last day a stage's price holds: "31 de marzo". */
+export function untilDay(closesAt: Date, timezone: string): string {
+  return dayMonth(lastDay(closesAt), timezone);
+}
+
 /** "27 feb – 31 mar", "21 – 26 jun", "hasta 31 mar", "desde 27 feb". */
 export function stageDates(stage: Pick<PriceStage, "opensAt" | "closesAt">, timezone: string): string {
   const from = stage.opensAt ? shortDay(stage.opensAt, timezone) : null;
