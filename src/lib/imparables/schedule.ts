@@ -165,3 +165,9 @@ export function agendaInstant(day: string | undefined, chip: string, timezone: s
   const instant = zonedTimeToUtc(`${day}T${String(time[0]).padStart(2, "0")}:${String(time[1]).padStart(2, "0")}`, timezone);
   return Number.isNaN(instant.getTime()) ? null : instant.toISOString();
 }
+
+/** When a day of the program ends by the hours its own header gives ("9:00 a. m. a 2:00 p. m." -> that day at 2:00 p. m.), or null. */
+export function dayEnd(hours: string, day: string | undefined, timezone: string): string | null {
+  const clocks = hours.match(/\d{1,2}[:.]\d{2}\s*(?:[ap]\.?\s*m\.?)?/gi) ?? [];
+  return clocks.length >= 2 ? agendaInstant(day, clocks[clocks.length - 1]!, timezone) : null;
+}

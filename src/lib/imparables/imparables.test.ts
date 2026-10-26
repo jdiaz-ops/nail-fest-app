@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { landingBlockSchema } from "@/lib/landingBlocks/schema";
 import { parseLandingBlocks, type LandingBlock } from "@/lib/landingBlocks/types";
 import { castLine, castOf, coverOf, isPanelCard, namesIn } from "./blocks";
-import { agendaInstant, coverName, eventWhen, readClock } from "./schedule";
+import { agendaInstant, coverName, dayEnd, eventWhen, readClock } from "./schedule";
 import { inDays, pesos, salesState, stageDates, type StageTicketType } from "./stages";
 import { IMPARABLES_BLOCKS, IMPARABLES_GROUP_PHOTO, IMPARABLES_PANELISTS, IMPARABLES_SPEAKERS, IMPARABLES_STAGES } from "./template";
 
@@ -209,6 +209,13 @@ describe("the program's hours", () => {
     expect(agendaInstant("2027-06-27", "9:15 a. m.", TZ)).toBe("2027-06-27T14:15:00.000Z");
     expect(agendaInstant("2027-06-28", "1:50 p. m.", TZ)).toBe("2027-06-28T18:50:00.000Z");
     expect(agendaInstant(undefined, "9:15 a. m.", TZ)).toBeNull();
+  });
+
+  it("ends a day of the program when its own header says, whatever the event's hours", () => {
+    expect(dayEnd("9:00 a. m. a 2:00 p. m.", "2027-06-27", TZ)).toBe("2027-06-27T19:00:00.000Z");
+    expect(dayEnd("De 9:00 a 14:30", "2027-06-28", TZ)).toBe("2027-06-28T19:30:00.000Z");
+    expect(dayEnd("Desde las 9:00 a. m.", "2027-06-27", TZ)).toBeNull();
+    expect(dayEnd("", "2027-06-27", TZ)).toBeNull();
   });
 });
 

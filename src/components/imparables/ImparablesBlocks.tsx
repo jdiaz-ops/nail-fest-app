@@ -9,7 +9,7 @@ import type {
   SlidesLandingBlock,
 } from "@/lib/landingBlocks/types";
 import { youtubeVideo } from "@/lib/landingBlocks/types";
-import { agendaInstant, zoneLabel, zoneOffset, type EventWhen } from "@/lib/imparables/schedule";
+import { agendaInstant, dayEnd, zoneLabel, zoneOffset, type EventWhen } from "@/lib/imparables/schedule";
 import { dayMonth, pesos, stageDates, type SalesState } from "@/lib/imparables/stages";
 import { isPanelCard, namesIn } from "@/lib/imparables/blocks";
 import { ImpIcon, Silhouette, iconForPoint, initials, instagramUrl, type ImpIconName } from "./ImpArt";
@@ -462,6 +462,8 @@ function Agenda({ rows, context }: { rows: AgendaRow[]; context: ImparablesConte
   // The n-th day of the program happens on the event's n-th day.
   const instants = days.map((d, i) => d.rows.map((row) => agendaInstant(context.when.days[i], row.chip, context.timezone)));
   const firstInstant = instants.flat().find((instant): instant is string => Boolean(instant)) ?? null;
+  // A day ends when its own header says ("9:00 a. m. a 2:00 p. m."), else when the event's day does.
+  const ends = days.map((d, i) => dayEnd(d.head?.text ?? "", context.when.days[i], context.timezone) ?? context.when.ends[i] ?? null);
   const cards = days.map((d, i) => {
     return (
       <div className="imp-day" key={i}>
@@ -481,7 +483,7 @@ function Agenda({ rows, context }: { rows: AgendaRow[]; context: ImparablesConte
           <ol className="imp-ag">
             {d.rows.map((row, j) => {
               const start = instants[i]![j] ?? null;
-              const next = instants[i]!.slice(j + 1).find(Boolean) ?? context.when.ends[i];
+              const next = instants[i]!.slice(j + 1).find(Boolean) ?? ends[i];
               return <AgendaLine key={j} row={row} instant={start} minutes={minutesBetween(start, next)} timezone={context.timezone} />;
             })}
           </ol>
