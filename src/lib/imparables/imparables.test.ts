@@ -3,10 +3,10 @@ import path from "path";
 import { describe, expect, it } from "vitest";
 import { landingBlockSchema } from "@/lib/landingBlocks/schema";
 import { parseLandingBlocks } from "@/lib/landingBlocks/types";
-import { castOf } from "./blocks";
+import { castOf, isPanelCard } from "./blocks";
 import { agendaInstant, eventWhen, readClock } from "./schedule";
 import { inDays, pesos, salesState, stageDates, type StageTicketType } from "./stages";
-import { IMPARABLES_BLOCKS, IMPARABLES_STAGES } from "./template";
+import { IMPARABLES_BLOCKS, IMPARABLES_PANELISTS, IMPARABLES_SPEAKERS, IMPARABLES_STAGES } from "./template";
 
 const TZ = "America/Bogota";
 const at = (iso: string) => new Date(iso);
@@ -182,6 +182,22 @@ describe("the template", () => {
     const photos = JSON.stringify(IMPARABLES_BLOCKS).match(/\/imparables\/[a-z]+\.jpg/g) ?? [];
     expect(photos.length).toBeGreaterThan(8);
     for (const photo of new Set(photos)) expect(existsSync(path.join(process.cwd(), "public", photo))).toBe(true);
+  });
+
+  it("makes no panelist up: four still to be announced, each with the story she brings", () => {
+    const i = IMPARABLES_BLOCKS.findIndex((b, j) => isPanelCard(b, IMPARABLES_BLOCKS[j + 1]));
+    const panelists = IMPARABLES_BLOCKS[i + 1];
+    if (panelists?.type !== "people") throw new Error("no panelists");
+    expect(panelists.items.map((p) => [p.name, p.handle, p.photoUrl])).toEqual(Array(4).fill(["", "", ""]));
+    expect(panelists.items.map((p) => p.tag)).toEqual(IMPARABLES_PANELISTS.map((p) => p.story));
+  });
+
+  it("puts each speaker's talk under her name in the program, with its subtitle if it has one", () => {
+    const agenda = IMPARABLES_BLOCKS.find((b) => b.type === "agenda");
+    if (agenda?.type !== "agenda") throw new Error("no agenda");
+    for (const s of IMPARABLES_SPEAKERS) {
+      expect(agenda.rows.filter((r) => r.instructor === s.name).map((r) => [r.topic, r.text])).toEqual([[s.talk, s.subtitle ?? ""]]);
+    }
   });
 
   it("fits each day of the program between 9:00 a. m. and 2:00 p. m.", () => {

@@ -267,15 +267,18 @@ function Card({ card }: { card: CardLandingBlock }) {
 }
 
 function Panel({ card, people }: { card: CardLandingBlock; people: PeopleLandingBlock }) {
+  // A panelist not confirmed yet has no name: her card still shows, with a
+  // silhouette, «Por anunciar» and the story she brings (her line).
+  const guests = people.items.filter((p) => p.name.trim() || p.tag.trim());
+  const pending = guests.filter((p) => !p.name.trim()).length;
   return (
     <div className="imp-panel">
       {card.eyebrow && <span className="imp-panel-when">{card.eyebrow}</span>}
       {card.title && <b className="imp-panel-t imp-gold">{card.title}</b>}
       {card.html && <div className="imp-panel-l" dangerouslySetInnerHTML={{ __html: card.html }} />}
       <div className="imp-panel-grid">
-        {people.items
-          .filter((p) => p.name.trim())
-          .map((p, j) => (
+        {guests.map((p, j) =>
+          p.name.trim() ? (
             <div className="imp-pn" key={j}>
               {p.photoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element -- admin-uploaded photo, arbitrary Blob URL
@@ -284,10 +287,23 @@ function Panel({ card, people }: { card: CardLandingBlock; people: PeopleLanding
                 <Silhouette className="imp-pn-ph" tone={p.tone} />
               )}
               <b>{p.name}</b>
+              {p.handle && (
+                <a className="imp-pn-ig" href={instagramUrl(p.handle)} target="_blank" rel="noopener noreferrer">
+                  @{p.handle.replace(/^@+/, "")}
+                </a>
+              )}
               {p.tag && <span>{p.tag}</span>}
             </div>
-          ))}
+          ) : (
+            <div className="imp-pn imp-pn--tba" key={j}>
+              <Silhouette className="imp-pn-ph" tone={p.tone} />
+              <small>Por anunciar</small>
+              <span>{p.tag}</span>
+            </div>
+          )
+        )}
       </div>
+      {pending > 0 && <p className="imp-panel-tba">{pending === 1 ? "Panelista por anunciar." : "Panelistas por anunciar."}</p>}
     </div>
   );
 }
@@ -383,6 +399,8 @@ function AgendaLine({ row, instant, timezone }: { row: AgendaRow; instant: strin
   // Rows saved before topic/instructor existed keep everything in `text`.
   const title = row.instructor || row.topic || row.text;
   const detail = row.instructor ? row.topic : row.topic ? row.text : "";
+  // A speaker's talk can carry a subtitle: the row's «Nota extra», under its title.
+  const note = row.instructor && row.topic ? row.text : "";
   const [digits, suffix] = splitChip(row.chip);
   if (!title && !row.chip) return null;
   return (
@@ -413,6 +431,7 @@ function AgendaLine({ row, instant, timezone }: { row: AgendaRow; instant: strin
       <span className="imp-what">
         {isPause ? title : <b>{title}</b>}
         {detail && <span>{detail}</span>}
+        {note && <span className="imp-what-note">{note}</span>}
       </span>
     </li>
   );

@@ -7,30 +7,121 @@ import { emptyAgendaRow, type AgendaRow, type LandingBlock } from "@/lib/landing
 // the ticket includes, who it is for, the prices with the guarantee, the
 // questions and the sponsors (hidden until there are logos). Plus the
 // event's own lines (tagline, closing, button) and its three price stages
-// as ticket types. The panelists are made up, said so on the page itself,
-// until the real ones are confirmed; the speakers' photos are their
-// Instagram profile pictures (public/imparables/), to be replaced by better
-// ones from the editor.
+// as ticket types. The panelists aren't confirmed yet: no one made up, each
+// card says «Por anunciar» (IMPARABLES_PANELISTS); the speakers' photos are
+// their Instagram profile pictures (public/imparables/), to be replaced by
+// better ones from the editor.
 
 const PHOTO = (name: string) => `/imparables/${name}.jpg`;
-const HOST = { name: "Heidy Aristizábal", photo: PHOTO("heidy") };
+// The host's card (the team's text, 2026-10-26, may still be adjusted).
+const HOST = {
+  name: "Heidy Aristizábal",
+  handle: "@hlacosedora",
+  bio: "Empezó haciendo uñas en un puesto alquilado. Hoy es cofundadora de H La Cosedora, Nail Fest y Guerra de Pinceles, tiene un récord Guinness y pasó por Shark Tank. Más de 10 años impulsando a la comunidad de uñas.",
+  photo: PHOTO("heidy"),
+};
 
-export const IMPARABLES_SPEAKERS = [
-  { name: "Jimena", handle: "@jimenanails", tag: "De manicurista a empresaria con marca multinacional.", photoUrl: PHOTO("jimena") },
-  { name: "Pau", handle: "@soypauc_tuprofe", tag: "De la mesa a más de 12 sedes: miedos, autosabotaje y cobrar sin culpa.", photoUrl: PHOTO("pau") },
-  { name: "Juan Tenorio", handle: "@don.juantenorio", tag: "Precios y la plata del negocio.", photoUrl: PHOTO("juan") },
-  { name: "Cris Sierra", handle: "@cris_sierra17", tag: "Una historia de superación: marca, cadena y academias.", photoUrl: PHOTO("cris") },
-  { name: "Maris", handle: "@maris_nails_oficial", tag: "Empezar de cero en otro país. En vivo desde Chile.", photoUrl: PHOTO("maris") },
-  { name: "Fabi", handle: "@fabiversatill", tag: "Estratega de salones: estrategias para hacer crecer el tuyo.", photoUrl: PHOTO("fabi") },
-  { name: "Alejandro Salinas", handle: "@salinas.beautybusiness", tag: "Marketing con inteligencia artificial.", photoUrl: PHOTO("salinas") },
-  { name: "Oskar", handle: "@oskarivanquebelleza", tag: "Energía, redes para sobresalir y la ruta final.", photoUrl: PHOTO("oskar") },
+// Each speaker's texts in one place (the team's update, 2026-10-26): the line
+// on her card (`tag`), her talk's title (`talk`), which the program shows
+// under her name, and the talk's subtitle when it has one (`subtitle`, the
+// program row's «Nota extra»). The team edits them later in «Contenido».
+interface ImparablesSpeaker {
+  name: string;
+  handle: string;
+  tag: string;
+  talk: string;
+  subtitle?: string;
+  photoUrl: string;
+}
+
+export const IMPARABLES_SPEAKERS: ImparablesSpeaker[] = [
+  {
+    name: "Jimena",
+    handle: "@jimenanails",
+    tag: "La manicurista que se convirtió en empresaria. Fundadora de JimenaNails, 10 años construyendo su marca y a sí misma.",
+    talk: "De la mesa a una marca internacional",
+    photoUrl: PHOTO("jimena"),
+  },
+  {
+    name: "Pau",
+    handle: "@soypauc_tuprofe",
+    tag: "De la mesa a CEO de El Imperio de las Uñas. Miedos, autosabotaje y cobrar sin culpa.",
+    talk: "Créete el cuento y cobra lo que vales",
+    photoUrl: PHOTO("pau"),
+  },
+  {
+    name: "Juan Tenorio",
+    handle: "@don.juantenorio",
+    tag: "Asesor de negocios de belleza, con más de 500 salones y barberías transformados. Precios, valor y rentabilidad.",
+    talk: "Tu salón factura, pero ¿cuánto te queda?",
+    photoUrl: PHOTO("juan"),
+  },
+  {
+    name: "Cris Sierra",
+    handle: "@cris_sierra17",
+    tag: "Fundadora de Cristina Sierra Nail Experts: 10 sedes y más de un millón de seguidores. Una historia de superación.",
+    // Provisional title, still to be confirmed.
+    talk: "La historia detrás de 10 sedes",
+    photoUrl: PHOTO("cris"),
+  },
+  {
+    name: "Maris",
+    handle: "@maris_nails_oficial",
+    tag: "De empezar desde nada a formar educadoras en toda Chile. En vivo desde Chile.",
+    talk: "Empezar de cero en otro país y atreverse a mostrarse",
+    photoUrl: PHOTO("maris"),
+  },
+  {
+    name: "Fabi",
+    handle: "@fabiversatill",
+    tag: "Nail artist y estratega de centros de belleza. La técnica ya no es suficiente.",
+    talk: "Agenda llena: estrategias y contenido que traen clientas",
+    photoUrl: PHOTO("fabi"),
+  },
+  {
+    name: "Alejandro Salinas",
+    handle: "@salinas.beautybusiness",
+    tag: "Asesor de negocios de belleza, 15 años de experiencia en administración, finanzas y marketing.",
+    talk: "IA para tu negocio: menos horas, más clientas",
+    photoUrl: PHOTO("salinas"),
+  },
+  {
+    name: "Oskar",
+    handle: "@oskarivanquebelleza",
+    tag: "Empresario y creador de marca. De creértela a sobresalir: visión, redes y la ruta final.",
+    talk: "Piensa en grande y hazte ver",
+    subtitle: "Visión, redes y la actitud para sobresalir.",
+    photoUrl: PHOTO("oskar"),
+  },
 ];
+
+// The panel's four guests (the team's update, 2026-10-26): none confirmed
+// yet, so no one is made up — each card shows a silhouette, «Por anunciar»
+// and the story she brings (`story`, the card's line). Once one is
+// confirmed, her name, Instagram and photo go here (or in the event's
+// «Contenido») and her card shows them instead.
+interface ImparablesPanelist {
+  name: string;
+  handle: string;
+  photoUrl: string;
+  story: string;
+}
+
+export const IMPARABLES_PANELISTS: ImparablesPanelist[] = [
+  { name: "", handle: "", photoUrl: "", story: "La que dejó de cobrar barato" },
+  { name: "", handle: "", photoUrl: "", story: "La que pasó de su casa a su propio local" },
+  { name: "", handle: "", photoUrl: "", story: "La que salió de deudas y ordenó su plata" },
+  { name: "", handle: "", photoUrl: "", story: "La que volvió a empezar desde cero" },
+];
+const PANEL_TONES = ["pink", "teal", "peach", "pink"] as const;
 
 const session = (chip: string, fields: Partial<AgendaRow>): AgendaRow => ({ ...emptyAgendaRow("session"), chip, ...fields });
 const day = (chip: string, topic: string, text: string): AgendaRow => ({ ...emptyAgendaRow("day"), chip, topic, text });
 const pause = (chip: string) => session(chip, { topic: "Pausa activa" });
-const speaker = (chip: string, name: string, topic: string) =>
-  session(chip, { instructor: name, topic, photoUrl: IMPARABLES_SPEAKERS.find((s) => s.name === name)?.photoUrl ?? "" });
+const speaker = (chip: string, name: string) => {
+  const s = IMPARABLES_SPEAKERS.find((sp) => sp.name === name);
+  return session(chip, { instructor: name, topic: s?.talk ?? "", text: s?.subtitle ?? "", photoUrl: s?.photoUrl ?? "" });
+};
 const withHost = (chip: string, topic: string, text: string) => session(chip, { topic, text, photoUrl: HOST.photo });
 
 export const IMPARABLES_REFUND =
@@ -48,30 +139,25 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
 
   // Speakers, el panel y la maestra de ceremonias
   { type: "heading", eyebrow: "Speakers", title: "Ya lo lograron. Ahora te cuentan cómo.", intro: "" },
-  { type: "people", items: IMPARABLES_SPEAKERS.map((s) => ({ ...s, tone: "pink" as const })) },
+  { type: "people", items: IMPARABLES_SPEAKERS.map(({ name, handle, tag, photoUrl }) => ({ name, handle, tag, photoUrl, tone: "pink" as const })) },
   {
     type: "card",
     eyebrow: "Panel · Lunes 28 · 12:05 p. m.",
-    title: "Dinero sin tabú",
-    html: "<p>Cuánto cobrar, cuánto ahorrar y cómo hablar de plata sin culpa.</p><p><em>Nombres de ejemplo · panelistas por confirmar</em></p>",
+    title: "El día que decidí cambiar",
+    html: "<p>Cuatro manicuristas cuentan la decisión que transformó su negocio y su vida.</p><p><em>Su antes, el momento del quiebre, su después y el consejo que te darían hoy.</em></p>",
     icon: "none",
     tone: "pink",
     imageUrl: "",
   },
   {
     type: "people",
-    items: [
-      { name: "Valentina Ríos", handle: "", tag: "Dueña de tres salones en Medellín", photoUrl: "", tone: "pink" },
-      { name: "Daniela Herrera", handle: "", tag: "Contadora de negocios de belleza", photoUrl: "", tone: "teal" },
-      { name: "Carolina Méndez", handle: "", tag: "Manicurista independiente en Barranquilla", photoUrl: "", tone: "peach" },
-      { name: "Natalia Gómez", handle: "", tag: "Asesora de finanzas para emprendedoras", photoUrl: "", tone: "pink" },
-    ],
+    items: IMPARABLES_PANELISTS.map((p, i) => ({ name: p.name, handle: p.handle, tag: p.story, photoUrl: p.photoUrl, tone: PANEL_TONES[i % PANEL_TONES.length]! })),
   },
   {
     type: "card",
     eyebrow: "Maestra de ceremonias",
     title: HOST.name,
-    html: "<p>@hlacosedora</p><p>Creadora de Nail Fest, Guerra de Pinceles, Manicuristas Imparables y la marca H la Cosedora. Speaker e influencer.</p>",
+    html: `<p>${HOST.handle}</p><p>${HOST.bio}</p>`,
     icon: "none",
     tone: "pink",
     imageUrl: HOST.photo,
@@ -84,25 +170,25 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
     rows: [
       day("Domingo 27 de junio", "De la mesa a empresaria", "9:00 a. m. a 2:00 p. m."),
       withHost("9:00 a. m.", "Bienvenida", "Con Heidy Aristizábal, maestra de ceremonias"),
-      speaker("9:15 a. m.", "Jimena", "De manicurista a empresaria"),
+      speaker("9:15 a. m.", "Jimena"),
       pause("10:15 a. m."),
-      speaker("10:25 a. m.", "Pau", "Miedos, autosabotaje y cobrar sin culpa"),
+      speaker("10:25 a. m.", "Pau"),
       pause("11:25 a. m."),
-      speaker("11:40 a. m.", "Juan Tenorio", "Precios y la plata del negocio"),
+      speaker("11:40 a. m.", "Juan Tenorio"),
       pause("12:40 p. m."),
-      speaker("12:50 p. m.", "Cris Sierra", "Marca, cadena y academias"),
+      speaker("12:50 p. m.", "Cris Sierra"),
       withHost("1:50 p. m.", "Cierre y sorteo", "Con Heidy Aristizábal"),
       day("Lunes 28 de junio", "Sobresalir y pasar a la acción", "9:00 a. m. a 2:00 p. m."),
       withHost("9:00 a. m.", "Repaso", "Con Heidy Aristizábal"),
-      speaker("9:05 a. m.", "Maris", "Empezar de cero en otro país"),
+      speaker("9:05 a. m.", "Maris"),
       pause("9:55 a. m."),
-      speaker("10:05 a. m.", "Fabi", "Estrategias para hacer crecer tu salón"),
+      speaker("10:05 a. m.", "Fabi"),
       pause("10:55 a. m."),
-      speaker("11:05 a. m.", "Alejandro Salinas", "Marketing con inteligencia artificial"),
+      speaker("11:05 a. m.", "Alejandro Salinas"),
       pause("11:55 a. m."),
-      session("12:05 p. m.", { topic: "Panel «Dinero sin tabú»", text: "Con Valentina, Daniela, Carolina y Natalia" }),
+      session("12:05 p. m.", { topic: "Panel «El día que decidí cambiar»", text: "Cuatro historias reales de transformación" }),
       pause("12:50 p. m."),
-      speaker("1:00 p. m.", "Oskar", "Energía, redes y la ruta final"),
+      speaker("1:00 p. m.", "Oskar"),
       withHost("1:50 p. m.", "Cierre y anuncio de la próxima edición", "Con Heidy Aristizábal"),
     ],
   },
