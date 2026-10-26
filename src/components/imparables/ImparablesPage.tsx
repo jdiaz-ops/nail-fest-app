@@ -5,7 +5,7 @@ import type { LandingBlock } from "@/lib/landingBlocks/types";
 import { coverName, type EventWhen } from "@/lib/imparables/schedule";
 import { dayMonth, pesos, saving, untilDay, type SalesState } from "@/lib/imparables/stages";
 import { utcToZonedInputValue } from "@/lib/dateFormat";
-import { castLine, castOf, coverOf, panelOf } from "@/lib/imparables/blocks";
+import { castLine, castOf, coverOf, panelOf, talksOf } from "@/lib/imparables/blocks";
 import ImparablesBlocks from "./ImparablesBlocks";
 import { ImpIcon, Tiara, initials } from "./ImpArt";
 import ImpButton from "./ImpButton";
@@ -102,6 +102,9 @@ export default function ImparablesPage({
 
   const { cover, rest } = coverOf(blocks);
   const { speakers, panels } = castOf(blocks);
+  const panel = panelOf(rest);
+  // Whose photo goes next to a name on the cards: the speakers', and the panel's guests already named.
+  const faces = [...speakers, ...(panel?.people.items.filter((p) => p.name.trim()) ?? [])];
   const line = castLine(blocks);
   const cast = speakers.length ? `${speakers.length} ${speakers.length === 1 ? "speaker" : "speakers"}${panels ? (panels === 1 ? " y un panel" : ` y ${panels} paneles`) : ""}` : "";
   const buyLabel = event.registerButtonLabel?.trim() || "Quiero mi boleta";
@@ -248,7 +251,7 @@ export default function ImparablesPage({
         </div>
       )}
 
-      <ImparablesBlocks blocks={rest} context={{ sales, offsetMs, when, timezone, now, buyLabel, speakers, panel: panelOf(rest) }} />
+      <ImparablesBlocks blocks={rest} context={{ sales, offsetMs, when, timezone, now, buyLabel, speakers: faces, panel, talks: talksOf(rest) }} />
 
       <section className="imp-close">
         <div className="imp-rays" aria-hidden="true" />

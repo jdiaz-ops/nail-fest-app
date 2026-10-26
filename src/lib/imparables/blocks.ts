@@ -1,4 +1,4 @@
-import type { CardLandingBlock, ImageLandingBlock, LandingBlock, PeopleLandingBlock } from "@/lib/landingBlocks/types";
+import type { AgendaRow, CardLandingBlock, ImageLandingBlock, LandingBlock, PeopleLandingBlock } from "@/lib/landingBlocks/types";
 
 // How Manicuristas Imparables' page reads an event's blocks
 // (components/imparables/ImparablesBlocks.tsx): an image before the first
@@ -49,6 +49,29 @@ export function namesIn(who: string): string[] {
     .split(/\s*,\s*|\s+y\s+/)
     .map((name) => name.trim())
     .filter(Boolean);
+}
+
+/** Each speaker's talk as the program titles it, by her name in lowercase: what her card says under her line. */
+export function talksOf(blocks: LandingBlock[]): Record<string, string> {
+  const talks: Record<string, string> = {};
+  for (const block of blocks) {
+    if (block.type !== "agenda") continue;
+    for (const row of block.rows) {
+      const name = row.instructor.trim().toLowerCase();
+      if (row.kind === "session" && name && row.topic.trim() && !(name in talks)) talks[name] = row.topic.trim();
+    }
+  }
+  return talks;
+}
+
+/** A day's route, from its talks' steps («Paso 1 · Tus números», «Paso 2 · Tu esencia»…):
+ * ["Tus números", "tu esencia"], to read with arrows between. Fewer than two steps make no route. */
+export function routeOf(rows: AgendaRow[]): string[] {
+  const steps = rows
+    .map((row) => /^paso\s*\d+\s*[·:.\-–—]\s*(.+)$/i.exec(row.label.trim())?.[1]?.trim())
+    .filter((step): step is string => Boolean(step));
+  if (steps.length < 2) return [];
+  return steps.map((step, i) => (i === 0 ? step : step.charAt(0).toLowerCase() + step.slice(1)));
 }
 
 /** Who is under the group photo: the speakers' names, then the host and the panel. */

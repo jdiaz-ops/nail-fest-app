@@ -119,7 +119,7 @@ export interface CardLandingBlock {
 
 // One line of the program. A "day" row is a divider ("Domingo 2 de
 // agosto") — `chip` and `tone`, plus an optional title for the day in
-// `topic` ("De la mesa a empresaria") and its hours in `text`. A "session" row is one
+// `topic` ("Ahora te toca a ti") and its hours in `text`. A "session" row is one
 // demo/talk, laid out like the Instagram cronograma: the time, the topic
 // ("Tema"), who teaches it, and the brand behind it. `sponsored` marks a
 // brand that bought the slot — that row gets its own tinted box and a
@@ -141,9 +141,12 @@ export interface AgendaRow {
   sponsored: boolean;
   text: string;
   tone: LandingTone;
-  // Manicuristas Imparables' page only: what she takes home from a day
-  // («Te llevas», on day rows) and the day's star talk (session rows).
+  // Manicuristas Imparables' page only: a day's subtitle, under its title
+  // (`takeaway`, on day rows — it read «Te llevas: …» until 2026-10-26), a
+  // talk's small tag before its title (`label`: «Paso 1 · Tus números»,
+  // «Charla estrella») and the day's star talk in a box of its own (`star`).
   takeaway: string;
+  label: string;
   star: boolean;
 }
 
@@ -166,6 +169,7 @@ export function emptyAgendaRow(kind: AgendaRow["kind"] = "session"): AgendaRow {
     text: "",
     tone: kind === "day" ? "pink" : "teal",
     takeaway: "",
+    label: "",
     star: false,
   };
 }
@@ -369,6 +373,7 @@ function parseOne(rec: Record<string, unknown>, result: LandingBlock[]): void {
           text: str(r.text),
           tone: tone(r.tone),
           takeaway: str(r.takeaway),
+          label: str(r.label),
           star: r.star === true,
         })
       );

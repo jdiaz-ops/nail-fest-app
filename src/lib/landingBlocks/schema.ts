@@ -49,6 +49,7 @@ export const landingBlockSchema = z.discriminatedUnion("type", [
         text: z.string().default(""),
         tone: z.enum(["teal", "pink", "peach"]),
         takeaway: z.string().default(""),
+        label: z.string().default(""),
         star: z.boolean().default(false),
       })
     ),

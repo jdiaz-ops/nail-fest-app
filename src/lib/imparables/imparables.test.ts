@@ -2,8 +2,8 @@ import { existsSync } from "fs";
 import path from "path";
 import { describe, expect, it } from "vitest";
 import { landingBlockSchema } from "@/lib/landingBlocks/schema";
-import { parseLandingBlocks, type LandingBlock } from "@/lib/landingBlocks/types";
-import { castLine, castOf, coverOf, isPanelCard, namesIn, panelOf } from "./blocks";
+import { emptyAgendaRow, parseLandingBlocks, type AgendaLandingBlock, type LandingBlock } from "@/lib/landingBlocks/types";
+import { castLine, castOf, coverOf, isPanelCard, namesIn, panelOf, routeOf, talksOf } from "./blocks";
 import { agendaInstant, coverName, dayEnd, eventWhen, readClock } from "./schedule";
 import { pesos, salesState, saving, untilDay, type StageTicketType } from "./stages";
 import { IMPARABLES_BLOCKS, IMPARABLES_GROUP_PHOTO, IMPARABLES_PANELISTS, IMPARABLES_SPEAKERS, IMPARABLES_STAGES } from "./template";
@@ -199,9 +199,22 @@ describe("how the page reads the blocks", () => {
 
   it("names who is under the group photo", () => {
     expect(castLine(IMPARABLES_BLOCKS)).toEqual({
-      names: "Jimena Montalban, Paula Chacón, Juan Tenorio, Cristina Sierra, Maria Carolina Sebastia Sandoval, Fabi Pinillo Martínez, Alejandro Salinas y Oskar Garzón",
+      names: "Jimena Montalban, Paula Chacón, Cristina Sierra, Alejandro Salinas, Karen, Fabi Pinillo Martínez, Juan Tenorio y Oskar Garzón",
       also: "con Heidy Aristizábal y el panel «El día que decidí cambiar»",
     });
+  });
+
+  it("finds each speaker's talk in the program, for her card", () => {
+    const talks = talksOf(IMPARABLES_BLOCKS);
+    for (const s of IMPARABLES_SPEAKERS) expect(talks[s.name.toLowerCase()]).toBe(s.talk);
+    expect(Object.keys(talks)).toHaveLength(IMPARABLES_SPEAKERS.length);
+  });
+
+  it("makes a day's route out of its talks' steps", () => {
+    const row = (label: string) => ({ ...emptyAgendaRow("session"), label });
+    expect(routeOf([row("Paso 1 · Tus números"), row(""), row("Paso 2 · Tu esencia"), row("Paso 3: Atraer")])).toEqual(["Tus números", "tu esencia", "atraer"]);
+    expect(routeOf([row("Charla estrella"), row("Paso 1 · Tus números")])).toEqual([]);
+    expect(routeOf([])).toEqual([]);
   });
 
   it("reads the names on a card as typed", () => {
@@ -252,11 +265,11 @@ describe("the template", () => {
     expect(speakers.map((s) => s.name)).toEqual([
       "Jimena Montalban",
       "Paula Chacón",
-      "Juan Tenorio",
       "Cristina Sierra",
-      "Maria Carolina Sebastia Sandoval",
-      "Fabi Pinillo Martínez",
       "Alejandro Salinas",
+      "Karen",
+      "Fabi Pinillo Martínez",
+      "Juan Tenorio",
       "Oskar Garzón",
     ]);
     expect(panels).toBe(1);
@@ -265,12 +278,19 @@ describe("the template", () => {
     for (const photo of new Set(photos)) expect(existsSync(path.join(process.cwd(), "public", photo))).toBe(true);
   });
 
-  it("makes no panelist up: four still to be announced, each with the story she brings", () => {
+  it("makes no panelist up: Maria Carolina, and three still to be announced with the story each brings", () => {
     const i = IMPARABLES_BLOCKS.findIndex((b, j) => isPanelCard(b, IMPARABLES_BLOCKS[j + 1]));
     const panelists = IMPARABLES_BLOCKS[i + 1];
     if (panelists?.type !== "people") throw new Error("no panelists");
-    expect(panelists.items.map((p) => [p.name, p.handle, p.photoUrl])).toEqual(Array(4).fill(["", "", ""]));
+    expect(panelists.items.map((p) => [p.name, p.handle, p.photoUrl])).toEqual([
+      ["", "", ""],
+      ["", "", ""],
+      ["", "", ""],
+      ["Maria Carolina Sebastia Sandoval", "@maris_nails_oficial", "/imparables/maris.jpg"],
+    ]);
     expect(panelists.items.map((p) => p.tag)).toEqual(IMPARABLES_PANELISTS.map((p) => p.story));
+    // She is on the panel, not among the speakers.
+    expect(castOf(IMPARABLES_BLOCKS).speakers.some((s) => s.handle === "@maris_nails_oficial")).toBe(false);
   });
 
   it("puts each speaker's talk under her name in the program, with its subtitle if it has one", () => {
@@ -281,24 +301,59 @@ describe("the template", () => {
     }
   });
 
-  it("has the 3 results and the 4 doubts, each person on them a speaker (or the panel)", () => {
+  it("has the 3 results and the 4 doubts, each person on them a speaker, a panelist (or the panel)", () => {
     const slides = IMPARABLES_BLOCKS.filter((b) => b.type === "slides");
     expect(slides.map((b) => (b.type === "slides" ? [b.style, b.items.length] : null))).toEqual([
       ["results", 3],
       ["doubts", 4],
     ]);
-    const speakers = new Set(IMPARABLES_SPEAKERS.map((s) => s.name));
+    const speakers = new Set([...IMPARABLES_SPEAKERS.map((s) => s.name), ...IMPARABLES_PANELISTS.map((p) => p.name).filter(Boolean)]);
     for (const block of slides) {
       if (block.type !== "slides") continue;
       for (const name of block.items.flatMap((it) => namesIn(it.who))) expect(speakers.has(name) || /panel/i.test(name)).toBe(true);
     }
   });
 
-  it("gives each day what she takes home, every talk alike: none stands out as the star", () => {
-    const agenda = IMPARABLES_BLOCKS.find((b) => b.type === "agenda");
-    if (agenda?.type !== "agenda") throw new Error("no agenda");
-    expect(agenda.rows.filter((r) => r.kind === "day").every((r) => r.takeaway.length > 0)).toBe(true);
-    expect(agenda.rows.filter((r) => r.star)).toEqual([]);
+  const agendaOf = (blocks: LandingBlock[]) => {
+    const agenda = blocks.find((b): b is AgendaLandingBlock => b.type === "agenda");
+    if (!agenda) throw new Error("no agenda");
+    const monday = agenda.rows.findIndex((r, i) => i > 0 && r.kind === "day");
+    return { rows: agenda.rows, sunday: agenda.rows.slice(1, monday), monday: agenda.rows.slice(monday + 1) };
+  };
+
+  it("gives each day its subtitle; Sunday tells the stories, the panel its star talk, with no box", () => {
+    const { rows, sunday } = agendaOf(IMPARABLES_BLOCKS);
+    expect(rows.filter((r) => r.kind === "day").map((r) => [r.chip, r.text])).toEqual([
+      ["Domingo 27 de junio", "9:00 a. m. a 1:45 p. m."],
+      ["Lunes 28 de junio", "9:00 a. m. a 2:00 p. m."],
+    ]);
+    expect(rows.filter((r) => r.kind === "day").every((r) => r.takeaway.length > 0)).toBe(true);
+    expect(sunday.filter((r) => r.label).map((r) => [r.topic, r.label])).toEqual([["Panel «El día que decidí cambiar»", "Charla estrella"]]);
+    expect(rows.filter((r) => r.star)).toEqual([]);
+  });
+
+  it("makes Monday a plan in five steps, the route they make under the day's subtitle", () => {
+    const { monday } = agendaOf(IMPARABLES_BLOCKS);
+    expect(monday.filter((r) => r.label).map((r) => [r.label, r.instructor])).toEqual([
+      ["Paso 1 · Tus números", "Alejandro Salinas"],
+      ["Paso 2 · Tu esencia", "Karen"],
+      ["Paso 3 · Atraer", "Fabi Pinillo Martínez"],
+      ["Paso 4 · Retener", "Juan Tenorio"],
+      ["Paso 5 · Tu ruta", "Oskar Garzón"],
+    ]);
+    expect(routeOf(monday).join(" → ")).toBe("Tus números → tu esencia → atraer → retener → tu ruta");
+  });
+
+  it("puts the results right after the program", () => {
+    const agenda = IMPARABLES_BLOCKS.findIndex((b) => b.type === "agenda");
+    expect(IMPARABLES_BLOCKS[agenda + 1]).toMatchObject({ type: "heading", eyebrow: "Resultados" });
+    expect(IMPARABLES_BLOCKS[agenda + 2]).toMatchObject({ type: "slides", style: "results" });
+  });
+
+  it("says nothing on the page about artificial intelligence, nor the days' old titles", () => {
+    const shown = JSON.stringify(IMPARABLES_BLOCKS.filter((b) => !b.hidden));
+    expect(shown).not.toMatch(/inteligencia artificial|\bIA\b/i);
+    for (const old of ["De la mesa a empresaria", "Sobresalir y pasar a la acción", "Hazte ver y pasa a la acción"]) expect(shown).not.toContain(old);
   });
 
   it("fits each day of the program between 9:00 a. m. and 2:00 p. m.", () => {

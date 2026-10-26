@@ -850,7 +850,7 @@ function AgendaBlockEditor({
   onChange,
 }: {
   block: Extract<LandingBlock, { type: "agenda" }>;
-  // Manicuristas Imparables' page also reads a day's «Te llevas» and a star talk.
+  // Manicuristas Imparables' page also reads a day's subtitle, a talk's tag and a star talk.
   theme: "NAIL_FEST" | "IMPARABLES";
   onChange: (block: LandingBlock) => void;
 }) {
@@ -901,7 +901,7 @@ function AgendaBlockEditor({
               <input
                 value={row.topic}
                 onChange={(e) => updateRow(i, { ...row, topic: e.target.value })}
-                placeholder="Título del día (opcional, ej. De la mesa a empresaria)"
+                placeholder="Título del día (opcional, ej. Ahora te toca a ti)"
                 style={{ flex: "1 1 100%" }}
               />
               <input
@@ -914,7 +914,7 @@ function AgendaBlockEditor({
                 <input
                   value={row.takeaway}
                   onChange={(e) => updateRow(i, { ...row, takeaway: e.target.value })}
-                  placeholder="Te llevas (opcional, ej. cuánto cobrar sin culpa y…)"
+                  placeholder="Subtítulo del día (opcional, ej. Tus números, tu esencia y cómo atraer clientas…)"
                   style={{ flex: "1 1 100%" }}
                 />
               )}
@@ -943,6 +943,13 @@ function AgendaBlockEditor({
               />
               {controls}
             </div>
+            {imparables && (
+              <input
+                value={row.label}
+                onChange={(e) => updateRow(i, { ...row, label: e.target.value })}
+                placeholder="Etiqueta antes del título (opcional, ej. Paso 1 · Tus números)"
+              />
+            )}
             <input value={row.topic} onChange={(e) => updateRow(i, { ...row, topic: e.target.value })} placeholder="Tema (ej. Manicura Macro)" />
             <input
               value={row.instructor}

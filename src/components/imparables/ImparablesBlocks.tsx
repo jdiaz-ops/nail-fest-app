@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import type {
   AgendaRow,
   CardLandingBlock,
@@ -11,7 +12,7 @@ import type {
 import { youtubeVideo } from "@/lib/landingBlocks/types";
 import { agendaInstant, dayEnd, type EventWhen } from "@/lib/imparables/schedule";
 import { dayMonth, pesos, saving, type SalesState } from "@/lib/imparables/stages";
-import { isPanelCard, listNames, namesIn } from "@/lib/imparables/blocks";
+import { isPanelCard, listNames, namesIn, routeOf } from "@/lib/imparables/blocks";
 import { ImpIcon, Silhouette, iconForPoint, initials, instagramUrl, type ImpIconName } from "./ImpArt";
 import ImpButton from "./ImpButton";
 import ImpCountdown from "./ImpCountdown";
@@ -38,8 +39,10 @@ export interface ImparablesContext {
   now: Date;
   /** "Quiero mi boleta" */
   buyLabel: string;
-  /** The speakers, whose photos go next to their names on the cards. */
+  /** Whose photo goes next to a name on the cards: the speakers and the panel's guests already named. */
   speakers: PeopleLandingBlock["items"];
+  /** Each speaker's talk, by her name in lowercase (lib/imparables/blocks.ts talksOf): it goes on her card. */
+  talks: Record<string, string>;
   /** The panel: its line in the program tells what its card says, with its panelists' faces. */
   panel: { card: CardLandingBlock; people: PeopleLandingBlock } | null;
 }
@@ -206,7 +209,7 @@ function renderBlock(block: LandingBlock, key: number, context: ImparablesContex
     }
 
     case "people":
-      return block.items.length > 0 ? <Speakers key={key} people={block} /> : null;
+      return block.items.length > 0 ? <Speakers key={key} people={block} talks={context.talks} /> : null;
 
     case "agenda":
       return block.rows.length > 0 ? <Agenda key={key} rows={block.rows} context={context} /> : null;
@@ -399,7 +402,9 @@ function Panelists({ people }: { people: PeopleLandingBlock }) {
   );
 }
 
-function Speakers({ people }: { people: PeopleLandingBlock }) {
+// A speaker's card: her photo, her name and Instagram, her line and, under
+// it, the title of her talk as the program has it (2026-10-26).
+function Speakers({ people, talks }: { people: PeopleLandingBlock; talks: Record<string, string> }) {
   return (
     <div className="imp-sp-grid">
       {people.items
@@ -423,6 +428,7 @@ function Speakers({ people }: { people: PeopleLandingBlock }) {
               </a>
             )}
             {p.tag && <p className="imp-sp-line">{p.tag}</p>}
+            {talks[p.name.trim().toLowerCase()] && <p className="imp-sp-talk">{talks[p.name.trim().toLowerCase()]}</p>}
           </div>
         ))}
     </div>
@@ -431,9 +437,11 @@ function Speakers({ people }: { people: PeopleLandingBlock }) {
 
 // ── The program ─────────────────────────────────────────────────────────────
 // Both days one under the other, each line told the way the approved boceto
-// does: the talk first, then who gives it (her photo and name), how long it
-// lasts under its hour, the day's star talk in a box of its own and the
-// active breaks as thin lines; a day can say what she takes home.
+// does: the talk first (after its small tag, if it has one: its step, or
+// «Charla estrella»), then who gives it (her photo and name), how long it
+// lasts under its hour, a star talk in a box of its own and the active breaks
+// as thin lines. A day's header: its date and hours, its title, its subtitle
+// and, when its talks are steps, the route they make.
 
 /** "10:15 a. m." -> ["10:15", "a. m."]; anything else stays whole. */
 function splitChip(chip: string): [string, string] {
@@ -463,16 +471,23 @@ function Agenda({ rows, context }: { rows: AgendaRow[]; context: ImparablesConte
   // A day ends when its own header says ("9:00 a. m. a 2:00 p. m."), else when the event's day does.
   const ends = days.map((d, i) => dayEnd(d.head?.text ?? "", context.when.days[i], context.timezone) ?? context.when.ends[i] ?? null);
   const cards = days.map((d, i) => {
+    const route = routeOf(d.rows);
     return (
       <div className="imp-day" key={i}>
         {d.head && (
           <div className="imp-day-h">
-            {d.head.chip && <small>{d.head.chip}</small>}
+            {(d.head.chip || d.head.text) && <small>{[d.head.chip, d.head.text].filter(Boolean).join(" · ")}</small>}
             {d.head.topic && <b>{d.head.topic}</b>}
-            {d.head.text && <span className="imp-day-time">{d.head.text}</span>}
-            {d.head.takeaway && (
-              <span className="imp-take">
-                <strong>Te llevas:</strong> {d.head.takeaway}
+            {d.head.takeaway && <span className="imp-day-sub">{d.head.takeaway}</span>}
+            {route.length > 0 && (
+              <span className="imp-route">
+                {route.map((step, k) => (
+                  // Each step whole on its line: the route breaks only between them.
+                  <Fragment key={k}>
+                    {k > 0 && " "}
+                    <span>{k > 0 ? `→ ${step}` : step}</span>
+                  </Fragment>
+                ))}
               </span>
             )}
           </div>
@@ -534,6 +549,7 @@ function AgendaLine({
   const subtitle = panel?.card.html ? "" : row.topic && (row.instructor || !row.photoUrl) ? row.text : "";
   const guests = panel ? panelGuests(panel.people) : [];
   const named = guests.filter((p) => p.name.trim()).map((p) => p.name.trim());
+  const pending = guests.length - named.length;
   const who = row.topic ? row.instructor || (row.photoUrl ? row.text : "") : "";
   const [digits, suffix] = splitChip(row.chip);
   if (!title && !row.chip) return null;
@@ -557,7 +573,7 @@ function AgendaLine({
         </span>
       )}
       <span className="imp-what">
-        {row.star && <span className="imp-star-k">★ Charla estrella</span>}
+        {(row.label || row.star) && <span className="imp-ag-tag">{row.label || "★ Charla estrella"}</span>}
         <b>{title}</b>
         {subtitle && <span>{subtitle}</span>}
         {panel?.card.html && <span className="imp-ag-desc" dangerouslySetInnerHTML={{ __html: panel.card.html }} />}
@@ -573,9 +589,11 @@ function AgendaLine({
                 )
               )}
             </span>
-            {named.length === guests.length
+            {pending === 0
               ? `Con ${listNames(named)}`
-              : `${guests.length} ${guests.length === 1 ? "panelista" : "panelistas"}${named.length ? ` · con ${listNames(named)}` : " por anunciar"}`}
+              : named.length
+                ? `Con ${listNames(named)} y ${pending} ${pending === 1 ? "panelista" : "panelistas"} por anunciar`
+                : `${guests.length} ${guests.length === 1 ? "panelista" : "panelistas"} por anunciar`}
           </span>
         )}
         {who && (

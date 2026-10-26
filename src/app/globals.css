@@ -4586,6 +4586,23 @@ body:has(.imp) {
   line-height: 1.45;
   color: var(--imp-texto-2);
 }
+/* Under her line, the title of her talk */
+.imp-sp-talk {
+  margin: 10px 0 0;
+  font-size: 13.5px;
+  font-weight: 800;
+  line-height: 1.35;
+  color: var(--imp-texto);
+  text-wrap: balance;
+}
+.imp-sp-talk::before {
+  content: "";
+  display: block;
+  width: 28px;
+  height: 1.5px;
+  margin: 0 auto 10px;
+  background: var(--imp-oro);
+}
 
 /* The panelists: smaller than the speakers and four to a row */
 .imp-pnl {
@@ -4753,13 +4770,6 @@ body:has(.imp) {
   font-size: 19px;
   line-height: 1.25;
 }
-.imp-day-time {
-  display: block;
-  margin-top: 4px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--imp-texto-2);
-}
 .imp-ag {
   list-style: none;
   margin: 0;
@@ -4815,7 +4825,7 @@ body:has(.imp) {
   line-height: 1.45;
   color: var(--imp-texto-2);
 }
-/* The day's star talk, in a box of its own */
+/* A star talk, in a box of its own */
 .imp-ag li.is-star {
   margin: 6px -10px;
   padding: 12px 10px;
@@ -4826,7 +4836,8 @@ body:has(.imp) {
 .imp-ag li.is-star + li {
   border-top: 0;
 }
-.imp-what > .imp-star-k {
+/* A talk's small tag before its title: its step, or «Charla estrella» */
+.imp-what > .imp-ag-tag {
   margin: 0 0 4px;
   font-size: 10.5px;
   font-weight: 800;
@@ -4928,21 +4939,24 @@ body:has(.imp) {
   height: 1px;
   background: var(--imp-linea);
 }
-/* «Te llevas» under a day's title */
-.imp-take {
+/* A day's subtitle under its title, and the route its steps make */
+.imp-day-sub {
   display: block;
-  margin-top: 10px;
-  padding: 9px 11px;
-  border-radius: 12px;
-  background: var(--imp-caja);
+  margin-top: 6px;
   font-size: 13px;
-  font-weight: 600;
-  line-height: 1.45;
-  color: var(--imp-texto);
+  line-height: 1.5;
+  color: var(--imp-texto-2);
 }
-.imp-take strong {
+.imp-route {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
   font-weight: 800;
-  color: var(--imp-resalte);
+  line-height: 1.5;
+  color: var(--imp-acento);
+}
+.imp-route span {
+  white-space: nowrap;
 }
 
 /* Cards that slide: the results and the doubts */

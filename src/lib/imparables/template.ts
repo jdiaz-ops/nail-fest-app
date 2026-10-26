@@ -3,15 +3,15 @@ import { emptyAgendaRow, type AgendaRow, type LandingBlock } from "@/lib/landing
 // «Usar la plantilla de Manicuristas Imparables» (EventForm.tsx →
 // /api/admin/events/[id]/plantilla-imparables, 2026-10-26): the page of the
 // approved boceto, as ordinary blocks the team edits like any other event's —
-// the cover's group photo, the hook, the 3 results, the 8 speakers, the
-// panel, the host, the two days' program, what the ticket includes, who it
-// is for, the prices with the guarantee, the doubts, the questions and the
-// sponsors (hidden until there are logos). Plus the event's own lines
+// the cover's group photo, the hook, the 8 speakers, the panel, the host, the
+// two days' program, the 3 results, what the ticket includes, who it is for,
+// the prices with the guarantee, the doubts, the questions and the sponsors
+// (hidden until there are logos). Plus the event's own lines
 // (tagline, closing, button and the line under the cover's countdown) and
 // its three price stages as ticket types. The panelists aren't confirmed yet: no one made up, each
 // card says «Por anunciar» (IMPARABLES_PANELISTS); the speakers' photos are
 // their Instagram profile pictures (public/imparables/), to be replaced by
-// better ones from the editor.
+// better ones from the editor (Karen's, still to come, shows her initial).
 
 const PHOTO = (name: string) => `/imparables/${name}.jpg`;
 // The host's card (the team's text, 2026-10-26, may still be adjusted).
@@ -24,14 +24,15 @@ const HOST = {
 
 // Each speaker's texts in one place (the team's update, 2026-10-26): the line
 // on her card (`tag`), her talk's title (`talk`), which the program shows
-// under her name, and the talk's subtitle when it has one (`subtitle`, the
-// program row's «Nota extra»). The team edits them later in «Contenido».
+// under her name and her card under her line, and the talk's subtitle
+// (`subtitle`, the program row's «Nota extra»). In the order of the cards.
+// The team edits them later in «Contenido».
 interface ImparablesSpeaker {
   name: string;
   handle: string;
   tag: string;
   talk: string;
-  subtitle?: string;
+  subtitle: string;
   photoUrl: string;
 }
 
@@ -40,66 +41,74 @@ export const IMPARABLES_SPEAKERS: ImparablesSpeaker[] = [
     name: "Jimena Montalban",
     handle: "@jimenanails",
     tag: "La manicurista que se convirtió en empresaria. Fundadora de JimenaNails, 10 años construyendo su marca y a sí misma.",
-    talk: "Tu nombre también puede ser una marca",
+    talk: "Lo que nadie te cuenta de crecer",
+    subtitle: "Las decisiones y los riesgos que la llevaron de la mesa de manicure a una marca internacional.",
     photoUrl: PHOTO("jimena"),
   },
   {
     name: "Paula Chacón",
     handle: "@soypauc_tuprofe",
-    tag: "De la mesa a CEO de El Imperio de las Uñas, una cadena de 7 spas.",
-    talk: "Créete el cuento y cobra lo que vales",
+    tag: "De la mesa a CEO de El Imperio de las Uñas, una cadena de 7 spas. Los miedos que tuvo que vencer: cobrar sin culpa y armar un equipo.",
+    talk: "Créete el cuento: cobra lo que vales y deja de hacerlo todo sola",
+    subtitle: "Los miedos que tuvo que vencer: cobrar sin culpa, delegar y armar un equipo.",
     photoUrl: PHOTO("pau"),
-  },
-  {
-    name: "Juan Tenorio",
-    handle: "@don.juantenorio",
-    tag: "Asesor de negocios de belleza, con más de 500 salones y barberías transformados.",
-    talk: "Tu salón factura, pero ¿cuánto te queda?",
-    photoUrl: PHOTO("juan"),
   },
   {
     name: "Cristina Sierra",
     handle: "@cris_sierra17",
-    tag: "Fundadora de Cristina Sierra Nail Experts: 10 sedes y más de un millón de seguidores. Una historia de superación.",
-    talk: "La historia de superación detrás de 10 sedes",
+    tag: "Fundadora de Cristina Sierra Nail Experts: 10 sedes y más de un millón de seguidores. Resiliencia: cómo levantarse de lo más duro.",
+    talk: "Lo que no te rompe te hace imparable",
+    subtitle: "La historia detrás de 10 sedes: resiliencia para levantarse de lo más duro.",
     photoUrl: PHOTO("cris"),
-  },
-  {
-    name: "Maria Carolina Sebastia Sandoval",
-    handle: "@maris_nails_oficial",
-    tag: "De empezar desde nada en otro país a formar educadoras en toda Chile. Te enseña a vencer el miedo y atreverte a mostrarte.",
-    talk: "Empezar de cero en otro país y atreverse a mostrarse",
-    photoUrl: PHOTO("maris"),
-  },
-  {
-    name: "Fabi Pinillo Martínez",
-    handle: "@fabiversatill",
-    tag: "Estratega de centros de belleza. Te enseña a llenar tu agenda con estrategias y contenido que traen clientas.",
-    talk: "Agenda llena: estrategias y contenido que traen clientas",
-    photoUrl: PHOTO("fabi"),
   },
   {
     name: "Alejandro Salinas",
     handle: "@salinas.beautybusiness",
-    tag: "Asesor de negocios de belleza, 15 años en administración, finanzas y marketing. Te muestra cómo usar la IA para ganar tiempo y clientas.",
-    talk: "IA para tu negocio: menos horas, más clientas",
+    tag: "Asesor de negocios de belleza, 15 años de experiencia en administración, finanzas y marketing. Precios, costos y cuánto te queda de verdad.",
+    talk: "Ordena tu plata: precios, costos y cuánto te queda de verdad",
+    subtitle: "Sal sabiendo cuánto cobrar, cuánto gastas y cuánto te queda, con herramientas sencillas que puedes usar desde mañana.",
     photoUrl: PHOTO("salinas"),
+  },
+  {
+    name: "Karen",
+    handle: "@karenw.trainer",
+    tag: "Creadora del Método Esencia. Tu esencia es tu marca: deja de copiar y crea tu sello.",
+    talk: "Tu esencia es tu marca: deja de copiar y crea tu sello",
+    subtitle: "Descubre lo que te hace única y conviértelo en una marca que tus clientas reconozcan y busquen.",
+    photoUrl: "",
+  },
+  {
+    name: "Fabi Pinillo Martínez",
+    handle: "@fabiversatill",
+    tag: "Nail artist y estratega de centros de belleza. La técnica ya no es suficiente.",
+    talk: "Agenda llena: estrategias y contenido que traen clientas",
+    subtitle: "Del primer mensaje a la cita confirmada: qué publicar y cómo responder.",
+    photoUrl: PHOTO("fabi"),
+  },
+  {
+    name: "Juan Tenorio",
+    handle: "@don.juantenorio",
+    tag: "Asesor de negocios de belleza, con más de 500 salones y barberías transformados. Clientas que vuelven y te recomiendan.",
+    talk: "Clientas que vuelven: cómo hacer que te elijan, regresen y te recomienden",
+    subtitle: "Servicio y experiencia para que cada clienta gaste más en cada visita.",
+    photoUrl: PHOTO("juan"),
   },
   {
     name: "Oskar Garzón",
     handle: "@oskarivanquebelleza",
-    tag: "Te contagia la energía para creértela y sobresalir: visión, redes y la ruta final.",
+    tag: "Empresario y creador de marca. Cierra el congreso: visión, actitud y tu ruta final.",
     talk: "Piensa en grande y hazte ver",
-    subtitle: "Visión, redes y la actitud para sobresalir.",
+    subtitle: "Visión, redes y la actitud para sobresalir. Cierre del congreso y tu ruta final.",
     photoUrl: PHOTO("oskar"),
   },
 ];
 
-// The panel's four guests (the team's update, 2026-10-26): none confirmed
-// yet, so no one is made up — each card shows a silhouette, «Por anunciar»
-// and the story she brings (`story`, the card's line). Once one is
-// confirmed, her name, Instagram and photo go here (or in the event's
-// «Contenido») and her card shows them instead.
+// The panel's four guests (the team's update, 2026-10-26): Maria Carolina
+// (Maris) is the one who started over from scratch; the other three aren't
+// confirmed yet, so no one is made up — each of their cards shows a
+// silhouette, «Por anunciar» and the story she brings (`story`, the card's
+// line). Once one is confirmed, her name, Instagram, photo and line go here
+// (or in the event's «Contenido») and her card shows them instead.
 interface ImparablesPanelist {
   name: string;
   handle: string;
@@ -111,16 +120,21 @@ export const IMPARABLES_PANELISTS: ImparablesPanelist[] = [
   { name: "", handle: "", photoUrl: "", story: "La que dejó de cobrar barato" },
   { name: "", handle: "", photoUrl: "", story: "La que pasó de su casa a su propio local" },
   { name: "", handle: "", photoUrl: "", story: "La que salió de deudas y ordenó su plata" },
-  { name: "", handle: "", photoUrl: "", story: "La que volvió a empezar desde cero" },
+  {
+    name: "Maria Carolina Sebastia Sandoval",
+    handle: "@maris_nails_oficial",
+    photoUrl: PHOTO("maris"),
+    story: "De empezar desde nada a formar educadoras en toda Chile. En vivo desde Chile.",
+  },
 ];
 const PANEL_TONES = ["pink", "teal", "peach", "pink"] as const;
 
 const session = (chip: string, fields: Partial<AgendaRow>): AgendaRow => ({ ...emptyAgendaRow("session"), chip, ...fields });
 const day = (chip: string, topic: string, text: string, takeaway: string): AgendaRow => ({ ...emptyAgendaRow("day"), chip, topic, text, takeaway });
 const pause = (chip: string) => session(chip, { topic: "Pausa activa" });
-const speaker = (chip: string, name: string) => {
+const speaker = (chip: string, name: string, label = "") => {
   const s = IMPARABLES_SPEAKERS.find((sp) => sp.name === name);
-  return session(chip, { instructor: name, topic: s?.talk ?? "", text: s?.subtitle ?? "", photoUrl: s?.photoUrl ?? "" });
+  return session(chip, { instructor: name, topic: s?.talk ?? "", text: s?.subtitle ?? "", photoUrl: s?.photoUrl ?? "", label });
 };
 
 // The cover's group photo: the speakers and Heidy, cut out of their photos (2026-10-26).
@@ -145,48 +159,12 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
   },
   { type: "card", eyebrow: "Ellas empezaron donde tú estás hoy:", title: "en una mesa de manicure.", html: "", icon: "none", tone: "pink", imageUrl: "", hidden: true },
 
-  // Los 3 resultados, en tarjetas que se deslizan
-  { type: "heading", eyebrow: "Resultados", title: "Lo que vas a resolver en estos dos días", intro: "" },
-  {
-    type: "slides",
-    style: "results",
-    items: [
-      {
-        tag: "Más clientas",
-        title: "Llena tu agenda sin depender del voz a voz",
-        text: "Redes que atraen clientas, tu marca y marketing con inteligencia artificial.",
-        noteLabel: "Sales sabiendo",
-        note: "qué publicar primero.",
-        who: "Fabi Pinillo Martínez, Alejandro Salinas y Oskar Garzón",
-        icon: "none",
-      },
-      {
-        tag: "Más ganancia",
-        title: "Cobra lo que vales, sin culpa",
-        text: "Cuánto cobrar, cuánto ahorrar y cómo hablar de plata con tus clientas.",
-        noteLabel: "Sales sabiendo",
-        note: "cuánto debe dejarte cada servicio.",
-        who: "Juan Tenorio, Paula Chacón y el panel",
-        icon: "none",
-      },
-      {
-        tag: "Tu negocio",
-        title: "De la mesa a dueña de tu marca",
-        text: "Pasar de atender sola a tener salón, equipo o academia, y empezar de cero si te toca.",
-        noteLabel: "Sales sabiendo",
-        note: "cuál es tu primer paso.",
-        who: "Jimena Montalban, Cristina Sierra y Maria Carolina Sebastia Sandoval",
-        icon: "none",
-      },
-    ],
-  },
-
   // Speakers, el panel y la maestra de ceremonias
-  { type: "heading", eyebrow: "Speakers", title: "Ya lo lograron. Ahora te cuentan cómo.", intro: "" },
+  { type: "heading", eyebrow: "Speakers", title: "Las que te lo van a contar.", intro: "" },
   { type: "people", items: IMPARABLES_SPEAKERS.map(({ name, handle, tag, photoUrl }) => ({ name, handle, tag, photoUrl, tone: "pink" as const })) },
   {
     type: "card",
-    eyebrow: "Panel · Lunes 28 · 12:05 p. m.",
+    eyebrow: "Panel · Domingo 27 · 10:25 a. m.",
     title: "El día que decidí cambiar",
     html: "<p>Cuatro manicuristas cuentan la decisión que transformó su negocio y su vida.</p><p><em>Su antes, el momento del quiebre, su después y el consejo que te darían hoy.</em></p>",
     icon: "none",
@@ -207,43 +185,80 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
     imageUrl: HOST.photo,
   },
 
-  // La agenda: todo cabe de 9:00 a. m. a 2:00 p. m.
+  // La agenda: el domingo, las historias (de 9:00 a. m. a 1:45 p. m.); el
+  // lunes, el plan en cinco pasos (de 9:00 a. m. a 2:00 p. m.)
   { type: "heading", eyebrow: "Agenda", title: "Así son los dos días", intro: "" },
   {
     type: "agenda",
     rows: [
       day(
         "Domingo 27 de junio",
-        "Tu talento vale más",
-        "9:00 a. m. a 2:00 p. m.",
-        "cuánto cobrar sin culpa y cómo hacer que tu trabajo te deje más dinero."
+        "Lo lograron con los mismos miedos que tú. Ahora te cuentan cómo.",
+        "9:00 a. m. a 1:45 p. m.",
+        "Cómo atravesaron las dificultades, tomaron riesgos y vencieron sus miedos para llegar donde están."
       ),
       withHost("9:00 a. m.", "Bienvenida", "Con Heidy Aristizábal, maestra de ceremonias"),
       speaker("9:15 a. m.", "Jimena Montalban"),
       pause("10:15 a. m."),
-      speaker("10:25 a. m.", "Paula Chacón"),
-      pause("11:25 a. m."),
-      speaker("11:40 a. m.", "Juan Tenorio"),
-      pause("12:40 p. m."),
-      speaker("12:50 p. m.", "Cristina Sierra"),
-      withHost("1:50 p. m.", "Cierre", "Con Heidy Aristizábal"),
+      session("10:25 a. m.", { topic: "Panel «El día que decidí cambiar»", text: "Cuatro historias reales de transformación", label: "Charla estrella" }),
+      pause("11:10 a. m."),
+      speaker("11:25 a. m.", "Paula Chacón"),
+      pause("12:25 p. m."),
+      speaker("12:35 p. m.", "Cristina Sierra"),
+      withHost("1:35 p. m.", "Cierre del día y sorteo", "Con Heidy Aristizábal"),
       day(
         "Lunes 28 de junio",
-        "Sobresalir y pasar a la acción",
+        "Ahora te toca a ti. Este es tu plan para lograrlo.",
         "9:00 a. m. a 2:00 p. m.",
-        "cómo mostrarte y llenar tu agenda, con contenido e IA, y el empujón para dar tu siguiente paso."
+        "Tus números, tu esencia, cómo atraer clientas y hacer que vuelvan: tu plan para ganar más y convertirte en la dueña de tu negocio."
       ),
       withHost("9:00 a. m.", "Repaso", "Con Heidy Aristizábal"),
-      speaker("9:05 a. m.", "Maria Carolina Sebastia Sandoval"),
+      speaker("9:05 a. m.", "Alejandro Salinas", "Paso 1 · Tus números"),
       pause("9:55 a. m."),
-      speaker("10:05 a. m.", "Fabi Pinillo Martínez"),
+      speaker("10:05 a. m.", "Karen", "Paso 2 · Tu esencia"),
       pause("10:55 a. m."),
-      speaker("11:05 a. m.", "Alejandro Salinas"),
+      speaker("11:05 a. m.", "Fabi Pinillo Martínez", "Paso 3 · Atraer"),
       pause("11:55 a. m."),
-      session("12:05 p. m.", { topic: "Panel «El día que decidí cambiar»", text: "Cuatro historias reales de transformación" }),
-      pause("12:50 p. m."),
-      speaker("1:00 p. m.", "Oskar Garzón"),
-      withHost("1:50 p. m.", "Cierre", "Con Heidy Aristizábal"),
+      speaker("12:05 p. m.", "Juan Tenorio", "Paso 4 · Retener"),
+      pause("12:55 p. m."),
+      speaker("1:05 p. m.", "Oskar Garzón", "Paso 5 · Tu ruta"),
+      withHost("1:35 p. m.", "Agradecimientos y anuncio de la próxima edición", "Con Heidy Aristizábal"),
+    ],
+  },
+
+  // Los 3 resultados, en tarjetas que se deslizan: después de la agenda
+  { type: "heading", eyebrow: "Resultados", title: "Lo que vas a resolver en estos dos días", intro: "" },
+  {
+    type: "slides",
+    style: "results",
+    items: [
+      {
+        tag: "Más clientas",
+        title: "Llena tu agenda sin depender del voz a voz",
+        text: "Contenido que atrae clientas, una marca con tu sello y clientas que vuelven y te recomiendan.",
+        noteLabel: "Sales sabiendo",
+        note: "qué publicar primero.",
+        who: "Karen, Fabi Pinillo Martínez y Juan Tenorio",
+        icon: "none",
+      },
+      {
+        tag: "Más ganancia",
+        title: "Cobra lo que vales, sin culpa",
+        text: "Cuánto cobrar, cuánto ahorrar y cómo hablar de plata con tus clientas.",
+        noteLabel: "Sales sabiendo",
+        note: "cuánto debe dejarte cada servicio.",
+        who: "Paula Chacón y Alejandro Salinas",
+        icon: "none",
+      },
+      {
+        tag: "Tu negocio",
+        title: "De la mesa a dueña de tu marca",
+        text: "Pasar de atender sola a tener salón, equipo o academia, y empezar de cero si te toca.",
+        noteLabel: "Sales sabiendo",
+        note: "cuál es tu primer paso.",
+        who: "Jimena Montalban, Cristina Sierra y el panel",
+        icon: "none",
+      },
     ],
   },
 
@@ -332,7 +347,7 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
         title: "Mi caso es distinto.",
         text: "Hay caminos de todo tipo: independiente, salón, cadena, academia, y empezar de cero en otro país.",
         noteLabel: "",
-        note: "Maria Carolina empezó desde nada y hoy forma educadoras en Chile.",
+        note: "Maria Carolina empezó desde nada y hoy forma educadoras en Chile; la escuchas en el panel.",
         who: "Maria Carolina Sebastia Sandoval",
         icon: "none",
       },
