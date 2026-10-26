@@ -58,19 +58,34 @@ export interface EventWhen {
   short: string;
   /** Each day's date where it happens ("2027-06-27"), in order: the program's days. */
   days: string[];
+  /** The first day's opening and closing instants when every day keeps the same hours: the cover shows them in a visitor's own hour. */
+  span: { opensAt: string; closesAt: string } | null;
+  /** When each of `days` ends, or null: how long the last line of its program lasts. */
+  ends: (string | null)[];
 }
 
 export function eventWhen(event: { startsAt: Date; endsAt: Date | null; scheduleDays?: unknown }, timezone: string): EventWhen {
   const spans = parseScheduleDays(event.scheduleDays)
     .sort((a, b) => new Date(a.opensAt).getTime() - new Date(b.opensAt).getTime())
-    .map((d) => ({ opens: local(new Date(d.opensAt), timezone), closes: local(new Date(d.closesAt), timezone) }));
+    .map((d) => ({
+      opens: local(new Date(d.opensAt), timezone),
+      closes: local(new Date(d.closesAt), timezone),
+      opensAt: new Date(d.opensAt).toISOString(),
+      closesAt: new Date(d.closesAt).toISOString(),
+    }));
   let days: LocalTime[];
   let hours: string | null = null;
+  let span: EventWhen["span"] = null;
+  let endOf: (date: string) => string | null;
   if (spans.length > 0) {
     days = spans.map((s) => s.opens);
     const first = spans[0]!;
     const same = spans.every((s) => s.opens.hour === first.opens.hour && s.opens.minute === first.opens.minute && s.closes.hour === first.closes.hour && s.closes.minute === first.closes.minute);
-    if (same) hours = `${clock(first.opens.hour, first.opens.minute)} a ${clock(first.closes.hour, first.closes.minute)}`;
+    if (same) {
+      hours = `${clock(first.opens.hour, first.opens.minute)} a ${clock(first.closes.hour, first.closes.minute)}`;
+      span = { opensAt: first.opensAt, closesAt: first.closesAt };
+    }
+    endOf = (date) => spans.find((s) => s.opens.date === date)?.closesAt ?? null;
   } else {
     const start = local(event.startsAt, timezone);
     const end = event.endsAt ? local(event.endsAt, timezone) : null;
@@ -81,7 +96,14 @@ export function eventWhen(event: { startsAt: Date; endsAt: Date | null; schedule
         days.push(local(new Date(t + 12 * 3_600_000), "UTC"));
       }
     }
-    if (end) hours = `${clock(start.hour, start.minute)} a ${clock(end.hour, end.minute)}`;
+    // Each day closes at the hour the last one does.
+    const closing = (date: string) =>
+      end ? zonedTimeToUtc(`${date}T${String(end.hour).padStart(2, "0")}:${String(end.minute).padStart(2, "0")}`, timezone).toISOString() : null;
+    if (end) {
+      hours = `${clock(start.hour, start.minute)} a ${clock(end.hour, end.minute)}`;
+      span = { opensAt: event.startsAt.toISOString(), closesAt: closing(start.date)! };
+    }
+    endOf = closing;
   }
 
   const unique = days.filter((d, i) => days.findIndex((o) => o.date === d.date) === i);
@@ -102,7 +124,14 @@ export function eventWhen(event: { startsAt: Date; endsAt: Date | null; schedule
     dates = sameMonth ? `del ${named(first)} al ${named(last)} ${monthYear}` : `del ${named(first)} de ${MONTHS[first.month]} al ${named(last)} ${monthYear}`;
     short = sameMonth ? `del ${first.day} al ${last.day} de ${MONTHS[last.month]}` : `del ${first.day} de ${MONTHS[first.month]} al ${last.day} de ${MONTHS[last.month]}`;
   }
-  return { dates: capitalize(dates), hours, short, days: unique.map((d) => d.date) };
+  return { dates: capitalize(dates), hours, short, days: unique.map((d) => d.date), span, ends: unique.map((d) => endOf(d.date)) };
+}
+
+/** Minutes east of UTC where the event happens, at that instant (Bogotá: −300). */
+export function zoneOffset(instant: string, timezone: string): number {
+  const date = new Date(instant);
+  const wall = new Date(`${utcToZonedInputValue(date, timezone)}:00Z`);
+  return Math.round((wall.getTime() - date.getTime()) / 60_000);
 }
 
 /** "9:15 a. m." -> [9, 15]; "12:05 p. m." -> [12, 5]; "14:30" -> [14, 30]; anything else -> null. */

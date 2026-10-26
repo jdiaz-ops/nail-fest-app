@@ -141,6 +141,10 @@ export interface AgendaRow {
   sponsored: boolean;
   text: string;
   tone: LandingTone;
+  // Manicuristas Imparables' page only: what she takes home from a day
+  // («Te llevas», on day rows) and the day's star talk (session rows).
+  takeaway: string;
+  star: boolean;
 }
 
 export interface AgendaLandingBlock {
@@ -149,7 +153,21 @@ export interface AgendaLandingBlock {
 }
 
 export function emptyAgendaRow(kind: AgendaRow["kind"] = "session"): AgendaRow {
-  return { kind, chip: "", topic: "", instructor: "", photoUrl: "", brand: "", brandLogoUrl: "", handles: "", sponsored: false, text: "", tone: kind === "day" ? "pink" : "teal" };
+  return {
+    kind,
+    chip: "",
+    topic: "",
+    instructor: "",
+    photoUrl: "",
+    brand: "",
+    brandLogoUrl: "",
+    handles: "",
+    sponsored: false,
+    text: "",
+    tone: kind === "day" ? "pink" : "teal",
+    takeaway: "",
+    star: false,
+  };
 }
 
 /** "@amglowspa, cannicolombia" -> ["amglowspa", "cannicolombia"]. */
@@ -196,6 +214,34 @@ export interface PricesLandingBlock {
   note: string;
 }
 
+// A row of cards that slides with a finger, on Manicuristas Imparables'
+// page. «Resultados»: what she'll solve — a label (`tag`), the promise
+// (`title`), what she learns (`text`), what she leaves knowing (`noteLabel`
+// + `note`: "Sales sabiendo" + "qué publicar primero.") and who teaches it
+// (`who`). «Dudas»: the doubt in her own voice (`title`), the answer
+// (`text`) and a proof (`noteLabel` + `note`) next to a speaker's photo
+// (`who`) or an icon. `who` is names as typed ("Fabi, Alejandro Salinas y
+// Oskar"): the page finds each one's photo in the speakers.
+export interface SlideItem {
+  tag: string;
+  title: string;
+  text: string;
+  noteLabel: string;
+  note: string;
+  who: string;
+  icon: LandingCardIcon;
+}
+
+export interface SlidesLandingBlock {
+  type: "slides";
+  style: "results" | "doubts";
+  items: SlideItem[];
+}
+
+export function emptySlide(): SlideItem {
+  return { tag: "", title: "", text: "", noteLabel: "", note: "", who: "", icon: "none" };
+}
+
 // Reseñas de asistentes (lib/reviews.ts): this event's, the previous
 // edition's in the same city, or every edition's. Renders nothing below
 // three approved reviews — see components/reviews/ReviewsSection.tsx.
@@ -228,7 +274,8 @@ export type LandingBlock = (
   | VenueLandingBlock
   | PeopleLandingBlock
   | PointsLandingBlock
-  | PricesLandingBlock) & {
+  | PricesLandingBlock
+  | SlidesLandingBlock) & {
   // Kept in the editor but left off the public page — for a section that's
   // still being filled in. Absent = visible, so every block saved before
   // this existed stays exactly as it was.
@@ -321,6 +368,8 @@ function parseOne(rec: Record<string, unknown>, result: LandingBlock[]): void {
           sponsored: r.sponsored === true,
           text: str(r.text),
           tone: tone(r.tone),
+          takeaway: str(r.takeaway),
+          star: r.star === true,
         })
       );
     result.push({ type: "agenda", rows });
@@ -341,6 +390,19 @@ function parseOne(rec: Record<string, unknown>, result: LandingBlock[]): void {
     result.push({ type: "reviews", scope: rec.scope === "event" || rec.scope === "global" ? rec.scope : "previous", title: str(rec.title), limit });
   } else if (rec.type === "prices") {
     result.push({ type: "prices", note: str(rec.note) });
+  } else if (rec.type === "slides" && Array.isArray(rec.items)) {
+    const items = rec.items
+      .filter((it): it is Record<string, unknown> => typeof it === "object" && it !== null)
+      .map((it) => ({
+        tag: str(it.tag),
+        title: str(it.title),
+        text: str(it.text),
+        noteLabel: str(it.noteLabel),
+        note: str(it.note),
+        who: str(it.who),
+        icon: cardIcon(it.icon),
+      }));
+    result.push({ type: "slides", style: rec.style === "doubts" ? "doubts" : "results", items });
   } else if (rec.type === "reviewsBadge") {
     result.push({ type: "reviewsBadge", scope: rec.scope === "event" || rec.scope === "previous" ? rec.scope : "global" });
   }

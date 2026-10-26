@@ -108,6 +108,7 @@ export default async function EventLandingPage({
           format: event.format,
           closingText: event.closingText,
           registerButtonLabel: event.registerButtonLabel,
+          ctaNote: event.ctaNote,
         }}
         blocks={data.blocks}
         sales={data.sales}

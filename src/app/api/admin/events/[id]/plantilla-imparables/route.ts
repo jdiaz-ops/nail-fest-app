@@ -10,8 +10,9 @@ import { IMPARABLES_BLOCKS, IMPARABLES_FIELDS, IMPARABLES_STAGES, IMPARABLES_STA
 // «Usar la plantilla de Manicuristas Imparables» (EventForm.tsx): the
 // event's page becomes the approved boceto in the congress's design — its
 // blocks replaced by the template's (the admin confirmed that first, seeing
-// how many there were), its tagline, closing line and button set only
-// where it has none of its own, and its three price stages created as
+// how many there were), its tagline, closing line, button and the line
+// under the cover's countdown set only where it has none of its own, and
+// its three price stages created as
 // ticket types only when it has no ticket types at all. Nothing else of the
 // event changes (dates, format, Zoom, the old sales page), and nothing is
 // sent to anyone.
@@ -30,6 +31,7 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
       landingBlocks: sanitizeLandingBlocks(IMPARABLES_BLOCKS) as unknown as Prisma.InputJsonValue,
       subtitle: event.subtitle?.trim() ? undefined : sanitizeEventDescription(IMPARABLES_FIELDS.subtitle),
       closingText: event.closingText?.trim() ? undefined : IMPARABLES_FIELDS.closingText,
+      ctaNote: event.ctaNote?.trim() ? undefined : IMPARABLES_FIELDS.ctaNote,
       registerButtonLabel:
         !event.registerButtonLabel?.trim() || event.registerButtonLabel === DEFAULT_REGISTER_BUTTON_LABEL ? IMPARABLES_FIELDS.registerButtonLabel : undefined,
     },

@@ -2,11 +2,11 @@ import { existsSync } from "fs";
 import path from "path";
 import { describe, expect, it } from "vitest";
 import { landingBlockSchema } from "@/lib/landingBlocks/schema";
-import { parseLandingBlocks } from "@/lib/landingBlocks/types";
-import { castOf, isPanelCard } from "./blocks";
+import { parseLandingBlocks, type LandingBlock } from "@/lib/landingBlocks/types";
+import { castLine, castOf, coverOf, isPanelCard, namesIn } from "./blocks";
 import { agendaInstant, eventWhen, readClock } from "./schedule";
 import { inDays, pesos, salesState, stageDates, type StageTicketType } from "./stages";
-import { IMPARABLES_BLOCKS, IMPARABLES_PANELISTS, IMPARABLES_SPEAKERS, IMPARABLES_STAGES } from "./template";
+import { IMPARABLES_BLOCKS, IMPARABLES_GROUP_PHOTO, IMPARABLES_PANELISTS, IMPARABLES_SPEAKERS, IMPARABLES_STAGES } from "./template";
 
 const TZ = "America/Bogota";
 const at = (iso: string) => new Date(iso);
@@ -126,6 +126,8 @@ describe("eventWhen", () => {
       hours: "9:00 a. m. a 2:00 p. m.",
       short: "27 y 28 de junio",
       days: ["2027-06-27", "2027-06-28"],
+      span: { opensAt: "2027-06-27T14:00:00.000Z", closesAt: "2027-06-27T19:00:00.000Z" },
+      ends: ["2027-06-27T19:00:00.000Z", "2027-06-28T19:00:00.000Z"],
     });
   });
 
@@ -134,6 +136,8 @@ describe("eventWhen", () => {
     expect(when.dates).toBe("Domingo 27 y lunes 28 de junio de 2027");
     expect(when.hours).toBe("9:00 a. m. a 2:00 p. m.");
     expect(when.days).toEqual(["2027-06-27", "2027-06-28"]);
+    expect(when.span).toEqual({ opensAt: "2027-06-27T14:00:00.000Z", closesAt: "2027-06-27T19:00:00.000Z" });
+    expect(when.ends).toEqual(["2027-06-27T19:00:00.000Z", "2027-06-28T19:00:00.000Z"]);
   });
 
   it("leaves the hours out when the days keep different ones", () => {
@@ -149,6 +153,35 @@ describe("eventWhen", () => {
       TZ
     );
     expect(when.hours).toBeNull();
+    // No shared hours to show in her own hour on the cover; each day still knows when it ends.
+    expect(when.span).toBeNull();
+    expect(when.ends).toEqual(["2027-06-27T19:00:00.000Z", "2027-06-28T19:00:00.000Z"]);
+  });
+});
+
+describe("how the page reads the blocks", () => {
+  it("takes the image before the first section title as the cover's group photo", () => {
+    const { cover, rest } = coverOf(IMPARABLES_BLOCKS);
+    expect(cover?.url).toBe(IMPARABLES_GROUP_PHOTO);
+    expect(rest).toHaveLength(IMPARABLES_BLOCKS.length - 1);
+    expect(rest.some((b) => b.type === "image")).toBe(false);
+    expect(existsSync(path.join(process.cwd(), "public", IMPARABLES_GROUP_PHOTO))).toBe(true);
+    // An image further down is just an image.
+    const later = [{ type: "heading", eyebrow: "", title: "x", intro: "" }, { type: "image", url: "/a.jpg", caption: "" }] as LandingBlock[];
+    expect(coverOf(later).cover).toBeNull();
+  });
+
+  it("names who is under the group photo", () => {
+    expect(castLine(IMPARABLES_BLOCKS)).toEqual({
+      names: "Jimena, Pau, Juan Tenorio, Cris Sierra, Maris, Fabi, Alejandro Salinas y Oskar",
+      also: "con Heidy Aristizábal y el panel «El día que decidí cambiar»",
+    });
+  });
+
+  it("reads the names on a card as typed", () => {
+    expect(namesIn("Fabi, Alejandro Salinas y Oskar")).toEqual(["Fabi", "Alejandro Salinas", "Oskar"]);
+    expect(namesIn("Juan Tenorio, Pau y el panel")).toEqual(["Juan Tenorio", "Pau", "el panel"]);
+    expect(namesIn("  ")).toEqual([]);
   });
 });
 
@@ -198,6 +231,26 @@ describe("the template", () => {
     for (const s of IMPARABLES_SPEAKERS) {
       expect(agenda.rows.filter((r) => r.instructor === s.name).map((r) => [r.topic, r.text])).toEqual([[s.talk, s.subtitle ?? ""]]);
     }
+  });
+
+  it("has the 3 results and the 4 doubts, each person on them a speaker (or the panel)", () => {
+    const slides = IMPARABLES_BLOCKS.filter((b) => b.type === "slides");
+    expect(slides.map((b) => (b.type === "slides" ? [b.style, b.items.length] : null))).toEqual([
+      ["results", 3],
+      ["doubts", 4],
+    ]);
+    const speakers = new Set(IMPARABLES_SPEAKERS.map((s) => s.name));
+    for (const block of slides) {
+      if (block.type !== "slides") continue;
+      for (const name of block.items.flatMap((it) => namesIn(it.who))) expect(speakers.has(name) || /panel/i.test(name)).toBe(true);
+    }
+  });
+
+  it("gives each day what she takes home and one star talk", () => {
+    const agenda = IMPARABLES_BLOCKS.find((b) => b.type === "agenda");
+    if (agenda?.type !== "agenda") throw new Error("no agenda");
+    expect(agenda.rows.filter((r) => r.kind === "day").every((r) => r.takeaway.length > 0)).toBe(true);
+    expect(agenda.rows.filter((r) => r.star).map((r) => r.instructor || r.topic)).toEqual(["Jimena", "Panel «El día que decidí cambiar»"]);
   });
 
   it("fits each day of the program between 9:00 a. m. and 2:00 p. m.", () => {

@@ -904,10 +904,11 @@ export default function EventForm({
               {values.theme === "IMPARABLES" && (
                 <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 10 }}>
                   <p style={{ fontSize: 13, color: "#5b5f6b", margin: 0 }}>
-                    La portada sale del nombre público, la bajada y las fechas (con el horario por día); debajo van los bloques de
-                    «Contenido» en el estilo del congreso, y al final la frase de cierre. Los precios salen de la pestaña Entradas: cada
-                    etapa es un tipo de entrada con sus fechas (si la primera empezara más adelante, mientras tanto la página recibiría
-                    una lista de espera). La imagen de portada y el carrusel no se muestran en este diseño.
+                    La portada sale del nombre público, la bajada y las fechas (con el horario por día), con la foto grupal: la
+                    «Imagen» que va primero en «Contenido». Debajo van los demás bloques de «Contenido» en el estilo del congreso, y al
+                    final la frase de cierre. Los precios salen de la pestaña Entradas: cada etapa es un tipo de entrada con sus fechas
+                    (si la primera empezara más adelante, mientras tanto la página recibiría una lista de espera). La imagen de portada
+                    y el carrusel de esta pestaña no se muestran en este diseño.
                   </p>
                   {isEdit && (
                     <div>
@@ -1000,7 +1001,9 @@ export default function EventForm({
                       placeholder="Para manicuristas, estudiantes de manos y pies y aficionadas a las uñas"
                     />
                     <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>
-                      Una línea corta — para quién es el evento. Vacío = no aparece.
+                      {values.theme === "IMPARABLES"
+                        ? "En el diseño Manicuristas Imparables sale debajo del contador de la portada (ej. Imparables pasa una vez al año.). Vacío = no aparece."
+                        : "Una línea corta — para quién es el evento. Vacío = no aparece."}
                     </p>
                   </div>
                 </>

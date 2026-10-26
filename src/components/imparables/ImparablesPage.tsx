@@ -2,14 +2,15 @@ import { Cinzel, Manrope } from "next/font/google";
 import type { EventFormat } from "@prisma/client";
 import MetaPixelScript from "@/components/MetaPixelScript";
 import type { LandingBlock } from "@/lib/landingBlocks/types";
-import { zoneLabel, type EventWhen } from "@/lib/imparables/schedule";
+import { zoneLabel, zoneOffset, type EventWhen } from "@/lib/imparables/schedule";
 import { dayMonth, inDays, pesos, type SalesState } from "@/lib/imparables/stages";
 import { utcToZonedInputValue } from "@/lib/dateFormat";
-import { castOf } from "@/lib/imparables/blocks";
+import { castLine, castOf, coverOf } from "@/lib/imparables/blocks";
 import ImparablesBlocks from "./ImparablesBlocks";
 import { ImpIcon, Tiara, initials, type ImpIconName } from "./ImpArt";
 import ImpButton from "./ImpButton";
 import ImpCountdown from "./ImpCountdown";
+import { ImpYourHours } from "./ImpLocalTime";
 import ImpPageTracking from "./ImpPageTracking";
 import ImpTitle from "./ImpTitle";
 import ImpWaitlistForm from "./ImpWaitlistForm";
@@ -17,7 +18,8 @@ import ImpWaitlistForm from "./ImpWaitlistForm";
 // Manicuristas Imparables' own page (EventTheme IMPARABLES, 2026-10-26):
 // the approved boceto, deep blue and gold, cinematic, mobile first, with
 // Nail Fest as the organizer. Everything on it comes from the event — its
-// name, tagline and days on the cover, its blocks below, its ticket types
+// name, tagline and days on the cover, the group photo (the first image of
+// its blocks) with the speakers' names, its blocks below, its ticket types
 // as price stages — so the team edits it like any other event's page. With
 // a price on sale the cover sells it and the checkout is the usual one
 // (EventRegistration, rendered here as just its modal); before the first
@@ -36,6 +38,8 @@ export interface ImparablesEvent {
   format: EventFormat;
   closingText: string | null;
   registerButtonLabel: string | null;
+  /** «Texto debajo del botón»: on this cover, the line under the countdown ("Imparables pasa una vez al año."). */
+  ctaNote: string | null;
 }
 
 export interface ImparablesPreview {
@@ -93,7 +97,9 @@ export default function ImparablesPage({
   if (event.format === "VIRTUAL" && event.city) chips.push({ icon: "live", text: `Desde un set en ${event.city}` });
   else if (event.format !== "VIRTUAL" && (event.venueName || event.city)) chips.push({ icon: "pin", text: event.venueName || event.city });
 
+  const { cover, rest } = coverOf(blocks);
   const { speakers, panels } = castOf(blocks);
+  const line = castLine(blocks);
   const cast = speakers.length ? `${speakers.length} ${speakers.length === 1 ? "speaker" : "speakers"}${panels ? (panels === 1 ? " y un panel" : ` y ${panels} paneles`) : ""}` : "";
   const buyLabel = event.registerButtonLabel?.trim() || "Quiero mi boleta";
   const { mode, current, next, countdown } = sales;
@@ -155,6 +161,38 @@ export default function ImparablesPage({
             // Sanitized before storage (lib/events.ts), like every event's tagline.
             <div className="imp-tag" dangerouslySetInnerHTML={{ __html: event.subtitle }} />
           )}
+          {cover ? (
+            <>
+              <figure className="imp-group">
+                {/* eslint-disable-next-line @next/next/no-img-element -- admin-uploaded photo, arbitrary Blob URL */}
+                <img src={cover.url} alt={cover.caption || line.names} />
+              </figure>
+              {line.names && (
+                <p className="imp-cast">
+                  <b>{line.names}</b>
+                  {line.also && <span>{line.also}</span>}
+                </p>
+              )}
+            </>
+          ) : (
+            speakers.length > 0 && (
+              <>
+                <div className="imp-faces" aria-hidden="true">
+                  {speakers.slice(0, 10).map((p, i) =>
+                    p.photoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- admin-uploaded photo, arbitrary Blob URL
+                      <img key={i} className="imp-face" src={p.photoUrl} alt="" />
+                    ) : (
+                      <span key={i} className="imp-face imp-face--ini">
+                        {initials(p.name)}
+                      </span>
+                    )
+                  )}
+                </div>
+                <div className="imp-faces-cap">{cast}</div>
+              </>
+            )
+          )}
           <div className="imp-when">
             <b>{when.dates}</b>
             {when.hours && (
@@ -163,7 +201,15 @@ export default function ImparablesPage({
                 {zone && ` · ${zone}`}
               </span>
             )}
+            {when.span && <ImpYourHours opensAt={when.span.opensAt} closesAt={when.span.closesAt} eventOffset={zoneOffset(when.span.opensAt, timezone)} />}
           </div>
+          {cta}
+          {mode === "closed" && <p className="imp-closed-note">La venta de boletas está cerrada.</p>}
+          {countdown && (
+            <ImpCountdown to={countdown.to.toISOString()} label={countdown.label} initialSeconds={secondsUntil(countdown.to, now)} offsetMs={offsetMs} />
+          )}
+          {event.ctaNote?.trim() && <p className="imp-once">{event.ctaNote.trim()}</p>}
+          {/* Under the countdown, so the button stays on the first screen. */}
           {chips.length > 0 && (
             <div className="imp-chips">
               {chips.map((chip) => (
@@ -173,28 +219,6 @@ export default function ImparablesPage({
                 </span>
               ))}
             </div>
-          )}
-          {speakers.length > 0 && (
-            <>
-              <div className="imp-faces" aria-hidden="true">
-                {speakers.slice(0, 10).map((p, i) =>
-                  p.photoUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- admin-uploaded photo, arbitrary Blob URL
-                    <img key={i} className="imp-face" src={p.photoUrl} alt="" />
-                  ) : (
-                    <span key={i} className="imp-face imp-face--ini">
-                      {initials(p.name)}
-                    </span>
-                  )
-                )}
-              </div>
-              <div className="imp-faces-cap">{cast}</div>
-            </>
-          )}
-          {cta}
-          {mode === "closed" && <p className="imp-closed-note">La venta de boletas está cerrada.</p>}
-          {countdown && (
-            <ImpCountdown to={countdown.to.toISOString()} label={countdown.label} initialSeconds={secondsUntil(countdown.to, now)} offsetMs={offsetMs} />
           )}
         </div>
       </section>
@@ -213,7 +237,7 @@ export default function ImparablesPage({
         </div>
       )}
 
-      <ImparablesBlocks blocks={blocks} context={{ sales, offsetMs, when, timezone, now, buyLabel }} />
+      <ImparablesBlocks blocks={rest} context={{ sales, offsetMs, when, timezone, now, buyLabel, speakers }} />
 
       <section className="imp-close">
         <div className="imp-rays" aria-hidden="true" />

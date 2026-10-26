@@ -10,10 +10,12 @@ import {
   LANDING_CARD_ICONS,
   LANDING_TONES,
   emptyAgendaRow,
+  emptySlide,
   youtubeVideo,
   type AgendaRow,
   type LandingBlock,
   type LandingTone,
+  type SlideItem,
 } from "@/lib/landingBlocks/types";
 
 // Self-service alternative to the plain Description field below — see
@@ -65,6 +67,8 @@ export default function LandingBlocksEditor({
                           ? { type: "reviewsBadge", scope: "global" }
                           : type === "prices"
                             ? { type: "prices", note: "IVA del 19% incluido" }
+                            : type === "slides"
+                              ? { type: "slides", style: "results", items: [emptySlide()] }
                       : { type: "people", items: [{ name: "", handle: "", tag: "", photoUrl: "", tone: "pink" }] };
     onChange([...blocks, block]);
   }
@@ -103,10 +107,11 @@ export default function LandingBlocksEditor({
     <div>
       {theme === "IMPARABLES" && (
         <div style={{ fontSize: 12.5, lineHeight: 1.5, color: "#3b2f12", background: "#fbf3dc", border: "1px solid #f0dca6", borderRadius: 8, padding: "10px 12px", marginBottom: 12 }}>
-          <strong>Diseño Manicuristas Imparables.</strong> Cada «Título de sección» abre una sección nueva (con fondo alterno). Una «Tarjeta
-          destacada» con foto se dibuja como la maestra de ceremonias; sin foto y seguida de «Personas», como el panel; sin foto y con una
-          lista, como una caja de puntos (con ✕ si su etiqueta empieza por «No»); sin foto, como una frase grande. Los precios salen de las
-          entradas del evento.
+          <strong>Diseño Manicuristas Imparables.</strong> Una «Imagen» al principio, antes del primer título, es la foto grupal de la
+          portada. Cada «Título de sección» abre una sección nueva (con fondo alterno). Una «Tarjeta destacada» con foto se dibuja como la
+          maestra de ceremonias; sin foto y seguida de «Personas», como el panel; sin foto y con una lista, como una caja de puntos (con ✕ si
+          su etiqueta empieza por «No»); sin foto, como una frase grande. Las «Tarjetas deslizables» son los resultados o las dudas. Los
+          precios salen de las entradas del evento.
         </div>
       )}
       {blocks.length > 0 && (
@@ -195,13 +200,14 @@ export default function LandingBlocksEditor({
               {block.type === "faq" && <FaqBlockEditor block={block} onChange={(b) => updateAt(i, b)} />}
               {block.type === "heading" && <HeadingBlockEditor block={block} onChange={(b) => updateAt(i, b)} />}
               {block.type === "card" && <CardBlockEditor block={block} onChange={(b) => updateAt(i, b)} />}
-              {block.type === "agenda" && <AgendaBlockEditor block={block} onChange={(b) => updateAt(i, b)} />}
+              {block.type === "agenda" && <AgendaBlockEditor block={block} theme={theme} onChange={(b) => updateAt(i, b)} />}
               {block.type === "venue" && <VenueBlockEditor block={block} onChange={(b) => updateAt(i, b)} />}
               {block.type === "people" && <PeopleBlockEditor block={block} onChange={(b) => updateAt(i, b)} />}
               {block.type === "points" && <PointsBlockEditor block={block} onChange={(b) => updateAt(i, b)} />}
               {block.type === "reviews" && <ReviewsBlockEditor block={block} onChange={(b) => updateAt(i, b)} />}
               {block.type === "reviewsBadge" && <ReviewsBadgeBlockEditor block={block} onChange={(b) => updateAt(i, b)} />}
               {block.type === "prices" && <PricesBlockEditor block={block} theme={theme} onChange={(b) => updateAt(i, b)} />}
+              {block.type === "slides" && <SlidesBlockEditor block={block} theme={theme} onChange={(b) => updateAt(i, b)} />}
             </div>
           ))}
         </div>
@@ -209,7 +215,7 @@ export default function LandingBlocksEditor({
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         {(Object.keys(BLOCK_LABELS) as LandingBlock["type"][])
-          .filter((type) => type !== "prices" || theme === "IMPARABLES")
+          .filter((type) => (type !== "prices" && type !== "slides") || theme === "IMPARABLES")
           .map((type) => (
             <button key={type} type="button" onClick={() => addBlock(type)} className="secondary" style={addButtonStyle}>
               + {BLOCK_LABELS[type]}
@@ -236,6 +242,7 @@ const BLOCK_LABELS: Record<LandingBlock["type"], string> = {
   reviews: "Reseñas de asistentes",
   reviewsBadge: "Insignia de reseñas",
   prices: "Precios por etapas",
+  slides: "Tarjetas deslizables",
 };
 
 const TONE_LABELS: Record<LandingTone, string> = { teal: "Turquesa", pink: "Rosa", peach: "Durazno" };
@@ -838,11 +845,15 @@ function PointsBlockEditor({
 
 function AgendaBlockEditor({
   block,
+  theme,
   onChange,
 }: {
   block: Extract<LandingBlock, { type: "agenda" }>;
+  // Manicuristas Imparables' page also reads a day's «Te llevas» and a star talk.
+  theme: "NAIL_FEST" | "IMPARABLES";
   onChange: (block: LandingBlock) => void;
 }) {
+  const imparables = theme === "IMPARABLES";
   function updateRow(i: number, row: AgendaRow) {
     onChange({ ...block, rows: block.rows.map((r, j) => (j === i ? row : r)) });
   }
@@ -898,6 +909,14 @@ function AgendaBlockEditor({
                 placeholder="Horario (opcional, ej. 9:00 a. m. a 2:00 p. m.)"
                 style={{ flex: "1 1 100%" }}
               />
+              {imparables && (
+                <input
+                  value={row.takeaway}
+                  onChange={(e) => updateRow(i, { ...row, takeaway: e.target.value })}
+                  placeholder="Te llevas (opcional, ej. cuánto cobrar sin culpa y…)"
+                  style={{ flex: "1 1 100%" }}
+                />
+              )}
             </div>
           );
         }
@@ -954,8 +973,14 @@ function AgendaBlockEditor({
             <input
               value={row.text}
               onChange={(e) => updateRow(i, { ...row, text: e.target.value })}
-              placeholder="Nota extra (opcional, ej. Cupos limitados en primera fila)"
+              placeholder={imparables ? "Nota extra (opcional: el subtítulo de la charla)" : "Nota extra (opcional, ej. Cupos limitados en primera fila)"}
             />
+            {imparables && (
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 400 }}>
+                <input type="checkbox" checked={row.star} onChange={(e) => updateRow(i, { ...row, star: e.target.checked })} style={{ width: "auto" }} />
+                ★ Charla estrella: destacarla en su día
+              </label>
+            )}
           </div>
         );
       })}
@@ -1000,6 +1025,123 @@ function PricesBlockEditor({
         hasta» y «Ocultar después», en las opciones avanzadas). Antes de la primera etapa, la página muestra la lista de espera.
         {theme !== "IMPARABLES" && " Este bloque solo se ve con el diseño Manicuristas Imparables."}
       </p>
+    </div>
+  );
+}
+
+// Manicuristas Imparables' cards that slide — see SlidesLandingBlock: the
+// results she'll take home, or her doubts with an answer and a proof.
+function SlidesBlockEditor({
+  block,
+  theme,
+  onChange,
+}: {
+  block: Extract<LandingBlock, { type: "slides" }>;
+  theme: "NAIL_FEST" | "IMPARABLES";
+  onChange: (block: LandingBlock) => void;
+}) {
+  const doubts = block.style === "doubts";
+  function updateItem(i: number, item: SlideItem) {
+    onChange({ ...block, items: block.items.map((it, j) => (j === i ? item : it)) });
+  }
+  function removeItem(i: number) {
+    onChange({ ...block, items: block.items.filter((_, j) => j !== i) });
+  }
+  function moveItem(i: number, dir: -1 | 1) {
+    const target = i + dir;
+    if (target < 0 || target >= block.items.length) return;
+    const next = [...block.items];
+    [next[i], next[target]] = [next[target]!, next[i]!];
+    onChange({ ...block, items: next });
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <select
+        value={block.style}
+        onChange={(e) => onChange({ ...block, style: e.target.value === "doubts" ? "doubts" : "results" })}
+        style={{ width: "auto", alignSelf: "flex-start" }}
+      >
+        <option value="results">Resultados: lo que va a resolver</option>
+        <option value="doubts">Dudas: ¿todavía lo estás pensando?</option>
+      </select>
+      <p style={{ fontSize: 12, color: "#5b5f6b", margin: 0 }}>
+        {doubts
+          ? "Cada tarjeta: la duda en su voz (sale entre comillas), la respuesta y una prueba, con la foto de un speaker (escribe su nombre) o un ícono."
+          : "Cada tarjeta: etiqueta, promesa, qué aprende, lo que sale sabiendo y quiénes la enseñan (sus nombres como salen en los speakers: la página pone sus fotos)."}
+        {theme !== "IMPARABLES" && " Este bloque solo se ve con el diseño Manicuristas Imparables."}
+      </p>
+      {block.items.map((item, i) => (
+        <div key={i} style={{ display: "flex", flexDirection: "column", gap: 6, border: "1px solid #f0efec", borderRadius: 6, padding: 10 }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            {doubts ? (
+              <span style={{ flex: 1, fontSize: 12, fontWeight: 700, color: "#5b5f6b" }}>Duda {i + 1}</span>
+            ) : (
+              <input value={item.tag} onChange={(e) => updateItem(i, { ...item, tag: e.target.value })} placeholder="Etiqueta (ej. Más clientas)" style={{ flex: 1 }} />
+            )}
+            <button type="button" onClick={() => moveItem(i, -1)} disabled={i === 0} title="Subir" aria-label="Subir" style={iconButtonStyle}>
+              ↑
+            </button>
+            <button type="button" onClick={() => moveItem(i, 1)} disabled={i === block.items.length - 1} title="Bajar" aria-label="Bajar" style={iconButtonStyle}>
+              ↓
+            </button>
+            <button type="button" onClick={() => removeItem(i)} title="Quitar" aria-label="Quitar" style={iconButtonStyle}>
+              ×
+            </button>
+          </div>
+          <input
+            value={item.title}
+            onChange={(e) => updateItem(i, { ...item, title: e.target.value })}
+            placeholder={doubts ? "La duda (ej. No tengo tiempo.)" : "La promesa (ej. Llena tu agenda sin depender del voz a voz)"}
+          />
+          <textarea
+            value={item.text}
+            onChange={(e) => updateItem(i, { ...item, text: e.target.value })}
+            placeholder={doubts ? "La respuesta" : "Qué aprende (una línea)"}
+            rows={2}
+            style={{ width: "100%" }}
+          />
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <input
+              value={item.noteLabel}
+              onChange={(e) => updateItem(i, { ...item, noteLabel: e.target.value })}
+              placeholder={doubts ? "Etiqueta de la prueba (ej. Prueba, Garantía)" : "Comienzo en dorado (ej. Sales sabiendo)"}
+              style={{ flex: "1 1 160px" }}
+            />
+            <input
+              value={item.note}
+              onChange={(e) => updateItem(i, { ...item, note: e.target.value })}
+              placeholder={doubts ? "La prueba (ej. Pau empezó en una mesa de manicure…)" : "El resto (ej. qué publicar primero.)"}
+              style={{ flex: "2 1 220px" }}
+            />
+          </div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+            <input
+              value={item.who}
+              onChange={(e) => updateItem(i, { ...item, who: e.target.value })}
+              placeholder={doubts ? "Speaker de la prueba (su nombre, opcional)" : "Quiénes (ej. Fabi, Alejandro Salinas y Oskar)"}
+              style={{ flex: "1 1 220px" }}
+            />
+            {doubts && (
+              <select value={item.icon} onChange={(e) => updateItem(i, { ...item, icon: e.target.value as SlideItem["icon"] })} style={{ width: "auto" }}>
+                {LANDING_CARD_ICONS.map((icon) => (
+                  <option key={icon} value={icon}>
+                    {ICON_LABELS[icon]}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={() => onChange({ ...block, items: [...block.items, emptySlide()] })}
+        className="secondary"
+        style={{ width: "auto", padding: "6px 12px", alignSelf: "flex-start" }}
+      >
+        + Agregar tarjeta
+      </button>
     </div>
   );
 }

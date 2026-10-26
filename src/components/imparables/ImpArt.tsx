@@ -110,6 +110,14 @@ const ICONS = {
       <path d="M12 6v6l4 2" />
     </>
   ),
+  people: (
+    <>
+      <circle cx="9" cy="8.5" r="3" />
+      <path d="M3.5 19.5a5.5 5.5 0 0 1 11 0" />
+      <circle cx="17" cy="9.5" r="2.4" />
+      <path d="M15.6 14.4a4.6 4.6 0 0 1 5.4 4.6" />
+    </>
+  ),
 };
 export type ImpIconName = keyof typeof ICONS;
 

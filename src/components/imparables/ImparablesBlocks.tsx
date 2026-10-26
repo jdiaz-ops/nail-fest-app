@@ -1,13 +1,22 @@
-import type { AgendaRow, CardLandingBlock, HeadingLandingBlock, LandingBlock, PeopleLandingBlock, PricesLandingBlock } from "@/lib/landingBlocks/types";
+import type {
+  AgendaRow,
+  CardLandingBlock,
+  HeadingLandingBlock,
+  LandingBlock,
+  PeopleLandingBlock,
+  PricesLandingBlock,
+  SlideItem,
+  SlidesLandingBlock,
+} from "@/lib/landingBlocks/types";
 import { youtubeVideo } from "@/lib/landingBlocks/types";
-import { agendaInstant, zoneLabel, type EventWhen } from "@/lib/imparables/schedule";
+import { agendaInstant, zoneLabel, zoneOffset, type EventWhen } from "@/lib/imparables/schedule";
 import { dayMonth, pesos, stageDates, type SalesState } from "@/lib/imparables/stages";
-import { utcToZonedInputValue } from "@/lib/dateFormat";
-import { isPanelCard } from "@/lib/imparables/blocks";
+import { isPanelCard, namesIn } from "@/lib/imparables/blocks";
 import { ImpIcon, Silhouette, iconForPoint, initials, instagramUrl, type ImpIconName } from "./ImpArt";
 import ImpButton from "./ImpButton";
 import ImpCountdown from "./ImpCountdown";
 import ImpLocalTime, { ImpZoneNote } from "./ImpLocalTime";
+import ImpSwipe from "./ImpSwipe";
 
 // Event.landingBlocks drawn in Manicuristas Imparables' style (EventTheme
 // IMPARABLES): the same blocks every event page has, read the way the
@@ -15,8 +24,9 @@ import ImpLocalTime, { ImpZoneNote } from "./ImpLocalTime";
 // of its own, the background alternating; inside it, a card with a photo is
 // the host, a card without one followed by people is the panel, one with a
 // list is a box of ✓ (or ✕ when its label starts with «No»), and any other
-// is a big phrase. The text in cards and text blocks is the same sanitized
-// HTML as everywhere (lib/events.ts).
+// is a big phrase; «Tarjetas deslizables» are the results or the doubts.
+// The text in cards and text blocks is the same sanitized HTML as
+// everywhere (lib/events.ts).
 
 export interface ImparablesContext {
   sales: SalesState;
@@ -27,6 +37,8 @@ export interface ImparablesContext {
   now: Date;
   /** "Quiero mi boleta" */
   buyLabel: string;
+  /** The speakers, whose photos go next to their names on the cards. */
+  speakers: PeopleLandingBlock["items"];
 }
 
 type Section = { heading: HeadingLandingBlock | null; blocks: LandingBlock[] };
@@ -199,10 +211,90 @@ function renderBlock(block: LandingBlock, key: number, context: ImparablesContex
     case "prices":
       return <Prices key={key} block={block} context={context} />;
 
+    case "slides":
+      return <Slides key={key} block={block} speakers={context.speakers} />;
+
     // The venue and the reviews keep the Nail Fest page's own look; this page has none of them.
     default:
       return null;
   }
+}
+
+// ── Cards that slide: the results and the doubts ────────────────────────────
+
+/** The photo (or initials, or a group icon for «el panel») of each name in a card's `who`. */
+function Face({ name, speakers }: { name: string; speakers: PeopleLandingBlock["items"] }) {
+  const person = speakers.find((p) => p.name.trim().toLowerCase() === name.toLowerCase());
+  if (person?.photoUrl) {
+    // eslint-disable-next-line @next/next/no-img-element -- admin-uploaded photo, arbitrary Blob URL
+    return <img src={person.photoUrl} alt="" loading="lazy" />;
+  }
+  return <span aria-hidden="true">{/panel/i.test(name) ? <ImpIcon name="people" size={16} /> : initials(name)}</span>;
+}
+
+function Slides({ block, speakers }: { block: SlidesLandingBlock; speakers: PeopleLandingBlock["items"] }) {
+  const items = block.items.filter((it) => it.title.trim() || it.text.trim());
+  if (items.length === 0) return null;
+  return (
+    <ImpSwipe>
+      {items.map((item, j) => (block.style === "doubts" ? <Doubt key={j} item={item} speakers={speakers} /> : <Result key={j} item={item} speakers={speakers} />))}
+    </ImpSwipe>
+  );
+}
+
+function Result({ item, speakers }: { item: SlideItem; speakers: PeopleLandingBlock["items"] }) {
+  const names = namesIn(item.who);
+  return (
+    <article className="imp-slide">
+      {item.tag && <span className="imp-slide-tag">{item.tag}</span>}
+      {item.title && <h3 className="imp-slide-t">{item.title}</h3>}
+      {item.text && <p className="imp-slide-l">{item.text}</p>}
+      {(item.noteLabel || item.note) && (
+        <p className="imp-slide-k">
+          {item.noteLabel && <b>{item.noteLabel}</b>} {item.note}
+        </p>
+      )}
+      {names.length > 0 && (
+        <div className="imp-slide-who">
+          <span className="imp-slide-faces">
+            {names.map((name) => (
+              <Face key={name} name={name} speakers={speakers} />
+            ))}
+          </span>
+          <span>Con {item.who.trim()}</span>
+        </div>
+      )}
+    </article>
+  );
+}
+
+function Doubt({ item, speakers }: { item: SlideItem; speakers: PeopleLandingBlock["items"] }) {
+  const who = namesIn(item.who)[0];
+  const icon = CARD_ICONS[item.icon];
+  const quoted = /^[«"“]/.test(item.title.trim()) ? item.title.trim() : `«${item.title.trim()}»`;
+  return (
+    <article className="imp-slide imp-slide--q">
+      {item.title.trim() && <p className="imp-slide-q">{quoted}</p>}
+      {item.text && <p className="imp-slide-a">{item.text}</p>}
+      {(item.noteLabel || item.note) && (
+        <div className="imp-slide-proof">
+          {who ? (
+            <span className="imp-slide-faces">
+              <Face name={who} speakers={speakers} />
+            </span>
+          ) : icon ? (
+            <span className="imp-slide-ic">
+              <ImpIcon name={icon} size={20} />
+            </span>
+          ) : null}
+          <span>
+            {item.noteLabel && <b>{item.noteLabel}</b>}
+            {item.note}
+          </span>
+        </div>
+      )}
+    </article>
+  );
 }
 
 // ── Cards ────────────────────────────────────────────────────────────────────
@@ -339,18 +431,22 @@ function Speakers({ people }: { people: PeopleLandingBlock }) {
 }
 
 // ── The program ─────────────────────────────────────────────────────────────
-
-/** Minutes east of UTC where the event happens, at that instant (Bogotá: −300). */
-function zoneOffset(instant: string, timezone: string): number {
-  const date = new Date(instant);
-  const wall = new Date(`${utcToZonedInputValue(date, timezone)}:00Z`);
-  return Math.round((wall.getTime() - date.getTime()) / 60_000);
-}
+// Both days one under the other, each line told the way the approved boceto
+// does: the talk first, then who gives it (her photo and name), how long it
+// lasts under its hour, the day's star talk in a box of its own and the
+// active breaks as thin lines; a day can say what she takes home.
 
 /** "10:15 a. m." -> ["10:15", "a. m."]; anything else stays whole. */
 function splitChip(chip: string): [string, string] {
   const match = /^(\d{1,2}[:.]\d{2})\s*(.*)$/.exec(chip.trim());
   return match ? [match[1]!, match[2]!] : [chip, ""];
+}
+
+/** How long a line lasts: until the next one starts (or its day ends), when that's known and sensible. */
+function minutesBetween(from: string | null, to: string | null | undefined): number | null {
+  if (!from || !to) return null;
+  const minutes = Math.round((new Date(to).getTime() - new Date(from).getTime()) / 60_000);
+  return minutes > 0 && minutes <= 300 ? minutes : null;
 }
 
 function Agenda({ rows, context }: { rows: AgendaRow[]; context: ImparablesContext }) {
@@ -374,13 +470,20 @@ function Agenda({ rows, context }: { rows: AgendaRow[]; context: ImparablesConte
             {d.head.chip && <small>{d.head.chip}</small>}
             {d.head.topic && <b>{d.head.topic}</b>}
             {d.head.text && <span className="imp-day-time">{d.head.text}</span>}
+            {d.head.takeaway && (
+              <span className="imp-take">
+                <strong>Te llevas:</strong> {d.head.takeaway}
+              </span>
+            )}
           </div>
         )}
         {d.rows.length > 0 && (
           <ol className="imp-ag">
-            {d.rows.map((row, j) => (
-              <AgendaLine key={j} row={row} instant={instants[i]![j] ?? null} timezone={context.timezone} />
-            ))}
+            {d.rows.map((row, j) => {
+              const start = instants[i]![j] ?? null;
+              const next = instants[i]!.slice(j + 1).find(Boolean) ?? context.when.ends[i];
+              return <AgendaLine key={j} row={row} instant={start} minutes={minutesBetween(start, next)} timezone={context.timezone} />;
+            })}
           </ol>
         )}
       </div>
@@ -394,44 +497,52 @@ function Agenda({ rows, context }: { rows: AgendaRow[]; context: ImparablesConte
   );
 }
 
-function AgendaLine({ row, instant, timezone }: { row: AgendaRow; instant: string | null; timezone: string }) {
+function AgendaLine({ row, instant, minutes, timezone }: { row: AgendaRow; instant: string | null; minutes: number | null; timezone: string }) {
   const isPause = !row.instructor && !row.photoUrl && /^pausa/i.test(row.topic.trim());
   // Rows saved before topic/instructor existed keep everything in `text`.
-  const title = row.instructor || row.topic || row.text;
-  const detail = row.instructor ? row.topic : row.topic ? row.text : "";
-  // A speaker's talk can carry a subtitle: the row's «Nota extra», under its title.
-  const note = row.instructor && row.topic ? row.text : "";
+  const title = row.topic || row.instructor || row.text;
+  // A talk: its title, its subtitle (the row's «Nota extra»), then who gives
+  // it. A line with a photo and no speaker (the host's): its title, then the
+  // photo next to its text.
+  const subtitle = row.topic && (row.instructor || !row.photoUrl) ? row.text : "";
+  const who = row.topic ? row.instructor || (row.photoUrl ? row.text : "") : "";
   const [digits, suffix] = splitChip(row.chip);
   if (!title && !row.chip) return null;
+  if (isPause) {
+    return (
+      <li className="is-pause">
+        <span>
+          {title}
+          {minutes ? ` · ${minutes} min` : ""}
+        </span>
+      </li>
+    );
+  }
   return (
-    <li className={isPause ? "is-pause" : undefined}>
+    <li className={row.star ? "is-star" : undefined}>
       {row.chip && (
         <span className="imp-ag-time">
           <span>{digits}</span>
           {suffix && <small>{suffix}</small>}
           {instant && <ImpLocalTime instant={instant} eventOffset={zoneOffset(instant, timezone)} />}
-        </span>
-      )}
-      {isPause ? (
-        <span className="imp-dot" aria-hidden="true">
-          ·
-        </span>
-      ) : row.photoUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element -- admin-uploaded photo, arbitrary Blob URL
-        <img className="imp-mini" src={row.photoUrl} alt="" loading="lazy" />
-      ) : row.instructor ? (
-        <span className="imp-mini imp-mini--ini" aria-hidden="true">
-          {initials(row.instructor)}
-        </span>
-      ) : (
-        <span className="imp-dot" aria-hidden="true">
-          <ImpIcon name="star" size={16} />
+          {minutes && <em className="imp-ag-dur">{minutes} min</em>}
         </span>
       )}
       <span className="imp-what">
-        {isPause ? title : <b>{title}</b>}
-        {detail && <span>{detail}</span>}
-        {note && <span className="imp-what-note">{note}</span>}
+        {row.star && <span className="imp-star-k">★ Charla estrella</span>}
+        <b>{title}</b>
+        {subtitle && <span>{subtitle}</span>}
+        {who && (
+          <span className="imp-by">
+            {row.photoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element -- admin-uploaded photo, arbitrary Blob URL
+              <img src={row.photoUrl} alt="" loading="lazy" />
+            ) : row.instructor ? (
+              <span aria-hidden="true">{initials(row.instructor)}</span>
+            ) : null}
+            {who}
+          </span>
+        )}
       </span>
     </li>
   );

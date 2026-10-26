@@ -3,11 +3,12 @@ import { emptyAgendaRow, type AgendaRow, type LandingBlock } from "@/lib/landing
 // «Usar la plantilla de Manicuristas Imparables» (EventForm.tsx →
 // /api/admin/events/[id]/plantilla-imparables, 2026-10-26): the page of the
 // approved boceto, as ordinary blocks the team edits like any other event's —
-// the hook, the 8 speakers, the panel, the host, the two days' program, what
-// the ticket includes, who it is for, the prices with the guarantee, the
-// questions and the sponsors (hidden until there are logos). Plus the
-// event's own lines (tagline, closing, button) and its three price stages
-// as ticket types. The panelists aren't confirmed yet: no one made up, each
+// the cover's group photo, the hook, the 3 results, the 8 speakers, the
+// panel, the host, the two days' program, what the ticket includes, who it
+// is for, the prices with the guarantee, the doubts, the questions and the
+// sponsors (hidden until there are logos). Plus the event's own lines
+// (tagline, closing, button and the line under the cover's countdown) and
+// its three price stages as ticket types. The panelists aren't confirmed yet: no one made up, each
 // card says «Por anunciar» (IMPARABLES_PANELISTS); the speakers' photos are
 // their Instagram profile pictures (public/imparables/), to be replaced by
 // better ones from the editor.
@@ -116,18 +117,24 @@ export const IMPARABLES_PANELISTS: ImparablesPanelist[] = [
 const PANEL_TONES = ["pink", "teal", "peach", "pink"] as const;
 
 const session = (chip: string, fields: Partial<AgendaRow>): AgendaRow => ({ ...emptyAgendaRow("session"), chip, ...fields });
-const day = (chip: string, topic: string, text: string): AgendaRow => ({ ...emptyAgendaRow("day"), chip, topic, text });
+const day = (chip: string, topic: string, text: string, takeaway: string): AgendaRow => ({ ...emptyAgendaRow("day"), chip, topic, text, takeaway });
 const pause = (chip: string) => session(chip, { topic: "Pausa activa" });
-const speaker = (chip: string, name: string) => {
+const speaker = (chip: string, name: string, star = false) => {
   const s = IMPARABLES_SPEAKERS.find((sp) => sp.name === name);
-  return session(chip, { instructor: name, topic: s?.talk ?? "", text: s?.subtitle ?? "", photoUrl: s?.photoUrl ?? "" });
+  return session(chip, { instructor: name, topic: s?.talk ?? "", text: s?.subtitle ?? "", photoUrl: s?.photoUrl ?? "", star });
 };
+
+// The cover's group photo: the speakers and Heidy, cut out of their photos (2026-10-26).
+export const IMPARABLES_GROUP_PHOTO = "/imparables/grupo.webp";
 const withHost = (chip: string, topic: string, text: string) => session(chip, { topic, text, photoUrl: HOST.photo });
 
 export const IMPARABLES_REFUND =
   "Sí, de dos formas. Si en los primeros 30 minutos del primer día sientes que el congreso no es para ti, escríbenos y te devolvemos el 100%, sin preguntas. Y dentro de los 5 días hábiles siguientes a tu compra también te devolvemos el 100%, siempre que el congreso no haya empezado. Fuera de eso no hacemos devoluciones, pero puedes pasarle tu boleta a otra persona escribiéndonos hasta el 25 de junio, y si no puedes verlo en vivo tienes la repetición por 30 días. Si Nail Fest cambia la fecha o cancela el congreso, tú eliges: te devolvemos todo o usas tu boleta en la nueva fecha. Para pedirlo, escríbenos por WhatsApp con el correo de tu compra; el dinero vuelve por el mismo medio de pago en máximo 30 días.";
 
 export const IMPARABLES_BLOCKS: LandingBlock[] = [
+  // La foto grupal de la portada: la imagen antes del primer título
+  { type: "image", url: IMPARABLES_GROUP_PHOTO, caption: "" },
+
   // El gancho
   {
     type: "heading",
@@ -136,6 +143,42 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
     intro: "Haces uñas hermosas. Pero cobrar lo que vales, llenar tu agenda y hacer crecer tu negocio no te lo enseñó nadie.",
   },
   { type: "card", eyebrow: "Ellas empezaron donde tú estás hoy:", title: "en una mesa de manicure.", html: "", icon: "none", tone: "pink", imageUrl: "" },
+
+  // Los 3 resultados, en tarjetas que se deslizan
+  { type: "heading", eyebrow: "Resultados", title: "Lo que vas a resolver en estos dos días", intro: "" },
+  {
+    type: "slides",
+    style: "results",
+    items: [
+      {
+        tag: "Más clientas",
+        title: "Llena tu agenda sin depender del voz a voz",
+        text: "Redes que atraen clientas, tu marca y marketing con inteligencia artificial.",
+        noteLabel: "Sales sabiendo",
+        note: "qué publicar primero.",
+        who: "Fabi, Alejandro Salinas y Oskar",
+        icon: "none",
+      },
+      {
+        tag: "Más ganancia",
+        title: "Cobra lo que vales, sin culpa",
+        text: "Cuánto cobrar, cuánto ahorrar y cómo hablar de plata con tus clientas.",
+        noteLabel: "Sales sabiendo",
+        note: "cuánto debe dejarte cada servicio.",
+        who: "Juan Tenorio, Pau y el panel",
+        icon: "none",
+      },
+      {
+        tag: "Tu negocio",
+        title: "De la mesa a dueña de tu marca",
+        text: "Pasar de atender sola a tener salón, equipo o academia, y empezar de cero si te toca.",
+        noteLabel: "Sales sabiendo",
+        note: "cuál es tu primer paso.",
+        who: "Jimena, Cris Sierra y Maris",
+        icon: "none",
+      },
+    ],
+  },
 
   // Speakers, el panel y la maestra de ceremonias
   { type: "heading", eyebrow: "Speakers", title: "Ya lo lograron. Ahora te cuentan cómo.", intro: "" },
@@ -168,9 +211,14 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
   {
     type: "agenda",
     rows: [
-      day("Domingo 27 de junio", "De la mesa a empresaria", "9:00 a. m. a 2:00 p. m."),
+      day(
+        "Domingo 27 de junio",
+        "De la mesa a empresaria",
+        "9:00 a. m. a 2:00 p. m.",
+        "cuánto cobrar sin culpa y el camino para pasar de la mesa a tu propia marca."
+      ),
       withHost("9:00 a. m.", "Bienvenida", "Con Heidy Aristizábal, maestra de ceremonias"),
-      speaker("9:15 a. m.", "Jimena"),
+      speaker("9:15 a. m.", "Jimena", true),
       pause("10:15 a. m."),
       speaker("10:25 a. m.", "Pau"),
       pause("11:25 a. m."),
@@ -178,7 +226,12 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
       pause("12:40 p. m."),
       speaker("12:50 p. m.", "Cris Sierra"),
       withHost("1:50 p. m.", "Cierre y sorteo", "Con Heidy Aristizábal"),
-      day("Lunes 28 de junio", "Sobresalir y pasar a la acción", "9:00 a. m. a 2:00 p. m."),
+      day(
+        "Lunes 28 de junio",
+        "Sobresalir y pasar a la acción",
+        "9:00 a. m. a 2:00 p. m.",
+        "cómo mostrarte y llenar tu agenda, con contenido e IA, y el empujón para dar tu siguiente paso."
+      ),
       withHost("9:00 a. m.", "Repaso", "Con Heidy Aristizábal"),
       speaker("9:05 a. m.", "Maris"),
       pause("9:55 a. m."),
@@ -186,7 +239,7 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
       pause("10:55 a. m."),
       speaker("11:05 a. m.", "Alejandro Salinas"),
       pause("11:55 a. m."),
-      session("12:05 p. m.", { topic: "Panel «El día que decidí cambiar»", text: "Cuatro historias reales de transformación" }),
+      session("12:05 p. m.", { topic: "Panel «El día que decidí cambiar»", text: "Cuatro historias reales de transformación", star: true }),
       pause("12:50 p. m."),
       speaker("1:00 p. m.", "Oskar"),
       withHost("1:50 p. m.", "Cierre y anuncio de la próxima edición", "Con Heidy Aristizábal"),
@@ -246,6 +299,51 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
     imageUrl: "",
   },
 
+  // Las dudas, en su propia voz: una respuesta y una prueba real
+  { type: "heading", eyebrow: "Si todavía dudas", title: "¿Todavía lo estás pensando?", intro: "" },
+  {
+    type: "slides",
+    style: "doubts",
+    items: [
+      {
+        tag: "",
+        title: "No tengo tiempo.",
+        text: "Son dos mañanas, de 9:00 a. m. a 2:00 p. m., desde tu celular. Y si no puedes en vivo, tienes la repetición por 30 días.",
+        noteLabel: "Incluido",
+        note: "La repetición por 30 días viene con tu boleta.",
+        who: "",
+        icon: "clock",
+      },
+      {
+        tag: "",
+        title: "Apenas estoy empezando.",
+        text: "Es de negocio, no de técnica: te sirve desde tu primera clienta.",
+        noteLabel: "Prueba",
+        note: "Pau empezó en una mesa de manicure y hoy es CEO de El Imperio de las Uñas.",
+        who: "Pau",
+        icon: "none",
+      },
+      {
+        tag: "",
+        title: "Mi caso es distinto.",
+        text: "Hay caminos de todo tipo: independiente, salón, cadena, academia, y empezar de cero en otro país.",
+        noteLabel: "Prueba",
+        note: "Maris empezó desde nada y hoy forma educadoras en Chile.",
+        who: "Maris",
+        icon: "none",
+      },
+      {
+        tag: "",
+        title: "Ya hice cursos y no me sirvieron.",
+        text: "Aquí no hay teoría: te cuentan cómo lo hicieron manicuristas que empezaron donde tú estás.",
+        noteLabel: "Garantía",
+        note: "Si en los primeros 30 minutos no es para ti, te devolvemos el 100%.",
+        who: "",
+        icon: "shield",
+      },
+    ],
+  },
+
   // Preguntas frecuentes
   { type: "heading", eyebrow: "Preguntas frecuentes", title: "Lo que te estás preguntando", intro: "" },
   {
@@ -287,6 +385,8 @@ export const IMPARABLES_FIELDS = {
   subtitle: "<p>Tienes el talento. Ya es hora de construir un negocio que crece.</p>",
   closingText: "Tienes el talento. Ahora, a construir tu negocio.",
   registerButtonLabel: "Quiero mi boleta",
+  // «Texto debajo del botón»: on this cover, the line under the countdown.
+  ctaNote: "Imparables pasa una vez al año.",
 };
 
 /** The three price stages, as ticket types (only for an event with none yet). Dates are Bogotá midnights.

@@ -3990,6 +3990,56 @@ body:has(.imp) {
   font-size: 12.5px;
   color: var(--imp-niebla);
 }
+/* The cover's group photo, and who is in it */
+.imp-group {
+  position: relative;
+  margin: 14px -22px 0;
+}
+.imp-group::before {
+  content: "";
+  position: absolute;
+  inset: 4% 4% 10%;
+  background: radial-gradient(50% 50% at 50% 55%, rgba(226, 179, 79, 0.3), rgba(226, 179, 79, 0.08) 55%, transparent 72%);
+}
+.imp-group img {
+  position: relative;
+  display: block;
+  width: 100%;
+  max-width: 520px;
+  height: auto;
+  margin: 0 auto;
+  -webkit-mask-image: linear-gradient(180deg, #000 68%, transparent 98%);
+  mask-image: linear-gradient(180deg, #000 68%, transparent 98%);
+}
+.imp-cast {
+  margin: -8px auto 0;
+  max-width: 36ch;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--imp-niebla);
+  text-wrap: balance;
+}
+.imp-cast b {
+  display: block;
+  font-weight: 700;
+  color: var(--imp-marfil);
+}
+.imp-cast span {
+  display: block;
+}
+.imp-when .imp-when-local {
+  margin-top: 2px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(226, 179, 79, 0.35);
+  font-weight: 700;
+  color: var(--imp-oro-claro);
+}
+.imp-once {
+  margin: 14px 0 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--imp-oro-claro);
+}
 .imp-cta {
   display: flex;
   align-items: center;
@@ -4704,9 +4754,9 @@ body:has(.imp) {
 }
 .imp-ag li {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
-  padding: 10px 0;
+  padding: 12px 0;
   border-top: 1px solid rgba(167, 176, 211, 0.14);
 }
 .imp-ag li:first-child {
@@ -4715,6 +4765,7 @@ body:has(.imp) {
 .imp-ag-time {
   flex: none;
   width: 56px;
+  padding-top: 1px;
   font-size: 13.5px;
   font-weight: 800;
   line-height: 1.15;
@@ -4735,64 +4786,308 @@ body:has(.imp) {
   font-weight: 700;
   color: var(--imp-humo);
 }
-.imp-mini {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  box-shadow: 0 0 0 1.5px var(--imp-oro);
-  background: #14256c;
-  object-fit: cover;
-  font-family: var(--imp-display), Georgia, serif;
-  font-weight: 800;
-  font-size: 11.5px;
-  color: var(--imp-oro-claro);
+.imp-ag-dur {
+  display: block;
+  margin-top: 5px;
+  font-size: 10.5px;
+  font-style: normal;
+  font-weight: 700;
+  color: var(--imp-humo);
 }
-.imp-mini--ini {
-  background: radial-gradient(circle at 50% 30%, #23388e, #0e1b52);
-}
-.imp-dot {
-  flex: none;
-  width: 34px;
-  display: grid;
-  place-items: center;
-  color: var(--imp-oro);
+.imp-what {
+  min-width: 0;
 }
 .imp-what b {
   display: block;
-  font-size: 14.5px;
+  font-size: 15px;
   font-weight: 800;
   line-height: 1.3;
 }
-.imp-what span {
+.imp-what > span {
   display: block;
+  margin-top: 3px;
   font-size: 12.5px;
-  line-height: 1.4;
+  line-height: 1.45;
   color: var(--imp-niebla);
 }
-.imp-what .imp-what-note {
-  margin-top: 1px;
-  color: var(--imp-humo);
+/* The day's star talk, in a box of its own */
+.imp-ag li.is-star {
+  margin: 6px -10px;
+  padding: 12px 10px;
+  border: 1px solid rgba(226, 179, 79, 0.6);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(226, 179, 79, 0.17), rgba(226, 179, 79, 0.05));
 }
+.imp-ag li.is-star + li {
+  border-top: 0;
+}
+.imp-what > .imp-star-k {
+  margin: 0 0 4px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--imp-oro);
+}
+/* Who gives it: her photo and her name */
+.imp-what > .imp-by {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 7px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--imp-oro);
+}
+.imp-by img,
+.imp-by span {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1.5px var(--imp-oro);
+  object-fit: cover;
+  background: radial-gradient(circle at 50% 30%, #23388e, #0e1b52);
+  font-family: var(--imp-display), Georgia, serif;
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--imp-oro-claro);
+}
+/* An active break: a thin line with its length */
 .imp-ag li.is-pause {
-  padding: 6px 0;
+  padding: 3px 0;
+  border-top: 0;
 }
-.imp-ag li.is-pause .imp-what {
-  font-size: 11px;
+.imp-ag li.is-pause + li {
+  border-top: 0;
+}
+.imp-ag li.is-pause span {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  font-size: 10.5px;
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--imp-humo);
 }
-.imp-ag li.is-pause .imp-ag-time {
-  color: var(--imp-humo);
+.imp-ag li.is-pause span::before,
+.imp-ag li.is-pause span::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: rgba(167, 176, 211, 0.2);
+}
+/* «Te llevas» under a day's title */
+.imp-take {
+  display: block;
+  margin-top: 10px;
+  padding: 9px 11px;
+  border-radius: 12px;
+  background: rgba(6, 13, 38, 0.5);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--imp-marfil);
+}
+.imp-take strong {
+  font-weight: 800;
+  color: var(--imp-oro-claro);
 }
 .imp-tz {
   margin: 14px 0 0;
   font-size: 12.5px;
   color: var(--imp-niebla);
+}
+
+/* Cards that slide: the results and the doubts */
+.imp-swipe {
+  display: flex;
+  gap: 12px;
+  margin: 22px -22px 0;
+  padding: 0 22px 4px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-padding: 0 22px;
+  scrollbar-width: none;
+}
+.imp-swipe::-webkit-scrollbar {
+  display: none;
+}
+.imp-slide {
+  flex: 0 0 80%;
+  display: flex;
+  flex-direction: column;
+  scroll-snap-align: start;
+  padding: 20px 18px 18px;
+  border-radius: 20px;
+  border: 1px solid rgba(226, 179, 79, 0.5);
+  background: linear-gradient(180deg, rgba(226, 179, 79, 0.15), rgba(20, 37, 108, 0.32));
+  box-shadow: 0 18px 40px -26px rgba(226, 179, 79, 0.6);
+}
+.imp-slide-tag {
+  align-self: flex-start;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #fbe3a0, #e2b34f);
+  color: #1d1406;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.imp-slide-t {
+  margin: 14px 0 0;
+  font-family: var(--imp-display), Georgia, serif;
+  font-weight: 800;
+  font-size: 21px;
+  line-height: 1.18;
+  color: var(--imp-marfil);
+  text-wrap: balance;
+}
+.imp-slide-l {
+  margin: 10px 0 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--imp-niebla);
+}
+.imp-slide-k {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(6, 13, 38, 0.5);
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--imp-marfil);
+}
+.imp-slide-k b {
+  color: var(--imp-oro-claro);
+}
+.imp-slide-who {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 16px;
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--imp-niebla);
+}
+.imp-slide-faces {
+  display: flex;
+  flex: none;
+  padding-left: 7px;
+}
+.imp-slide-faces > * {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin-left: -7px;
+  border-radius: 50%;
+  border: 2px solid #0b1640;
+  box-shadow: 0 0 0 1.5px var(--imp-oro);
+  object-fit: cover;
+  background: #14256c;
+  font-family: var(--imp-display), Georgia, serif;
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--imp-oro-claro);
+}
+/* A doubt: in her own voice, the answer and a proof */
+.imp-slide--q {
+  border-color: rgba(167, 176, 211, 0.26);
+  background: rgba(246, 240, 227, 0.05);
+  box-shadow: none;
+}
+.imp-slide-q {
+  margin: 0;
+  font-family: var(--imp-display), Georgia, serif;
+  font-weight: 800;
+  font-size: 23px;
+  line-height: 1.2;
+  color: var(--imp-oro-claro);
+}
+.imp-slide-a {
+  margin: 10px 0 16px;
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: var(--imp-marfil);
+}
+.imp-slide-proof {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid rgba(167, 176, 211, 0.16);
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--imp-niebla);
+}
+.imp-slide-proof .imp-slide-faces {
+  padding-left: 0;
+}
+.imp-slide-proof .imp-slide-faces > * {
+  width: 40px;
+  height: 40px;
+  margin-left: 0;
+  font-size: 12px;
+}
+.imp-slide-ic {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(226, 179, 79, 0.14);
+  color: var(--imp-oro-claro);
+}
+.imp-slide-proof b {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--imp-oro);
+}
+.imp-dots {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+}
+.imp-dots button {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.imp-dots button::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(167, 176, 211, 0.35);
+  transition: width 0.2s ease, background 0.2s ease;
+}
+.imp-dots button.is-on::before {
+  width: 18px;
+  background: var(--imp-oro);
+}
+@media (prefers-reduced-motion: reduce) {
+  .imp-dots button::before {
+    transition: none;
+  }
 }
 
 /* What the ticket includes */
@@ -5215,6 +5510,17 @@ body:has(.imp) {
   }
   .imp-agenda .imp-tz {
     grid-column: 1 / -1;
+  }
+  /* On a computer the cards sit side by side: nothing to slide. */
+  .imp-swipe {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    margin: 26px 0 0;
+    padding: 0;
+    overflow: visible;
+  }
+  .imp-dots {
+    display: none;
   }
   .imp-inc {
     grid-template-columns: 1fr 1fr;
