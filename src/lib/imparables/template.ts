@@ -393,9 +393,9 @@ export const IMPARABLES_FIELDS = {
  * No waiting list (2026-10-26): the Preventa is on sale from the moment the
  * event is published, no start date. */
 export const IMPARABLES_STAGES: { name: string; price: number; opensAt: string | null; closesAt: string }[] = [
-  { name: "Preventa", price: 79_900, opensAt: null, closesAt: "2027-04-01T00:00:00-05:00" },
-  { name: "General", price: 99_900, opensAt: "2027-04-01T00:00:00-05:00", closesAt: "2027-06-21T00:00:00-05:00" },
-  { name: "Última semana", price: 119_900, opensAt: "2027-06-21T00:00:00-05:00", closesAt: "2027-06-27T00:00:00-05:00" },
+  { name: "Preventa", price: 80_000, opensAt: null, closesAt: "2027-04-01T00:00:00-05:00" },
+  { name: "General", price: 100_000, opensAt: "2027-04-01T00:00:00-05:00", closesAt: "2027-06-21T00:00:00-05:00" },
+  { name: "Última semana", price: 120_000, opensAt: "2027-06-21T00:00:00-05:00", closesAt: "2027-06-27T00:00:00-05:00" },
 ];
 /** Room in each stage: a cap that won't be the limit, to lower once Zoom's capacity is known. */
 export const IMPARABLES_STAGE_QUANTITY = 3000;

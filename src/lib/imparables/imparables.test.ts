@@ -281,6 +281,6 @@ describe("the template", () => {
   it("opens the Preventa with the event and chains the stages without gaps", () => {
     expect(IMPARABLES_STAGES[0]!.opensAt).toBeNull();
     for (let i = 1; i < IMPARABLES_STAGES.length; i++) expect(IMPARABLES_STAGES[i]!.opensAt).toBe(IMPARABLES_STAGES[i - 1]!.closesAt);
-    expect(IMPARABLES_STAGES.map((s) => s.price)).toEqual([79_900, 99_900, 119_900]);
+    expect(IMPARABLES_STAGES.map((s) => s.price)).toEqual([80_000, 100_000, 120_000]);
   });
 });
