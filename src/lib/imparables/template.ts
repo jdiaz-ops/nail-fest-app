@@ -23,10 +23,10 @@ const HOST = {
 };
 
 // Each speaker's texts in one place (the team's update, 2026-10-26): the line
-// on her card (`tag`), her talk's title (`talk`), which the program shows
-// under her name and her card under her line, and the talk's subtitle
-// (`subtitle`, the program row's «Nota extra»). In the order of the cards.
-// The team edits them later in «Contenido».
+// on her card (`tag`, all of about the same length, so the cards keep their
+// proportions), her talk's title (`talk`), which the program shows under her
+// name, and the talk's subtitle (`subtitle`, the program row's «Nota extra»).
+// In the order of the cards. The team edits them later in «Contenido».
 interface ImparablesSpeaker {
   name: string;
   handle: string;
@@ -48,7 +48,7 @@ export const IMPARABLES_SPEAKERS: ImparablesSpeaker[] = [
   {
     name: "Paula Chacón",
     handle: "@soypauc_tuprofe",
-    tag: "Empezó atendiendo en una mesa de manicure y hoy es CEO de El Imperio de las Uñas, una cadena de 7 spas. Para crecer tuvo que vencer el autosabotaje, cobrar sin culpa y aprender a delegar en un equipo.",
+    tag: "De la mesa de manicure a CEO de El Imperio de las Uñas, una cadena de 7 spas. Aprendió a cobrar sin culpa y a delegar.",
     talk: "Créete el cuento: cobra lo que vales y deja de hacerlo todo sola",
     subtitle: "Los miedos que tuvo que vencer: cobrar sin culpa, delegar y armar un equipo.",
     photoUrl: PHOTO("pau"),
@@ -56,7 +56,7 @@ export const IMPARABLES_SPEAKERS: ImparablesSpeaker[] = [
   {
     name: "Cristina Sierra",
     handle: "@cris_sierra17",
-    tag: "Fundadora de Cristina Sierra Nail Experts: 10 sedes y más de un millón de seguidores. Resiliencia: cómo levantarse de lo más duro.",
+    tag: "Fundadora de Cristina Sierra Nail Experts: 10 sedes y más de un millón de seguidores. Una historia de resiliencia y superación.",
     talk: "Lo que no te rompe te hace imparable",
     subtitle: "La historia detrás de 10 sedes: resiliencia para levantarse de lo más duro.",
     photoUrl: PHOTO("cris"),
@@ -64,7 +64,7 @@ export const IMPARABLES_SPEAKERS: ImparablesSpeaker[] = [
   {
     name: "Alejandro Salinas",
     handle: "@salinas.beautybusiness",
-    tag: "Asesor de negocios de belleza, 15 años de experiencia en administración, finanzas y marketing. Precios, costos y cuánto te queda de verdad.",
+    tag: "Asesor de negocios de belleza con 15 años en administración, finanzas y marketing. Te enseña a ordenar tu plata.",
     talk: "Ordena tu plata: precios, costos y cuánto te queda de verdad",
     subtitle: "Sal sabiendo cuánto cobrar, cuánto gastas y cuánto te queda, con herramientas sencillas que puedes usar desde mañana.",
     photoUrl: PHOTO("salinas"),
@@ -72,8 +72,7 @@ export const IMPARABLES_SPEAKERS: ImparablesSpeaker[] = [
   {
     name: "Karen",
     handle: "@karenw.trainer",
-    // Her talk's title goes right under her line: the line doesn't say it again (2026-10-26).
-    tag: "Creadora del Método Esencia.",
+    tag: "Creadora del Método Esencia. Te ayuda a descubrir lo que te hace única y a convertirlo en tu sello.",
     talk: "Tu esencia es tu marca: deja de copiar y crea tu sello",
     subtitle: "Descubre lo que te hace única y conviértelo en una marca que tus clientas reconozcan y busquen.",
     photoUrl: "",
@@ -81,7 +80,7 @@ export const IMPARABLES_SPEAKERS: ImparablesSpeaker[] = [
   {
     name: "Fabi Pinillo Martínez",
     handle: "@fabiversatill",
-    tag: "Nail artist y estratega de centros de belleza. La técnica ya no es suficiente.",
+    tag: "Nail artist y estratega de centros de belleza. Te enseña a llenar tu agenda: la técnica ya no es suficiente.",
     talk: "Agenda llena: estrategias y contenido que traen clientas",
     subtitle: "Del primer mensaje a la cita confirmada: qué publicar y cómo responder.",
     photoUrl: PHOTO("fabi"),
@@ -89,7 +88,7 @@ export const IMPARABLES_SPEAKERS: ImparablesSpeaker[] = [
   {
     name: "Juan Tenorio",
     handle: "@don.juantenorio",
-    tag: "Asesor de negocios de belleza, con más de 500 salones y barberías transformados. Clientas que vuelven y te recomiendan.",
+    tag: "Asesor de negocios de belleza, con más de 500 salones y barberías transformados.",
     talk: "Clientas que vuelven: cómo hacer que te elijan, regresen y te recomienden",
     subtitle: "Servicio y experiencia para que cada clienta gaste más en cada visita.",
     photoUrl: PHOTO("juan"),
@@ -97,7 +96,7 @@ export const IMPARABLES_SPEAKERS: ImparablesSpeaker[] = [
   {
     name: "Oskar Garzón",
     handle: "@oskarivanquebelleza",
-    tag: "Empresario y creador de marca. Cierra el congreso: visión, actitud y tu ruta final.",
+    tag: "Empresario y creador de marca. Cierra el congreso con visión, redes y la actitud para sobresalir.",
     talk: "Piensa en grande y hazte ver",
     subtitle: "Visión, redes y la actitud para sobresalir. Cierre del congreso y tu ruta final.",
     photoUrl: PHOTO("oskar"),
@@ -403,7 +402,7 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
 
 /** The event's own lines, set by the template only where the event has none of its own. */
 export const IMPARABLES_FIELDS = {
-  subtitle: "<p>Tienes el talento. Ya es hora de construir un negocio que crece.</p>",
+  subtitle: "<p>Nadie nace imparable. <strong>Se hace.</strong></p><p>Tuvieron tus mismos miedos y hoy te cuentan cómo los atravesaron. Y tú sales con lo que a ellas les faltó al principio: qué te hace única, cuánto cobrar, estrategias para llenar tu agenda y cómo hacer que vuelvan.</p>",
   closingText: "Tienes el talento. Ahora, a construir tu negocio.",
   registerButtonLabel: "Quiero mi boleta",
   // «Texto debajo del botón»: on this cover, under the button with a shield —

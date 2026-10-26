@@ -12,7 +12,7 @@ import type {
 import { youtubeVideo } from "@/lib/landingBlocks/types";
 import { agendaInstant, dayEnd, type EventWhen } from "@/lib/imparables/schedule";
 import { dayMonth, pesos, saving, type SalesState } from "@/lib/imparables/stages";
-import { isPanelCard, listNames, namesIn, routeOf } from "@/lib/imparables/blocks";
+import { isPanelCard, listNames, namesIn, panelGuestsOf, routeOf } from "@/lib/imparables/blocks";
 import { ImpIcon, Silhouette, iconForPoint, initials, instagramUrl, type ImpIconName } from "./ImpArt";
 import ImpButton from "./ImpButton";
 import ImpCountdown from "./ImpCountdown";
@@ -41,8 +41,6 @@ export interface ImparablesContext {
   buyLabel: string;
   /** Whose photo goes next to a name on the cards: the speakers and the panel's guests already named. */
   speakers: PeopleLandingBlock["items"];
-  /** Each speaker's talk, by her name in lowercase (lib/imparables/blocks.ts talksOf): it goes on her card. */
-  talks: Record<string, string>;
   /** The panel: its line in the program tells what its card says, with its panelists' faces. */
   panel: { card: CardLandingBlock; people: PeopleLandingBlock } | null;
 }
@@ -209,7 +207,7 @@ function renderBlock(block: LandingBlock, key: number, context: ImparablesContex
     }
 
     case "people":
-      return block.items.length > 0 ? <Speakers key={key} people={block} talks={context.talks} /> : null;
+      return block.items.length > 0 ? <Speakers key={key} people={block} /> : null;
 
     case "agenda":
       return block.rows.length > 0 ? <Agenda key={key} rows={block.rows} context={context} /> : null;
@@ -364,17 +362,12 @@ function Card({ card }: { card: CardLandingBlock }) {
   );
 }
 
-/** The panel's guests, those with a name or the story they bring. */
-function panelGuests(people: PeopleLandingBlock) {
-  return people.items.filter((p) => p.name.trim() || p.tag.trim());
-}
-
-// The panelists under the speakers (2026-10-26): smaller and four to a row,
-// since they share one session instead of giving a talk of their own; when
-// and what the panel is, the program says. One not confirmed yet shows a
-// silhouette, «Por anunciar» and the story she brings (her line).
+// The panelists under the speakers (2026-10-26): a list, each on a line of
+// her own — her photo, then who she is and her line, or, not confirmed yet,
+// a silhouette, «Por anunciar» and the story she brings — the confirmed ones
+// first. When and what the panel is, the program says.
 function Panelists({ people }: { people: PeopleLandingBlock }) {
-  const guests = panelGuests(people);
+  const guests = panelGuestsOf(people);
   if (guests.length === 0) return null;
   return (
     <div className="imp-pnl">
@@ -388,13 +381,15 @@ function Panelists({ people }: { people: PeopleLandingBlock }) {
             ) : (
               <Silhouette className="imp-pn-ph" tone={p.tone} />
             )}
-            {p.name.trim() ? <b>{p.name}</b> : <small>Por anunciar</small>}
-            {p.name.trim() && p.handle && (
-              <a className="imp-pn-ig" href={instagramUrl(p.handle)} target="_blank" rel="noopener noreferrer">
-                @{p.handle.replace(/^@+/, "")}
-              </a>
-            )}
-            {p.tag && <span>{p.tag}</span>}
+            <div className="imp-pn-t">
+              {p.name.trim() ? <b>{p.name}</b> : <small>Por anunciar</small>}
+              {p.name.trim() && p.handle && (
+                <a className="imp-pn-ig" href={instagramUrl(p.handle)} target="_blank" rel="noopener noreferrer">
+                  @{p.handle.replace(/^@+/, "")}
+                </a>
+              )}
+              {p.tag && <span>{p.tag}</span>}
+            </div>
           </div>
         ))}
       </div>
@@ -402,9 +397,10 @@ function Panelists({ people }: { people: PeopleLandingBlock }) {
   );
 }
 
-// A speaker's card: her photo, her name and Instagram, her line and, under
-// it, the title of her talk as the program has it (2026-10-26).
-function Speakers({ people, talks }: { people: PeopleLandingBlock; talks: Record<string, string> }) {
+// A speaker's card: her photo, her name, her Instagram and her line — always
+// those four, so each row of cards lines them up (globals.css) whatever
+// their length (2026-10-26).
+function Speakers({ people }: { people: PeopleLandingBlock }) {
   return (
     <div className="imp-sp-grid">
       {people.items
@@ -422,13 +418,14 @@ function Speakers({ people, talks }: { people: PeopleLandingBlock; talks: Record
               )}
             </div>
             <div className="imp-sp-name">{p.name}</div>
-            {p.handle && (
+            {p.handle ? (
               <a className="imp-sp-ig" href={instagramUrl(p.handle)} target="_blank" rel="noopener noreferrer">
                 @{p.handle.replace(/^@+/, "")}
               </a>
+            ) : (
+              <span className="imp-sp-ig" />
             )}
-            {p.tag && <p className="imp-sp-line">{p.tag}</p>}
-            {talks[p.name.trim().toLowerCase()] && <p className="imp-sp-talk">{talks[p.name.trim().toLowerCase()]}</p>}
+            <p className="imp-sp-line">{p.tag}</p>
           </div>
         ))}
     </div>
@@ -547,7 +544,7 @@ function AgendaLine({
   // photo next to its text.
   // The panel's line tells what its card says instead (2026-10-26).
   const subtitle = panel?.card.html ? "" : row.topic && (row.instructor || !row.photoUrl) ? row.text : "";
-  const guests = panel ? panelGuests(panel.people) : [];
+  const guests = panel ? panelGuestsOf(panel.people) : [];
   const named = guests.filter((p) => p.name.trim()).map((p) => p.name.trim());
   const pending = guests.length - named.length;
   const who = row.topic ? row.instructor || (row.photoUrl ? row.text : "") : "";

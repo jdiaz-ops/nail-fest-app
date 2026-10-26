@@ -5,7 +5,7 @@ import type { LandingBlock } from "@/lib/landingBlocks/types";
 import { coverName, type EventWhen } from "@/lib/imparables/schedule";
 import { dayMonth, pesos, saving, untilDay, type SalesState } from "@/lib/imparables/stages";
 import { utcToZonedInputValue } from "@/lib/dateFormat";
-import { castLine, castOf, coverOf, panelOf, talksOf } from "@/lib/imparables/blocks";
+import { castLine, castOf, coverOf, panelOf } from "@/lib/imparables/blocks";
 import ImparablesBlocks from "./ImparablesBlocks";
 import { ImpIcon, Tiara, initials } from "./ImpArt";
 import ImpButton from "./ImpButton";
@@ -251,7 +251,7 @@ export default function ImparablesPage({
         </div>
       )}
 
-      <ImparablesBlocks blocks={rest} context={{ sales, offsetMs, when, timezone, now, buyLabel, speakers: faces, panel, talks: talksOf(rest) }} />
+      <ImparablesBlocks blocks={rest} context={{ sales, offsetMs, when, timezone, now, buyLabel, speakers: faces, panel }} />
 
       <section className="imp-close">
         <div className="imp-rays" aria-hidden="true" />
