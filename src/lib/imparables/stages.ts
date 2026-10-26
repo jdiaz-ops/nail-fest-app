@@ -1,11 +1,12 @@
 // Manicuristas Imparables' price stages (2026-10-26): each stage is one of
 // the event's own ticket types with its dates (TicketType.hideUntil /
-// hideAfter) — Preventa 27 feb – 31 mar, General 1 abr – 20 jun, Última
-// semana 21 – 26 jun — so the price on sale is always the one whose dates
-// hold today; getPublicTicketTypes (lib/ticketTypes.ts) already offers only
-// that one in the checkout. From the same rows the page tells what it costs
-// today, what comes next and when — or, before the first stage opens, when
-// the sale opens (the waiting list).
+// hideAfter) — Etapa 1 until 31 mar, Etapa 2 1 abr – 20 jun, Etapa 3 21 –
+// 26 jun, and the regular price («Precio normal») during the congress — so
+// the price on sale is always the one whose dates hold today;
+// getPublicTicketTypes (lib/ticketTypes.ts) already offers only that one in
+// the checkout. From the same rows the page tells what it costs today, what
+// it saves against the regular price, what comes next and when — or, before
+// the first stage opens, when the sale opens (the waiting list).
 
 import { utcToZonedInputValue } from "@/lib/dateFormat";
 
@@ -39,6 +40,8 @@ export interface SalesState {
   mode: SalesMode;
   /** Every ticket type on sale (status ON_SALE), in the order its dates come. */
   stages: PriceStage[];
+  /** The regular price: the stage named «Precio normal», which each other one's saving is told against. */
+  normal: PriceStage | null;
   /** Today's price: the cheapest one open with tickets left. */
   current: PriceStage | null;
   /** The first one still to open. */
@@ -56,6 +59,7 @@ export function salesState(types: StageTicketType[], now: Date, eventStartsAt: D
       return { id: t.id, name: t.name, price: t.price, opensAt: t.hideUntil, closesAt: t.hideAfter, state };
     });
 
+  const normal = stages.filter((s) => /^precio normal\b/i.test(s.name.trim())).sort((a, b) => b.price - a.price)[0] ?? null;
   const open = stages.filter((s) => s.state === "current");
   const current = open.length ? open.reduce((cheapest, s) => (s.price < cheapest.price ? s : cheapest)) : null;
   const next = stages.filter((s) => s.state === "future").sort((a, b) => a.opensAt!.getTime() - b.opensAt!.getTime())[0] ?? null;
@@ -69,7 +73,12 @@ export function salesState(types: StageTicketType[], now: Date, eventStartsAt: D
   } else if (next) {
     countdown = { to: next.opensAt!, label: "La venta abre en" };
   }
-  return { mode, stages, current, next, countdown };
+  return { mode, stages, normal, current, next, countdown };
+}
+
+/** What buying at `stage` saves against the regular price (0 when there's none, or it's that one). */
+export function saving(stage: Pick<PriceStage, "id" | "price">, normal: Pick<PriceStage, "id" | "price"> | null): number {
+  return normal && normal.id !== stage.id && normal.price > stage.price ? normal.price - stage.price : 0;
 }
 
 // ── How it reads ────────────────────────────────────────────────────────────

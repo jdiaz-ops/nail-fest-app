@@ -10,7 +10,7 @@ import type {
 } from "@/lib/landingBlocks/types";
 import { youtubeVideo } from "@/lib/landingBlocks/types";
 import { agendaInstant, dayEnd, zoneLabel, zoneOffset, type EventWhen } from "@/lib/imparables/schedule";
-import { dayMonth, pesos, stageDates, type SalesState } from "@/lib/imparables/stages";
+import { dayMonth, pesos, saving, stageDates, type SalesState } from "@/lib/imparables/stages";
 import { isPanelCard, namesIn } from "@/lib/imparables/blocks";
 import { ImpIcon, Silhouette, iconForPoint, initials, instagramUrl, type ImpIconName } from "./ImpArt";
 import ImpButton from "./ImpButton";
@@ -559,16 +559,22 @@ function secondsUntil(to: Date, now: Date): number {
 function Prices({ block, context }: { block: PricesLandingBlock; context: ImparablesContext }) {
   const { sales, timezone, now, offsetMs } = context;
   if (sales.stages.length === 0) return null;
-  const { current, next, countdown } = sales;
+  const { current, next, countdown, normal } = sales;
   const STATE_NOTE = { current: " · ahora", past: " · cerrada", soldout: " · agotada", future: "" } as const;
   return (
     <div className="imp-prices">
       {current ? (
         <div className="imp-now">
           <span className="imp-now-badge">Precio de hoy · {current.name}</span>
+          {saving(current, normal) > 0 && (
+            <div className="imp-now-was">
+              Precio normal <s>{pesos(normal!.price)}</s>
+            </div>
+          )}
           <div className="imp-now-amt">
             {pesos(current.price)} <small>COP</small>
           </div>
+          {saving(current, normal) > 0 && <div className="imp-now-save">Ahorras {pesos(saving(current, normal))}</div>}
           {block.note && <div className="imp-now-iva">{block.note}</div>}
           {next?.opensAt && (
             <div className="imp-now-up">
@@ -610,7 +616,10 @@ function Prices({ block, context }: { block: PricesLandingBlock; context: Impara
               {stageDates(stage, timezone)}
               {STATE_NOTE[stage.state]}
             </span>
-            <strong>{pesos(stage.price)}</strong>
+            <span className="imp-stage-p">
+              <strong>{pesos(stage.price)}</strong>
+              {saving(stage, normal) > 0 && stage.state !== "past" && <small>Ahorras {pesos(saving(stage, normal))}</small>}
+            </span>
           </li>
         ))}
       </ol>

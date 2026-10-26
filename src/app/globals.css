@@ -5219,6 +5219,26 @@ body:has(.imp) {
   font-size: 13px;
   color: var(--imp-texto-2);
 }
+/* The regular price, struck, and what today's saves against it */
+.imp-now-was {
+  margin-top: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--imp-texto-2);
+}
+.imp-now-was + .imp-now-amt {
+  margin-top: 4px;
+}
+.imp-now-save {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--imp-oro);
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--imp-resalte);
+}
 .imp-now-up {
   margin: 16px 0 0;
   font-size: 14.5px;
@@ -5262,6 +5282,17 @@ body:has(.imp) {
   font-size: 15px;
   font-variant-numeric: tabular-nums;
   color: var(--imp-texto);
+}
+.imp-stage-p {
+  flex: none;
+  text-align: right;
+}
+.imp-stage-p small {
+  display: block;
+  margin-top: 2px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--imp-resalte);
 }
 .imp-stages li.is-on {
   border-color: var(--imp-oro);
