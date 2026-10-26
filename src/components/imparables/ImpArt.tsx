@@ -2,22 +2,16 @@ import type { LandingTone } from "@/lib/landingBlocks/types";
 
 // The drawn pieces of Manicuristas Imparables' page: the tiara over the
 // name, the line icons, and the silhouette a panelist shows until her photo
-// arrives. Plain SVG, gold on blue, same strokes as the boceto.
+// arrives. Plain SVG in the page's own colors (globals.css), same strokes as
+// the boceto.
 
-/** Two on the page (the cover and the closing): `id` keeps their gradients apart. */
-export function Tiara({ id }: { id: string }) {
+/** On the cover and the closing, in the color .imp-tiara gives it. */
+export function Tiara() {
   return (
     <svg className="imp-tiara" viewBox="0 0 190 52" aria-hidden="true">
-      <defs>
-        <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#fff2c6" />
-          <stop offset=".55" stopColor="#e2b34f" />
-          <stop offset="1" stopColor="#9c6c1e" />
-        </linearGradient>
-      </defs>
-      <path d="M6 48 Q95 -4 184 48" fill="none" stroke={`url(#${id})`} strokeWidth="2.6" />
-      <path d="M30 46 Q95 12 160 46" fill="none" stroke={`url(#${id})`} strokeWidth="1.2" opacity=".7" />
-      <polygon points="95,8 99.4,19 111,19.6 101.9,26.8 105,38 95,31.6 85,38 88.1,26.8 79,19.6 90.6,19" fill={`url(#${id})`} />
+      <path d="M6 48 Q95 -4 184 48" fill="none" stroke="currentColor" strokeWidth="2.6" />
+      <path d="M30 46 Q95 12 160 46" fill="none" stroke="currentColor" strokeWidth="1.2" opacity=".7" />
+      <polygon points="95,8 99.4,19 111,19.6 101.9,26.8 105,38 95,31.6 85,38 88.1,26.8 79,19.6 90.6,19" fill="currentColor" />
     </svg>
   );
 }
@@ -144,18 +138,18 @@ export function iconForPoint(title: string): ImpIconName {
 }
 
 const TONE_GROUND: Record<LandingTone, string> = {
-  pink: "radial-gradient(circle at 50% 28%, #2b43a3, #0e1b52)",
-  teal: "radial-gradient(circle at 50% 28%, #1d5a7a, #0a2133)",
-  peach: "radial-gradient(circle at 50% 28%, #563283, #1b0f35)",
+  pink: "var(--imp-chocolate-tarjeta)",
+  teal: "var(--imp-chocolate-medio)",
+  peach: "var(--imp-bronce-oscuro)",
 };
 
-/** A portrait still to come: a gold silhouette in a medallion. */
+/** A portrait still to come: a silhouette in a medallion, in the color .imp-pn-ph gives it. */
 export function Silhouette({ tone, className }: { tone: LandingTone; className: string }) {
   return (
     <span className={className} style={{ background: TONE_GROUND[tone] }} aria-hidden="true">
       <svg viewBox="0 0 64 64">
         <path
-          fill="#fbe3a0"
+          fill="currentColor"
           fillOpacity=".55"
           d="M32 13c-7.2 0-11.5 5.6-11.5 12.4 0 4.3 1.6 8 4.3 10.2-1 .9-2.4 1.6-4.2 2.1C13.4 39.6 9 45.4 7.5 64h49c-1.5-18.6-5.9-24.4-13.1-26.3-1.8-.5-3.2-1.2-4.2-2.1 2.7-2.2 4.3-5.9 4.3-10.2C43.5 18.6 39.2 13 32 13z"
         />

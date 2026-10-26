@@ -156,7 +156,7 @@ export default function ImparablesPage({
             </span>
             <span className="imp-live">{live}</span>
           </div>
-          <Tiara id="imp-tiara-top" />
+          <Tiara />
           <ImpTitle pre={pre} big={big} />
           {event.subtitle && (
             // Sanitized before storage (lib/events.ts), like every event's tagline.
@@ -236,7 +236,7 @@ export default function ImparablesPage({
       <section className="imp-close">
         <div className="imp-rays" aria-hidden="true" />
         <div className="imp-hero-in">
-          <Tiara id="imp-tiara-close" />
+          <Tiara />
           {closing.length === 2 ? (
             <>
               <p className="imp-close-1">{closing[0]}</p>

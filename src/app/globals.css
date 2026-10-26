@@ -3719,32 +3719,68 @@ button.pt-item { width: 100%; border: 0; border-radius: 0; background: none; fon
 }
 
 /* ── Manicuristas Imparables (components/imparables/, EventTheme IMPARABLES) ──
-   The approved boceto: deep blue and gold, Cinzel over Manrope, mobile
-   first, widening into columns on a computer. Everything is scoped under
-   .imp; the checkout modal inside it keeps the app's light look
-   (.imp-checkout). */
+   The approved boceto in the team's «Editorial hueso» palette: light (bone)
+   and dark (chocolate) sections in turn, bronze and gold on them, flat
+   colors; Cinzel over Manrope, mobile first, widening into columns on a
+   computer. Everything is scoped under .imp; the checkout modal inside it
+   keeps the app's light look (.imp-checkout). */
 .imp {
-  --imp-abismo: #060d26;
-  --imp-noche: #0b1640;
-  --imp-imperial: #14256c;
-  --imp-borde: #22357f;
-  --imp-oro: #e2b34f;
-  --imp-oro-claro: #fbe3a0;
-  --imp-oro-viejo: #9c6c1e;
-  --imp-marfil: #f6f0e3;
-  --imp-niebla: #a7b0d3;
-  --imp-humo: #7f88b3;
+  /* «Editorial hueso»: every color on the page is one of these. */
+  --imp-hueso: #ede8e1;
+  --imp-hueso-tarjeta: #f7f3ec;
+  --imp-hueso-profundo: #e9dfcf;
+  --imp-borde-claro: #dcd2c3;
+  --imp-borde-contador: #cfc5b6;
+  --imp-estrella: #f3e6cc;
+  --imp-negro: #141414;
+  --imp-negro-tarjeta: #262626;
+  --imp-borde-negro: #3a3a3a;
+  --imp-gris-calido: #5e564c;
+  --imp-gris-suave: #6f665b;
+  --imp-chocolate: #3b2418;
+  --imp-chocolate-tarjeta: #4a3024;
+  --imp-chocolate-medio: #5a4030;
+  --imp-borde-oscuro: #6b4a33;
+  --imp-crema: #f5f0e8;
+  --imp-crema-suave: #e6dacb;
+  --imp-arena: #cbbba8;
+  --imp-bronce: #8c6a3e;
+  --imp-bronce-oscuro: #6e5230;
+  --imp-oro: #c9a46a;
+  --imp-oro-hover: #b8925a;
+  --imp-oro-claro: #d2b486;
+  --imp-error: #ffb4b4;
+  /* What each part takes from them, by zone. These are the black zone's (the
+     bar at the bottom, the footer); the light and dark ones are below. */
+  --imp-fondo: var(--imp-negro);
+  --imp-tarjeta: var(--imp-negro-tarjeta);
+  --imp-tarjeta-borde: var(--imp-borde-negro);
+  --imp-linea: var(--imp-borde-negro);
+  --imp-caja: var(--imp-negro);
+  --imp-destacado: var(--imp-negro);
+  --imp-texto: var(--imp-crema);
+  --imp-texto-2: var(--imp-crema-suave);
+  --imp-texto-3: var(--imp-arena);
+  --imp-acento: var(--imp-oro);
+  --imp-resalte: var(--imp-oro-claro);
+  --imp-titulo: var(--imp-oro-claro);
+  --imp-icono: var(--imp-oro);
+  --imp-punto: var(--imp-borde-negro);
+  --imp-marca: var(--imp-negro-tarjeta);
+  --imp-contador-borde: var(--imp-bronce);
+  --imp-contador-num: var(--imp-oro-claro);
   position: relative;
   min-height: 100vh;
   overflow-x: clip;
-  background: var(--imp-abismo);
-  color: var(--imp-marfil);
+  background: var(--imp-fondo);
+  color: var(--imp-texto);
   font-family: var(--imp-body), system-ui, -apple-system, "Segoe UI", sans-serif;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
 body:has(.imp) {
-  background: #060d26;
+  /* The cover's bone (--imp-hueso; the palette lives on .imp, inside body). */
+  background: #ede8e1;
 }
 /* Film grain over the whole page. */
 .imp::after {
@@ -3761,14 +3797,64 @@ body:has(.imp) {
   color: inherit;
 }
 .imp :focus-visible {
-  outline: 2px solid var(--imp-oro-claro);
+  outline: 2px solid var(--imp-resalte);
   outline-offset: 3px;
 }
 .imp-gold {
-  background: linear-gradient(180deg, #fff6d4 0%, #f7d47c 36%, #dca844 62%, #a87422 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: var(--imp-titulo);
+}
+
+/* The zones the page takes turns in: the cover and every other section are
+   light; the sections in between, the waiting list and the closing are dark;
+   what is outside them (the bar, the footer) keeps the black of .imp. */
+.imp-hero,
+.imp-sec:not(.imp-sec--alt) {
+  --imp-fondo: var(--imp-hueso);
+  --imp-tarjeta: var(--imp-hueso-tarjeta);
+  --imp-tarjeta-borde: var(--imp-borde-claro);
+  --imp-linea: var(--imp-borde-claro);
+  --imp-caja: var(--imp-hueso-profundo);
+  --imp-destacado: var(--imp-estrella);
+  --imp-texto: var(--imp-negro);
+  --imp-texto-2: var(--imp-gris-calido);
+  --imp-texto-3: var(--imp-gris-suave);
+  /* Bronze reads on bone only from 24px up: smaller text takes the dark one. */
+  --imp-acento: var(--imp-bronce-oscuro);
+  --imp-resalte: var(--imp-bronce-oscuro);
+  --imp-titulo: var(--imp-bronce);
+  --imp-icono: var(--imp-bronce);
+  --imp-punto: var(--imp-borde-contador);
+  --imp-marca: var(--imp-borde-claro);
+  --imp-contador-borde: var(--imp-borde-contador);
+  --imp-contador-num: var(--imp-negro);
+}
+.imp-sec--alt,
+.imp-wl-wrap,
+.imp-close {
+  --imp-fondo: var(--imp-chocolate);
+  --imp-tarjeta: var(--imp-chocolate-tarjeta);
+  --imp-tarjeta-borde: var(--imp-bronce);
+  --imp-linea: var(--imp-borde-oscuro);
+  --imp-caja: var(--imp-chocolate);
+  --imp-destacado: var(--imp-chocolate);
+  --imp-texto: var(--imp-crema);
+  --imp-texto-2: var(--imp-crema-suave);
+  --imp-texto-3: var(--imp-arena);
+  --imp-acento: var(--imp-oro);
+  --imp-resalte: var(--imp-oro-claro);
+  --imp-titulo: var(--imp-oro-claro);
+  --imp-icono: var(--imp-oro);
+  --imp-punto: var(--imp-borde-oscuro);
+  --imp-marca: var(--imp-chocolate-tarjeta);
+  --imp-contador-borde: var(--imp-bronce);
+  --imp-contador-num: var(--imp-oro-claro);
+}
+.imp-hero,
+.imp-sec,
+.imp-wl-wrap,
+.imp-close {
+  background: var(--imp-fondo);
+  color: var(--imp-texto);
 }
 
 /* The team's preview band */
@@ -3781,8 +3867,8 @@ body:has(.imp) {
   justify-content: center;
   gap: 6px 14px;
   padding: 8px 12px;
-  background: #fbf3dc;
-  color: #3b2f12;
+  background: var(--imp-hueso-profundo);
+  color: var(--imp-negro);
   font-size: 12px;
   line-height: 1.4;
   text-align: center;
@@ -3803,9 +3889,9 @@ body:has(.imp) {
 .imp-preview nav a {
   padding: 3px 10px;
   border-radius: 999px;
-  background: #fff;
-  border: 1px solid #f0dca6;
-  color: #3b2f12;
+  background: var(--imp-hueso-tarjeta);
+  border: 1px solid var(--imp-borde-claro);
+  color: var(--imp-negro);
   font-weight: 700;
   text-decoration: none;
 }
@@ -3819,7 +3905,6 @@ body:has(.imp) {
 }
 .imp-hero {
   padding: 16px 22px 34px;
-  background: radial-gradient(120% 55% at 50% -6%, rgba(251, 227, 160, 0.34) 0%, rgba(226, 179, 79, 0.1) 34%, transparent 62%), linear-gradient(180deg, #0b1949 0%, #060d26 72%);
 }
 .imp-hero-in {
   position: relative;
@@ -3834,7 +3919,8 @@ body:has(.imp) {
   height: 620px;
   transform: translateX(-50%);
   pointer-events: none;
-  background: repeating-conic-gradient(from 0deg at 50% 0%, rgba(251, 227, 160, 0.1) 0deg 2.2deg, transparent 2.2deg 7deg);
+  background: repeating-conic-gradient(from 0deg at 50% 0%, var(--imp-bronce) 0deg 2.2deg, transparent 2.2deg 7deg);
+  opacity: 0.1;
   -webkit-mask-image: radial-gradient(62% 72% at 50% 0%, #000 0%, rgba(0, 0, 0, 0.5) 45%, transparent 78%);
   mask-image: radial-gradient(62% 72% at 50% 0%, #000 0%, rgba(0, 0, 0, 0.5) 45%, transparent 78%);
 }
@@ -3847,7 +3933,7 @@ body:has(.imp) {
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--imp-niebla);
+  color: var(--imp-texto-2);
 }
 .imp-org {
   display: flex;
@@ -3857,7 +3943,8 @@ body:has(.imp) {
 .imp-org img {
   height: 20px;
   width: auto;
-  filter: brightness(0) invert(1);
+  /* In black on the light cover. */
+  filter: brightness(0);
   opacity: 0.92;
 }
 .imp-live {
@@ -3866,8 +3953,8 @@ body:has(.imp) {
   gap: 6px;
   padding: 5px 10px;
   border-radius: 999px;
-  border: 1px solid rgba(226, 179, 79, 0.5);
-  color: var(--imp-oro-claro);
+  border: 1px solid var(--imp-tarjeta-borde);
+  color: var(--imp-resalte);
   white-space: nowrap;
 }
 .imp-live::before {
@@ -3875,14 +3962,14 @@ body:has(.imp) {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--imp-oro);
-  box-shadow: 0 0 8px var(--imp-oro);
+  background: var(--imp-acento);
 }
 .imp-tiara {
   display: block;
   width: 190px;
   height: 52px;
   margin: 22px auto 0;
+  color: var(--imp-oro);
 }
 .imp-name {
   margin: 8px 0 0;
@@ -3896,7 +3983,7 @@ body:has(.imp) {
   letter-spacing: 0.36em;
   text-indent: 0.36em;
   text-transform: uppercase;
-  color: var(--imp-marfil);
+  color: var(--imp-texto);
 }
 .imp-title {
   display: block;
@@ -3909,7 +3996,6 @@ body:has(.imp) {
   line-height: 1.02;
   letter-spacing: 0.01em;
   text-transform: uppercase;
-  filter: drop-shadow(0 6px 22px rgba(226, 179, 79, 0.38));
 }
 .imp-tag {
   margin: 18px auto 0;
@@ -3917,7 +4003,7 @@ body:has(.imp) {
   font-size: 18px;
   line-height: 1.42;
   font-weight: 600;
-  color: var(--imp-marfil);
+  color: var(--imp-texto);
   text-wrap: balance;
 }
 .imp-tag p {
@@ -3929,17 +4015,17 @@ body:has(.imp) {
   gap: 3px;
   margin: 18px auto 0;
   padding: 11px 18px;
-  border: 1px solid rgba(226, 179, 79, 0.45);
+  border: 1px solid var(--imp-tarjeta-borde);
   border-radius: 14px;
-  background: rgba(11, 25, 73, 0.7);
+  background: var(--imp-tarjeta);
 }
 .imp-when b {
   font-size: 15px;
-  color: var(--imp-oro-claro);
+  color: var(--imp-resalte);
 }
 .imp-when span {
   font-size: 12.5px;
-  color: var(--imp-niebla);
+  color: var(--imp-texto-2);
 }
 .imp-chips {
   display: flex;
@@ -3954,14 +4040,14 @@ body:has(.imp) {
   gap: 6px;
   padding: 7px 12px;
   border-radius: 999px;
-  background: rgba(246, 240, 227, 0.08);
-  border: 1px solid rgba(246, 240, 227, 0.16);
+  background: var(--imp-tarjeta);
+  border: 1px solid var(--imp-tarjeta-borde);
   font-size: 12.5px;
   font-weight: 700;
 }
 .imp-chip svg {
   flex: none;
-  color: var(--imp-oro);
+  color: var(--imp-icono);
 }
 .imp-faces {
   display: flex;
@@ -3976,30 +4062,24 @@ body:has(.imp) {
   height: 38px;
   margin-left: -8px;
   border-radius: 50%;
-  border: 2px solid #08112f;
+  border: 2px solid var(--imp-fondo);
   box-shadow: 0 0 0 1.5px var(--imp-oro);
-  background: #1a2a6e;
+  background: var(--imp-caja);
   object-fit: cover;
   font-family: var(--imp-display), Georgia, serif;
   font-weight: 800;
   font-size: 12px;
-  color: var(--imp-oro-claro);
+  color: var(--imp-resalte);
 }
 .imp-faces-cap {
   margin-top: 8px;
   font-size: 12.5px;
-  color: var(--imp-niebla);
+  color: var(--imp-texto-2);
 }
 /* The cover's group photo, and who is in it */
 .imp-group {
   position: relative;
   margin: 14px -22px 0;
-}
-.imp-group::before {
-  content: "";
-  position: absolute;
-  inset: 4% 4% 10%;
-  background: radial-gradient(50% 50% at 50% 55%, rgba(226, 179, 79, 0.3), rgba(226, 179, 79, 0.08) 55%, transparent 72%);
 }
 .imp-group img {
   position: relative;
@@ -4014,15 +4094,15 @@ body:has(.imp) {
 .imp-when .imp-when-local {
   margin-top: 2px;
   padding-top: 6px;
-  border-top: 1px dashed rgba(226, 179, 79, 0.35);
+  border-top: 1px dashed var(--imp-linea);
   font-weight: 700;
-  color: var(--imp-oro-claro);
+  color: var(--imp-resalte);
 }
 .imp-once {
   margin: 14px 0 0;
   font-size: 13.5px;
   font-weight: 700;
-  color: var(--imp-oro-claro);
+  color: var(--imp-resalte);
 }
 .imp-cta {
   display: flex;
@@ -4034,19 +4114,18 @@ body:has(.imp) {
   padding: 16px 20px;
   border: none;
   border-radius: 14px;
-  background: linear-gradient(180deg, #fbe3a0 0%, #e2b34f 50%, #c38c2c 100%);
-  color: #1d1406 !important;
+  background: var(--imp-oro);
+  color: var(--imp-negro) !important;
   font-family: inherit;
   font-size: 16.5px;
   font-weight: 800;
   text-decoration: none;
   cursor: pointer;
-  box-shadow: 0 12px 30px -10px rgba(226, 179, 79, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.65);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.15s ease, background-color 0.15s ease;
 }
 .imp-cta:hover {
   transform: translateY(-1px);
-  box-shadow: 0 16px 34px -10px rgba(226, 179, 79, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.65);
+  background: var(--imp-oro-hover);
 }
 .imp-cta:disabled {
   opacity: 0.6;
@@ -4056,7 +4135,7 @@ body:has(.imp) {
 .imp-closed-note {
   margin: 20px 0 0;
   font-weight: 700;
-  color: var(--imp-oro-claro);
+  color: var(--imp-resalte);
 }
 .imp-count {
   margin-top: 18px;
@@ -4066,7 +4145,7 @@ body:has(.imp) {
   font-weight: 800;
   letter-spacing: 0.15em;
   text-transform: uppercase;
-  color: var(--imp-niebla);
+  color: var(--imp-texto-2);
 }
 .imp-count-row {
   display: flex;
@@ -4078,8 +4157,7 @@ body:has(.imp) {
   width: 68px;
   padding: 9px 0 7px;
   border-radius: 12px;
-  background: rgba(246, 240, 227, 0.06);
-  border: 1px solid rgba(226, 179, 79, 0.38);
+  border: 1px solid var(--imp-contador-borde);
 }
 .imp-cbox b {
   display: block;
@@ -4087,14 +4165,14 @@ body:has(.imp) {
   font-weight: 800;
   line-height: 1.2;
   font-variant-numeric: tabular-nums;
-  color: var(--imp-oro-claro);
+  color: var(--imp-contador-num);
 }
 .imp-cbox span {
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--imp-niebla);
+  color: var(--imp-texto-2);
 }
 
 /* Waiting list */
@@ -4103,17 +4181,17 @@ body:has(.imp) {
   padding: 0 18px 40px;
 }
 .imp-wl {
-  --surface: #13225e;
-  --ink: #f6f0e3;
-  --ink-muted: #a7b0d3;
-  --border: rgba(167, 176, 211, 0.28);
+  --surface: var(--imp-tarjeta);
+  --ink: var(--imp-texto);
+  --ink-muted: var(--imp-texto-2);
+  --border: var(--imp-linea);
   position: relative;
   max-width: 560px;
   margin: 0 auto;
   padding: 22px 18px;
   border-radius: 20px;
-  background: #0e1b52;
-  border: 1px solid rgba(226, 179, 79, 0.5);
+  background: var(--imp-tarjeta);
+  border: 1px solid var(--imp-tarjeta-borde);
   box-shadow: 0 18px 50px -24px rgba(0, 0, 0, 0.7);
   scroll-margin-top: 16px;
 }
@@ -4128,10 +4206,10 @@ body:has(.imp) {
   margin: 6px 0 16px;
   font-size: 13.5px;
   line-height: 1.5;
-  color: var(--imp-niebla);
+  color: var(--imp-texto-2);
 }
 .imp-wl-intro b {
-  color: var(--imp-oro-claro);
+  color: var(--imp-resalte);
 }
 .imp-fld {
   display: block;
@@ -4143,7 +4221,7 @@ body:has(.imp) {
   margin-bottom: 4px;
   font-size: 12px;
   font-weight: 700;
-  color: var(--imp-niebla);
+  color: var(--imp-texto-2);
 }
 .imp-wl input,
 .imp-wl select {
@@ -4151,23 +4229,23 @@ body:has(.imp) {
   min-width: 0;
   padding: 12px 14px;
   border-radius: 12px;
-  background: rgba(246, 240, 227, 0.07);
-  border: 1px solid rgba(167, 176, 211, 0.28);
-  color: var(--imp-marfil);
+  background: var(--imp-caja);
+  border: 1px solid var(--imp-linea);
+  color: var(--imp-texto);
   font-size: 16px;
 }
 .imp-wl input::placeholder {
-  color: #7f88b3;
+  color: var(--imp-texto-3);
 }
 .imp-wl input:focus,
 .imp-wl select:focus {
   outline: none;
   border-color: var(--imp-oro);
-  box-shadow: 0 0 0 3px rgba(226, 179, 79, 0.25);
+  box-shadow: 0 0 0 3px var(--imp-linea);
 }
 .imp-wl select option {
-  background: #0e1b52;
-  color: var(--imp-marfil);
+  background: var(--imp-tarjeta);
+  color: var(--imp-texto);
 }
 .imp-fld-phone {
   display: flex;
@@ -4177,7 +4255,7 @@ body:has(.imp) {
   border-radius: 12px !important;
 }
 .imp-wl [role="option"][aria-selected="true"] {
-  background: rgba(226, 179, 79, 0.2) !important;
+  background: var(--imp-linea) !important;
 }
 .imp-two {
   display: grid;
@@ -4194,13 +4272,13 @@ body:has(.imp) {
 .imp-wl-hint {
   margin: -6px 0 12px;
   font-size: 12.5px;
-  color: var(--imp-niebla);
+  color: var(--imp-texto-2);
 }
 .imp-wl-hint button {
   padding: 0;
   border: none;
   background: none;
-  color: var(--imp-oro-claro);
+  color: var(--imp-resalte);
   font-weight: 700;
   text-decoration: underline;
   cursor: pointer;
@@ -4209,14 +4287,14 @@ body:has(.imp) {
   margin: 10px 0 0;
   font-size: 13px;
   font-weight: 600;
-  color: #ffb4b4;
+  color: var(--imp-error);
 }
 .imp-wl small {
   display: block;
   margin-top: 10px;
   font-size: 11.5px;
   line-height: 1.45;
-  color: #8a93bd;
+  color: var(--imp-texto-3);
   text-align: center;
 }
 .imp-wl small a {
@@ -4224,14 +4302,14 @@ body:has(.imp) {
 }
 .imp-wl .imp-wl-legal {
   font-size: 10.5px;
-  color: #6f78a6;
+  color: var(--imp-texto-3);
 }
 .imp-wl--done {
   text-align: center;
 }
 .imp-wl--done p {
   margin: 8px 0 0;
-  color: var(--imp-niebla);
+  color: var(--imp-texto-2);
 }
 .imp-wl-check {
   display: inline-grid;
@@ -4240,8 +4318,8 @@ body:has(.imp) {
   height: 46px;
   margin-bottom: 10px;
   border-radius: 50%;
-  background: linear-gradient(180deg, #fbe3a0, #c38c2c);
-  color: #1d1406;
+  background: var(--imp-oro);
+  color: var(--imp-negro);
   font-size: 22px;
   font-weight: 900;
 }
@@ -4250,9 +4328,6 @@ body:has(.imp) {
 .imp-sec {
   position: relative;
   padding: 46px 22px;
-}
-.imp-sec--alt {
-  background: var(--imp-noche);
 }
 .imp-sec-in {
   position: relative;
@@ -4266,7 +4341,7 @@ body:has(.imp) {
   font-family: var(--imp-display), Georgia, serif;
   font-size: 150px;
   line-height: 1;
-  color: rgba(226, 179, 79, 0.1);
+  color: var(--imp-marca);
   pointer-events: none;
 }
 .imp-eyebrow {
@@ -4274,7 +4349,7 @@ body:has(.imp) {
   font-weight: 800;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--imp-oro);
+  color: var(--imp-acento);
 }
 .imp-h2 {
   margin: 8px 0 0;
@@ -4283,7 +4358,7 @@ body:has(.imp) {
   font-weight: 800;
   font-size: 28px;
   line-height: 1.14;
-  color: var(--imp-marfil);
+  color: var(--imp-texto);
   text-wrap: balance;
 }
 .imp-h3 {
@@ -4296,19 +4371,19 @@ body:has(.imp) {
   max-width: 60ch;
   font-size: 16px;
   line-height: 1.6;
-  color: var(--imp-niebla);
+  color: var(--imp-texto-2);
 }
 .imp-rich {
   margin-top: 18px;
   max-width: 65ch;
   font-size: 16px;
   line-height: 1.6;
-  color: var(--imp-niebla);
+  color: var(--imp-texto-2);
 }
 .imp-rich h2,
 .imp-rich h3,
 .imp-rich strong {
-  color: var(--imp-marfil);
+  color: var(--imp-texto);
 }
 .imp-rich img {
   max-width: 100%;
@@ -4327,7 +4402,7 @@ body:has(.imp) {
 .imp-figure figcaption {
   margin-top: 8px;
   font-size: 13px;
-  color: var(--imp-niebla);
+  color: var(--imp-texto-2);
 }
 .imp-video {
   position: relative;
@@ -4351,15 +4426,15 @@ body:has(.imp) {
   margin-top: 28px;
   padding: 22px 8px;
   text-align: center;
-  border-top: 1px solid rgba(226, 179, 79, 0.35);
-  border-bottom: 1px solid rgba(226, 179, 79, 0.35);
+  border-top: 1px solid var(--imp-bronce);
+  border-bottom: 1px solid var(--imp-bronce);
 }
 .imp-st small {
   display: block;
   font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.04em;
-  color: var(--imp-oro);
+  color: var(--imp-acento);
 }
 .imp-st-title {
   margin: 8px 0 0;
@@ -4374,16 +4449,16 @@ body:has(.imp) {
   margin: 10px auto 0;
   font-size: 14.5px;
   line-height: 1.55;
-  color: var(--imp-niebla);
+  color: var(--imp-texto-2);
 }
 .imp-st-body p {
   margin: 0;
 }
 .imp-st--icon {
   padding: 24px 18px;
-  border: 1px solid rgba(226, 179, 79, 0.45);
+  border: 1px solid var(--imp-tarjeta-borde);
   border-radius: 20px;
-  background: rgba(246, 240, 227, 0.04);
+  background: var(--imp-tarjeta);
 }
 .imp-st-icon {
   display: inline-grid;
@@ -4392,8 +4467,8 @@ body:has(.imp) {
   height: 52px;
   margin-bottom: 10px;
   border-radius: 50%;
-  background: rgba(226, 179, 79, 0.14);
-  color: var(--imp-oro-claro);
+  background: var(--imp-caja);
+  color: var(--imp-icono);
 }
 .imp-st--icon .imp-st-title {
   font-size: 21px;
@@ -4404,25 +4479,25 @@ body:has(.imp) {
   margin-top: 18px;
   padding: 18px 18px 14px;
   border-radius: 18px;
-  border: 1px solid rgba(226, 179, 79, 0.45);
-  background: rgba(226, 179, 79, 0.07);
+  border: 1px solid var(--imp-tarjeta-borde);
+  background: var(--imp-tarjeta);
 }
 .imp-list--no {
-  border-color: rgba(167, 176, 211, 0.25);
-  background: rgba(246, 240, 227, 0.03);
+  border-color: var(--imp-linea);
+  background: none;
 }
 .imp-list-h {
   display: block;
   font-size: 15px;
   font-weight: 800;
-  color: var(--imp-oro-claro);
+  color: var(--imp-resalte);
 }
 .imp-list--no .imp-list-h {
-  color: var(--imp-marfil);
+  color: var(--imp-texto);
 }
 .imp-list-t {
   margin: 4px 0 0;
-  color: var(--imp-niebla);
+  color: var(--imp-texto-2);
 }
 .imp-list-body ul,
 .imp-list-body ol {
@@ -4447,17 +4522,17 @@ body:has(.imp) {
   height: 20px;
   border-radius: 50%;
   background: var(--imp-oro);
-  color: #1d1406;
+  color: var(--imp-negro);
   font-size: 12px;
   font-weight: 900;
 }
 .imp-list--no .imp-list-body li {
-  color: var(--imp-niebla);
+  color: var(--imp-texto-2);
 }
 .imp-list--no .imp-list-body li::before {
   content: "✕";
-  background: rgba(167, 176, 211, 0.22);
-  color: var(--imp-marfil);
+  background: var(--imp-linea);
+  color: var(--imp-texto);
 }
 .imp-list-body p {
   margin: 0;
@@ -4479,8 +4554,7 @@ body:has(.imp) {
   margin: 0 auto;
   padding: 4px;
   border-radius: 50%;
-  background: linear-gradient(180deg, #fbe3a0, #9c6c1e);
-  box-shadow: 0 10px 26px -10px rgba(226, 179, 79, 0.55);
+  background: var(--imp-oro);
 }
 .imp-sp-ph {
   display: grid;
@@ -4488,16 +4562,16 @@ body:has(.imp) {
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  border: 3px solid var(--imp-abismo);
-  background: #14256c;
+  border: 3px solid var(--imp-fondo);
+  background: var(--imp-tarjeta);
   object-fit: cover;
 }
 .imp-sp-ph--ini {
   font-family: var(--imp-display), Georgia, serif;
   font-weight: 800;
   font-size: 32px;
-  color: var(--imp-oro-claro);
-  background: radial-gradient(circle at 50% 30%, #23388e, #0e1b52);
+  color: var(--imp-resalte);
+  background: var(--imp-tarjeta);
 }
 .imp-sp-name {
   margin-top: 12px;
@@ -4511,7 +4585,7 @@ body:has(.imp) {
   margin-top: 3px;
   font-size: 12px;
   font-weight: 700;
-  color: var(--imp-oro) !important;
+  color: var(--imp-acento) !important;
   text-decoration: none;
   overflow-wrap: anywhere;
 }
@@ -4519,7 +4593,7 @@ body:has(.imp) {
   margin: 6px 0 0;
   font-size: 13px;
   line-height: 1.45;
-  color: var(--imp-niebla);
+  color: var(--imp-texto-2);
 }
 
 /* The panel */
@@ -4528,16 +4602,15 @@ body:has(.imp) {
   padding: 22px 18px 20px;
   border-radius: 20px;
   text-align: center;
-  border: 1px solid rgba(226, 179, 79, 0.55);
-  background: linear-gradient(180deg, rgba(226, 179, 79, 0.14), rgba(20, 37, 108, 0.28));
-  box-shadow: 0 18px 46px -24px rgba(226, 179, 79, 0.55);
+  border: 1px solid var(--imp-tarjeta-borde);
+  background: var(--imp-tarjeta);
 }
 .imp-panel-when {
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--imp-oro);
+  color: var(--imp-acento);
 }
 .imp-panel-t {
   display: block;
@@ -4553,7 +4626,7 @@ body:has(.imp) {
   max-width: 34ch;
   font-size: 14px;
   line-height: 1.5;
-  color: var(--imp-niebla);
+  color: var(--imp-texto-2);
 }
 .imp-panel-l p {
   margin: 0;
@@ -4565,7 +4638,7 @@ body:has(.imp) {
   font-style: normal;
   font-weight: 700;
   letter-spacing: 0.04em;
-  color: var(--imp-humo);
+  color: var(--imp-texto-3);
 }
 .imp-panel-grid {
   display: grid;
@@ -4581,7 +4654,9 @@ body:has(.imp) {
   border-radius: 50%;
   overflow: hidden;
   object-fit: cover;
-  box-shadow: 0 0 0 2px var(--imp-oro), 0 0 0 5px #0d1a4d, 0 0 0 6px rgba(226, 179, 79, 0.45);
+  box-shadow: 0 0 0 2px var(--imp-oro), 0 0 0 5px var(--imp-tarjeta), 0 0 0 6px var(--imp-bronce);
+  /* The silhouette of a panelist still to come. */
+  color: var(--imp-oro-claro);
 }
 .imp-pn-ph svg {
   display: block;
@@ -4599,14 +4674,14 @@ body:has(.imp) {
   margin-top: 2px;
   font-size: 12px;
   line-height: 1.4;
-  color: var(--imp-niebla);
+  color: var(--imp-texto-2);
 }
 .imp-pn-ig {
   display: inline-block;
   margin-top: 2px;
   font-size: 11.5px;
   font-weight: 700;
-  color: var(--imp-oro) !important;
+  color: var(--imp-acento) !important;
   text-decoration: none;
   overflow-wrap: anywhere;
 }
@@ -4618,20 +4693,20 @@ body:has(.imp) {
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--imp-oro);
+  color: var(--imp-acento);
 }
 .imp-pn--tba span {
   margin-top: 4px;
   font-size: 13px;
   font-weight: 700;
   line-height: 1.35;
-  color: var(--imp-marfil);
+  color: var(--imp-texto);
 }
 .imp-panel-tba {
   margin: 18px 0 0;
   font-size: 12.5px;
   font-weight: 700;
-  color: var(--imp-humo);
+  color: var(--imp-texto-3);
 }
 
 /* The host */
@@ -4642,8 +4717,8 @@ body:has(.imp) {
   margin-top: 18px;
   padding: 16px;
   border-radius: 18px;
-  border: 1px solid rgba(167, 176, 211, 0.22);
-  background: rgba(246, 240, 227, 0.05);
+  border: 1px solid var(--imp-linea);
+  background: var(--imp-tarjeta);
   text-align: left;
 }
 .imp-host-ring {
@@ -4652,14 +4727,14 @@ body:has(.imp) {
   height: 92px;
   padding: 3px;
   border-radius: 50%;
-  background: linear-gradient(180deg, #fbe3a0, #9c6c1e);
+  background: var(--imp-oro);
 }
 .imp-host-ph {
   display: block;
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  border: 3px solid var(--imp-abismo);
+  border: 3px solid var(--imp-tarjeta);
   object-fit: cover;
 }
 .imp-host-k {
@@ -4667,7 +4742,7 @@ body:has(.imp) {
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--imp-oro);
+  color: var(--imp-acento);
 }
 .imp-host-t b {
   display: block;
@@ -4680,14 +4755,14 @@ body:has(.imp) {
   margin-top: 2px;
   font-size: 12px;
   font-weight: 700;
-  color: var(--imp-oro) !important;
+  color: var(--imp-acento) !important;
   text-decoration: none;
 }
 .imp-host-body {
   margin-top: 4px;
   font-size: 13px;
   line-height: 1.45;
-  color: var(--imp-niebla);
+  color: var(--imp-texto-2);
 }
 .imp-host-body p {
   margin: 0;
@@ -4699,14 +4774,14 @@ body:has(.imp) {
 }
 .imp-day {
   margin-top: 22px;
-  border: 1px solid var(--imp-borde);
+  border: 1px solid var(--imp-tarjeta-borde);
   border-radius: 18px;
   overflow: hidden;
-  background: rgba(20, 37, 108, 0.22);
+  background: var(--imp-tarjeta);
 }
 .imp-day-h {
   padding: 14px 16px;
-  background: linear-gradient(90deg, rgba(226, 179, 79, 0.24), rgba(226, 179, 79, 0));
+  border-bottom: 1px solid var(--imp-linea);
 }
 .imp-day-h small {
   display: block;
@@ -4714,7 +4789,7 @@ body:has(.imp) {
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--imp-oro);
+  color: var(--imp-acento);
 }
 .imp-day-h b {
   display: block;
@@ -4729,7 +4804,7 @@ body:has(.imp) {
   margin-top: 4px;
   font-size: 12px;
   font-weight: 600;
-  color: var(--imp-niebla);
+  color: var(--imp-texto-2);
 }
 .imp-ag {
   list-style: none;
@@ -4741,7 +4816,7 @@ body:has(.imp) {
   align-items: flex-start;
   gap: 12px;
   padding: 12px 0;
-  border-top: 1px solid rgba(167, 176, 211, 0.14);
+  border-top: 1px solid var(--imp-linea);
 }
 .imp-ag li:first-child {
   border-top: 0;
@@ -4754,13 +4829,13 @@ body:has(.imp) {
   font-weight: 800;
   line-height: 1.15;
   font-variant-numeric: tabular-nums;
-  color: var(--imp-oro-claro);
+  color: var(--imp-resalte);
 }
 .imp-ag-time small {
   display: block;
   font-size: 9.5px;
   font-weight: 700;
-  color: var(--imp-niebla);
+  color: var(--imp-texto-2);
 }
 .imp-ag-local {
   display: block;
@@ -4768,7 +4843,7 @@ body:has(.imp) {
   font-size: 10px;
   font-style: normal;
   font-weight: 700;
-  color: var(--imp-humo);
+  color: var(--imp-texto-3);
 }
 .imp-ag-dur {
   display: block;
@@ -4776,7 +4851,7 @@ body:has(.imp) {
   font-size: 10.5px;
   font-style: normal;
   font-weight: 700;
-  color: var(--imp-humo);
+  color: var(--imp-texto-3);
 }
 .imp-what {
   min-width: 0;
@@ -4792,15 +4867,15 @@ body:has(.imp) {
   margin-top: 3px;
   font-size: 12.5px;
   line-height: 1.45;
-  color: var(--imp-niebla);
+  color: var(--imp-texto-2);
 }
 /* The day's star talk, in a box of its own */
 .imp-ag li.is-star {
   margin: 6px -10px;
   padding: 12px 10px;
-  border: 1px solid rgba(226, 179, 79, 0.6);
+  border: 1px solid var(--imp-oro);
   border-radius: 14px;
-  background: linear-gradient(180deg, rgba(226, 179, 79, 0.17), rgba(226, 179, 79, 0.05));
+  background: var(--imp-destacado);
 }
 .imp-ag li.is-star + li {
   border-top: 0;
@@ -4811,7 +4886,7 @@ body:has(.imp) {
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--imp-oro);
+  color: var(--imp-acento);
 }
 /* Who gives it: her photo and her name */
 .imp-what > .imp-by {
@@ -4821,7 +4896,7 @@ body:has(.imp) {
   margin-top: 7px;
   font-size: 12px;
   font-weight: 700;
-  color: var(--imp-oro);
+  color: var(--imp-acento);
 }
 .imp-by img,
 .imp-by span {
@@ -4833,11 +4908,11 @@ body:has(.imp) {
   border-radius: 50%;
   box-shadow: 0 0 0 1.5px var(--imp-oro);
   object-fit: cover;
-  background: radial-gradient(circle at 50% 30%, #23388e, #0e1b52);
+  background: var(--imp-caja);
   font-family: var(--imp-display), Georgia, serif;
   font-size: 9px;
   font-weight: 800;
-  color: var(--imp-oro-claro);
+  color: var(--imp-resalte);
 }
 /* An active break: a thin line with its length */
 .imp-ag li.is-pause {
@@ -4856,14 +4931,14 @@ body:has(.imp) {
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--imp-humo);
+  color: var(--imp-texto-3);
 }
 .imp-ag li.is-pause span::before,
 .imp-ag li.is-pause span::after {
   content: "";
   flex: 1;
   height: 1px;
-  background: rgba(167, 176, 211, 0.2);
+  background: var(--imp-linea);
 }
 /* «Te llevas» under a day's title */
 .imp-take {
@@ -4871,20 +4946,20 @@ body:has(.imp) {
   margin-top: 10px;
   padding: 9px 11px;
   border-radius: 12px;
-  background: rgba(6, 13, 38, 0.5);
+  background: var(--imp-caja);
   font-size: 13px;
   font-weight: 600;
   line-height: 1.45;
-  color: var(--imp-marfil);
+  color: var(--imp-texto);
 }
 .imp-take strong {
   font-weight: 800;
-  color: var(--imp-oro-claro);
+  color: var(--imp-resalte);
 }
 .imp-tz {
   margin: 14px 0 0;
   font-size: 12.5px;
-  color: var(--imp-niebla);
+  color: var(--imp-texto-2);
 }
 
 /* Cards that slide: the results and the doubts */
@@ -4908,16 +4983,15 @@ body:has(.imp) {
   scroll-snap-align: start;
   padding: 20px 18px 18px;
   border-radius: 20px;
-  border: 1px solid rgba(226, 179, 79, 0.5);
-  background: linear-gradient(180deg, rgba(226, 179, 79, 0.15), rgba(20, 37, 108, 0.32));
-  box-shadow: 0 18px 40px -26px rgba(226, 179, 79, 0.6);
+  border: 1px solid var(--imp-tarjeta-borde);
+  background: var(--imp-tarjeta);
 }
 .imp-slide-tag {
   align-self: flex-start;
   padding: 5px 11px;
   border-radius: 999px;
-  background: linear-gradient(180deg, #fbe3a0, #e2b34f);
-  color: #1d1406;
+  background: var(--imp-oro);
+  color: var(--imp-negro);
   font-size: 10.5px;
   font-weight: 800;
   letter-spacing: 0.14em;
@@ -4929,26 +5003,26 @@ body:has(.imp) {
   font-weight: 800;
   font-size: 21px;
   line-height: 1.18;
-  color: var(--imp-marfil);
+  color: var(--imp-texto);
   text-wrap: balance;
 }
 .imp-slide-l {
   margin: 10px 0 0;
   font-size: 14px;
   line-height: 1.5;
-  color: var(--imp-niebla);
+  color: var(--imp-texto-2);
 }
 .imp-slide-k {
   margin: 12px 0 0;
   padding: 10px 12px;
   border-radius: 12px;
-  background: rgba(6, 13, 38, 0.5);
+  background: var(--imp-caja);
   font-size: 13.5px;
   line-height: 1.45;
-  color: var(--imp-marfil);
+  color: var(--imp-texto);
 }
 .imp-slide-k b {
-  color: var(--imp-oro-claro);
+  color: var(--imp-resalte);
 }
 .imp-slide-who {
   display: flex;
@@ -4959,7 +5033,7 @@ body:has(.imp) {
   font-size: 12.5px;
   font-weight: 700;
   line-height: 1.35;
-  color: var(--imp-niebla);
+  color: var(--imp-texto-2);
 }
 .imp-slide-faces {
   display: flex;
@@ -4973,19 +5047,19 @@ body:has(.imp) {
   height: 32px;
   margin-left: -7px;
   border-radius: 50%;
-  border: 2px solid #0b1640;
+  border: 2px solid var(--imp-tarjeta);
   box-shadow: 0 0 0 1.5px var(--imp-oro);
   object-fit: cover;
-  background: #14256c;
+  background: var(--imp-caja);
   font-family: var(--imp-display), Georgia, serif;
   font-size: 10px;
   font-weight: 800;
-  color: var(--imp-oro-claro);
+  color: var(--imp-resalte);
 }
 /* A doubt: in her own voice, the answer and a proof */
 .imp-slide--q {
-  border-color: rgba(167, 176, 211, 0.26);
-  background: rgba(246, 240, 227, 0.05);
+  border-color: var(--imp-tarjeta-borde);
+  background: var(--imp-tarjeta);
   box-shadow: none;
 }
 .imp-slide-q {
@@ -4994,13 +5068,13 @@ body:has(.imp) {
   font-weight: 800;
   font-size: 23px;
   line-height: 1.2;
-  color: var(--imp-oro-claro);
+  color: var(--imp-resalte);
 }
 .imp-slide-a {
   margin: 10px 0 16px;
   font-size: 14.5px;
   line-height: 1.55;
-  color: var(--imp-marfil);
+  color: var(--imp-texto);
 }
 .imp-slide-proof {
   display: flex;
@@ -5008,10 +5082,10 @@ body:has(.imp) {
   gap: 11px;
   margin-top: auto;
   padding-top: 14px;
-  border-top: 1px solid rgba(167, 176, 211, 0.16);
+  border-top: 1px solid var(--imp-linea);
   font-size: 12.5px;
   line-height: 1.4;
-  color: var(--imp-niebla);
+  color: var(--imp-texto-2);
 }
 .imp-slide-proof .imp-slide-faces {
   padding-left: 0;
@@ -5029,8 +5103,8 @@ body:has(.imp) {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: rgba(226, 179, 79, 0.14);
-  color: var(--imp-oro-claro);
+  background: var(--imp-caja);
+  color: var(--imp-icono);
 }
 .imp-slide-proof b {
   display: block;
@@ -5039,7 +5113,7 @@ body:has(.imp) {
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--imp-oro);
+  color: var(--imp-acento);
 }
 .imp-dots {
   display: flex;
@@ -5061,12 +5135,12 @@ body:has(.imp) {
   width: 6px;
   height: 6px;
   border-radius: 999px;
-  background: rgba(167, 176, 211, 0.35);
+  background: var(--imp-punto);
   transition: width 0.2s ease, background 0.2s ease;
 }
 .imp-dots button.is-on::before {
   width: 18px;
-  background: var(--imp-oro);
+  background: var(--imp-icono);
 }
 @media (prefers-reduced-motion: reduce) {
   .imp-dots button::before {
@@ -5088,12 +5162,12 @@ body:has(.imp) {
   gap: 14px;
   padding: 14px 16px;
   border-radius: 14px;
-  background: rgba(246, 240, 227, 0.05);
-  border: 1px solid rgba(167, 176, 211, 0.16);
+  background: var(--imp-tarjeta);
+  border: 1px solid var(--imp-tarjeta-borde);
 }
 .imp-inc li svg {
   flex: none;
-  color: var(--imp-oro);
+  color: var(--imp-icono);
 }
 .imp-inc b {
   display: block;
@@ -5105,7 +5179,7 @@ body:has(.imp) {
   display: block;
   margin-top: 2px;
   font-size: 13px;
-  color: var(--imp-niebla);
+  color: var(--imp-texto-2);
 }
 
 /* Tu boleta */
@@ -5114,16 +5188,15 @@ body:has(.imp) {
   padding: 22px 20px;
   border-radius: 20px;
   text-align: center;
-  background: linear-gradient(180deg, rgba(226, 179, 79, 0.17), rgba(20, 37, 108, 0.32));
+  background: var(--imp-tarjeta);
   border: 1.5px solid var(--imp-oro);
-  box-shadow: 0 18px 50px -22px rgba(226, 179, 79, 0.7);
 }
 .imp-now-badge {
   display: inline-block;
   padding: 5px 12px;
   border-radius: 999px;
   background: var(--imp-oro);
-  color: #1d1406;
+  color: var(--imp-negro);
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.1em;
@@ -5139,19 +5212,19 @@ body:has(.imp) {
 .imp-now-amt small {
   font-size: 15px;
   font-weight: 700;
-  color: var(--imp-niebla);
+  color: var(--imp-texto-2);
 }
 .imp-now-iva {
   margin-top: 6px;
   font-size: 13px;
-  color: var(--imp-niebla);
+  color: var(--imp-texto-2);
 }
 .imp-now-up {
   margin: 16px 0 0;
   font-size: 14.5px;
 }
 .imp-now-up b {
-  color: var(--imp-oro-claro);
+  color: var(--imp-resalte);
 }
 .imp-now .imp-count {
   margin-top: 10px;
@@ -5176,27 +5249,27 @@ body:has(.imp) {
   gap: 10px;
   padding: 12px 14px;
   border-radius: 12px;
-  border: 1px solid rgba(167, 176, 211, 0.18);
+  border: 1px solid var(--imp-linea);
   font-size: 13px;
-  color: var(--imp-niebla);
+  color: var(--imp-texto-2);
 }
 .imp-stages li b {
   display: block;
   font-size: 14.5px;
-  color: var(--imp-marfil);
+  color: var(--imp-texto);
 }
 .imp-stages li strong {
   font-size: 15px;
   font-variant-numeric: tabular-nums;
-  color: var(--imp-marfil);
+  color: var(--imp-texto);
 }
 .imp-stages li.is-on {
   border-color: var(--imp-oro);
-  background: rgba(226, 179, 79, 0.1);
+  background: var(--imp-tarjeta);
 }
 .imp-stages li.is-on b,
 .imp-stages li.is-on strong {
-  color: var(--imp-oro-claro);
+  color: var(--imp-resalte);
 }
 .imp-stages li.is-off {
   opacity: 0.55;
@@ -5214,20 +5287,20 @@ body:has(.imp) {
 .imp-pay span {
   padding: 5px 10px;
   border-radius: 8px;
-  background: rgba(246, 240, 227, 0.07);
+  background: var(--imp-tarjeta);
   font-size: 11.5px;
   font-weight: 700;
-  color: var(--imp-niebla);
+  color: var(--imp-texto-2);
 }
 
 /* Questions */
 .imp-faq {
   max-width: 760px;
   margin-top: 20px;
-  border-top: 1px solid rgba(167, 176, 211, 0.18);
+  border-top: 1px solid var(--imp-linea);
 }
 .imp-faq-item {
-  border-bottom: 1px solid rgba(167, 176, 211, 0.18);
+  border-bottom: 1px solid var(--imp-linea);
 }
 .imp-faq-item summary {
   display: flex;
@@ -5258,7 +5331,7 @@ body:has(.imp) {
   width: 14px;
   height: 2px;
   border-radius: 2px;
-  background: var(--imp-oro);
+  background: var(--imp-icono);
   transition: transform 0.2s ease;
 }
 .imp-faq-item summary i::after {
@@ -5272,7 +5345,7 @@ body:has(.imp) {
   padding: 0 2px 16px;
   font-size: 14px;
   line-height: 1.6;
-  color: var(--imp-niebla);
+  color: var(--imp-texto-2);
   white-space: pre-line;
 }
 
@@ -5291,7 +5364,7 @@ body:has(.imp) {
   aspect-ratio: 3 / 2;
   padding: 12px;
   border-radius: 14px;
-  background: var(--imp-marfil);
+  background: var(--imp-crema);
 }
 .imp-logos img {
   max-width: 100%;
@@ -5302,7 +5375,6 @@ body:has(.imp) {
 /* Closing */
 .imp-close {
   padding: 60px 22px 44px;
-  background: radial-gradient(110% 70% at 50% 0%, rgba(251, 227, 160, 0.24) 0%, rgba(226, 179, 79, 0.08) 40%, transparent 70%), #060d26;
 }
 .imp-close .imp-tiara {
   margin-top: 0;
@@ -5327,7 +5399,7 @@ body:has(.imp) {
 .imp-close-3 {
   margin-top: 14px;
   font-size: 13px;
-  color: var(--imp-niebla);
+  color: var(--imp-texto-2);
 }
 .imp-foot {
   position: relative;
@@ -5338,9 +5410,9 @@ body:has(.imp) {
   padding: 22px 22px 28px;
   font-size: 12px;
   line-height: 1.7;
-  color: var(--imp-humo);
+  color: var(--imp-texto-3);
   text-align: center;
-  border-top: 1px solid rgba(167, 176, 211, 0.14);
+  border-top: 1px solid var(--imp-linea);
 }
 .imp-foot--bar {
   padding-bottom: 112px;
@@ -5366,7 +5438,7 @@ body:has(.imp) {
   text-decoration: none;
 }
 .imp-foot nav a:hover {
-  color: var(--imp-marfil);
+  color: var(--imp-texto);
 }
 
 /* The bar fixed at the bottom */
@@ -5377,9 +5449,8 @@ body:has(.imp) {
   bottom: 0;
   z-index: 40;
   padding: 12px 16px calc(14px + env(safe-area-inset-bottom));
-  background: rgba(6, 13, 38, 0.94);
-  border-top: 1px solid rgba(226, 179, 79, 0.4);
-  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.35);
+  background: var(--imp-fondo);
+  border-top: 1px solid var(--imp-linea);
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
 }
@@ -5400,24 +5471,27 @@ body:has(.imp) {
   font-size: 17px;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
-  color: var(--imp-oro-claro);
+  color: var(--imp-resalte);
 }
 .imp-st-p span {
   font-size: 11.5px;
-  color: var(--imp-niebla);
+  color: var(--imp-texto-2);
 }
 .imp-st-b {
   flex: none;
   padding: 13px 18px;
   border: none;
   border-radius: 12px;
-  background: linear-gradient(180deg, #fbe3a0 0%, #e2b34f 50%, #c38c2c 100%);
-  color: #1d1406 !important;
+  background: var(--imp-oro);
+  color: var(--imp-negro) !important;
   font-family: inherit;
   font-size: 15px;
   font-weight: 800;
   text-decoration: none;
   cursor: pointer;
+}
+.imp-st-b:hover {
+  background: var(--imp-oro-hover);
 }
 
 /* The checkout keeps the app's own light look. */
@@ -5427,9 +5501,12 @@ body:has(.imp) {
   text-align: left;
 }
 .imp-checkout button.primary {
-  background: linear-gradient(180deg, #fbe3a0 0%, #e2b34f 50%, #c38c2c 100%) !important;
-  color: #1d1406 !important;
-  box-shadow: 0 6px 16px -6px rgba(195, 140, 44, 0.6) !important;
+  background: var(--imp-oro) !important;
+  color: var(--imp-negro) !important;
+  box-shadow: none !important;
+}
+.imp-checkout button.primary:hover:not(:disabled) {
+  background: var(--imp-oro-hover) !important;
 }
 
 @media (min-width: 900px) {
