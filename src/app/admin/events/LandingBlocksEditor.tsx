@@ -109,7 +109,8 @@ export default function LandingBlocksEditor({
         <div style={{ fontSize: 12.5, lineHeight: 1.5, color: "#3b2f12", background: "#fbf3dc", border: "1px solid #f0dca6", borderRadius: 8, padding: "10px 12px", marginBottom: 12 }}>
           <strong>Diseño Manicuristas Imparables.</strong> Una «Imagen» al principio, antes del primer título, es la foto grupal de la
           portada. Cada «Título de sección» abre una sección nueva (con fondo alterno). Una «Tarjeta destacada» con foto se dibuja como la
-          maestra de ceremonias; sin foto y seguida de «Personas», como el panel; sin foto y con una lista, como una caja de puntos (con ✕ si
+          maestra de ceremonias; sin foto y seguida de «Personas», como el panel (sus personas salen como «Panelistas» bajo los speakers y
+          su texto, en la línea de la agenda que lleva su título); sin foto y con una lista, como una caja de puntos (con ✕ si
           su etiqueta empieza por «No»); sin foto, como una frase grande. Las «Tarjetas deslizables» son los resultados o las dudas. Los
           precios salen de las entradas del evento.
         </div>

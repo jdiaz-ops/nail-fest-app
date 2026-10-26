@@ -4587,65 +4587,36 @@ body:has(.imp) {
   color: var(--imp-texto-2);
 }
 
-/* The panel */
-.imp-panel {
+/* The panelists: smaller than the speakers and four to a row */
+.imp-pnl {
   margin-top: 36px;
-  padding: 22px 18px 20px;
-  border-radius: 20px;
-  text-align: center;
-  border: 1px solid var(--imp-tarjeta-borde);
-  background: var(--imp-tarjeta);
+  padding-top: 26px;
+  border-top: 1px solid var(--imp-linea);
 }
-.imp-panel-when {
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--imp-acento);
-}
-.imp-panel-t {
-  display: block;
-  margin-top: 8px;
-  font-family: var(--imp-display), Georgia, serif;
-  font-weight: 900;
-  font-size: 31px;
-  line-height: 1.05;
-  text-wrap: balance;
-}
-.imp-panel-l {
-  margin: 8px auto 0;
-  max-width: 34ch;
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--imp-texto-2);
-}
-.imp-panel-l p {
+.imp-pnl-t {
   margin: 0;
+  font-family: var(--imp-display), Georgia, serif;
+  font-weight: 800;
+  font-size: 21px;
+  line-height: 1.2;
+  color: var(--imp-texto);
 }
-.imp-panel-l em {
-  display: block;
-  margin-top: 6px;
-  font-size: 11px;
-  font-style: normal;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  color: var(--imp-texto-3);
-}
-.imp-panel-grid {
+.imp-pnl-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 18px 12px;
-  margin-top: 20px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+  text-align: center;
 }
 .imp-pn-ph {
   display: block;
-  width: 86px;
-  height: 86px;
+  width: 56px;
+  height: 56px;
   margin: 0 auto;
   border-radius: 50%;
   overflow: hidden;
   object-fit: cover;
-  box-shadow: 0 0 0 2px var(--imp-oro), 0 0 0 5px var(--imp-tarjeta), 0 0 0 6px var(--imp-bronce);
+  box-shadow: 0 0 0 1.5px var(--imp-oro);
   /* The silhouette of a panelist still to come. */
   color: var(--imp-oro-claro);
 }
@@ -4656,15 +4627,16 @@ body:has(.imp) {
 }
 .imp-pn b {
   display: block;
-  margin-top: 12px;
-  font-size: 14px;
+  margin-top: 9px;
+  font-size: 12.5px;
   font-weight: 800;
+  line-height: 1.25;
 }
 .imp-pn span {
   display: block;
-  margin-top: 2px;
-  font-size: 12px;
-  line-height: 1.4;
+  margin-top: 3px;
+  font-size: 11px;
+  line-height: 1.35;
   color: var(--imp-texto-2);
 }
 .imp-pn-ig {
@@ -4679,25 +4651,16 @@ body:has(.imp) {
 /* A panelist still to be announced: «Por anunciar» over the story she brings. */
 .imp-pn--tba small {
   display: block;
-  margin-top: 12px;
-  font-size: 10.5px;
+  margin-top: 9px;
+  font-size: 9px;
   font-weight: 800;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--imp-acento);
 }
 .imp-pn--tba span {
-  margin-top: 4px;
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 1.35;
+  font-weight: 600;
   color: var(--imp-texto);
-}
-.imp-panel-tba {
-  margin: 18px 0 0;
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--imp-texto-3);
 }
 
 /* The host */
@@ -4904,6 +4867,48 @@ body:has(.imp) {
   font-size: 9px;
   font-weight: 800;
   color: var(--imp-resalte);
+}
+/* The panel's line: what its card says, then its panelists' faces */
+.imp-what > .imp-ag-desc {
+  display: block;
+  margin-top: 4px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--imp-texto-2);
+}
+.imp-ag-desc p {
+  margin: 0;
+}
+.imp-ag-desc em {
+  display: block;
+  margin-top: 4px;
+  font-size: 11.5px;
+  font-style: normal;
+  font-weight: 700;
+  color: var(--imp-texto-3);
+}
+.imp-by .imp-by-faces {
+  display: flex;
+  flex: none;
+  width: auto;
+  height: auto;
+  padding-left: 6px;
+  border-radius: 0;
+  box-shadow: none;
+  background: none;
+}
+.imp-by .imp-by-faces > * {
+  margin-left: -6px;
+  border: 1.5px solid var(--imp-destacado);
+}
+.imp-by-sil {
+  overflow: hidden;
+  color: var(--imp-oro-claro);
+}
+.imp-by-sil svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 /* An active break: a thin line with its length */
 .imp-ag li.is-pause {
@@ -5583,11 +5588,18 @@ body:has(.imp) {
     grid-template-columns: repeat(4, 1fr);
     gap: 36px 20px;
   }
-  .imp-panel {
-    padding: 30px 28px 28px;
+  .imp-pnl-row {
+    gap: 20px;
   }
-  .imp-panel-grid {
-    grid-template-columns: repeat(4, 1fr);
+  .imp-pn-ph {
+    width: 72px;
+    height: 72px;
+  }
+  .imp-pn b {
+    font-size: 14px;
+  }
+  .imp-pn span {
+    font-size: 12px;
   }
   .imp-host {
     max-width: 620px;

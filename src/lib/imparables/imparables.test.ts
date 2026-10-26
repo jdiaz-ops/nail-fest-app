@@ -3,7 +3,7 @@ import path from "path";
 import { describe, expect, it } from "vitest";
 import { landingBlockSchema } from "@/lib/landingBlocks/schema";
 import { parseLandingBlocks, type LandingBlock } from "@/lib/landingBlocks/types";
-import { castLine, castOf, coverOf, isPanelCard, namesIn } from "./blocks";
+import { castLine, castOf, coverOf, isPanelCard, namesIn, panelOf } from "./blocks";
 import { agendaInstant, coverName, dayEnd, eventWhen, readClock } from "./schedule";
 import { inDays, pesos, salesState, saving, stageDates, untilDay, type StageTicketType } from "./stages";
 import { IMPARABLES_BLOCKS, IMPARABLES_GROUP_PHOTO, IMPARABLES_PANELISTS, IMPARABLES_SPEAKERS, IMPARABLES_STAGES } from "./template";
@@ -253,6 +253,12 @@ describe("the program's hours", () => {
 });
 
 describe("the template", () => {
+  it("has its panel: the card the program's line tells, and its four panelists", () => {
+    const panel = panelOf(IMPARABLES_BLOCKS);
+    expect(panel?.card.title).toBe("El día que decidí cambiar");
+    expect(panel?.people.items).toHaveLength(4);
+  });
+
   it("is made of blocks the editor and the API accept as they are", () => {
     for (const block of IMPARABLES_BLOCKS) expect(landingBlockSchema.safeParse(block).success).toBe(true);
     expect(parseLandingBlocks(JSON.parse(JSON.stringify(IMPARABLES_BLOCKS)))).toEqual(IMPARABLES_BLOCKS);

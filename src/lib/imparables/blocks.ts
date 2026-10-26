@@ -12,6 +12,12 @@ export function isPanelCard(block: LandingBlock | undefined, next: LandingBlock 
   return block?.type === "card" && !block.imageUrl && next?.type === "people";
 }
 
+/** The (first) panel: its card and its panelists. */
+export function panelOf(blocks: LandingBlock[]): { card: CardLandingBlock; people: PeopleLandingBlock } | null {
+  const i = blocks.findIndex((b, j) => isPanelCard(b, blocks[j + 1]));
+  return i === -1 ? null : { card: blocks[i] as CardLandingBlock, people: blocks[i + 1] as PeopleLandingBlock };
+}
+
 /** The speakers (the first people not drawn as the panel) and how many panels there are. */
 export function castOf(blocks: LandingBlock[]): { speakers: PeopleLandingBlock["items"]; panels: number } {
   let speakers: PeopleLandingBlock["items"] | null = null;
