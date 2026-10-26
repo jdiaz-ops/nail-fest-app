@@ -48,7 +48,7 @@ export const IMPARABLES_SPEAKERS: ImparablesSpeaker[] = [
   {
     name: "Paula Chacón",
     handle: "@soypauc_tuprofe",
-    tag: "De la mesa a CEO de El Imperio de las Uñas, una cadena de 7 spas. Los miedos que tuvo que vencer: cobrar sin culpa y armar un equipo.",
+    tag: "Empezó atendiendo en una mesa de manicure y hoy es CEO de El Imperio de las Uñas, una cadena de 7 spas. Para crecer tuvo que vencer el autosabotaje, cobrar sin culpa y aprender a delegar en un equipo.",
     talk: "Créete el cuento: cobra lo que vales y deja de hacerlo todo sola",
     subtitle: "Los miedos que tuvo que vencer: cobrar sin culpa, delegar y armar un equipo.",
     photoUrl: PHOTO("pau"),
@@ -200,12 +200,13 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
       withHost("9:00 a. m.", "Bienvenida", "Con Heidy Aristizábal, maestra de ceremonias"),
       speaker("9:15 a. m.", "Jimena Montalban"),
       pause("10:15 a. m."),
-      session("10:25 a. m.", { topic: "Panel «El día que decidí cambiar»", text: "Cuatro historias reales de transformación", label: "Charla estrella" }),
+      session("10:25 a. m.", { topic: "Panel «El día que decidí cambiar»", text: "Cuatro historias reales de transformación" }),
       pause("11:10 a. m."),
       speaker("11:25 a. m.", "Paula Chacón"),
       pause("12:25 p. m."),
       speaker("12:35 p. m.", "Cristina Sierra"),
-      withHost("1:35 p. m.", "Cierre del día y sorteo", "Con Heidy Aristizábal"),
+      // No raffle and no next edition's announcement (the team, 2026-10-26).
+      withHost("1:35 p. m.", "Cierre del día", "Con Heidy Aristizábal"),
       day(
         "Lunes 28 de junio",
         "Ahora te toca a ti. Este es tu plan para lograrlo.",
@@ -222,7 +223,7 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
       speaker("12:05 p. m.", "Juan Tenorio", "Paso 4 · Retener"),
       pause("12:55 p. m."),
       speaker("1:05 p. m.", "Oskar Garzón", "Paso 5 · Tu ruta"),
-      withHost("1:35 p. m.", "Agradecimientos y anuncio de la próxima edición", "Con Heidy Aristizábal"),
+      withHost("1:35 p. m.", "Agradecimientos", "Con Heidy Aristizábal"),
     ],
   },
 

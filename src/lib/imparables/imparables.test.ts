@@ -321,14 +321,15 @@ describe("the template", () => {
     return { rows: agenda.rows, sunday: agenda.rows.slice(1, monday), monday: agenda.rows.slice(monday + 1) };
   };
 
-  it("gives each day its subtitle; Sunday tells the stories, the panel its star talk, with no box", () => {
+  it("gives each day its subtitle; Sunday tells the stories, no talk tagged nor boxed as the star", () => {
     const { rows, sunday } = agendaOf(IMPARABLES_BLOCKS);
     expect(rows.filter((r) => r.kind === "day").map((r) => [r.chip, r.text])).toEqual([
       ["Domingo 27 de junio", "9:00 a. m. a 1:45 p. m."],
       ["Lunes 28 de junio", "9:00 a. m. a 2:00 p. m."],
     ]);
     expect(rows.filter((r) => r.kind === "day").every((r) => r.takeaway.length > 0)).toBe(true);
-    expect(sunday.filter((r) => r.label).map((r) => [r.topic, r.label])).toEqual([["Panel «El día que decidí cambiar»", "Charla estrella"]]);
+    expect(sunday.filter((r) => r.label)).toEqual([]);
+    expect(sunday.some((r) => r.topic === "Panel «El día que decidí cambiar»")).toBe(true);
     expect(rows.filter((r) => r.star)).toEqual([]);
   });
 
@@ -350,9 +351,10 @@ describe("the template", () => {
     expect(IMPARABLES_BLOCKS[agenda + 2]).toMatchObject({ type: "slides", style: "results" });
   });
 
-  it("says nothing on the page about artificial intelligence, nor the days' old titles", () => {
+  it("says nothing on the page about artificial intelligence, a raffle or the next edition, nor the days' old titles", () => {
     const shown = JSON.stringify(IMPARABLES_BLOCKS.filter((b) => !b.hidden));
     expect(shown).not.toMatch(/inteligencia artificial|\bIA\b/i);
+    expect(shown).not.toMatch(/sorteo|próxima edición|charla estrella/i);
     for (const old of ["De la mesa a empresaria", "Sobresalir y pasar a la acción", "Hazte ver y pasa a la acción"]) expect(shown).not.toContain(old);
   });
 
