@@ -906,8 +906,8 @@ export default function EventForm({
                   <p style={{ fontSize: 13, color: "#5b5f6b", margin: 0 }}>
                     La portada sale del nombre público, la bajada y las fechas (con el horario por día); debajo van los bloques de
                     «Contenido» en el estilo del congreso, y al final la frase de cierre. Los precios salen de la pestaña Entradas: cada
-                    etapa es un tipo de entrada con sus fechas, y antes de la primera la página recibe la lista de espera. La imagen de
-                    portada y el carrusel no se muestran en este diseño.
+                    etapa es un tipo de entrada con sus fechas (si la primera empezara más adelante, mientras tanto la página recibiría
+                    una lista de espera). La imagen de portada y el carrusel no se muestran en este diseño.
                   </p>
                   {isEdit && (
                     <div>
@@ -921,7 +921,7 @@ export default function EventForm({
                       </button>
                     </div>
                   )}
-                  {waitlist && (
+                  {waitlist && waitlist.count > 0 && (
                     <p style={{ fontSize: 13, margin: 0 }}>
                       <strong>Lista de espera:</strong> {waitlist.count} {waitlist.count === 1 ? "persona" : "personas"}. Están en el CRM con la
                       etiqueta «{waitlist.label}»: para avisarles, usa esa etiqueta en un segmento.

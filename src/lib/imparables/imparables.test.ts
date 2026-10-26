@@ -12,21 +12,33 @@ const TZ = "America/Bogota";
 const at = (iso: string) => new Date(iso);
 const STARTS = at("2027-06-27T09:00:00-05:00");
 
-const stages = (remaining = [3000, 3000, 3000]): StageTicketType[] =>
-  IMPARABLES_STAGES.map((s, i) => ({
-    id: `t${i}`,
-    name: s.name,
-    price: s.price,
-    status: "ON_SALE",
-    hideUntil: at(s.opensAt),
-    hideAfter: at(s.closesAt),
-    remaining: remaining[i]!,
-    order: i,
-  }));
+// The template's stages; `firstOpensAt` gives the Preventa a start date (the template has none).
+const stages = (remaining = [3000, 3000, 3000], firstOpensAt: string | null = null): StageTicketType[] =>
+  IMPARABLES_STAGES.map((s, i) => {
+    const opensAt = i === 0 ? firstOpensAt : s.opensAt;
+    return {
+      id: `t${i}`,
+      name: s.name,
+      price: s.price,
+      status: "ON_SALE",
+      hideUntil: opensAt ? at(opensAt) : null,
+      hideAfter: at(s.closesAt),
+      remaining: remaining[i]!,
+      order: i,
+    };
+  });
 
 describe("salesState", () => {
-  it("takes names for the waiting list before the first stage, counting down to it", () => {
-    const state = salesState(stages(), at("2027-01-15T10:00:00-05:00"), STARTS);
+  it("sells the Preventa from the moment the event is out: no waiting list", () => {
+    const state = salesState(stages(), at("2026-10-26T10:00:00-05:00"), STARTS);
+    expect(state.mode).toBe("sale");
+    expect(state.current?.name).toBe("Preventa");
+    expect(state.next?.name).toBe("General");
+    expect(state.countdown).toEqual({ to: at("2027-04-01T00:00:00-05:00"), label: "Este precio termina en" });
+  });
+
+  it("takes names for a waiting list when the first stage starts later, counting down to it", () => {
+    const state = salesState(stages(undefined, "2027-02-27T00:00:00-05:00"), at("2027-01-15T10:00:00-05:00"), STARTS);
     expect(state.mode).toBe("waitlist");
     expect(state.current).toBeNull();
     expect(state.next?.name).toBe("Preventa");
@@ -57,7 +69,7 @@ describe("salesState", () => {
   });
 
   it("goes back to the waiting list when a stage sells out before the next one opens", () => {
-    const state = salesState(stages([0, 3000, 3000]), at("2027-03-15T10:00:00-05:00"), STARTS);
+    const state = salesState(stages([0, 3000, 3000], "2027-02-27T00:00:00-05:00"), at("2027-03-15T10:00:00-05:00"), STARTS);
     expect(state.mode).toBe("waitlist");
     expect(state.stages[0]!.state).toBe("soldout");
     expect(state.next?.name).toBe("General");
@@ -81,14 +93,15 @@ describe("how prices and dates read", () => {
 
   it("gives each stage its days, the last one being the day before it closes", () => {
     const [preventa, general, ultima] = salesState(stages(), at("2027-01-01T00:00:00-05:00"), STARTS).stages;
-    expect(stageDates(preventa!, TZ)).toBe("27 feb – 31 mar");
+    expect(stageDates(preventa!, TZ)).toBe("hasta 31 mar");
+    expect(stageDates({ opensAt: at("2027-02-27T00:00:00-05:00"), closesAt: at("2027-04-01T00:00:00-05:00") }, TZ)).toBe("27 feb – 31 mar");
     expect(stageDates(general!, TZ)).toBe("1 abr – 20 jun");
     expect(stageDates(ultima!, TZ)).toBe("21 – 26 jun");
-    expect(stageDates({ opensAt: null, closesAt: at("2027-04-01T00:00:00-05:00") }, TZ)).toBe("hasta 31 mar");
   });
 
   it("says how long until the price goes up in calendar days", () => {
     const up = at("2027-04-01T00:00:00-05:00");
+    expect(inDays(up, at("2026-10-26T10:00:00-05:00"), TZ)).toBe("el 1 de abril");
     expect(inDays(up, at("2027-03-01T10:00:00-05:00"), TZ)).toBe("en 31 días");
     expect(inDays(up, at("2027-03-31T23:30:00-05:00"), TZ)).toBe("mañana");
     expect(inDays(at("2027-03-31T20:00:00-05:00"), at("2027-03-31T09:00:00-05:00"), TZ)).toBe("hoy");
@@ -179,7 +192,8 @@ describe("the template", () => {
     expect(agenda.rows.filter((r) => r.kind === "day")).toHaveLength(2);
   });
 
-  it("chains the price stages without gaps", () => {
+  it("opens the Preventa with the event and chains the stages without gaps", () => {
+    expect(IMPARABLES_STAGES[0]!.opensAt).toBeNull();
     for (let i = 1; i < IMPARABLES_STAGES.length; i++) expect(IMPARABLES_STAGES[i]!.opensAt).toBe(IMPARABLES_STAGES[i - 1]!.closesAt);
     expect(IMPARABLES_STAGES.map((s) => s.price)).toEqual([79_900, 99_900, 119_900]);
   });

@@ -121,8 +121,9 @@ function calendarDays(from: Date, to: Date, timezone: string): number {
   return Math.round((Date.UTC(b.year, b.month, b.day) - Date.UTC(a.year, a.month, a.day)) / 86_400_000);
 }
 
-/** "en 30 días", "mañana", "hoy". */
+/** "en 30 días", "mañana", "hoy" — or, months away, the day itself: "el 1 de abril". */
 export function inDays(to: Date, now: Date, timezone: string): string {
   const days = calendarDays(now, to, timezone);
+  if (days > 45) return `el ${dayMonth(to, timezone)}`;
   return days >= 2 ? `en ${days} días` : days === 1 ? "mañana" : "hoy";
 }

@@ -45,7 +45,8 @@ export async function imparablesPageData(event: Event, timezone: string, now: Da
   );
 
   const day = (date: Date) => utcToZonedInputValue(date, timezone).slice(0, 10);
-  const opening = sales.stages.find((s) => s.opensAt)?.opensAt ?? null;
+  // A waiting list only when even the first stage opens later (stages come in date order, no date first).
+  const opening = sales.stages[0]?.opensAt ?? null;
   const shortcuts = [
     ...(opening ? [{ label: "Lista de espera", date: day(new Date(opening.getTime() - 86_400_000)) }] : []),
     ...sales.stages.filter((s) => s.opensAt).map((s) => ({ label: s.name, date: day(s.opensAt!) })),

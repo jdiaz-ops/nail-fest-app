@@ -49,7 +49,7 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
         // One ticket, one person: each buyer gets her own Zoom link.
         maxPerOrder: 1,
         issuance: "INDIVIDUAL",
-        hideUntil: new Date(stage.opensAt),
+        hideUntil: stage.opensAt ? new Date(stage.opensAt) : null,
         hideAfter: new Date(stage.closesAt),
         hideWhenSoldOut: false,
         showRemainingOnPage: false,

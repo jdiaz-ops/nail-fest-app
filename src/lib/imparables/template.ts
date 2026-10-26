@@ -203,9 +203,11 @@ export const IMPARABLES_FIELDS = {
   registerButtonLabel: "Quiero mi boleta",
 };
 
-/** The three price stages, as ticket types (only for an event with none yet). Dates are Bogotá midnights. */
-export const IMPARABLES_STAGES = [
-  { name: "Preventa", price: 79_900, opensAt: "2027-02-27T00:00:00-05:00", closesAt: "2027-04-01T00:00:00-05:00" },
+/** The three price stages, as ticket types (only for an event with none yet). Dates are Bogotá midnights.
+ * No waiting list (2026-10-26): the Preventa is on sale from the moment the
+ * event is published, no start date. */
+export const IMPARABLES_STAGES: { name: string; price: number; opensAt: string | null; closesAt: string }[] = [
+  { name: "Preventa", price: 79_900, opensAt: null, closesAt: "2027-04-01T00:00:00-05:00" },
   { name: "General", price: 99_900, opensAt: "2027-04-01T00:00:00-05:00", closesAt: "2027-06-21T00:00:00-05:00" },
   { name: "Última semana", price: 119_900, opensAt: "2027-06-21T00:00:00-05:00", closesAt: "2027-06-27T00:00:00-05:00" },
 ];
