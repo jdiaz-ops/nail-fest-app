@@ -3992,73 +3992,87 @@ body:has(.imp) {
 .imp-tag p {
   margin: 0;
 }
-/* A line and a paragraph under the name (2026-10-26): the first, the
-   tagline, big and strong — its bold words in gold, on a line of their own
-   («Nadie nace imparable. / Se hace.»); the rest under it, smaller. */
+/* A headline and a paragraph under the name (2026-10-27): the first, big
+   and black («El talento solo no paga las cuentas.»); the rest under it,
+   smaller, its bold words in bronze. */
 .imp-tag:has(> p + p) {
   max-width: 36ch;
 }
 .imp-tag > p:first-child:not(:only-child) {
-  font-size: 25px;
+  font-size: 31px;
   font-weight: 800;
-  line-height: 1.2;
-}
-.imp-tag > p:first-child:not(:only-child) strong {
-  display: block;
-  color: var(--imp-resalte);
+  line-height: 1.12;
+  letter-spacing: -0.01em;
+  color: var(--imp-texto);
 }
 .imp-tag > p + p {
-  margin-top: 12px;
+  margin-top: 14px;
   font-size: 15px;
   font-weight: 500;
   line-height: 1.55;
   color: var(--imp-texto-2);
 }
-.imp-when {
-  display: inline-flex;
-  flex-direction: column;
-  gap: 3px;
-  margin: 18px auto 0;
-  padding: 11px 18px;
-  border: 1px solid var(--imp-tarjeta-borde);
-  border-radius: 14px;
-  background: var(--imp-tarjeta);
-}
-.imp-when b {
-  font-size: 15px;
+.imp-tag > p + p strong {
+  font-weight: 800;
   color: var(--imp-resalte);
 }
-.imp-when span {
-  font-size: 12.5px;
-  color: var(--imp-texto-2);
+/* The pill over the name: how, when and from where (2026-10-27) */
+.imp-pill span {
+  white-space: nowrap;
+}
+.imp-pill {
+  display: inline-block;
+  max-width: 100%;
+  margin: 16px auto 0;
+  padding: 7px 16px;
+  border: 1px solid var(--imp-borde-claro);
+  border-radius: 20px;
+  background: var(--imp-hueso-tarjeta);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.45;
+  color: var(--imp-texto);
   text-wrap: balance;
 }
-.imp-faces {
-  display: flex;
-  justify-content: center;
-  margin-top: 20px;
-  padding-left: 8px;
+/* The speakers on the cover: one strip of photos of the same height (two
+   rows of four on a phone), their names in a line under it (2026-10-27) */
+.imp-strip {
+  margin: 24px 0 0;
 }
-.imp-face {
+.imp-strip-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--imp-borde-claro);
+  border-radius: 18px;
+  background: var(--imp-hueso-tarjeta);
+}
+.imp-strip-row img,
+.imp-strip-ini {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  border-radius: 12px;
+  object-fit: cover;
+  object-position: 50% 20%;
+}
+.imp-strip-ini {
   display: grid;
   place-items: center;
-  width: 38px;
-  height: 38px;
-  margin-left: -8px;
-  border-radius: 50%;
-  border: 2px solid var(--imp-fondo);
-  box-shadow: 0 0 0 1.5px var(--imp-oro);
-  background: var(--imp-caja);
-  object-fit: cover;
+  background: var(--imp-hueso-profundo);
   font-family: var(--imp-display), Georgia, serif;
   font-weight: 800;
-  font-size: 12px;
+  font-size: 24px;
   color: var(--imp-resalte);
 }
-.imp-faces-cap {
-  margin-top: 8px;
-  font-size: 12.5px;
+.imp-strip figcaption {
+  margin-top: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
   color: var(--imp-texto-2);
+  text-wrap: balance;
 }
 /* The cover's group photo, and who is in it */
 .imp-group {
@@ -5599,11 +5613,23 @@ body:has(.imp) {
   .imp-tag {
     font-size: 21px;
   }
+  .imp-tag:has(> p + p) {
+    max-width: 680px;
+  }
   .imp-tag > p:first-child:not(:only-child) {
-    font-size: 32px;
+    font-size: 46px;
   }
   .imp-tag > p + p {
+    max-width: 34em;
+    margin-left: auto;
+    margin-right: auto;
     font-size: 17px;
+  }
+  .imp-pill {
+    font-size: 13px;
+  }
+  .imp-strip-row {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
   }
   .imp-hero .imp-cta,
   .imp-close .imp-cta {

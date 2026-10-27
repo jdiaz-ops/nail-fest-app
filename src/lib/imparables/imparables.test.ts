@@ -131,6 +131,7 @@ describe("eventWhen", () => {
     expect(when).toEqual({
       dates: "Domingo 27 y lunes 28 de junio de 2027",
       hours: "9:00 a. m. a 2:00 p. m.",
+      opens: "9:00 a. m.",
       short: "27 y 28 de junio",
       compact: "27 y 28 de junio de 2027",
       days: ["2027-06-27", "2027-06-28"],
@@ -306,8 +307,19 @@ describe("the template", () => {
     }
   });
 
-  it("opens the cover with its tagline, then what she takes home", () => {
-    expect(IMPARABLES_FIELDS.subtitle).toMatch(/^<p>Nadie nace imparable\. <strong>Se hace\.<\/strong><\/p><p>Tuvieron tus mismos miedos[^<]+<\/p>$/);
+  it("opens the cover with its headline, then why and what for — and closes with «Nadie nace imparable»", () => {
+    expect(IMPARABLES_FIELDS.subtitle).toBe(
+      "<p>El talento solo no paga las cuentas.</p><p>Tienes el talento. Si no cambias cómo piensas, vendes y cobras, <strong>nada va a cambiar</strong>. Dos días en vivo con quienes ya lo hicieron: <strong>Mentalidad · Dinero · Marketing</strong>.</p>"
+    );
+    expect(IMPARABLES_FIELDS.closingText).toBe("Nadie nace imparable. Se hace.");
+    expect(IMPARABLES_FIELDS.registerButtonLabel).toBe("Quiero hacerlo diferente");
+    // The line under the cover's strip of photos: the speakers, as the team calls them.
+    expect(coverOf(IMPARABLES_BLOCKS).cover?.caption).toBe("Jimena, Pau, Cris, Alejandro, Karen, Fabi, Juan Tenorio, Oskar");
+  });
+
+  it("names no platform: Zoom is nowhere on the page", () => {
+    const page = JSON.stringify([IMPARABLES_FIELDS, IMPARABLES_BLOCKS.filter((b) => !b.hidden)]);
+    expect(page).not.toMatch(/zoom/i);
   });
 
   it("puts each speaker's talk under her name in the program, with its subtitle if it has one", () => {
@@ -386,7 +398,6 @@ describe("the template", () => {
   it("speaks plain Spanish: no «speakers» nor «Nail artist» on the page", () => {
     const shown = JSON.stringify(IMPARABLES_BLOCKS.filter((b) => !b.hidden));
     expect(shown).not.toMatch(/\bspeakers?\b|nail artist/i);
-    expect(IMPARABLES_FIELDS.registerButtonLabel).toBe("Quiero mi cupo");
   });
 
   it("says nothing on the page about artificial intelligence, a raffle or the next edition, nor the days' old titles", () => {

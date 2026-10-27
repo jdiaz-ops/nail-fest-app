@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { Cinzel, Manrope } from "next/font/google";
 import type { EventFormat } from "@prisma/client";
 import MetaPixelScript from "@/components/MetaPixelScript";
@@ -92,25 +93,22 @@ export default function ImparablesPage({
   const big = words.pop() ?? event.displayName;
   const pre = words.join(" ");
   const liveNote = event.format === "IN_PERSON" ? "" : "100% en vivo, desde tu celular";
-  // How it happens, under the dates on the cover (the hours are in the program).
-  const how =
-    event.format === "VIRTUAL"
-      ? `Congreso virtual por Zoom · ${liveNote}`
-      : event.format === "HYBRID"
-        ? `Presencial${event.venueName || event.city ? ` en ${event.venueName || event.city}` : ""} y virtual por Zoom`
-        : event.venueName || event.city;
+  // The pill over the name (2026-10-27): how, when and from where — no platform named.
+  const place = event.venueName || event.city;
+  const kind = event.format === "VIRTUAL" ? "Congreso virtual" : event.format === "HYBRID" ? `Presencial${place ? ` en ${place}` : ""} y virtual` : place;
+  const pill = [kind, when.short, when.opens, liveNote].filter((part): part is string => Boolean(part));
 
   const { cover, rest } = coverOf(blocks);
-  const { speakers, panels } = castOf(blocks);
+  const { speakers } = castOf(blocks);
   const panel = panelOf(rest);
   // Whose photo goes next to a name on the cards: the speakers', and the panel's guests already named.
   const faces = [...speakers, ...(panel?.people.items.filter((p) => p.name.trim()) ?? [])];
   const line = castLine(blocks);
-  const cast = speakers.length
-    ? `${speakers.length} ${speakers.length === 1 ? "conferencista" : "conferencistas"}${panels ? (panels === 1 ? " y un panel" : ` y ${panels} paneles`) : ""}`
-    : "";
-  // One label for every buy button: the cover's, the price's and the bar's (2026-10-27).
-  const buyLabel = event.registerButtonLabel?.trim() || "Quiero mi cupo";
+  // The cover's button (and the closing's) says what the event's label says
+  // («Quiero hacerlo diferente», 2026-10-27); the price's and the bar's, a
+  // short one that fits the bar.
+  const heroLabel = event.registerButtonLabel?.trim() || "Quiero mi cupo";
+  const buyLabel = "Quiero mi cupo";
   const { mode, current, next } = sales;
   const closing = twoLines(event.closingText?.trim() || `Nos vemos el ${when.short}.`);
   // The lowest price the congress will have, when the one about to open is it.
@@ -137,7 +135,7 @@ export default function ImparablesPage({
   const cta =
     mode === "sale" && current ? (
       <ImpButton action="buy" className="imp-cta">
-        {buyLabel} · {pesos(current.price)}
+        {heroLabel} · {pesos(current.price)}
       </ImpButton>
     ) : mode === "waitlist" ? (
       <ImpButton action="waitlist" className="imp-cta">
@@ -178,58 +176,62 @@ export default function ImparablesPage({
               <img src="/logo.png" alt={brandName} /> presenta
             </span>
           </div>
+          {pill.length > 0 && (
+            <p className="imp-pill">
+              {pill.map((part, i) => (
+                // Each part whole on its line: the pill breaks only between them.
+                <Fragment key={i}>
+                  {i > 0 && " · "}
+                  <span>{part}</span>
+                </Fragment>
+              ))}
+            </p>
+          )}
           <Tiara />
           <ImpTitle pre={pre} big={big} />
           {event.subtitle && (
             // Sanitized before storage (lib/events.ts), like every event's tagline.
             <div className="imp-tag" dangerouslySetInnerHTML={{ __html: event.subtitle }} />
           )}
-          {cover ? (
-            // Who is in it goes only to those who can't see it.
-            <figure className="imp-group">
-              {/* eslint-disable-next-line @next/next/no-img-element -- admin-uploaded photo, arbitrary Blob URL */}
-              <img src={cover.url} alt={cover.caption || [line.names, line.also].filter(Boolean).join(", ")} />
+          {speakers.length > 0 ? (
+            // The speakers: their photos in one strip, all of the same height,
+            // and their names in a line under it — the cover image's caption,
+            // or else their first names (2026-10-27).
+            <figure className="imp-strip">
+              <div className="imp-strip-row">
+                {speakers.map((p, i) =>
+                  p.photoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- admin-uploaded photo, arbitrary Blob URL
+                    <img key={i} src={p.photoUrl} alt="" />
+                  ) : (
+                    <span key={i} className="imp-strip-ini" aria-hidden="true">
+                      {initials(p.name)}
+                    </span>
+                  )
+                )}
+              </div>
+              <figcaption>{cover?.caption.trim() || speakers.map((p) => p.name.trim().split(/\s+/)[0]).join(", ")}</figcaption>
             </figure>
           ) : (
-            speakers.length > 0 && (
-              <>
-                <div className="imp-faces" aria-hidden="true">
-                  {speakers.slice(0, 10).map((p, i) =>
-                    p.photoUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element -- admin-uploaded photo, arbitrary Blob URL
-                      <img key={i} className="imp-face" src={p.photoUrl} alt="" />
-                    ) : (
-                      <span key={i} className="imp-face imp-face--ini">
-                        {initials(p.name)}
-                      </span>
-                    )
-                  )}
-                </div>
-                <div className="imp-faces-cap">{cast}</div>
-              </>
+            cover && (
+              // Who is in it goes only to those who can't see it.
+              <figure className="imp-group">
+                {/* eslint-disable-next-line @next/next/no-img-element -- admin-uploaded photo, arbitrary Blob URL */}
+                <img src={cover.url} alt={cover.caption || [line.names, line.also].filter(Boolean).join(", ")} />
+              </figure>
             )
           )}
-          <div className="imp-when">
-            <b>{when.compact}</b>
-            {how && <span>{how}</span>}
-          </div>
           {cta}
           {mode === "closed" && <p className="imp-closed-note">La venta de boletas está cerrada.</p>}
-          {/* Under the button: today's price against the regular one, until
-              when it holds and what comes after — then what makes buying
-              risk-free («Texto debajo del botón», a guarantee). */}
-          {mode === "sale" && current && (save > 0 || (next && current.closesAt)) && (
+          {/* Under the button: until when today's price holds and what comes
+              after — then what makes buying risk-free («Texto debajo del
+              botón», a guarantee). The regular price and the saving are told
+              in «Tu boleta» and the bar (2026-10-27). */}
+          {mode === "sale" && current && next && current.closesAt && (
             <div className="imp-deal">
-              {save > 0 && (
-                <p>
-                  Precio normal <s>{pesos(sales.normal!.price)}</s> · <b>Ahorras {pesos(save)}</b>
-                </p>
-              )}
-              {next && current.closesAt && (
-                <p className="imp-deal-until">
-                  Precio de {current.name} solo hasta el {untilDay(current.closesAt, timezone)}; después sube a {pesos(next.price)}.
-                </p>
-              )}
+              <p className="imp-deal-until">
+                {current.name} hasta el {untilDay(current.closesAt, timezone)}; después sube a {pesos(next.price)}.
+              </p>
             </div>
           )}
           {event.ctaNote?.trim() && (

@@ -152,8 +152,10 @@ export const IMPARABLES_REFUND = [
 ].join("\n");
 
 export const IMPARABLES_BLOCKS: LandingBlock[] = [
-  // La foto grupal de la portada: la imagen antes del primer título
-  { type: "image", url: IMPARABLES_GROUP_PHOTO, caption: "" },
+  // La foto grupal de la portada: la imagen antes del primer título. Con
+  // speakers, la portada muestra sus fotos en una franja y, debajo, esta
+  // leyenda (2026-10-27); la foto queda para una página sin ellos.
+  { type: "image", url: IMPARABLES_GROUP_PHOTO, caption: "Jimena, Pau, Cris, Alejandro, Karen, Fabi, Juan Tenorio, Oskar" },
 
   // El gancho
   {
@@ -378,7 +380,7 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
       {
         question: "¿Cómo me conecto?",
         answer:
-          "Por Zoom. En el celular descargas la app gratis una sola vez y entras con tu enlace personal, que te llega por correo y por WhatsApp; antes de empezar te mandamos recordatorios. También puedes verlo desde el computador.",
+          "Con tu enlace personal, que te llega por correo y por WhatsApp; antes de empezar te mandamos recordatorios. Lo ves desde el celular o desde el computador.",
       },
       { question: "¿Y si no puedo verlo en vivo?", answer: "Tienes la repetición de todo el congreso durante 30 días, para verlo cuando puedas." },
       {
@@ -389,7 +391,7 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
       {
         question: "¿Sirve si estoy fuera de Colombia?",
         answer:
-          "Sí. Es 100% en vivo por Zoom, así que lo ves desde cualquier país. Las horas de la agenda están en hora Colombia. Si necesitas ayuda para pagar desde afuera, escríbenos por WhatsApp.",
+          "Sí. Es 100% en vivo y en línea, así que lo ves desde cualquier país. Las horas de la agenda están en hora Colombia. Si necesitas ayuda para pagar desde afuera, escríbenos por WhatsApp.",
       },
       {
         question: "¿Cómo pago?",
@@ -407,9 +409,9 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
 
 /** The event's own lines, set by the template only where the event has none of its own. */
 export const IMPARABLES_FIELDS = {
-  subtitle: "<p>Nadie nace imparable. <strong>Se hace.</strong></p><p>Tuvieron tus mismos miedos y hoy te cuentan cómo los atravesaron. Y tú sales con lo que a ellas les faltó al principio: qué te hace única, cuánto cobrar, estrategias para llenar tu agenda y cómo hacer que vuelvan.</p>",
-  closingText: "Nadie nace imparable. Nos vemos el 27 de junio.",
-  registerButtonLabel: "Quiero mi cupo",
+  subtitle: "<p>El talento solo no paga las cuentas.</p><p>Tienes el talento. Si no cambias cómo piensas, vendes y cobras, <strong>nada va a cambiar</strong>. Dos días en vivo con quienes ya lo hicieron: <strong>Mentalidad · Dinero · Marketing</strong>.</p>",
+  closingText: "Nadie nace imparable. Se hace.",
+  registerButtonLabel: "Quiero hacerlo diferente",
   // «Texto debajo del botón»: on this cover, under the button with a shield —
   // what makes buying risk-free.
   ctaNote: "Garantía de 30 minutos: si en la primera media hora sientes que no es para ti, te devolvemos el 100%.",
