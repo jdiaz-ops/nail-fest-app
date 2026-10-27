@@ -11,7 +11,7 @@ import type {
 } from "@/lib/landingBlocks/types";
 import { youtubeVideo } from "@/lib/landingBlocks/types";
 import { agendaInstant, dayEnd, type EventWhen } from "@/lib/imparables/schedule";
-import { dayMonth, pesos, saving, type SalesState } from "@/lib/imparables/stages";
+import { dayMonth, pesos, saving, untilDay, type SalesState } from "@/lib/imparables/stages";
 import { isPanelCard, listNames, namesIn, panelGuestsOf, routeOf } from "@/lib/imparables/blocks";
 import { ImpIcon, Silhouette, iconForPoint, initials, instagramUrl, type ImpIconName } from "./ImpArt";
 import ImpButton from "./ImpButton";
@@ -37,7 +37,7 @@ export interface ImparablesContext {
   when: EventWhen;
   timezone: string;
   now: Date;
-  /** "Quiero mi boleta" */
+  /** "Quiero mi cupo": every buy button's label. */
   buyLabel: string;
   /** Whose photo goes next to a name on the cards: the speakers and the panel's guests already named. */
   speakers: PeopleLandingBlock["items"];
@@ -615,12 +615,15 @@ function secondsUntil(to: Date, now: Date): number {
   return Math.max(0, Math.floor((to.getTime() - now.getTime()) / 1000));
 }
 
+/** Today's price says until when it holds; the countdown only comes in its last days — months away, it hurries no one (2026-10-27). */
+const COUNTDOWN_DAYS = 30;
+
 function Prices({ block, context }: { block: PricesLandingBlock; context: ImparablesContext }) {
   const { sales, timezone, now, offsetMs } = context;
   if (sales.stages.length === 0) return null;
   const { current, next, countdown, normal } = sales;
-  // Each stage says where it stands, no dates (2026-10-26): the countdown
-  // tells how long today's price lasts.
+  // Each stage says where it stands, no dates (2026-10-26); today's price
+  // says until when it holds, and the countdown comes in its last days.
   const STATE_NOTE = { current: "Ahora", past: "Cerrada", soldout: "Agotada", future: "Próximamente" } as const;
   const STATE_CLASS = { current: "is-on", past: "is-off", soldout: "is-off", future: "is-soon" } as const;
   return (
@@ -640,12 +643,15 @@ function Prices({ block, context }: { block: PricesLandingBlock; context: Impara
           {block.note && <div className="imp-now-iva">{block.note}</div>}
           {next && (
             <div className="imp-now-up">
-              Después sube a <b>{pesos(next.price)}</b>
+              {current.closesAt ? `Este precio termina el ${untilDay(current.closesAt, timezone)}; después sube a ` : "Después sube a "}
+              <b>{pesos(next.price)}</b>
             </div>
           )}
-          {countdown && <ImpCountdown to={countdown.to.toISOString()} label="Faltan" initialSeconds={secondsUntil(countdown.to, now)} seconds={false} offsetMs={offsetMs} />}
+          {countdown && secondsUntil(countdown.to, now) <= COUNTDOWN_DAYS * 86_400 && (
+            <ImpCountdown to={countdown.to.toISOString()} label="Faltan" initialSeconds={secondsUntil(countdown.to, now)} seconds={false} offsetMs={offsetMs} />
+          )}
           <ImpButton action="buy" className="imp-cta">
-            Comprar mi boleta
+            {context.buyLabel}
           </ImpButton>
         </div>
       ) : next?.opensAt ? (

@@ -106,19 +106,23 @@ export default function ImparablesPage({
   // Whose photo goes next to a name on the cards: the speakers', and the panel's guests already named.
   const faces = [...speakers, ...(panel?.people.items.filter((p) => p.name.trim()) ?? [])];
   const line = castLine(blocks);
-  const cast = speakers.length ? `${speakers.length} ${speakers.length === 1 ? "speaker" : "speakers"}${panels ? (panels === 1 ? " y un panel" : ` y ${panels} paneles`) : ""}` : "";
-  const buyLabel = event.registerButtonLabel?.trim() || "Quiero mi boleta";
+  const cast = speakers.length
+    ? `${speakers.length} ${speakers.length === 1 ? "conferencista" : "conferencistas"}${panels ? (panels === 1 ? " y un panel" : ` y ${panels} paneles`) : ""}`
+    : "";
+  // One label for every buy button: the cover's, the price's and the bar's (2026-10-27).
+  const buyLabel = event.registerButtonLabel?.trim() || "Quiero mi cupo";
   const { mode, current, next } = sales;
   const closing = twoLines(event.closingText?.trim() || `Nos vemos el ${when.short}.`);
   // The lowest price the congress will have, when the one about to open is it.
   const opensCheapest = next && sales.stages.every((s) => s.state === "past" || s.price >= next.price);
   // Under the bar's price: the regular one struck with what today's saves —
-  // or, with no regular price to tell it against, what comes after.
+  // or, with no regular price to tell it against, what comes after. Struck,
+  // it needs no words: with «Quiero mi cupo» the bar has room for one line.
   const save = current ? saving(current, sales.normal) : 0;
   const barNote =
     save > 0 ? (
       <>
-        Precio normal <s>{pesos(sales.normal!.price)}</s> · ahorras {pesos(save)}
+        <s>{pesos(sales.normal!.price)}</s> · ahorras {pesos(save)}
       </>
     ) : next ? (
       `Después sube a ${pesos(next.price)}`
@@ -300,7 +304,7 @@ export default function ImparablesPage({
               <span>{barNote}</span>
             </div>
             <ImpButton action="buy" className="imp-st-b">
-              Comprar
+              {buyLabel}
             </ImpButton>
           </div>
         </ImpStickyBar>

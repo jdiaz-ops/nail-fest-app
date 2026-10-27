@@ -132,7 +132,7 @@ describe("eventWhen", () => {
       dates: "Domingo 27 y lunes 28 de junio de 2027",
       hours: "9:00 a. m. a 2:00 p. m.",
       short: "27 y 28 de junio",
-      compact: "27 & 28 Junio 2027",
+      compact: "27 y 28 de junio de 2027",
       days: ["2027-06-27", "2027-06-28"],
       span: { opensAt: "2027-06-27T14:00:00.000Z", closesAt: "2027-06-27T19:00:00.000Z" },
       ends: ["2027-06-27T19:00:00.000Z", "2027-06-28T19:00:00.000Z"],
@@ -141,10 +141,10 @@ describe("eventWhen", () => {
 
   it("writes the cover's dates as short as they get", () => {
     const one = (startsAt: string, endsAt: string | null) => eventWhen({ startsAt: at(startsAt), endsAt: endsAt ? at(endsAt) : null }, TZ).compact;
-    expect(one("2027-06-27T09:00:00-05:00", null)).toBe("27 Junio 2027");
-    expect(one("2027-06-27T09:00:00-05:00", "2027-06-29T14:00:00-05:00")).toBe("27 – 29 Junio 2027");
-    expect(one("2027-06-30T09:00:00-05:00", "2027-07-01T14:00:00-05:00")).toBe("30 Junio & 1 Julio 2027");
-    expect(one("2026-12-31T09:00:00-05:00", "2027-01-01T14:00:00-05:00")).toBe("31 Diciembre 2026 & 1 Enero 2027");
+    expect(one("2027-06-27T09:00:00-05:00", null)).toBe("27 de junio de 2027");
+    expect(one("2027-06-27T09:00:00-05:00", "2027-06-29T14:00:00-05:00")).toBe("27 al 29 de junio de 2027");
+    expect(one("2027-06-30T09:00:00-05:00", "2027-07-01T14:00:00-05:00")).toBe("30 de junio y 1 de julio de 2027");
+    expect(one("2026-12-31T09:00:00-05:00", "2027-01-01T14:00:00-05:00")).toBe("31 de diciembre de 2026 y 1 de enero de 2027");
   });
 
   it("reads a single span over two days the same way", () => {
@@ -353,19 +353,40 @@ describe("the template", () => {
   it("makes Monday a plan in five steps, the route they make under the day's subtitle", () => {
     const { monday } = agendaOf(IMPARABLES_BLOCKS);
     expect(monday.filter((r) => r.label).map((r) => [r.label, r.instructor])).toEqual([
-      ["Paso 1 · Tus números", "Alejandro Salinas"],
-      ["Paso 2 · Tu esencia", "Karen"],
-      ["Paso 3 · Atraer", "Fabi Pinillo Martínez"],
-      ["Paso 4 · Retener", "Juan Tenorio"],
-      ["Paso 5 · Tu ruta", "Oskar Garzón"],
+      ["Paso 1 · Ordena tus números", "Alejandro Salinas"],
+      ["Paso 2 · Encuentra tu sello", "Karen"],
+      ["Paso 3 · Atrae", "Fabi Pinillo Martínez"],
+      ["Paso 4 · Fideliza", "Juan Tenorio"],
+      ["Paso 5 · Traza tu ruta", "Oskar Garzón"],
     ]);
-    expect(routeOf(monday).join(" → ")).toBe("Tus números → tu esencia → atraer → retener → tu ruta");
+    expect(routeOf(monday).join(" → ")).toBe("Ordena tus números → encuentra tu sello → atrae → fideliza → traza tu ruta");
   });
 
   it("puts the results right after the program", () => {
     const agenda = IMPARABLES_BLOCKS.findIndex((b) => b.type === "agenda");
     expect(IMPARABLES_BLOCKS[agenda + 1]).toMatchObject({ type: "heading", eyebrow: "Resultados" });
     expect(IMPARABLES_BLOCKS[agenda + 2]).toMatchObject({ type: "slides", style: "results" });
+  });
+
+  it("says its guarantee the same way everywhere, and the refund answer in short lines", () => {
+    const guarantee = "Garantía de 30 minutos: si en la primera media hora sientes que no es para ti, te devolvemos el 100%.";
+    expect(IMPARABLES_FIELDS.ctaNote).toBe(guarantee);
+    const doubts = IMPARABLES_BLOCKS.find((b) => b.type === "slides" && b.style === "doubts");
+    if (doubts?.type !== "slides") throw new Error("no doubts");
+    expect(doubts.items.filter((it) => /30 minutos|media hora/.test(it.note)).map((it) => it.note)).toEqual([guarantee]);
+    const faq = IMPARABLES_BLOCKS.find((b) => b.type === "faq");
+    if (faq?.type !== "faq") throw new Error("no faq");
+    const refund = faq.items.find((it) => it.question === "¿Puedo pedir reembolso?")!.answer;
+    expect(refund).toContain(guarantee);
+    for (const line of refund.split("\n")) expect(line.length).toBeLessThan(200);
+    // Nothing promised in the old policy went missing.
+    for (const part of ["5 días hábiles", "25 de junio", "repetición por 30 días", "nueva fecha", "WhatsApp", "máximo 30 días", "no hacemos devoluciones"]) expect(refund).toContain(part);
+  });
+
+  it("speaks plain Spanish: no «speakers» nor «Nail artist» on the page", () => {
+    const shown = JSON.stringify(IMPARABLES_BLOCKS.filter((b) => !b.hidden));
+    expect(shown).not.toMatch(/\bspeakers?\b|nail artist/i);
+    expect(IMPARABLES_FIELDS.registerButtonLabel).toBe("Quiero mi cupo");
   });
 
   it("says nothing on the page about artificial intelligence, a raffle or the next edition, nor the days' old titles", () => {

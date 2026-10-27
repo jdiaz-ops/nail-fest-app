@@ -133,7 +133,7 @@ export function iconForPoint(title: string): ImpIconName {
   if (/guía|guia|descarg|plantilla|material/.test(t)) return "file";
   if (/descuento|cup[oó]n|precio/.test(t)) return "tag";
   if (/ruta|plan\b/.test(t)) return "map";
-  if (/speaker|panel|charla|conferencia/.test(t)) return "mic";
+  if (/speaker|panel|charla|conferencia|conferencista/.test(t)) return "mic";
   return "star";
 }
 

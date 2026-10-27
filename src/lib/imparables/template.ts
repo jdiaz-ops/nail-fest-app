@@ -80,7 +80,7 @@ export const IMPARABLES_SPEAKERS: ImparablesSpeaker[] = [
   {
     name: "Fabi Pinillo Martínez",
     handle: "@fabiversatill",
-    tag: "Nail artist y estratega de centros de belleza. Te enseña a llenar tu agenda: la técnica ya no es suficiente.",
+    tag: "Artista de uñas y estratega de centros de belleza. Te enseña a llenar tu agenda: la técnica ya no es suficiente.",
     talk: "Agenda llena: estrategias y contenido que traen clientas",
     subtitle: "Del primer mensaje a la cita confirmada: qué publicar y cómo responder.",
     photoUrl: PHOTO("fabi"),
@@ -141,8 +141,15 @@ const speaker = (chip: string, name: string, label = "") => {
 export const IMPARABLES_GROUP_PHOTO = "/imparables/grupo.webp";
 const withHost = (chip: string, topic: string, text: string) => session(chip, { topic, text, photoUrl: HOST.photo });
 
-export const IMPARABLES_REFUND =
-  "Sí, de dos formas. Si en los primeros 30 minutos del primer día sientes que el congreso no es para ti, escríbenos y te devolvemos el 100%, sin preguntas. Y dentro de los 5 días hábiles siguientes a tu compra también te devolvemos el 100%, siempre que el congreso no haya empezado. Fuera de eso no hacemos devoluciones, pero puedes pasarle tu boleta a otra persona escribiéndonos hasta el 25 de junio, y si no puedes verlo en vivo tienes la repetición por 30 días. Si Nail Fest cambia la fecha o cancela el congreso, tú eliges: te devolvemos todo o usas tu boleta en la nueva fecha. Para pedirlo, escríbenos por WhatsApp con el correo de tu compra; el dinero vuelve por el mismo medio de pago en máximo 30 días.";
+// The refund policy in short lines (the answer keeps its line breaks on the page).
+export const IMPARABLES_REFUND = [
+  "Sí, en estos casos:",
+  "• Garantía de 30 minutos: si en la primera media hora sientes que no es para ti, te devolvemos el 100%.",
+  "• Si te arrepientes dentro de los 5 días hábiles siguientes a tu compra, también te devolvemos el 100%, siempre que el congreso no haya empezado.",
+  "• Si Nail Fest cambia la fecha o cancela el congreso, tú eliges: te devolvemos todo o usas tu boleta en la nueva fecha.",
+  "Fuera de estos casos no hacemos devoluciones, pero puedes pasarle tu boleta a otra persona escribiéndonos hasta el 25 de junio, y si no puedes verlo en vivo tienes la repetición por 30 días.",
+  "Para pedirlo, escríbenos por WhatsApp con el correo de tu compra; el dinero vuelve por el mismo medio de pago en máximo 30 días.",
+].join("\n");
 
 export const IMPARABLES_BLOCKS: LandingBlock[] = [
   // La foto grupal de la portada: la imagen antes del primer título
@@ -160,7 +167,7 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
   { type: "card", eyebrow: "Ellas empezaron donde tú estás hoy:", title: "en una mesa de manicure.", html: "", icon: "none", tone: "pink", imageUrl: "", hidden: true },
 
   // Speakers, el panel y la maestra de ceremonias
-  { type: "heading", eyebrow: "Speakers", title: "Las que te lo van a contar.", intro: "" },
+  { type: "heading", eyebrow: "Conferencistas", title: "De quién vas a aprender", intro: "" },
   { type: "people", items: IMPARABLES_SPEAKERS.map(({ name, handle, tag, photoUrl }) => ({ name, handle, tag, photoUrl, tone: "pink" as const })) },
   {
     type: "card",
@@ -193,7 +200,7 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
     rows: [
       day(
         "Domingo 27 de junio",
-        "Lo lograron con los mismos miedos que tú. Ahora te cuentan cómo.",
+        "Así lo lograron",
         "9:00 a. m. a 1:45 p. m.",
         "Cómo atravesaron las dificultades, tomaron riesgos y vencieron sus miedos para llegar donde están."
       ),
@@ -214,15 +221,15 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
         "Tus números, tu esencia, cómo atraer clientas y hacer que vuelvan: tu plan para ganar más y convertirte en la dueña de tu negocio."
       ),
       withHost("9:00 a. m.", "Repaso", "Con Heidy Aristizábal"),
-      speaker("9:05 a. m.", "Alejandro Salinas", "Paso 1 · Tus números"),
+      speaker("9:05 a. m.", "Alejandro Salinas", "Paso 1 · Ordena tus números"),
       pause("9:55 a. m."),
-      speaker("10:05 a. m.", "Karen", "Paso 2 · Tu esencia"),
+      speaker("10:05 a. m.", "Karen", "Paso 2 · Encuentra tu sello"),
       pause("10:55 a. m."),
-      speaker("11:05 a. m.", "Fabi Pinillo Martínez", "Paso 3 · Atraer"),
+      speaker("11:05 a. m.", "Fabi Pinillo Martínez", "Paso 3 · Atrae"),
       pause("11:55 a. m."),
-      speaker("12:05 p. m.", "Juan Tenorio", "Paso 4 · Retener"),
+      speaker("12:05 p. m.", "Juan Tenorio", "Paso 4 · Fideliza"),
       pause("12:55 p. m."),
-      speaker("1:05 p. m.", "Oskar Garzón", "Paso 5 · Tu ruta"),
+      speaker("1:05 p. m.", "Oskar Garzón", "Paso 5 · Traza tu ruta"),
       withHost("1:35 p. m.", "Agradecimientos", "Con Heidy Aristizábal"),
     ],
   },
@@ -236,7 +243,7 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
       {
         tag: "Más clientas",
         title: "Llena tu agenda sin depender del voz a voz",
-        text: "Contenido que atrae clientas, una marca con tu sello y clientas que vuelven y te recomiendan.",
+        text: "Contenido que atrae, una marca con tu sello y clientas que vuelven y te recomiendan.",
         noteLabel: "Sales sabiendo",
         note: "qué publicar primero.",
         who: "Karen, Fabi Pinillo Martínez y Juan Tenorio",
@@ -269,14 +276,12 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
     type: "points",
     tone: "pink",
     items: [
-      { title: "2 días en vivo", text: "" },
-      { title: "8 speakers y un panel", text: "" },
-      { title: "Pausas activas", text: "" },
-      { title: "Guías de los speakers para descargar", text: "" },
-      { title: "Repetición por 30 días", text: "" },
-      { title: "Certificado digital de asistencia con tu nombre", text: "" },
-      { title: "Descuentos exclusivos de los speakers", text: "" },
-      { title: "Tu hoja de ruta personal al final", text: "" },
+      { title: "Tu hoja de ruta personal", text: "Sales con tu plan listo para aplicar." },
+      { title: "2 días en vivo", text: "Con 8 conferencistas y un panel, desde tu celular." },
+      { title: "Repetición por 30 días", text: "Si te pierdes algo, lo ves cuando puedas." },
+      { title: "Guías para descargar", text: "El material de cada conferencista." },
+      { title: "Certificado digital", text: "De asistencia, con tu nombre." },
+      { title: "Descuentos exclusivos", text: "De los conferencistas, solo para quienes asisten." },
     ],
   },
 
@@ -311,9 +316,9 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
   { type: "prices", note: "" },
   {
     type: "card",
-    eyebrow: "Garantía sin preguntas",
+    eyebrow: "Garantía de 30 minutos",
     title: "Si no es para ti, te devolvemos tu dinero",
-    html: "<p>Si en los primeros 30 minutos del primer día sientes que esto no es para ti, escríbenos y te devolvemos el 100%. Sin preguntas.</p>",
+    html: "<p>Si en la primera media hora sientes que no es para ti, te devolvemos el 100%.</p>",
     icon: "shield",
     tone: "teal",
     imageUrl: "",
@@ -328,7 +333,7 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
       {
         tag: "",
         title: "No tengo tiempo.",
-        text: "Son dos mañanas, de 9:00 a. m. a 2:00 p. m., desde tu celular. Y si no puedes en vivo, tienes la repetición por 30 días.",
+        text: "Son dos días, de 9:00 a. m. a 2:00 p. m., desde tu celular.",
         noteLabel: "",
         note: "La repetición por 30 días viene con tu boleta.",
         who: "",
@@ -357,7 +362,7 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
         title: "Ya hice cursos y no me sirvieron.",
         text: "Aquí no hay teoría: te cuentan cómo lo hicieron manicuristas que empezaron donde tú estás.",
         noteLabel: "",
-        note: "Si en los primeros 30 minutos no es para ti, te devolvemos el 100%.",
+        note: "Garantía de 30 minutos: si en la primera media hora sientes que no es para ti, te devolvemos el 100%.",
         who: "",
         icon: "shield",
       },
@@ -403,11 +408,11 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
 /** The event's own lines, set by the template only where the event has none of its own. */
 export const IMPARABLES_FIELDS = {
   subtitle: "<p>Nadie nace imparable. <strong>Se hace.</strong></p><p>Tuvieron tus mismos miedos y hoy te cuentan cómo los atravesaron. Y tú sales con lo que a ellas les faltó al principio: qué te hace única, cuánto cobrar, estrategias para llenar tu agenda y cómo hacer que vuelvan.</p>",
-  closingText: "Tienes el talento. Ahora, a construir tu negocio.",
-  registerButtonLabel: "Quiero mi boleta",
+  closingText: "Nadie nace imparable. Nos vemos el 27 de junio.",
+  registerButtonLabel: "Quiero mi cupo",
   // «Texto debajo del botón»: on this cover, under the button with a shield —
   // what makes buying risk-free.
-  ctaNote: "Garantía sin preguntas: si en los primeros 30 minutos del congreso sientes que no es para ti, te devolvemos el 100%.",
+  ctaNote: "Garantía de 30 minutos: si en la primera media hora sientes que no es para ti, te devolvemos el 100%.",
 };
 
 /** The price stages, as ticket types (only for an event with none yet). Dates are Bogotá's.

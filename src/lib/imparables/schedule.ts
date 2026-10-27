@@ -63,7 +63,7 @@ export interface EventWhen {
   hours: string | null;
   /** "27 y 28 de junio" */
   short: string;
-  /** "27 & 28 Junio 2027": the cover's, as short as it gets. */
+  /** "27 y 28 de junio de 2027": the cover's, as short as it gets in plain Spanish. */
   compact: string;
   /** Each day's date where it happens ("2027-06-27"), in order: the program's days. */
   days: string[];
@@ -136,16 +136,17 @@ export function eventWhen(event: { startsAt: Date; endsAt: Date | null; schedule
   return { dates: capitalize(dates), hours, short, compact: compactDates(unique), days: unique.map((d) => d.date), span, ends: unique.map((d) => endOf(d.date)) };
 }
 
-/** "27 Junio 2027", "27 & 28 Junio 2027", "27 – 29 Junio 2027", "30 Junio & 1 Julio 2027". */
+/** "27 de junio de 2027", "27 y 28 de junio de 2027", "27 al 29 de junio de 2027",
+ * "30 de junio y 1 de julio de 2027" — no «&», no capitals (2026-10-27). */
 function compactDates(days: LocalTime[]): string {
   const first = days[0]!;
   const last = days[days.length - 1]!;
-  const month = (d: LocalTime) => capitalize(MONTHS[d.month]!);
-  const join = days.length === 2 ? " & " : " – ";
-  if (days.length === 1) return `${first.day} ${month(first)} ${first.year}`;
-  if (first.year !== last.year) return `${first.day} ${month(first)} ${first.year}${join}${last.day} ${month(last)} ${last.year}`;
-  if (first.month !== last.month) return `${first.day} ${month(first)}${join}${last.day} ${month(last)} ${last.year}`;
-  return `${first.day}${join}${last.day} ${month(last)} ${last.year}`;
+  const month = (d: LocalTime) => MONTHS[d.month]!;
+  const join = days.length === 2 ? " y " : " al ";
+  if (days.length === 1) return `${first.day} de ${month(first)} de ${first.year}`;
+  if (first.year !== last.year) return `${first.day} de ${month(first)} de ${first.year}${join}${last.day} de ${month(last)} de ${last.year}`;
+  if (first.month !== last.month) return `${first.day} de ${month(first)}${join}${last.day} de ${month(last)} de ${last.year}`;
+  return `${first.day}${join}${last.day} de ${month(last)} de ${last.year}`;
 }
 
 /** "9:15 a. m." -> [9, 15]; "12:05 p. m." -> [12, 5]; "14:30" -> [14, 30]; anything else -> null. */
