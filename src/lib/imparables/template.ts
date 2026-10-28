@@ -72,7 +72,7 @@ export const IMPARABLES_SPEAKERS: ImparablesSpeaker[] = [
   {
     name: "Juan Tenorio",
     handle: "@don.juantenorio",
-    tag: "Asesor de negocios de belleza, con más de 500 salones y barberías transformados.",
+    tag: "No habla de teoría: habla de lo que hizo. Primero construyó su propia cadena de 5 barberías en Bogotá. Luego le enseñó su método a 500+ salones y barberías que hoy son rentables.",
     talk: "Clientas que vuelven: cómo hacer que te elijan, regresen y te recomienden",
     subtitle: "Servicio y experiencia para que cada clienta gaste más en cada visita.",
     photoUrl: PHOTO("juan"),
@@ -96,7 +96,7 @@ export const IMPARABLES_SPEAKERS: ImparablesSpeaker[] = [
   {
     name: "Alejandro Salinas",
     handle: "@salinas.beautybusiness",
-    tag: "«El Señor Finanzas». Asesor de negocios de belleza con 15 años en administración y marketing.",
+    tag: "«El Señor Finanzas». 9 años dentro de la cadena de uñas más grande de México, 6 certificaciones oficiales de belleza desarrolladas con el gobierno y más de 2.000 negocios capacitados en 8 países. Si no sabes cuánto ganas, él te enseña a saberlo.",
     talk: "Ordena tu plata: precios, costos y cuánto te queda de verdad",
     subtitle: "Sal sabiendo cuánto cobrar, cuánto gastas y cuánto te queda, con herramientas sencillas que puedes usar desde mañana.",
     photoUrl: PHOTO("salinas"),
