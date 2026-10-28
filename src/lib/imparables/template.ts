@@ -56,7 +56,7 @@ export const IMPARABLES_SPEAKERS: ImparablesSpeaker[] = [
   {
     name: "Paula Chacón",
     handle: "@soypauc_tuprofe",
-    tag: "De la mesa de manicure a CEO de El Imperio de las Uñas, una cadena de 7 spas. Aprendió a cobrar sin culpa y a delegar.",
+    tag: "Empezó en una mesa de manicure. Hoy es CEO de El Imperio de las Uñas: 7 spas en Bogotá, academia propia y un negocio que factura miles de millones al año.",
     talk: "Créete el cuento: cobra lo que vales y deja de hacerlo todo sola",
     subtitle: "Los miedos que tuvo que vencer: cobrar sin culpa, delegar y armar un equipo.",
     photoUrl: PHOTO("pau"),
@@ -64,7 +64,7 @@ export const IMPARABLES_SPEAKERS: ImparablesSpeaker[] = [
   {
     name: "Oskar Garzón",
     handle: "@oskarivanquebelleza",
-    tag: "Empresario y creador de marca. Cierra el congreso con visión, redes y la actitud para sobresalir.",
+    tag: "Del humor de la mesa de trabajo creó un personaje que siguen cientos de miles en todo Latam. Se convirtió en la voz del gremio con un solo mensaje: con esta profesión cualquiera puede sobresalir.",
     talk: "Piensa en grande y hazte ver",
     subtitle: "Visión, redes y la actitud para sobresalir. Cierre del congreso y tu ruta final.",
     photoUrl: PHOTO("oskar"),
@@ -80,7 +80,7 @@ export const IMPARABLES_SPEAKERS: ImparablesSpeaker[] = [
   {
     name: "Karen Pinzón",
     handle: "@karenw.trainer",
-    tag: "Creadora del Método Esencia. Te ayuda a descubrir lo que te hace única y a convertirlo en tu sello.",
+    tag: "Su lema es: «La vida es una historia, escribe la tuya». Karen escribió la suya: de la mesa pasó a maestra, y hoy más de 150 mil la siguen para aprender de ella.",
     talk: "Tu esencia es tu marca: deja de copiar y crea tu sello",
     subtitle: "Descubre lo que te hace única y conviértelo en una marca que tus clientas reconozcan y busquen.",
     photoUrl: PHOTO("karen"),
@@ -88,7 +88,7 @@ export const IMPARABLES_SPEAKERS: ImparablesSpeaker[] = [
   {
     name: "Fabi Pinillo Martínez",
     handle: "@fabiversatill",
-    tag: "Artista de uñas y estratega de centros de belleza. Te enseña a llenar tu agenda: la técnica ya no es suficiente.",
+    tag: "Sabe lo frustrante que es hacer uñas bien y aun así no avanzar. Lleva más de 6 años sacando manicuristas de ahí: más de 400 certificadas que hoy viven de su talento. Su regla es simple: la técnica ya no es suficiente, hay que saber llenar la agenda.",
     talk: "Agenda llena: estrategias y contenido que traen clientas",
     subtitle: "Del primer mensaje a la cita confirmada: qué publicar y cómo responder.",
     photoUrl: PHOTO("fabi"),
@@ -96,7 +96,7 @@ export const IMPARABLES_SPEAKERS: ImparablesSpeaker[] = [
   {
     name: "Alejandro Salinas",
     handle: "@salinas.beautybusiness",
-    tag: "«El Señor Finanzas». Asesor de negocios de belleza con 15 años en administración y marketing. Te enseña a ordenar tu plata.",
+    tag: "«El Señor Finanzas». Asesor de negocios de belleza con 15 años en administración y marketing.",
     talk: "Ordena tu plata: precios, costos y cuánto te queda de verdad",
     subtitle: "Sal sabiendo cuánto cobrar, cuánto gastas y cuánto te queda, con herramientas sencillas que puedes usar desde mañana.",
     photoUrl: PHOTO("salinas"),

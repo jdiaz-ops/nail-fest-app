@@ -331,11 +331,12 @@ describe("the template", () => {
     expect(castOf(IMPARABLES_BLOCKS).speakers.some((s) => s.handle === "@maris_nails_oficial")).toBe(false);
   });
 
-  it("gives each card a line about her of about the same length, not her talk's title (the program says it)", () => {
+  it("gives each card a line about her in the team's words, not her talk's title (the program says it)", () => {
     for (const s of IMPARABLES_SPEAKERS) {
       expect(s.tag.toLowerCase()).not.toContain(s.talk.toLowerCase());
+      // From one line to a short paragraph (the team's bios, 2026-10-28).
       expect(s.tag.length).toBeGreaterThanOrEqual(75);
-      expect(s.tag.length).toBeLessThanOrEqual(130);
+      expect(s.tag.length).toBeLessThanOrEqual(260);
     }
   });
 
