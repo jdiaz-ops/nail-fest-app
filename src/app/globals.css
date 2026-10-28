@@ -4018,23 +4018,33 @@ body:has(.imp) {
   font-weight: 800;
   color: var(--imp-resalte);
 }
-/* The pill right before the group photo: what it is and when (2026-10-28) */
-.imp-pill span {
-  white-space: nowrap;
-}
+/* The pill right before the group photo (2026-10-28): when, big; under it,
+   smaller, what it is */
 .imp-pill {
-  display: inline-block;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
   max-width: 100%;
   margin: 22px auto 0;
-  padding: 7px 16px;
+  padding: 10px 24px 11px;
   border: 1px solid var(--imp-borde-claro);
-  border-radius: 20px;
+  border-radius: 18px;
   background: var(--imp-hueso-tarjeta);
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1.45;
+  line-height: 1.25;
   color: var(--imp-texto);
   text-wrap: balance;
+}
+.imp-pill-date {
+  font-size: 21px;
+  font-weight: 800;
+}
+.imp-pill-note {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--imp-texto-2);
 }
 
 /* «Mentalidad · Dinero · Marketing», under the group photo (2026-10-28):
@@ -4125,6 +4135,12 @@ body:has(.imp) {
   text-decoration: none;
   cursor: pointer;
   transition: transform 0.15s ease, background-color 0.15s ease;
+}
+/* The regular price, struck, between the label and today's */
+.imp-cta-was {
+  font-size: 0.86em;
+  font-weight: 600;
+  opacity: 0.6;
 }
 .imp-cta:hover {
   transform: translateY(-1px);
@@ -5606,8 +5622,11 @@ body:has(.imp) {
     margin-right: auto;
     font-size: 17px;
   }
-  .imp-pill {
-    font-size: 13px;
+  .imp-pill-date {
+    font-size: 25px;
+  }
+  .imp-pill-note {
+    font-size: 12px;
   }
 
   .imp-hero .imp-cta,

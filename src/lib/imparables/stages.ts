@@ -111,3 +111,10 @@ function lastDay(closesAt: Date): Date {
 export function untilDay(closesAt: Date, timezone: string): string {
   return dayMonth(lastDay(closesAt), timezone);
 }
+
+/** The same day with its year, as the team writes it under the cover's
+ * button: "31 de marzo 2027" (2026-10-28). */
+export function untilDate(closesAt: Date, timezone: string): string {
+  const last = lastDay(closesAt);
+  return `${dayMonth(last, timezone)} ${localDate(last, timezone).year}`;
+}

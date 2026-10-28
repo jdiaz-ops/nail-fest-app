@@ -410,7 +410,7 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
 export const IMPARABLES_FIELDS = {
   subtitle: "<p>Mentalidad · Dinero · Marketing</p><p>Deja de pensar en pequeño.</p><p>Inspírate en quienes empezaron desde abajo, con tus mismos miedos, y hoy tienen el negocio y la vida que sueñas. <strong>Aprende cómo lo hicieron y replica sus estrategias para ganar</strong>.</p>",
   closingText: "Nadie nace imparable. Se hace.",
-  registerButtonLabel: "Quiero hacerlo diferente",
+  registerButtonLabel: "Reservar mi cupo",
   // «Texto debajo del botón»: on this cover, under the button with a shield —
   // what makes buying risk-free.
   ctaNote: "Garantía de 30 minutos: si en la primera media hora sientes que no es para ti, te devolvemos el 100%.",

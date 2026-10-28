@@ -5,7 +5,7 @@ import { landingBlockSchema } from "@/lib/landingBlocks/schema";
 import { emptyAgendaRow, parseLandingBlocks, type AgendaLandingBlock, type LandingBlock } from "@/lib/landingBlocks/types";
 import { castLine, castOf, coverOf, isPanelCard, namesIn, panelGuestsOf, panelOf, routeOf } from "./blocks";
 import { agendaInstant, coverName, dayEnd, eventWhen, readClock } from "./schedule";
-import { pesos, salesState, saving, untilDay, type StageTicketType } from "./stages";
+import { pesos, salesState, saving, untilDate, untilDay, type StageTicketType } from "./stages";
 import { splitTagline } from "./tagline";
 import { IMPARABLES_BLOCKS, IMPARABLES_FIELDS, IMPARABLES_GROUP_PHOTO, IMPARABLES_PANELISTS, IMPARABLES_SPEAKERS, IMPARABLES_STAGES } from "./template";
 
@@ -113,6 +113,11 @@ describe("how prices and dates read", () => {
   it("says the last day a stage's price holds, the day before it closes", () => {
     expect(untilDay(at("2027-04-01T00:00:00-05:00"), TZ)).toBe("31 de marzo");
     expect(untilDay(at("2027-06-27T00:00:00-05:00"), TZ)).toBe("26 de junio");
+  });
+
+  it("adds the year under the cover's button, as the team writes it", () => {
+    expect(untilDate(at("2027-04-01T00:00:00-05:00"), TZ)).toBe("31 de marzo 2027");
+    expect(untilDate(at("2027-01-01T00:00:00-05:00"), TZ)).toBe("31 de diciembre 2026");
   });
 });
 
@@ -337,7 +342,7 @@ describe("the template", () => {
       "<p>Mentalidad · Dinero · Marketing</p><p>Deja de pensar en pequeño.</p><p>Inspírate en quienes empezaron desde abajo, con tus mismos miedos, y hoy tienen el negocio y la vida que sueñas. <strong>Aprende cómo lo hicieron y replica sus estrategias para ganar</strong>.</p>"
     );
     expect(IMPARABLES_FIELDS.closingText).toBe("Nadie nace imparable. Se hace.");
-    expect(IMPARABLES_FIELDS.registerButtonLabel).toBe("Quiero hacerlo diferente");
+    expect(IMPARABLES_FIELDS.registerButtonLabel).toBe("Reservar mi cupo");
     // Who is in the group photo, for those who can't see it.
     expect(coverOf(IMPARABLES_BLOCKS).cover?.caption).toBe("Jimena Montalban, Paula Chacón, Cristina Sierra, Alejandro Salinas, Fabi Pinillo Martínez, Juan Tenorio, Oskar Garzón, Maria Carolina Sebastia Sandoval y Heidy Aristizábal");
   });

@@ -1,15 +1,14 @@
-import { Fragment } from "react";
 import { Cinzel, Manrope } from "next/font/google";
 import type { EventFormat } from "@prisma/client";
 import MetaPixelScript from "@/components/MetaPixelScript";
 import type { LandingBlock } from "@/lib/landingBlocks/types";
 import { coverName, type EventWhen } from "@/lib/imparables/schedule";
-import { dayMonth, pesos, saving, untilDay, type SalesState } from "@/lib/imparables/stages";
+import { dayMonth, pesos, saving, untilDate, type SalesState } from "@/lib/imparables/stages";
 import { utcToZonedInputValue } from "@/lib/dateFormat";
 import { castLine, castOf, coverOf, panelOf } from "@/lib/imparables/blocks";
 import { splitTagline } from "@/lib/imparables/tagline";
 import ImparablesBlocks from "./ImparablesBlocks";
-import { ImpIcon, Tiara } from "./ImpArt";
+import { Tiara } from "./ImpArt";
 import ImpButton from "./ImpButton";
 import ImpPageTracking from "./ImpPageTracking";
 import ImpStickyBar from "./ImpStickyBar";
@@ -94,10 +93,13 @@ export default function ImparablesPage({
   const big = words.pop() ?? event.displayName;
   const pre = words.join(" ");
   const liveNote = event.format === "IN_PERSON" ? "" : "100% en vivo, desde tu celular";
-  // The pill right before the group photo (2026-10-28): what it is and when — no platform named.
+  // The pill right before the group photo (2026-10-28): when, big — written
+  // the way the team writes it there, «27 y 28 junio 2027» — and under it,
+  // smaller, what it is. No platform named.
   const place = event.venueName || event.city;
   const kind = event.format === "VIRTUAL" ? "Congreso virtual" : event.format === "HYBRID" ? `Presencial${place ? ` en ${place}` : ""} y virtual` : place;
-  const pill = [kind, when.compact].filter((part): part is string => Boolean(part));
+  const pillDate = when.compact.replace(/ de /g, " ");
+  const pillNote = [kind, event.format === "VIRTUAL" ? "100% en vivo" : ""].filter(Boolean).join(" ");
 
   const { cover, rest } = coverOf(blocks);
   const { pillars, tagline } = splitTagline(event.subtitle ?? "");
@@ -107,8 +109,8 @@ export default function ImparablesPage({
   const faces = [...speakers, ...(panel?.people.items.filter((p) => p.name.trim()) ?? [])];
   const line = castLine(blocks);
   // The cover's button (and the closing's) says what the event's label says
-  // («Quiero hacerlo diferente», 2026-10-27); the price's and the bar's, a
-  // short one that fits the bar.
+  // («Reservar mi cupo», 2026-10-28); the price's and the bar's, a short one
+  // that fits the bar.
   const heroLabel = event.registerButtonLabel?.trim() || "Quiero mi cupo";
   const buyLabel = "Quiero mi cupo";
   const { mode, current, next } = sales;
@@ -137,7 +139,10 @@ export default function ImparablesPage({
   const cta =
     mode === "sale" && current ? (
       <ImpButton action="buy" className="imp-cta">
-        {heroLabel} · {pesos(current.price)}
+        <span>{heroLabel} ·</span>
+        {/* Today's price against the regular one, struck (2026-10-28). */}
+        {save > 0 && <s className="imp-cta-was">{pesos(sales.normal!.price)}</s>}
+        <span>{pesos(current.price)}</span>
       </ImpButton>
     ) : mode === "waitlist" ? (
       <ImpButton action="waitlist" className="imp-cta">
@@ -185,17 +190,10 @@ export default function ImparablesPage({
             <div className="imp-tag" dangerouslySetInnerHTML={{ __html: tagline }} />
           )}
           {/* Right before the group photo (2026-10-28): what it is and when, before who. */}
-          {pill.length > 0 && (
-            <p className="imp-pill">
-              {pill.map((part, i) => (
-                // Each part whole on its line: the pill breaks only between them.
-                <Fragment key={i}>
-                  {i > 0 && " · "}
-                  <span>{part}</span>
-                </Fragment>
-              ))}
-            </p>
-          )}
+          <p className="imp-pill">
+            <span className="imp-pill-date">{pillDate}</span>
+            {pillNote && <span className="imp-pill-note">{pillNote}</span>}
+          </p>
           {cover && (
             // The group photo (2026-10-28: back from a strip of portraits).
             // Who is in it goes only to those who can't see it.
@@ -208,22 +206,13 @@ export default function ImparablesPage({
           {pillars && <div className="imp-pillars" dangerouslySetInnerHTML={{ __html: pillars }} />}
           {cta}
           {mode === "closed" && <p className="imp-closed-note">La venta de boletas está cerrada.</p>}
-          {/* Under the button: until when today's price holds and what comes
-              after — then what makes buying risk-free («Texto debajo del
-              botón», a guarantee). The regular price and the saving are told
-              in «Tu boleta» and the bar (2026-10-27). */}
-          {mode === "sale" && current && next && current.closesAt && (
+          {/* Under the button: until when today's price holds (2026-10-28).
+              The guarantee («Texto debajo del botón») is hidden from the
+              cover for now; it stays on the event, and in «Tu boleta». */}
+          {mode === "sale" && current?.closesAt && (
             <div className="imp-deal">
-              <p className="imp-deal-until">
-                {current.name} hasta el {untilDay(current.closesAt, timezone)}; después sube a {pesos(next.price)}.
-              </p>
+              <p className="imp-deal-until">Hasta el {untilDate(current.closesAt, timezone)}</p>
             </div>
-          )}
-          {event.ctaNote?.trim() && (
-            <p className="imp-once">
-              <ImpIcon name="shield" size={17} />
-              <span>{event.ctaNote.trim()}</span>
-            </p>
           )}
         </div>
       </section>
