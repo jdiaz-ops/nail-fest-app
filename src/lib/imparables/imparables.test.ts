@@ -309,12 +309,12 @@ describe("the template", () => {
 
   it("opens the cover with its headline, then why and what for — and closes with «Nadie nace imparable»", () => {
     expect(IMPARABLES_FIELDS.subtitle).toBe(
-      "<p>Deja de pensar en pequeño.</p><p>En 2 días aprende de quienes empezaron desde abajo, con miedos, y hoy tienen el negocio y la vida que sueñas: <strong>cómo lo hicieron y sus estrategias para ganar</strong>.</p>"
+      "<p>Mentalidad · Dinero · Marketing</p><p>Deja de pensar en pequeño.</p><p>En 2 días aprende de quienes empezaron desde abajo, con miedos, y hoy tienen el negocio y la vida que sueñas: <strong>cómo lo hicieron y sus estrategias para ganar</strong>.</p>"
     );
     expect(IMPARABLES_FIELDS.closingText).toBe("Nadie nace imparable. Se hace.");
     expect(IMPARABLES_FIELDS.registerButtonLabel).toBe("Quiero hacerlo diferente");
-    // The line under the cover's strip of photos: the speakers, as the team calls them.
-    expect(coverOf(IMPARABLES_BLOCKS).cover?.caption).toBe("Jimena, Pau, Cris, Alejandro, Karen, Fabi, Juan Tenorio, Oskar");
+    // Who is in the group photo, for those who can't see it.
+    expect(coverOf(IMPARABLES_BLOCKS).cover?.caption).toBe("Jimena Montalban, Paula Chacón, Cristina Sierra, Alejandro Salinas, Fabi Pinillo Martínez, Juan Tenorio, Oskar Garzón, Maria Carolina Sebastia Sandoval y Heidy Aristizábal");
   });
 
   it("names no platform: Zoom is nowhere on the page", () => {

@@ -152,10 +152,9 @@ export const IMPARABLES_REFUND = [
 ].join("\n");
 
 export const IMPARABLES_BLOCKS: LandingBlock[] = [
-  // La foto grupal de la portada: la imagen antes del primer título. Con
-  // speakers, la portada muestra sus fotos en una franja y, debajo, esta
-  // leyenda (2026-10-27); la foto queda para una página sin ellos.
-  { type: "image", url: IMPARABLES_GROUP_PHOTO, caption: "Jimena, Pau, Cris, Alejandro, Karen, Fabi, Juan Tenorio, Oskar" },
+  // La foto grupal de la portada: la imagen antes del primer título; su
+  // leyenda dice quiénes están, para quien no la ve.
+  { type: "image", url: IMPARABLES_GROUP_PHOTO, caption: "Jimena Montalban, Paula Chacón, Cristina Sierra, Alejandro Salinas, Fabi Pinillo Martínez, Juan Tenorio, Oskar Garzón, Maria Carolina Sebastia Sandoval y Heidy Aristizábal" },
 
   // El gancho
   {
@@ -409,7 +408,7 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
 
 /** The event's own lines, set by the template only where the event has none of its own. */
 export const IMPARABLES_FIELDS = {
-  subtitle: "<p>Deja de pensar en pequeño.</p><p>En 2 días aprende de quienes empezaron desde abajo, con miedos, y hoy tienen el negocio y la vida que sueñas: <strong>cómo lo hicieron y sus estrategias para ganar</strong>.</p>",
+  subtitle: "<p>Mentalidad · Dinero · Marketing</p><p>Deja de pensar en pequeño.</p><p>En 2 días aprende de quienes empezaron desde abajo, con miedos, y hoy tienen el negocio y la vida que sueñas: <strong>cómo lo hicieron y sus estrategias para ganar</strong>.</p>",
   closingText: "Nadie nace imparable. Se hace.",
   registerButtonLabel: "Quiero hacerlo diferente",
   // «Texto debajo del botón»: on this cover, under the button with a shield —

@@ -3992,27 +3992,44 @@ body:has(.imp) {
 .imp-tag p {
   margin: 0;
 }
-/* A headline and a paragraph under the name (2026-10-27): the first, big
-   and black («Deja de pensar en pequeño.»); the rest under it, smaller,
-   any bold words in bronze. */
+/* Under the name, counted from the end of the event's tagline (2026-10-28):
+   the last paragraph, smaller, any bold words in bronze; the one before it,
+   the headline, in the titles' face («Deja de pensar en pequeño.»); a third
+   one before them, part of the name itself — spaced capitals like
+   «Manicuristas» above it («Mentalidad · Dinero · Marketing»). */
 .imp-tag:has(> p + p) {
   max-width: 36ch;
 }
-.imp-tag > p:first-child:not(:only-child) {
-  font-size: 31px;
-  font-weight: 800;
-  line-height: 1.12;
-  letter-spacing: -0.01em;
+.imp-tag:has(> p:nth-last-child(3)) {
+  margin-top: 8px;
+}
+.imp-tag > p:nth-last-child(3) {
+  font-family: var(--imp-display), Georgia, serif;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  text-indent: 0.2em;
+  text-transform: uppercase;
   color: var(--imp-texto);
 }
-.imp-tag > p + p {
+.imp-tag > p:nth-last-child(2) {
+  font-family: var(--imp-display), Georgia, serif;
+  font-weight: 800;
+  font-size: 27px;
+  line-height: 1.16;
+  color: var(--imp-texto);
+}
+.imp-tag > p:nth-last-child(3) + p {
+  margin-top: 26px;
+}
+.imp-tag > p:last-child:not(:only-child) {
   margin-top: 14px;
   font-size: 15px;
   font-weight: 500;
   line-height: 1.55;
   color: var(--imp-texto-2);
 }
-.imp-tag > p + p strong {
+.imp-tag > p:last-child:not(:only-child) strong {
   font-weight: 800;
   color: var(--imp-resalte);
 }
@@ -4034,46 +4051,7 @@ body:has(.imp) {
   color: var(--imp-texto);
   text-wrap: balance;
 }
-/* The speakers on the cover: one strip of photos of the same height (two
-   rows of four on a phone), their names in a line under it (2026-10-27) */
-.imp-strip {
-  margin: 24px 0 0;
-}
-.imp-strip-row {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 6px;
-  padding: 8px;
-  border: 1px solid var(--imp-borde-claro);
-  border-radius: 18px;
-  background: var(--imp-hueso-tarjeta);
-}
-.imp-strip-row img,
-.imp-strip-ini {
-  display: block;
-  width: 100%;
-  aspect-ratio: 4 / 5;
-  border-radius: 12px;
-  object-fit: cover;
-  object-position: 50% 20%;
-}
-.imp-strip-ini {
-  display: grid;
-  place-items: center;
-  background: var(--imp-hueso-profundo);
-  font-family: var(--imp-display), Georgia, serif;
-  font-weight: 800;
-  font-size: 24px;
-  color: var(--imp-resalte);
-}
-.imp-strip figcaption {
-  margin-top: 10px;
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.45;
-  color: var(--imp-texto-2);
-  text-wrap: balance;
-}
+
 /* The cover's group photo, and who is in it */
 .imp-group {
   position: relative;
@@ -5616,10 +5594,15 @@ body:has(.imp) {
   .imp-tag:has(> p + p) {
     max-width: 680px;
   }
-  .imp-tag > p:first-child:not(:only-child) {
-    font-size: 46px;
+  .imp-tag > p:nth-last-child(3) {
+    font-size: 16px;
+    letter-spacing: 0.3em;
+    text-indent: 0.3em;
   }
-  .imp-tag > p + p {
+  .imp-tag > p:nth-last-child(2) {
+    font-size: 40px;
+  }
+  .imp-tag > p:last-child:not(:only-child) {
     max-width: 34em;
     margin-left: auto;
     margin-right: auto;
@@ -5628,9 +5611,7 @@ body:has(.imp) {
   .imp-pill {
     font-size: 13px;
   }
-  .imp-strip-row {
-    grid-template-columns: repeat(8, minmax(0, 1fr));
-  }
+
   .imp-hero .imp-cta,
   .imp-close .imp-cta {
     max-width: 440px;

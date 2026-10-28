@@ -8,7 +8,7 @@ import { dayMonth, pesos, saving, untilDay, type SalesState } from "@/lib/impara
 import { utcToZonedInputValue } from "@/lib/dateFormat";
 import { castLine, castOf, coverOf, panelOf } from "@/lib/imparables/blocks";
 import ImparablesBlocks from "./ImparablesBlocks";
-import { ImpIcon, Tiara, initials } from "./ImpArt";
+import { ImpIcon, Tiara } from "./ImpArt";
 import ImpButton from "./ImpButton";
 import ImpPageTracking from "./ImpPageTracking";
 import ImpStickyBar from "./ImpStickyBar";
@@ -193,33 +193,13 @@ export default function ImparablesPage({
             // Sanitized before storage (lib/events.ts), like every event's tagline.
             <div className="imp-tag" dangerouslySetInnerHTML={{ __html: event.subtitle }} />
           )}
-          {speakers.length > 0 ? (
-            // The speakers: their photos in one strip, all of the same height,
-            // and their names in a line under it — the cover image's caption,
-            // or else their first names (2026-10-27).
-            <figure className="imp-strip">
-              <div className="imp-strip-row">
-                {speakers.map((p, i) =>
-                  p.photoUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- admin-uploaded photo, arbitrary Blob URL
-                    <img key={i} src={p.photoUrl} alt="" />
-                  ) : (
-                    <span key={i} className="imp-strip-ini" aria-hidden="true">
-                      {initials(p.name)}
-                    </span>
-                  )
-                )}
-              </div>
-              <figcaption>{cover?.caption.trim() || speakers.map((p) => p.name.trim().split(/\s+/)[0]).join(", ")}</figcaption>
+          {cover && (
+            // The group photo (2026-10-28: back from a strip of portraits).
+            // Who is in it goes only to those who can't see it.
+            <figure className="imp-group">
+              {/* eslint-disable-next-line @next/next/no-img-element -- admin-uploaded photo, arbitrary Blob URL */}
+              <img src={cover.url} alt={cover.caption || [line.names, line.also].filter(Boolean).join(", ")} />
             </figure>
-          ) : (
-            cover && (
-              // Who is in it goes only to those who can't see it.
-              <figure className="imp-group">
-                {/* eslint-disable-next-line @next/next/no-img-element -- admin-uploaded photo, arbitrary Blob URL */}
-                <img src={cover.url} alt={cover.caption || [line.names, line.also].filter(Boolean).join(", ")} />
-              </figure>
-            )
           )}
           {cta}
           {mode === "closed" && <p className="imp-closed-note">La venta de boletas está cerrada.</p>}
