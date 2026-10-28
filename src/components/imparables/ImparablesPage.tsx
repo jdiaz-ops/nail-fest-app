@@ -281,10 +281,6 @@ export default function ImparablesPage({
 
       {mode === "sale" && current && (
         <ImpStickyBar>
-          {/* Until when today's price holds, across the top of the bar (2026-10-28). */}
-          {current.closesAt && next && (
-            <p className="imp-st-up">Tarifa hasta el {untilDate(current.closesAt, timezone)}. ¡Luego sube!</p>
-          )}
           <div className="imp-sticky-in">
             <div className="imp-st-p">
               <b>
@@ -297,6 +293,10 @@ export default function ImparablesPage({
               {buyLabel}
             </ImpButton>
           </div>
+          {/* Until when today's price holds, across the foot of the bar (2026-10-28). */}
+          {current.closesAt && next && (
+            <p className="imp-st-up">Tarifa hasta el {untilDate(current.closesAt, timezone)}. ¡Luego sube!</p>
+          )}
         </ImpStickyBar>
       )}
       {mode === "waitlist" && next?.opensAt && (
