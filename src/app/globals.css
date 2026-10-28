@@ -4033,7 +4033,7 @@ body:has(.imp) {
   font-weight: 800;
   color: var(--imp-resalte);
 }
-/* The pill over the name: how, when and from where (2026-10-27) */
+/* The pill over the cover's button: how, when and from where (2026-10-28) */
 .imp-pill span {
   white-space: nowrap;
 }
