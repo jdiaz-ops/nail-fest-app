@@ -3903,11 +3903,19 @@ body:has(.imp) {
   overflow: hidden;
   text-align: center;
 }
+/* The cover fills the phone's whole screen, at least (2026-10-28): its
+   parts in the middle of it when there's room to spare. */
 .imp-hero {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 100vh;
+  min-height: 100svh;
   padding: 16px 22px 34px;
 }
 .imp-hero-in {
   position: relative;
+  width: 100%;
   max-width: 560px;
   margin: 0 auto;
 }
@@ -3984,16 +3992,17 @@ body:has(.imp) {
 .imp-tag > p:nth-last-child(2) {
   font-family: var(--imp-display), Georgia, serif;
   font-weight: 800;
-  font-size: 27px;
-  line-height: 1.16;
+  font-size: 33px;
+  line-height: 1.12;
   color: var(--imp-texto);
 }
+/* The line under the headline, strong (2026-10-28): bigger, in the cover's ink. */
 .imp-tag > p:last-child:not(:only-child) {
-  margin-top: 14px;
-  font-size: 16px;
+  margin-top: 18px;
+  font-size: 19px;
   font-weight: 500;
-  line-height: 1.55;
-  color: var(--imp-texto-2);
+  line-height: 1.45;
+  color: var(--imp-texto);
 }
 .imp-tag > p:last-child:not(:only-child) strong {
   font-weight: 800;
@@ -4007,8 +4016,8 @@ body:has(.imp) {
   align-items: center;
   gap: 3px;
   max-width: 100%;
-  margin: 22px auto 0;
-  padding: 10px 24px 11px;
+  margin: 28px auto 0;
+  padding: 11px 26px 12px;
   border: 1px solid var(--imp-borde-claro);
   border-radius: 18px;
   background: var(--imp-hueso-tarjeta);
@@ -4017,11 +4026,11 @@ body:has(.imp) {
   text-wrap: balance;
 }
 .imp-pill-date {
-  font-size: 21px;
+  font-size: 24px;
   font-weight: 700;
 }
 .imp-pill-note {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
 }
 
@@ -4041,7 +4050,7 @@ body:has(.imp) {
 /* The cover's group photo, and who is in it */
 .imp-group {
   position: relative;
-  margin: 14px -22px 0;
+  margin: 20px -22px 0;
 }
 .imp-group img {
   position: relative;
@@ -5620,19 +5629,19 @@ body:has(.imp) {
     text-indent: 0.3em;
   }
   .imp-tag > p:nth-last-child(2) {
-    font-size: 40px;
+    font-size: 44px;
   }
   .imp-tag > p:last-child:not(:only-child) {
-    max-width: 34em;
+    max-width: 32em;
     margin-left: auto;
     margin-right: auto;
-    font-size: 18px;
+    font-size: 21px;
   }
   .imp-pill-date {
-    font-size: 25px;
+    font-size: 28px;
   }
   .imp-pill-note {
-    font-size: 13px;
+    font-size: 14px;
   }
 
   .imp-hero .imp-cta,
