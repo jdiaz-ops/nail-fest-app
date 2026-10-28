@@ -177,12 +177,6 @@ export default function ImparablesPage({
       <section className="imp-hero">
         <div className="imp-rays" aria-hidden="true" />
         <div className="imp-hero-in">
-          <div className="imp-topbar">
-            <span className="imp-org">
-              {/* eslint-disable-next-line @next/next/no-img-element -- fixed logo mark */}
-              <img src="/logo.png" alt={brandName} /> presenta
-            </span>
-          </div>
           <Tiara />
           <ImpTitle pre={pre} big={big} />
           {tagline && (
@@ -206,14 +200,23 @@ export default function ImparablesPage({
           {pillars && <div className="imp-pillars" dangerouslySetInnerHTML={{ __html: pillars }} />}
           {cta}
           {mode === "closed" && <p className="imp-closed-note">La venta de boletas está cerrada.</p>}
-          {/* Under the button: until when today's price holds (2026-10-28).
-              The guarantee («Texto debajo del botón») is hidden from the
-              cover for now; it stays on the event, and in «Tu boleta». */}
+          {/* Under the button: which price it is and until when it holds
+              (2026-10-28). The guarantee («Texto debajo del botón») is
+              hidden from the cover for now; it stays on the event. */}
           {mode === "sale" && current?.closesAt && (
             <div className="imp-deal">
-              <p className="imp-deal-until">Hasta el {untilDate(current.closesAt, timezone)}</p>
+              <p className="imp-deal-until">
+                Tarifa {current.name} hasta el {untilDate(current.closesAt, timezone)}
+              </p>
             </div>
           )}
+          {/* Who organizes it, at the foot of the cover (2026-10-28: it was
+              «Nail Fest presenta», above the name). */}
+          <p className="imp-organiza">
+            Organiza
+            {/* eslint-disable-next-line @next/next/no-img-element -- fixed logo mark */}
+            <img src="/logo.png" alt={brandName} />
+          </p>
         </div>
       </section>
 
@@ -275,7 +278,8 @@ export default function ImparablesPage({
           <div className="imp-sticky-in">
             <div className="imp-st-p">
               <b>
-                {pesos(current.price)} · {current.name}
+                {/* The stage's name smaller, so «Etapa Creyente» fits beside the price (2026-10-28). */}
+                {pesos(current.price)} <small>· {current.name}</small>
               </b>
               <span>{barNote}</span>
             </div>

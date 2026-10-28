@@ -13,7 +13,7 @@ const TZ = "America/Bogota";
 const at = (iso: string) => new Date(iso);
 const STARTS = at("2027-06-27T09:00:00-05:00");
 
-// The template's stages; `firstOpensAt` gives Etapa 1 a start date (the template has none).
+// The template's stages; `firstOpensAt` gives the first one (Etapa Creyente) a start date (the template has none).
 const stages = (remaining = [3000, 3000, 3000, 3000], firstOpensAt: string | null = null): StageTicketType[] =>
   IMPARABLES_STAGES.map((s, i) => {
     const opensAt = i === 0 ? firstOpensAt : s.opensAt;
@@ -30,10 +30,10 @@ const stages = (remaining = [3000, 3000, 3000, 3000], firstOpensAt: string | nul
   });
 
 describe("salesState", () => {
-  it("sells Etapa 1 from the moment the event is out: no waiting list", () => {
+  it("sells the first stage, «Etapa Creyente», from the moment the event is out: no waiting list", () => {
     const state = salesState(stages(), at("2026-10-26T10:00:00-05:00"), STARTS);
     expect(state.mode).toBe("sale");
-    expect(state.current?.name).toBe("Etapa 1");
+    expect(state.current?.name).toBe("Etapa Creyente");
     expect(state.next?.name).toBe("Etapa 2");
     expect(state.countdown).toEqual({ to: at("2027-04-01T00:00:00-05:00"), label: "Este precio termina en" });
   });
@@ -42,14 +42,14 @@ describe("salesState", () => {
     const state = salesState(stages(undefined, "2027-02-27T00:00:00-05:00"), at("2027-01-15T10:00:00-05:00"), STARTS);
     expect(state.mode).toBe("waitlist");
     expect(state.current).toBeNull();
-    expect(state.next?.name).toBe("Etapa 1");
+    expect(state.next?.name).toBe("Etapa Creyente");
     expect(state.countdown).toEqual({ to: at("2027-02-27T00:00:00-05:00"), label: "La venta abre en" });
   });
 
   it("sells today's stage and counts down to when its price ends", () => {
     const state = salesState(stages(), at("2027-03-01T10:00:00-05:00"), STARTS);
     expect(state.mode).toBe("sale");
-    expect(state.current?.name).toBe("Etapa 1");
+    expect(state.current?.name).toBe("Etapa Creyente");
     expect(state.next?.name).toBe("Etapa 2");
     expect(state.countdown).toEqual({ to: at("2027-04-01T00:00:00-05:00"), label: "Este precio termina en" });
     expect(state.stages.map((s) => s.state)).toEqual(["current", "future", "future", "future"]);
@@ -115,9 +115,9 @@ describe("how prices and dates read", () => {
     expect(untilDay(at("2027-06-27T00:00:00-05:00"), TZ)).toBe("26 de junio");
   });
 
-  it("adds the year under the cover's button, as the team writes it", () => {
-    expect(untilDate(at("2027-04-01T00:00:00-05:00"), TZ)).toBe("31 de marzo 2027");
-    expect(untilDate(at("2027-01-01T00:00:00-05:00"), TZ)).toBe("31 de diciembre 2026");
+  it("adds the year under the cover's button, as the team writes it there — no «de»", () => {
+    expect(untilDate(at("2027-04-01T00:00:00-05:00"), TZ)).toBe("31 marzo 2027");
+    expect(untilDate(at("2027-01-01T00:00:00-05:00"), TZ)).toBe("31 diciembre 2026");
   });
 });
 
@@ -360,11 +360,12 @@ describe("the template", () => {
     }
   });
 
-  it("has the 3 results and the 4 doubts, each person on them a speaker, a panelist (or the panel)", () => {
+  it("shows 3 doubts — the results and «Ya hice cursos…» kept hidden — each person on them a speaker, a panelist (or the panel)", () => {
     const slides = IMPARABLES_BLOCKS.filter((b) => b.type === "slides");
-    expect(slides.map((b) => (b.type === "slides" ? [b.style, b.items.length] : null))).toEqual([
-      ["results", 3],
-      ["doubts", 4],
+    expect(slides.map((b) => (b.type === "slides" ? [b.style, b.items.length, b.hidden === true] : null))).toEqual([
+      ["results", 3, true],
+      ["doubts", 3, false],
+      ["doubts", 1, true],
     ]);
     const speakers = new Set([...IMPARABLES_SPEAKERS.map((s) => s.name), ...IMPARABLES_PANELISTS.map((p) => p.name).filter(Boolean)]);
     for (const block of slides) {
@@ -392,16 +393,11 @@ describe("the template", () => {
     expect(rows.filter((r) => r.star)).toEqual([]);
   });
 
-  it("makes Monday a plan in five steps, the route they make under the day's subtitle", () => {
-    const { monday } = agendaOf(IMPARABLES_BLOCKS);
-    expect(monday.filter((r) => r.label).map((r) => [r.label, r.instructor])).toEqual([
-      ["Paso 1 · Ordena tus números", "Alejandro Salinas"],
-      ["Paso 2 · Encuentra tu sello", "Karen"],
-      ["Paso 3 · Atrae", "Fabi Pinillo Martínez"],
-      ["Paso 4 · Fideliza", "Juan Tenorio"],
-      ["Paso 5 · Traza tu ruta", "Oskar Garzón"],
-    ]);
-    expect(routeOf(monday).join(" → ")).toBe("Ordena tus números → encuentra tu sello → atrae → fideliza → traza tu ruta");
+  it("makes Monday «Tu plan para lograrlo.», with no step named on its talks — so no route under the day either", () => {
+    const { rows, monday } = agendaOf(IMPARABLES_BLOCKS);
+    expect(rows.filter((r) => r.kind === "day").map((r) => r.topic)).toEqual(["Así lo lograron", "Tu plan para lograrlo."]);
+    expect(monday.filter((r) => r.label)).toEqual([]);
+    expect(routeOf(monday)).toEqual([]);
   });
 
   it("puts the results right after the program", () => {
@@ -413,9 +409,8 @@ describe("the template", () => {
   it("says its guarantee the same way everywhere, and the refund answer in short lines", () => {
     const guarantee = "Garantía de 30 minutos: si en la primera media hora sientes que no es para ti, te devolvemos el 100%.";
     expect(IMPARABLES_FIELDS.ctaNote).toBe(guarantee);
-    const doubts = IMPARABLES_BLOCKS.find((b) => b.type === "slides" && b.style === "doubts");
-    if (doubts?.type !== "slides") throw new Error("no doubts");
-    expect(doubts.items.filter((it) => /30 minutos|media hora/.test(it.note)).map((it) => it.note)).toEqual([guarantee]);
+    const doubts = IMPARABLES_BLOCKS.flatMap((b) => (b.type === "slides" && b.style === "doubts" ? b.items : []));
+    expect(doubts.filter((it) => /30 minutos|media hora/.test(it.note)).map((it) => it.note)).toEqual([guarantee]);
     const faq = IMPARABLES_BLOCKS.find((b) => b.type === "faq");
     if (faq?.type !== "faq") throw new Error("no faq");
     const refund = faq.items.find((it) => it.question === "¿Puedo pedir reembolso?")!.answer;
@@ -445,10 +440,10 @@ describe("the template", () => {
     expect(agenda.rows.filter((r) => r.kind === "day")).toHaveLength(2);
   });
 
-  it("opens Etapa 1 with the event and chains the stages without gaps, the regular price last", () => {
+  it("opens «Etapa Creyente» with the event and chains the stages without gaps, the regular price last", () => {
     expect(IMPARABLES_STAGES[0]!.opensAt).toBeNull();
     for (let i = 1; i < IMPARABLES_STAGES.length; i++) expect(IMPARABLES_STAGES[i]!.opensAt).toBe(IMPARABLES_STAGES[i - 1]!.closesAt);
-    expect(IMPARABLES_STAGES.map((s) => s.name)).toEqual(["Etapa 1", "Etapa 2", "Etapa 3", "Precio normal"]);
+    expect(IMPARABLES_STAGES.map((s) => s.name)).toEqual(["Etapa Creyente", "Etapa 2", "Etapa 3", "Precio normal"]);
     expect(IMPARABLES_STAGES.map((s) => s.price)).toEqual([80_000, 100_000, 120_000, 150_000]);
   });
 });

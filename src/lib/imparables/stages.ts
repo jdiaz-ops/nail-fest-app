@@ -1,6 +1,6 @@
 // Manicuristas Imparables' price stages (2026-10-26): each stage is one of
 // the event's own ticket types with its dates (TicketType.hideUntil /
-// hideAfter) — Etapa 1 until 31 mar, Etapa 2 1 abr – 20 jun, Etapa 3 21 –
+// hideAfter) — Etapa Creyente until 31 mar, Etapa 2 1 abr – 20 jun, Etapa 3 21 –
 // 26 jun, and the regular price («Precio normal») during the congress — so
 // the price on sale is always the one whose dates hold today;
 // getPublicTicketTypes (lib/ticketTypes.ts) already offers only that one in
@@ -113,8 +113,8 @@ export function untilDay(closesAt: Date, timezone: string): string {
 }
 
 /** The same day with its year, as the team writes it under the cover's
- * button: "31 de marzo 2027" (2026-10-28). */
+ * button — like the pill's dates, no «de»: "31 marzo 2027" (2026-10-28). */
 export function untilDate(closesAt: Date, timezone: string): string {
-  const last = lastDay(closesAt);
-  return `${dayMonth(last, timezone)} ${localDate(last, timezone).year}`;
+  const d = localDate(lastDay(closesAt), timezone);
+  return `${d.day} ${MONTHS[d.month]} ${d.year}`;
 }

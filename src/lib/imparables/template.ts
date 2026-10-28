@@ -217,29 +217,30 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
       withHost("1:35 p. m.", "Cierre del día", "Con Heidy Aristizábal"),
       day(
         "Lunes 28 de junio",
-        "Ahora te toca a ti. Este es tu plan para lograrlo.",
+        "Tu plan para lograrlo.",
         "9:00 a. m. a 2:00 p. m.",
         "Tus números, tu esencia, cómo atraer clientas y hacer que vuelvan: tu plan para ganar más y convertirte en la dueña de tu negocio."
       ),
       withHost("9:00 a. m.", "Repaso", "Con Heidy Aristizábal"),
-      speaker("9:05 a. m.", "Alejandro Salinas", "Paso 1 · Ordena tus números"),
+      speaker("9:05 a. m.", "Alejandro Salinas"),
       pause("9:55 a. m."),
-      speaker("10:05 a. m.", "Karen", "Paso 2 · Encuentra tu sello"),
+      speaker("10:05 a. m.", "Karen"),
       pause("10:55 a. m."),
-      speaker("11:05 a. m.", "Fabi Pinillo Martínez", "Paso 3 · Atrae"),
+      speaker("11:05 a. m.", "Fabi Pinillo Martínez"),
       pause("11:55 a. m."),
-      speaker("12:05 p. m.", "Juan Tenorio", "Paso 4 · Fideliza"),
+      speaker("12:05 p. m.", "Juan Tenorio"),
       pause("12:55 p. m."),
-      speaker("1:05 p. m.", "Oskar Garzón", "Paso 5 · Traza tu ruta"),
+      speaker("1:05 p. m.", "Oskar Garzón"),
       withHost("1:35 p. m.", "Agradecimientos", "Con Heidy Aristizábal"),
     ],
   },
 
   // Los 3 resultados, en tarjetas que se deslizan: después de la agenda
-  { type: "heading", eyebrow: "Resultados", title: "Lo que vas a resolver en estos dos días", intro: "" },
+  { type: "heading", eyebrow: "Resultados", title: "Lo que vas a resolver en estos dos días", intro: "", hidden: true },
   {
     type: "slides",
     style: "results",
+    hidden: true,
     items: [
       {
         tag: "Más clientas",
@@ -313,8 +314,8 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
   },
 
   // Tu boleta: las etapas de precio salen de las entradas del evento
-  { type: "heading", eyebrow: "Tu boleta", title: "Entre más temprano, menos pagas", intro: "" },
-  { type: "prices", note: "" },
+  { type: "heading", eyebrow: "Tu boleta", title: "Entre más temprano, menos pagas", intro: "", hidden: true },
+  { type: "prices", note: "", hidden: true },
   {
     type: "card",
     eyebrow: "Garantía de 30 minutos",
@@ -323,6 +324,7 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
     icon: "shield",
     tone: "teal",
     imageUrl: "",
+    hidden: true,
   },
 
   // Las dudas, en su propia voz: una respuesta y una prueba real
@@ -345,7 +347,7 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
         title: "Apenas estoy empezando.",
         text: "Es de negocio, no de técnica: te sirve desde tu primera clienta.",
         noteLabel: "",
-        note: "Paula empezó en una mesa de manicure y hoy es CEO de El Imperio de las Uñas.",
+        note: "",
         who: "Paula Chacón",
         icon: "none",
       },
@@ -354,10 +356,17 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
         title: "Mi caso es distinto.",
         text: "Hay caminos de todo tipo: independiente, salón, cadena, academia, y empezar de cero en otro país.",
         noteLabel: "",
-        note: "Maria Carolina empezó desde nada y hoy forma educadoras en Chile; la escuchas en el panel.",
+        note: "",
         who: "Maria Carolina Sebastia Sandoval",
         icon: "none",
       },
+    ],
+  },
+  // Hidden (the team, 2026-10-28), kept as it was.
+  {
+    type: "slides",
+    style: "doubts",
+    items: [
       {
         tag: "",
         title: "Ya hice cursos y no me sirvieron.",
@@ -368,6 +377,7 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
         icon: "shield",
       },
     ],
+    hidden: true,
   },
 
   // Preguntas frecuentes
@@ -383,11 +393,6 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
       },
       { question: "¿Y si no puedo verlo en vivo?", answer: "Tienes la repetición de todo el congreso durante 30 días, para verlo cuando puedas." },
       {
-        question: "¿Necesito experiencia?",
-        answer:
-          "No. Es para manicuristas que ya trabajan y quieren crecer, y también para las que están empezando o estudiando. No es un curso de técnica: es de negocio, con precios, clientas, redes y dinero.",
-      },
-      {
         question: "¿Sirve si estoy fuera de Colombia?",
         answer:
           "Sí. Es 100% en vivo y en línea, así que lo ves desde cualquier país. Las horas de la agenda están en hora Colombia. Si necesitas ayuda para pagar desde afuera, escríbenos por WhatsApp.",
@@ -396,9 +401,22 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
         question: "¿Cómo pago?",
         answer: "En línea, con Wompi: tarjeta de crédito o débito, PSE o Nequi. Apenas se confirma el pago te llega la confirmación a tu correo.",
       },
-      { question: "¿La boleta incluye IVA?", answer: "Sí. El precio que ves ya incluye el IVA del 19%; no hay cobros adicionales." },
       { question: "¿Puedo pedir reembolso?", answer: IMPARABLES_REFUND },
     ],
+  },
+  // Hidden (the team, 2026-10-28), kept as they were.
+  {
+    type: "faq",
+    title: "",
+    items: [
+      {
+        question: "¿Necesito experiencia?",
+        answer:
+          "No. Es para manicuristas que ya trabajan y quieren crecer, y también para las que están empezando o estudiando. No es un curso de técnica: es de negocio, con precios, clientas, redes y dinero.",
+      },
+      { question: "¿La boleta incluye IVA?", answer: "Sí. El precio que ves ya incluye el IVA del 19%; no hay cobros adicionales." },
+    ],
+    hidden: true,
   },
 
   // Patrocinadores: ocultos hasta que haya logos
@@ -417,13 +435,14 @@ export const IMPARABLES_FIELDS = {
 };
 
 /** The price stages, as ticket types (only for an event with none yet). Dates are Bogotá's.
- * No waiting list (2026-10-26): Etapa 1 is on sale from the moment the
- * event is published, no start date. Plain words, no «preventa» or «early
+ * No waiting list (2026-10-26): the first stage («Etapa Creyente» since
+ * 2026-10-28) is on sale from the moment the event is published, no start
+ * date. Plain words, no «preventa» or «early
  * bird»: three stages and the regular price, which is real — what it costs
  * to come in on the congress's two days — so each stage tells what it saves
  * against it (lib/imparables/stages.ts). */
 export const IMPARABLES_STAGES: { name: string; price: number; opensAt: string | null; closesAt: string }[] = [
-  { name: "Etapa 1", price: 80_000, opensAt: null, closesAt: "2027-04-01T00:00:00-05:00" },
+  { name: "Etapa Creyente", price: 80_000, opensAt: null, closesAt: "2027-04-01T00:00:00-05:00" },
   { name: "Etapa 2", price: 100_000, opensAt: "2027-04-01T00:00:00-05:00", closesAt: "2027-06-21T00:00:00-05:00" },
   { name: "Etapa 3", price: 120_000, opensAt: "2027-06-21T00:00:00-05:00", closesAt: "2027-06-27T00:00:00-05:00" },
   { name: "Precio normal", price: 150_000, opensAt: "2027-06-27T00:00:00-05:00", closesAt: "2027-06-28T14:00:00-05:00" },
