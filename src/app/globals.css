@@ -4080,8 +4080,8 @@ body:has(.imp) {
   justify-content: center;
   align-items: center;
   gap: 8px;
-  /* Well under the button and its price line, giving them room (2026-10-28). */
-  margin: 44px 0 0;
+  /* Last on the cover, under «Nadie nace imparable» (2026-10-28). */
+  margin: 30px 0 0;
   font-size: 10.5px;
   font-weight: 800;
   letter-spacing: 0.14em;
@@ -4089,8 +4089,9 @@ body:has(.imp) {
   color: var(--imp-texto-2);
 }
 /* «Nadie nace imparable. Se hace.», at the foot of the cover (2026-10-28) */
+/* Well under the button and its price line, giving them room. */
 .imp-hero-close {
-  margin: 22px 0 0;
+  margin: 44px 0 0;
   font-family: var(--imp-display), Georgia, serif;
   line-height: 1.15;
   text-wrap: balance;

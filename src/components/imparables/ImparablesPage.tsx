@@ -211,15 +211,8 @@ export default function ImparablesPage({
               </p>
             </div>
           )}
-          {/* Who organizes it, at the foot of the cover (2026-10-28: it was
-              «Nail Fest presenta», above the name). */}
-          <p className="imp-organiza">
-            Organiza
-            {/* eslint-disable-next-line @next/next/no-img-element -- fixed logo mark */}
-            <img src="/logo.png" alt={brandName} />
-          </p>
-          {/* «Nadie nace imparable. Se hace.», right under who organizes it
-              (2026-10-28: it used to close the page). */}
+          {/* «Nadie nace imparable. Se hace.», under the button and its price
+              line (2026-10-28: it used to close the page). */}
           <p className="imp-hero-close">
             {closing.length === 2 ? (
               <>
@@ -229,6 +222,13 @@ export default function ImparablesPage({
             ) : (
               <span className="imp-gold">{closing[0]}</span>
             )}
+          </p>
+          {/* Who organizes it, last on the cover, as its signature (2026-10-28:
+              it was «Nail Fest presenta», above the name). */}
+          <p className="imp-organiza">
+            Organiza
+            {/* eslint-disable-next-line @next/next/no-img-element -- fixed logo mark */}
+            <img src="/logo.png" alt={brandName} />
           </p>
         </div>
       </section>
