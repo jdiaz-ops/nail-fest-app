@@ -7,6 +7,7 @@ import { coverName, type EventWhen } from "@/lib/imparables/schedule";
 import { dayMonth, pesos, saving, untilDay, type SalesState } from "@/lib/imparables/stages";
 import { utcToZonedInputValue } from "@/lib/dateFormat";
 import { castLine, castOf, coverOf, panelOf } from "@/lib/imparables/blocks";
+import { splitTagline } from "@/lib/imparables/tagline";
 import ImparablesBlocks from "./ImparablesBlocks";
 import { ImpIcon, Tiara } from "./ImpArt";
 import ImpButton from "./ImpButton";
@@ -99,6 +100,7 @@ export default function ImparablesPage({
   const pill = [kind, when.compact].filter((part): part is string => Boolean(part));
 
   const { cover, rest } = coverOf(blocks);
+  const { pillars, tagline } = splitTagline(event.subtitle ?? "");
   const { speakers } = castOf(blocks);
   const panel = panelOf(rest);
   // Whose photo goes next to a name on the cards: the speakers', and the panel's guests already named.
@@ -178,9 +180,9 @@ export default function ImparablesPage({
           </div>
           <Tiara />
           <ImpTitle pre={pre} big={big} />
-          {event.subtitle && (
+          {tagline && (
             // Sanitized before storage (lib/events.ts), like every event's tagline.
-            <div className="imp-tag" dangerouslySetInnerHTML={{ __html: event.subtitle }} />
+            <div className="imp-tag" dangerouslySetInnerHTML={{ __html: tagline }} />
           )}
           {/* Right before the group photo (2026-10-28): what it is and when, before who. */}
           {pill.length > 0 && (
@@ -202,6 +204,8 @@ export default function ImparablesPage({
               <img src={cover.url} alt={cover.caption || [line.names, line.also].filter(Boolean).join(", ")} />
             </figure>
           )}
+          {/* «Mentalidad · Dinero · Marketing», under the group photo (2026-10-28). */}
+          {pillars && <div className="imp-pillars" dangerouslySetInnerHTML={{ __html: pillars }} />}
           {cta}
           {mode === "closed" && <p className="imp-closed-note">La venta de boletas está cerrada.</p>}
           {/* Under the button: until when today's price holds and what comes

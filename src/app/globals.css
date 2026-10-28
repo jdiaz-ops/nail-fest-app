@@ -3994,23 +3994,11 @@ body:has(.imp) {
 }
 /* Under the name, counted from the end of the event's tagline (2026-10-28):
    the last paragraph, smaller, any bold words in bronze; the one before it,
-   the headline, in the titles' face («Deja de pensar en pequeño.»); a third
-   one before them, part of the name itself — spaced capitals like
-   «Manicuristas» above it («Mentalidad · Dinero · Marketing»). */
+   the headline, in the titles' face («Deja de pensar en pequeño.»). A third
+   one before them, the pillars, goes under the group photo (.imp-pillars,
+   lib/imparables/tagline.ts). */
 .imp-tag:has(> p + p) {
   max-width: 36ch;
-}
-.imp-tag:has(> p:nth-last-child(3)) {
-  margin-top: 8px;
-}
-.imp-tag > p:nth-last-child(3) {
-  font-family: var(--imp-display), Georgia, serif;
-  font-weight: 700;
-  font-size: 12px;
-  letter-spacing: 0.2em;
-  text-indent: 0.2em;
-  text-transform: uppercase;
-  color: var(--imp-texto);
 }
 .imp-tag > p:nth-last-child(2) {
   font-family: var(--imp-display), Georgia, serif;
@@ -4018,9 +4006,6 @@ body:has(.imp) {
   font-size: 27px;
   line-height: 1.16;
   color: var(--imp-texto);
-}
-.imp-tag > p:nth-last-child(3) + p {
-  margin-top: 26px;
 }
 .imp-tag > p:last-child:not(:only-child) {
   margin-top: 14px;
@@ -4050,6 +4035,19 @@ body:has(.imp) {
   line-height: 1.45;
   color: var(--imp-texto);
   text-wrap: balance;
+}
+
+/* «Mentalidad · Dinero · Marketing», under the group photo (2026-10-28):
+   spaced capitals in the titles' face, like «Manicuristas» */
+.imp-pillars p {
+  margin: 12px 0 0;
+  font-family: var(--imp-display), Georgia, serif;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.2em;
+  text-indent: 0.2em;
+  text-transform: uppercase;
+  color: var(--imp-texto);
 }
 
 /* The cover's group photo, and who is in it */
@@ -5594,7 +5592,7 @@ body:has(.imp) {
   .imp-tag:has(> p + p) {
     max-width: 680px;
   }
-  .imp-tag > p:nth-last-child(3) {
+  .imp-pillars p {
     font-size: 16px;
     letter-spacing: 0.3em;
     text-indent: 0.3em;

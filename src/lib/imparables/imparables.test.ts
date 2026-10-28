@@ -6,6 +6,7 @@ import { emptyAgendaRow, parseLandingBlocks, type AgendaLandingBlock, type Landi
 import { castLine, castOf, coverOf, isPanelCard, namesIn, panelGuestsOf, panelOf, routeOf } from "./blocks";
 import { agendaInstant, coverName, dayEnd, eventWhen, readClock } from "./schedule";
 import { pesos, salesState, saving, untilDay, type StageTicketType } from "./stages";
+import { splitTagline } from "./tagline";
 import { IMPARABLES_BLOCKS, IMPARABLES_FIELDS, IMPARABLES_GROUP_PHOTO, IMPARABLES_PANELISTS, IMPARABLES_SPEAKERS, IMPARABLES_STAGES } from "./template";
 
 const TZ = "America/Bogota";
@@ -226,6 +227,31 @@ describe("how the page reads the blocks", () => {
     expect(namesIn("Fabi, Alejandro Salinas y Oskar")).toEqual(["Fabi", "Alejandro Salinas", "Oskar"]);
     expect(namesIn("Juan Tenorio, Pau y el panel")).toEqual(["Juan Tenorio", "Pau", "el panel"]);
     expect(namesIn("  ")).toEqual([]);
+  });
+});
+
+describe("the cover's tagline", () => {
+  it("takes the pillars out, for under the group photo", () => {
+    expect(splitTagline(IMPARABLES_FIELDS.subtitle)).toEqual({
+      pillars: "<p>Mentalidad · Dinero · Marketing</p>",
+      tagline:
+        "<p>Deja de pensar en pequeño.</p><p>Inspírate en quienes empezaron desde abajo, con tus mismos miedos, y hoy tienen el negocio y la vida que sueñas. <strong>Aprende cómo lo hicieron y replica sus estrategias para ganar</strong>.</p>",
+    });
+  });
+
+  it("leaves a tagline without pillars as it is", () => {
+    expect(splitTagline("<p>Deja de pensar en pequeño.</p><p>Aprende.</p>")).toEqual({
+      pillars: null,
+      tagline: "<p>Deja de pensar en pequeño.</p><p>Aprende.</p>",
+    });
+    expect(splitTagline("Una sola línea")).toEqual({ pillars: null, tagline: "Una sola línea" });
+  });
+
+  it("counts from the end, and keeps whatever comes before the pillars", () => {
+    expect(splitTagline('<p>a</p><p class="x">b</p><p>c</p><p>d</p>')).toEqual({
+      pillars: '<p class="x">b</p>',
+      tagline: "<p>a</p><p>c</p><p>d</p>",
+    });
   });
 });
 
