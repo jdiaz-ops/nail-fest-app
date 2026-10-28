@@ -41,7 +41,14 @@ export type SegmentCondition =
   // No es multi-select como los demás — un propósito + estado por
   // condición, ya que "marketing inactivo O whatsapp inactivo" no es un
   // caso real que este constructor necesite resolver hoy.
-  | { field: "consent"; purpose: ConsentPurpose; state: "active" | "inactive" };
+  | { field: "consent"; purpose: ConsentPurpose; state: "active" | "inactive" }
+  // Specific people, picked one by one with SegmentComposer's search box
+  // (phone, email or name — see personSearch.ts). Holds Person ids, not
+  // the phone/email that found them, so correcting someone's contact
+  // details later never drops them from a segment. OR'd like every other
+  // multi-value condition: on its own in `include`, the segment is
+  // exactly these people; in `exclude`, it takes them out of a bigger one.
+  | { field: "person"; personIds: string[] };
 
 export interface SegmentFilter {
   include: SegmentCondition[];
@@ -76,6 +83,8 @@ function normalizeCondition(raw: any): SegmentCondition {
       return { field: "phoneCountry", codes: raw.codes ?? [] };
     case "country":
       return { field: "country", countries: raw.countries ?? [] };
+    case "person":
+      return { field: "person", personIds: raw.personIds ?? [] };
     case "consent": {
       const validPurposes: ConsentPurpose[] = ["LOGISTICS", "MARKETING", "ADVERTISING", "WHATSAPP"];
       const purpose: ConsentPurpose = validPurposes.includes(raw.purpose) ? raw.purpose : "MARKETING";

@@ -95,6 +95,17 @@ async function matchingPersonIds(condition: SegmentCondition): Promise<Set<strin
       });
       return new Set(rows.map((r) => r.id));
     }
+    case "person": {
+      if (condition.personIds.length === 0) return new Set();
+      // Looked up rather than trusted as-is — countSegment counts these
+      // ids straight off the set, so someone no longer in the CRM must
+      // not keep counting toward the segment's size.
+      const rows = await db.person.findMany({
+        where: { id: { in: condition.personIds } },
+        select: { id: true },
+      });
+      return new Set(rows.map((r) => r.id));
+    }
     case "consent": {
       // "Active" = latest Consent row for this purpose is granted and not
       // revoked (same "latest row wins" rule as hasActiveConsent/

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { normalizeFilter, type SegmentFilter } from "@/lib/segments/normalize";
 import { COUNTRY_CODES } from "@/lib/countryCodes";
 import { WORLD_COUNTRIES } from "@/lib/worldCountries";
+import SegmentPersonPicker, { pendingPerson, type PickedPerson } from "./SegmentPersonPicker";
 
 // What editing an existing segment needs from the caller — the raw stored
 // filter (either shape; normalizeFilter below handles pre-multi-select
@@ -113,6 +114,8 @@ const CONSENT_OPTIONS: { value: string; label: string }[] = [
 
 const emptyForm = {
   name: "",
+  includePeople: [] as PickedPerson[],
+  excludePeople: [] as PickedPerson[],
   includeEvent: [] as string[],
   includeAttended: [] as string[],
   includeCity: [] as string[],
@@ -134,6 +137,8 @@ const emptyForm = {
 export default function SegmentComposer({ events, professionOptions, cityOptions, labelOptions, editingSegment, onDone }: Props) {
   const router = useRouter();
   const [name, setName] = useState("");
+  const [includePeople, setIncludePeople] = useState<PickedPerson[]>([]);
+  const [excludePeople, setExcludePeople] = useState<PickedPerson[]>([]);
   const [includeEvent, setIncludeEvent] = useState<string[]>([]);
   const [includeAttended, setIncludeAttended] = useState<string[]>([]);
   const [includeCity, setIncludeCity] = useState<string[]>([]);
@@ -161,6 +166,8 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
   useEffect(() => {
     if (!editingSegment) {
       setName(emptyForm.name);
+      setIncludePeople(emptyForm.includePeople);
+      setExcludePeople(emptyForm.excludePeople);
       setIncludeEvent(emptyForm.includeEvent);
       setIncludeAttended(emptyForm.includeAttended);
       setIncludeCity(emptyForm.includeCity);
@@ -180,7 +187,11 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
       return;
     }
     const normalized = normalizeFilter(editingSegment.filter as SegmentFilter);
+    const includePersonIds = extract(normalized.include, "person", "personIds");
+    const excludePersonIds = extract(normalized.exclude, "person", "personIds");
     setName(editingSegment.name);
+    setIncludePeople(includePersonIds.map(pendingPerson));
+    setExcludePeople(excludePersonIds.map(pendingPerson));
     setIncludeEvent(extract(normalized.include, "event", "eventSlugs"));
     setIncludeAttended(extract(normalized.include, "attended", "eventSlugs"));
     setIncludeCity(extract(normalized.include, "city", "cities"));
@@ -198,6 +209,33 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
     setExcludeCountry(extract(normalized.exclude, "country", "countries"));
     setExcludeConsent(extractConsent(normalized.exclude, "consent"));
     setResult(null);
+
+    // "Personas específicas" are stored as bare ids — look up who they are
+    // so the chips read as people again. Until this lands (or if it
+    // fails), the pendingPerson stand-ins keep every id in the filter;
+    // once it does, an id that matched nobody (no longer in the CRM) is
+    // dropped rather than left loading forever. Functional updates, so a
+    // chip added or removed meanwhile isn't overwritten.
+    const personIds = [...includePersonIds, ...excludePersonIds];
+    if (personIds.length === 0) return;
+    let ignore = false;
+    fetch("/api/admin/segments/people", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: personIds }),
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body: { people?: PickedPerson[] } | null) => {
+        if (ignore || !body?.people) return;
+        const byId = new Map(body.people.map((p) => [p.id, p]));
+        const fill = (prev: PickedPerson[]) => prev.flatMap((p) => byId.get(p.id) ?? (p.email ? [p] : []));
+        setIncludePeople(fill);
+        setExcludePeople(fill);
+      })
+      .catch(() => {});
+    return () => {
+      ignore = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editingSegment?.id]);
 
@@ -210,6 +248,7 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
   // you're out.
   const filter = useMemo(() => {
     const include = [
+      includePeople.length ? { field: "person", personIds: includePeople.map((p) => p.id) } : null,
       includeEvent.length ? { field: "event", eventSlugs: includeEvent } : null,
       includeAttended.length ? { field: "attended", eventSlugs: includeAttended } : null,
       includeCity.length ? { field: "city", cities: includeCity } : null,
@@ -220,6 +259,7 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
       parseConsentValue(includeConsent),
     ].filter(Boolean);
     const exclude = [
+      excludePeople.length ? { field: "person", personIds: excludePeople.map((p) => p.id) } : null,
       excludeEvent.length ? { field: "event", eventSlugs: excludeEvent } : null,
       excludeAttended.length ? { field: "attended", eventSlugs: excludeAttended } : null,
       excludeCity.length ? { field: "city", cities: excludeCity } : null,
@@ -231,6 +271,8 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
     ].filter(Boolean);
     return { include, exclude };
   }, [
+    includePeople,
+    excludePeople,
     includeEvent,
     includeAttended,
     includeCity,
@@ -308,6 +350,8 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
         onDone?.();
       } else {
         setName("");
+        setIncludePeople([]);
+        setExcludePeople([]);
         setIncludeEvent([]);
         setIncludeAttended([]);
         setIncludeCity([]);
@@ -380,6 +424,10 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
               Incluir
             </div>
             <div className="field">
+              <label>Personas específicas</label>
+              <SegmentPersonPicker selected={includePeople} onChange={setIncludePeople} />
+            </div>
+            <div className="field">
               <label>Registrados a estos eventos</label>
               <MultiCheckList options={eventOptions} selected={includeEvent} onChange={setIncludeEvent} emptyLabel="No hay eventos todavía." />
             </div>
@@ -423,6 +471,10 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
           <div>
             <div style={{ fontSize: 12, fontWeight: 600, color: "#5b5f6b", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 8 }}>
               Excluir
+            </div>
+            <div className="field">
+              <label>Personas específicas</label>
+              <SegmentPersonPicker selected={excludePeople} onChange={setExcludePeople} />
             </div>
             <div className="field">
               <label>Registrados a estos eventos</label>
