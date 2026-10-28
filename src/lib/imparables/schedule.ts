@@ -61,8 +61,6 @@ export interface EventWhen {
   dates: string;
   /** "9:00 a. m. a 2:00 p. m." when every day keeps the same hours, else null. */
   hours: string | null;
-  /** "9:00 a. m.": when the first day opens (the cover's pill). */
-  opens: string;
   /** "27 y 28 de junio" */
   short: string;
   /** "27 y 28 de junio de 2027": the cover's, as short as it gets in plain Spanish. */
@@ -85,14 +83,12 @@ export function eventWhen(event: { startsAt: Date; endsAt: Date | null; schedule
       closesAt: new Date(d.closesAt).toISOString(),
     }));
   let days: LocalTime[];
-  let opens: string;
   let hours: string | null = null;
   let span: EventWhen["span"] = null;
   let endOf: (date: string) => string | null;
   if (spans.length > 0) {
     days = spans.map((s) => s.opens);
     const first = spans[0]!;
-    opens = clock(first.opens.hour, first.opens.minute);
     const same = spans.every((s) => s.opens.hour === first.opens.hour && s.opens.minute === first.opens.minute && s.closes.hour === first.closes.hour && s.closes.minute === first.closes.minute);
     if (same) {
       hours = `${clock(first.opens.hour, first.opens.minute)} a ${clock(first.closes.hour, first.closes.minute)}`;
@@ -102,7 +98,6 @@ export function eventWhen(event: { startsAt: Date; endsAt: Date | null; schedule
   } else {
     const start = local(event.startsAt, timezone);
     const end = event.endsAt ? local(event.endsAt, timezone) : null;
-    opens = clock(start.hour, start.minute);
     days = [start];
     // Every date from the first to the last (a two-day congress written as one span).
     if (end && end.date > start.date) {
@@ -138,7 +133,7 @@ export function eventWhen(event: { startsAt: Date; endsAt: Date | null; schedule
     dates = sameMonth ? `del ${named(first)} al ${named(last)} ${monthYear}` : `del ${named(first)} de ${MONTHS[first.month]} al ${named(last)} ${monthYear}`;
     short = sameMonth ? `del ${first.day} al ${last.day} de ${MONTHS[last.month]}` : `del ${first.day} de ${MONTHS[first.month]} al ${last.day} de ${MONTHS[last.month]}`;
   }
-  return { dates: capitalize(dates), hours, opens, short, compact: compactDates(unique), days: unique.map((d) => d.date), span, ends: unique.map((d) => endOf(d.date)) };
+  return { dates: capitalize(dates), hours, short, compact: compactDates(unique), days: unique.map((d) => d.date), span, ends: unique.map((d) => endOf(d.date)) };
 }
 
 /** "27 de junio de 2027", "27 y 28 de junio de 2027", "27 al 29 de junio de 2027",

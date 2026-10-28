@@ -93,10 +93,10 @@ export default function ImparablesPage({
   const big = words.pop() ?? event.displayName;
   const pre = words.join(" ");
   const liveNote = event.format === "IN_PERSON" ? "" : "100% en vivo, desde tu celular";
-  // The pill over the cover's button (2026-10-28): how, when and from where — no platform named.
+  // The pill right before the group photo (2026-10-28): what it is and when — no platform named.
   const place = event.venueName || event.city;
   const kind = event.format === "VIRTUAL" ? "Congreso virtual" : event.format === "HYBRID" ? `Presencial${place ? ` en ${place}` : ""} y virtual` : place;
-  const pill = [kind, when.short, when.opens, liveNote].filter((part): part is string => Boolean(part));
+  const pill = [kind, when.compact].filter((part): part is string => Boolean(part));
 
   const { cover, rest } = coverOf(blocks);
   const { speakers } = castOf(blocks);
@@ -182,15 +182,7 @@ export default function ImparablesPage({
             // Sanitized before storage (lib/events.ts), like every event's tagline.
             <div className="imp-tag" dangerouslySetInnerHTML={{ __html: event.subtitle }} />
           )}
-          {cover && (
-            // The group photo (2026-10-28: back from a strip of portraits).
-            // Who is in it goes only to those who can't see it.
-            <figure className="imp-group">
-              {/* eslint-disable-next-line @next/next/no-img-element -- admin-uploaded photo, arbitrary Blob URL */}
-              <img src={cover.url} alt={cover.caption || [line.names, line.also].filter(Boolean).join(", ")} />
-            </figure>
-          )}
-          {/* Right over the button (2026-10-28): when and how, as she decides. */}
+          {/* Right before the group photo (2026-10-28): what it is and when, before who. */}
           {pill.length > 0 && (
             <p className="imp-pill">
               {pill.map((part, i) => (
@@ -201,6 +193,14 @@ export default function ImparablesPage({
                 </Fragment>
               ))}
             </p>
+          )}
+          {cover && (
+            // The group photo (2026-10-28: back from a strip of portraits).
+            // Who is in it goes only to those who can't see it.
+            <figure className="imp-group">
+              {/* eslint-disable-next-line @next/next/no-img-element -- admin-uploaded photo, arbitrary Blob URL */}
+              <img src={cover.url} alt={cover.caption || [line.names, line.also].filter(Boolean).join(", ")} />
+            </figure>
           )}
           {cta}
           {mode === "closed" && <p className="imp-closed-note">La venta de boletas está cerrada.</p>}

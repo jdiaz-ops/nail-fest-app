@@ -4033,14 +4033,14 @@ body:has(.imp) {
   font-weight: 800;
   color: var(--imp-resalte);
 }
-/* The pill over the cover's button: how, when and from where (2026-10-28) */
+/* The pill right before the group photo: what it is and when (2026-10-28) */
 .imp-pill span {
   white-space: nowrap;
 }
 .imp-pill {
   display: inline-block;
   max-width: 100%;
-  margin: 16px auto 0;
+  margin: 22px auto 0;
   padding: 7px 16px;
   border: 1px solid var(--imp-borde-claro);
   border-radius: 20px;

@@ -131,7 +131,6 @@ describe("eventWhen", () => {
     expect(when).toEqual({
       dates: "Domingo 27 y lunes 28 de junio de 2027",
       hours: "9:00 a. m. a 2:00 p. m.",
-      opens: "9:00 a. m.",
       short: "27 y 28 de junio",
       compact: "27 y 28 de junio de 2027",
       days: ["2027-06-27", "2027-06-28"],
