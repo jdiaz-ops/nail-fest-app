@@ -5582,13 +5582,17 @@ body:has(.imp) {
   font-variant-numeric: tabular-nums;
   color: var(--imp-resalte);
 }
-.imp-st-p b small {
+/* The regular price, struck, beside today's (2026-10-28) */
+.imp-st-p b s {
+  margin-right: 3px;
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 600;
+  color: var(--imp-texto-2);
 }
 .imp-st-p span {
-  font-size: 13px;
-  color: var(--imp-texto-2);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--imp-resalte);
 }
 .imp-st-b {
   flex: none;
@@ -5602,6 +5606,19 @@ body:has(.imp) {
   font-weight: 800;
   text-decoration: none;
   cursor: pointer;
+}
+/* A narrow phone: the bar's button and price a notch smaller, so neither crowds the other. */
+@media (max-width: 380px) {
+  .imp-st-p b {
+    font-size: 18px;
+  }
+  .imp-st-p b s {
+    font-size: 13px;
+  }
+  .imp-st-b {
+    padding: 13px 14px;
+    font-size: 15px;
+  }
 }
 .imp-st-b:hover {
   background: var(--imp-oro-hover);

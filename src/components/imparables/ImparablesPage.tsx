@@ -117,22 +117,9 @@ export default function ImparablesPage({
   const closing = twoLines(event.closingText?.trim() || `Nos vemos el ${when.short}.`);
   // The lowest price the congress will have, when the one about to open is it.
   const opensCheapest = next && sales.stages.every((s) => s.state === "past" || s.price >= next.price);
-  // Under the bar's price: the regular one struck with what today's saves —
-  // or, with no regular price to tell it against, what comes after. Struck,
-  // it needs no words: with «Quiero mi cupo» the bar has room for one line.
+  // Beside the bar's price, the regular one struck, when today's is lower
+  // (2026-10-28: the saving itself isn't spelled out any more).
   const save = current ? saving(current, sales.normal) : 0;
-  const barNote =
-    save > 0 ? (
-      <>
-        <s>{pesos(sales.normal!.price)}</s> · ahorras {pesos(save)}
-      </>
-    ) : next ? (
-      `Después sube a ${pesos(next.price)}`
-    ) : current && current.id === sales.normal?.id ? (
-      "El precio durante el congreso"
-    ) : (
-      "El último precio antes del congreso"
-    );
   // The team's preview of another day runs its countdowns on that day's clock.
   const offsetMs = preview?.simulated ? now.getTime() - Date.now() : 0;
 
@@ -284,10 +271,10 @@ export default function ImparablesPage({
           <div className="imp-sticky-in">
             <div className="imp-st-p">
               <b>
-                {/* The stage's name smaller, so «Etapa Creyente» fits beside the price (2026-10-28). */}
-                {pesos(current.price)} <small>· {current.name}</small>
+                {save > 0 && <s>{pesos(sales.normal!.price)}</s>} {pesos(current.price)}
               </b>
-              <span>{barNote}</span>
+              {/* The stage's name under the price (2026-10-28). */}
+              <span>{current.name}</span>
             </div>
             <ImpButton action="buy" className="imp-st-b">
               {buyLabel}
