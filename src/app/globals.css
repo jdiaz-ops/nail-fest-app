@@ -3947,13 +3947,14 @@ body:has(.imp) {
   margin: 8px 0 0;
   font-weight: inherit;
 }
+/* «Manicuristas», bigger and bolder since 2026-10-28: it was getting lost over «Imparables». */
 .imp-pre {
   display: block;
   font-family: var(--imp-display), Georgia, serif;
-  font-weight: 700;
-  font-size: 15px;
-  letter-spacing: 0.36em;
-  text-indent: 0.36em;
+  font-weight: 800;
+  font-size: 24px;
+  letter-spacing: 0.24em;
+  text-indent: 0.24em;
   text-transform: uppercase;
   color: var(--imp-texto);
 }
@@ -3999,8 +4000,8 @@ body:has(.imp) {
 /* The line under the headline, strong (2026-10-28): bigger, in the cover's ink. */
 .imp-tag > p:last-child:not(:only-child) {
   margin-top: 18px;
-  font-size: 19px;
-  font-weight: 500;
+  font-size: 21px;
+  font-weight: 600;
   line-height: 1.45;
   color: var(--imp-texto);
 }
@@ -4092,7 +4093,8 @@ body:has(.imp) {
   justify-content: center;
   align-items: center;
   gap: 8px;
-  margin: 20px 0 0;
+  /* Well under the button and its price line, giving them room (2026-10-28). */
+  margin: 44px 0 0;
   font-size: 10.5px;
   font-weight: 800;
   letter-spacing: 0.14em;
@@ -5615,7 +5617,7 @@ body:has(.imp) {
     font-size: 112px;
   }
   .imp-pre {
-    font-size: 19px;
+    font-size: 30px;
   }
   .imp-tag {
     font-size: 21px;
@@ -5635,7 +5637,7 @@ body:has(.imp) {
     max-width: 32em;
     margin-left: auto;
     margin-right: auto;
-    font-size: 21px;
+    font-size: 23px;
   }
   .imp-pill-date {
     font-size: 28px;
