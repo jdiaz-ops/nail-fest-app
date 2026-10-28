@@ -308,7 +308,7 @@ describe("the template", () => {
 
   it("opens the cover with its headline, then why and what for — and closes with «Nadie nace imparable»", () => {
     expect(IMPARABLES_FIELDS.subtitle).toBe(
-      "<p>Mentalidad · Dinero · Marketing</p><p>Deja de pensar en pequeño.</p><p>En 2 días aprende de quienes empezaron desde abajo, con miedos, y hoy tienen el negocio y la vida que sueñas: <strong>cómo lo hicieron y sus estrategias para ganar</strong>.</p>"
+      "<p>Mentalidad · Dinero · Marketing</p><p>Deja de pensar en pequeño.</p><p>Inspírate en quienes empezaron desde abajo, con tus mismos miedos, y hoy tienen el negocio y la vida que sueñas. <strong>Aprende cómo lo hicieron y replica sus estrategias para ganar</strong>.</p>"
     );
     expect(IMPARABLES_FIELDS.closingText).toBe("Nadie nace imparable. Se hace.");
     expect(IMPARABLES_FIELDS.registerButtonLabel).toBe("Quiero hacerlo diferente");
