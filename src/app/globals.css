@@ -3911,7 +3911,7 @@ body:has(.imp) {
   justify-content: center;
   min-height: 100vh;
   min-height: 100svh;
-  padding: 16px 22px 34px;
+  padding: 10px 22px 16px;
 }
 .imp-hero-in {
   position: relative;
@@ -3941,10 +3941,12 @@ body:has(.imp) {
 }
 /* Nothing above the cover's arc any more (2026-10-28): it starts right at the top. */
 .imp-hero .imp-tiara {
+  width: 140px;
+  height: 38px;
   margin-top: 4px;
 }
 .imp-name {
-  margin: 8px 0 0;
+  margin: 4px 0 0;
   font-weight: inherit;
 }
 /* «Manicuristas», bigger and bolder since 2026-10-28: it was getting lost over «Imparables». */
@@ -3952,7 +3954,7 @@ body:has(.imp) {
   display: block;
   font-family: var(--imp-display), Georgia, serif;
   font-weight: 800;
-  font-size: 24px;
+  font-size: 20px;
   letter-spacing: 0.24em;
   text-indent: 0.24em;
   text-transform: uppercase;
@@ -3971,7 +3973,7 @@ body:has(.imp) {
   text-transform: uppercase;
 }
 .imp-tag {
-  margin: 22px auto 0;
+  margin: 14px auto 0;
   max-width: 36ch;
   font-size: 18px;
   line-height: 1.42;
@@ -3987,9 +3989,9 @@ body:has(.imp) {
    under the group photo (.imp-pillars) — see lib/imparables/tagline.ts. */
 /* Strong, it's the cover's message now (2026-10-28): big, in the cover's ink. */
 .imp-tag > p:last-child {
-  font-size: 22px;
+  font-size: 17px;
   font-weight: 600;
-  line-height: 1.42;
+  line-height: 1.4;
   color: var(--imp-texto);
 }
 .imp-tag > p:last-child strong {
@@ -4004,8 +4006,8 @@ body:has(.imp) {
   align-items: center;
   gap: 3px;
   max-width: 100%;
-  margin: 28px auto 0;
-  padding: 11px 26px 12px;
+  margin: 16px auto 0;
+  padding: 8px 22px 9px;
   border: 1px solid var(--imp-borde-claro);
   border-radius: 18px;
   background: var(--imp-hueso-tarjeta);
@@ -4014,18 +4016,18 @@ body:has(.imp) {
   text-wrap: balance;
 }
 .imp-pill-date {
-  font-size: 24px;
+  font-size: 19px;
   font-weight: 700;
 }
 .imp-pill-note {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
 }
 
 /* «Mentalidad · Dinero · Marketing», under the group photo (2026-10-28):
    spaced capitals in the titles' face, like «Manicuristas» */
 .imp-pillars p {
-  margin: 12px 0 0;
+  margin: 8px 0 0;
   font-family: var(--imp-display), Georgia, serif;
   font-weight: 700;
   font-size: 12px;
@@ -4038,14 +4040,19 @@ body:has(.imp) {
 /* The cover's group photo, and who is in it */
 .imp-group {
   position: relative;
-  margin: 20px -22px 0;
+  margin: 12px -22px 0;
 }
 .imp-group img {
   position: relative;
   display: block;
-  width: 100%;
-  max-width: 520px;
+  width: auto;
+  max-width: min(100%, 520px);
   height: auto;
+  /* The photo gives way so the whole cover fits the first screen (2026-10-28):
+     what's left of the screen's height after the cover's other parts
+     (about 606px of them on a phone), never smaller than 110px. */
+  max-height: clamp(110px, calc(100vh - 606px), 260px);
+  max-height: clamp(110px, calc(100svh - 606px), 260px);
   margin: 0 auto;
   -webkit-mask-image: linear-gradient(180deg, #000 68%, transparent 98%);
   mask-image: linear-gradient(180deg, #000 68%, transparent 98%);
@@ -4055,7 +4062,7 @@ body:has(.imp) {
 .imp-deal {
   display: grid;
   gap: 4px;
-  margin-top: 12px;
+  margin-top: 8px;
   font-size: 14px;
   line-height: 1.45;
   color: var(--imp-texto-2);
@@ -4072,7 +4079,7 @@ body:has(.imp) {
   color: var(--imp-resalte);
 }
 .imp-deal-until {
-  font-size: 13px;
+  font-size: 14px;
 }
 /* Who organizes it, under the button: «Organiza» and the small logo */
 .imp-organiza {
@@ -4081,8 +4088,8 @@ body:has(.imp) {
   align-items: center;
   gap: 8px;
   /* Last on the cover, under «Nadie nace imparable» (2026-10-28). */
-  margin: 30px 0 0;
-  font-size: 10.5px;
+  margin: 12px 0 0;
+  font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -4091,7 +4098,7 @@ body:has(.imp) {
 /* «Nadie nace imparable. Se hace.», at the foot of the cover (2026-10-28) */
 /* Well under the button and its price line, giving them room. */
 .imp-hero-close {
-  margin: 44px 0 0;
+  margin: 18px 0 0;
   font-family: var(--imp-display), Georgia, serif;
   line-height: 1.15;
   text-wrap: balance;
@@ -4099,15 +4106,15 @@ body:has(.imp) {
 .imp-hero-close span {
   display: block;
   font-weight: 700;
-  font-size: 20px;
+  font-size: 16px;
 }
 .imp-hero-close .imp-gold {
   margin-top: 2px;
   font-weight: 900;
-  font-size: 30px;
+  font-size: 24px;
 }
 .imp-organiza img {
-  height: 18px;
+  height: 16px;
   width: auto;
   /* In black on the light cover. */
   filter: brightness(0);
@@ -4155,6 +4162,11 @@ body:has(.imp) {
   font-size: 0.86em;
   font-weight: 600;
   opacity: 0.6;
+}
+/* A little tighter on the cover, so all of it fits the first screen. */
+.imp-hero .imp-cta {
+  margin-top: 14px;
+  padding: 15px 18px;
 }
 .imp-cta:hover {
   transform: translateY(-1px);
@@ -4631,7 +4643,7 @@ body:has(.imp) {
 .imp-sp-ig {
   display: inline-block;
   margin-top: 3px;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--imp-acento) !important;
   text-decoration: none;
@@ -4640,7 +4652,7 @@ body:has(.imp) {
 .imp-sp-line {
   margin: 6px 0 0;
   padding-bottom: 26px;
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1.45;
   color: var(--imp-texto-2);
 }
@@ -4696,21 +4708,21 @@ body:has(.imp) {
 }
 .imp-pn-t b {
   display: block;
-  font-size: 14.5px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.3;
 }
 .imp-pn-t span {
   display: block;
   margin-top: 3px;
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1.45;
   color: var(--imp-texto-2);
 }
 .imp-pn-ig {
   display: inline-block;
   margin-top: 1px;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--imp-acento) !important;
   text-decoration: none;
@@ -4719,7 +4731,7 @@ body:has(.imp) {
 /* A panelist still to be announced: «Por anunciar» over the story she brings. */
 .imp-pn--tba small {
   display: block;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -4727,7 +4739,7 @@ body:has(.imp) {
 }
 .imp-pn--tba span {
   margin-top: 2px;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
   color: var(--imp-texto);
 }
@@ -4761,7 +4773,7 @@ body:has(.imp) {
   object-fit: cover;
 }
 .imp-host-k {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -4776,14 +4788,14 @@ body:has(.imp) {
 .imp-host-ig {
   display: inline-block;
   margin-top: 2px;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--imp-acento) !important;
   text-decoration: none;
 }
 .imp-host-body {
   margin-top: 4px;
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1.45;
   color: var(--imp-texto-2);
 }
@@ -4808,7 +4820,7 @@ body:has(.imp) {
 }
 .imp-day-h small {
   display: block;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -4841,7 +4853,7 @@ body:has(.imp) {
   flex: none;
   width: 56px;
   padding-top: 1px;
-  font-size: 13.5px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.15;
   font-variant-numeric: tabular-nums;
@@ -4849,7 +4861,7 @@ body:has(.imp) {
 }
 .imp-ag-time small {
   display: block;
-  font-size: 9.5px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--imp-texto-2);
 }
@@ -4858,14 +4870,14 @@ body:has(.imp) {
 }
 .imp-what b {
   display: block;
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 800;
   line-height: 1.3;
 }
 .imp-what > span {
   display: block;
   margin-top: 3px;
-  font-size: 12.5px;
+  font-size: 15px;
   line-height: 1.45;
   color: var(--imp-texto-2);
 }
@@ -4883,7 +4895,7 @@ body:has(.imp) {
 /* A talk's small tag before its title: its step, or «Charla estrella» */
 .imp-what > .imp-ag-tag {
   margin: 0 0 4px;
-  font-size: 10.5px;
+  font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -4895,7 +4907,7 @@ body:has(.imp) {
   align-items: center;
   gap: 7px;
   margin-top: 7px;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--imp-acento);
 }
@@ -4919,7 +4931,7 @@ body:has(.imp) {
 .imp-what > .imp-ag-desc {
   display: block;
   margin-top: 4px;
-  font-size: 12.5px;
+  font-size: 15px;
   line-height: 1.45;
   color: var(--imp-texto-2);
 }
@@ -4929,7 +4941,7 @@ body:has(.imp) {
 .imp-ag-desc em {
   display: block;
   margin-top: 4px;
-  font-size: 11.5px;
+  font-size: 14px;
   font-style: normal;
   font-weight: 700;
   color: var(--imp-texto-3);
@@ -4981,7 +4993,7 @@ body:has(.imp) {
   align-items: center;
   gap: 10px;
   width: 100%;
-  font-size: 10.5px;
+  font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -4998,14 +5010,14 @@ body:has(.imp) {
 .imp-day-sub {
   display: block;
   margin-top: 6px;
-  font-size: 13px;
+  font-size: 15px;
   line-height: 1.5;
   color: var(--imp-texto-2);
 }
 .imp-route {
   display: block;
   margin-top: 8px;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 800;
   line-height: 1.5;
   color: var(--imp-acento);
@@ -5223,14 +5235,14 @@ body:has(.imp) {
 }
 .imp-inc b {
   display: block;
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 700;
   line-height: 1.35;
 }
 .imp-inc small {
   display: block;
   margin-top: 2px;
-  font-size: 13px;
+  font-size: 15px;
   color: var(--imp-texto-2);
 }
 
@@ -5395,7 +5407,7 @@ body:has(.imp) {
   align-items: center;
   gap: 14px;
   padding: 16px 2px;
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 700;
   list-style: none;
   cursor: pointer;
@@ -5430,7 +5442,7 @@ body:has(.imp) {
 .imp-faq-a {
   margin: 0;
   padding: 0 2px 16px;
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.6;
   color: var(--imp-texto-2);
   white-space: pre-line;
@@ -5471,7 +5483,7 @@ body:has(.imp) {
 }
 .imp-close-3 {
   margin-top: 14px;
-  font-size: 13px;
+  font-size: 15px;
   color: var(--imp-texto-2);
 }
 .imp-foot {
@@ -5481,7 +5493,7 @@ body:has(.imp) {
   align-items: center;
   gap: 8px;
   padding: 22px 22px 28px;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1.7;
   color: var(--imp-texto-3);
   text-align: center;
@@ -5542,7 +5554,7 @@ body:has(.imp) {
   padding: 7px 16px calc(8px + env(safe-area-inset-bottom));
   background: var(--imp-oro);
   color: var(--imp-negro);
-  font-size: 12.5px;
+  font-size: 14px;
   font-weight: 800;
   text-align: center;
 }
@@ -5575,7 +5587,7 @@ body:has(.imp) {
   font-weight: 700;
 }
 .imp-st-p span {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--imp-texto-2);
 }
 .imp-st-b {
