@@ -37,7 +37,7 @@ export interface ImparablesContext {
   when: EventWhen;
   timezone: string;
   now: Date;
-  /** "Quiero mi cupo": every buy button's label. */
+  /** "Reservar mi cupo": every buy button's label. */
   buyLabel: string;
   /** Whose photo goes next to a name on the cards: the speakers and the panel's guests already named. */
   speakers: PeopleLandingBlock["items"];

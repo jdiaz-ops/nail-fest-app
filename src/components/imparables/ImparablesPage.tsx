@@ -109,10 +109,10 @@ export default function ImparablesPage({
   const faces = [...speakers, ...(panel?.people.items.filter((p) => p.name.trim()) ?? [])];
   const line = castLine(blocks);
   // The cover's button (and the closing's) says what the event's label says
-  // («Reservar mi cupo», 2026-10-28); the price's and the bar's, a short one
-  // that fits the bar.
+  // («Reservar mi cupo», 2026-10-28); the price's and the bar's say the same
+  // since then.
   const heroLabel = event.registerButtonLabel?.trim() || "Quiero mi cupo";
-  const buyLabel = "Quiero mi cupo";
+  const buyLabel = "Reservar mi cupo";
   const { mode, current, next } = sales;
   const closing = twoLines(event.closingText?.trim() || `Nos vemos el ${when.short}.`);
   // The lowest price the congress will have, when the one about to open is it.
@@ -281,6 +281,10 @@ export default function ImparablesPage({
 
       {mode === "sale" && current && (
         <ImpStickyBar>
+          {/* Until when today's price holds, across the top of the bar (2026-10-28). */}
+          {current.closesAt && next && (
+            <p className="imp-st-up">Tarifa hasta el {untilDate(current.closesAt, timezone)}. ¡Luego sube!</p>
+          )}
           <div className="imp-sticky-in">
             <div className="imp-st-p">
               <b>
