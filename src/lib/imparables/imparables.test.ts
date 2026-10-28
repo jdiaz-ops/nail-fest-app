@@ -308,9 +308,7 @@ describe("the template", () => {
   });
 
   it("opens the cover with its headline, then why and what for — and closes with «Nadie nace imparable»", () => {
-    expect(IMPARABLES_FIELDS.subtitle).toBe(
-      "<p>Deja de pensar en pequeño.</p><p>Quienes hoy tienen el negocio y la vida que tú sueñas empezaron desde abajo, con tus mismos miedos y las mismas dificultades. Aprende de ellos cómo lo hicieron y las estrategias para ganar.</p>"
-    );
+    expect(IMPARABLES_FIELDS.subtitle).toBe("<p>Deja de pensar en pequeño.</p><p>En 2 días aprende de quienes empezaron desde abajo, con miedos, y hoy tienen el negocio y la vida que sueñas.</p>");
     expect(IMPARABLES_FIELDS.closingText).toBe("Nadie nace imparable. Se hace.");
     expect(IMPARABLES_FIELDS.registerButtonLabel).toBe("Quiero hacerlo diferente");
     // The line under the cover's strip of photos: the speakers, as the team calls them.
