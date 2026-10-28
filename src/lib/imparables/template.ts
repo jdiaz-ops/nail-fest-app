@@ -409,7 +409,7 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
 
 /** The event's own lines, set by the template only where the event has none of its own. */
 export const IMPARABLES_FIELDS = {
-  subtitle: "<p>El talento solo no paga las cuentas.</p><p>Tienes el talento. Si no cambias cómo piensas, vendes y cobras, <strong>nada va a cambiar</strong>. Dos días en vivo con quienes ya lo hicieron: <strong>Mentalidad · Dinero · Marketing</strong>.</p>",
+  subtitle: "<p>Deja de pensar en pequeño.</p><p>Quienes hoy tienen el negocio y la vida que tú sueñas empezaron desde abajo, con tus mismos miedos y las mismas dificultades. Aprende de ellos cómo lo hicieron y las estrategias para ganar.</p>",
   closingText: "Nadie nace imparable. Se hace.",
   registerButtonLabel: "Quiero hacerlo diferente",
   // «Texto debajo del botón»: on this cover, under the button with a shield —

@@ -3993,8 +3993,8 @@ body:has(.imp) {
   margin: 0;
 }
 /* A headline and a paragraph under the name (2026-10-27): the first, big
-   and black («El talento solo no paga las cuentas.»); the rest under it,
-   smaller, its bold words in bronze. */
+   and black («Deja de pensar en pequeño.»); the rest under it, smaller,
+   any bold words in bronze. */
 .imp-tag:has(> p + p) {
   max-width: 36ch;
 }
