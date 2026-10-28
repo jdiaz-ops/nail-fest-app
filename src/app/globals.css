@@ -3971,8 +3971,8 @@ body:has(.imp) {
   text-transform: uppercase;
 }
 .imp-tag {
-  margin: 18px auto 0;
-  max-width: 29ch;
+  margin: 22px auto 0;
+  max-width: 36ch;
   font-size: 18px;
   line-height: 1.42;
   font-weight: 600;
@@ -3982,30 +3982,17 @@ body:has(.imp) {
 .imp-tag p {
   margin: 0;
 }
-/* Under the name, counted from the end of the event's tagline (2026-10-28):
-   the last paragraph, smaller, any bold words in bronze; the one before it,
-   the headline, in the titles' face («Deja de pensar en pequeño.»). A third
-   one before them, the pillars, goes under the group photo (.imp-pillars,
-   lib/imparables/tagline.ts). */
-.imp-tag:has(> p + p) {
-  max-width: 36ch;
-}
-.imp-tag > p:nth-last-child(2) {
-  font-family: var(--imp-display), Georgia, serif;
-  font-weight: 800;
-  font-size: 33px;
-  line-height: 1.12;
-  color: var(--imp-texto);
-}
-/* The line under the headline, strong (2026-10-28): bigger, in the cover's ink. */
-.imp-tag > p:last-child:not(:only-child) {
-  margin-top: 18px;
-  font-size: 21px;
+/* Under the name, the last line of the event's tagline, any bold words in
+   bronze (2026-10-28). Its headline is off the cover, and its pillars go
+   under the group photo (.imp-pillars) — see lib/imparables/tagline.ts. */
+/* Strong, it's the cover's message now (2026-10-28): big, in the cover's ink. */
+.imp-tag > p:last-child {
+  font-size: 22px;
   font-weight: 600;
-  line-height: 1.45;
+  line-height: 1.42;
   color: var(--imp-texto);
 }
-.imp-tag > p:last-child:not(:only-child) strong {
+.imp-tag > p:last-child strong {
   font-weight: 800;
   color: var(--imp-resalte);
 }
@@ -4100,6 +4087,23 @@ body:has(.imp) {
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--imp-texto-2);
+}
+/* «Nadie nace imparable. Se hace.», at the foot of the cover (2026-10-28) */
+.imp-hero-close {
+  margin: 22px 0 0;
+  font-family: var(--imp-display), Georgia, serif;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+.imp-hero-close span {
+  display: block;
+  font-weight: 700;
+  font-size: 20px;
+}
+.imp-hero-close .imp-gold {
+  margin-top: 2px;
+  font-weight: 900;
+  font-size: 30px;
 }
 .imp-organiza img {
   height: 18px;
@@ -5464,20 +5468,6 @@ body:has(.imp) {
 .imp-close .imp-rays {
   top: 34px;
 }
-.imp-close-1 {
-  margin: 14px 0 0;
-  font-family: var(--imp-display), Georgia, serif;
-  font-weight: 700;
-  font-size: 22px;
-}
-.imp-close-2 {
-  margin: 4px 0 0;
-  font-family: var(--imp-display), Georgia, serif;
-  font-weight: 900;
-  font-size: 31px;
-  line-height: 1.12;
-  text-wrap: balance;
-}
 .imp-close-3 {
   margin-top: 14px;
   font-size: 13px;
@@ -5622,7 +5612,7 @@ body:has(.imp) {
   .imp-tag {
     font-size: 21px;
   }
-  .imp-tag:has(> p + p) {
+  .imp-tag {
     max-width: 680px;
   }
   .imp-pillars p {
@@ -5630,14 +5620,17 @@ body:has(.imp) {
     letter-spacing: 0.3em;
     text-indent: 0.3em;
   }
-  .imp-tag > p:nth-last-child(2) {
-    font-size: 44px;
-  }
-  .imp-tag > p:last-child:not(:only-child) {
+  .imp-tag > p:last-child {
     max-width: 32em;
     margin-left: auto;
     margin-right: auto;
-    font-size: 23px;
+    font-size: 25px;
+  }
+  .imp-hero-close span {
+    font-size: 24px;
+  }
+  .imp-hero-close .imp-gold {
+    font-size: 36px;
   }
   .imp-pill-date {
     font-size: 28px;
@@ -5734,9 +5727,6 @@ body:has(.imp) {
   }
   .imp-close {
     padding: 90px 40px 64px;
-  }
-  .imp-close-2 {
-    font-size: 44px;
   }
   .imp-sticky-in {
     max-width: 1040px;

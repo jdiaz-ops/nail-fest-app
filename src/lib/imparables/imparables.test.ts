@@ -236,27 +236,25 @@ describe("how the page reads the blocks", () => {
 });
 
 describe("the cover's tagline", () => {
-  it("takes the pillars out, for under the group photo", () => {
+  it("parts the pillars (under the group photo), the headline (off the cover) and the line under the name", () => {
     expect(splitTagline(IMPARABLES_FIELDS.subtitle)).toEqual({
       pillars: "<p>Mentalidad · Dinero · Marketing</p>",
-      tagline:
-        "<p>Deja de pensar en pequeño</p><p>Inspírate en quienes empezaron desde abajo, con tus mismos miedos, y hoy tienen el negocio y la vida que sueñas. <strong>Aprende cómo lo hicieron y replica sus estrategias para ganar</strong>.</p>",
+      headline: "<p>Deja de pensar en pequeño</p>",
+      line: "<p>Inspírate en quienes empezaron desde abajo, con tus mismos miedos, y hoy tienen el negocio y la vida que sueñas. <strong>Aprende cómo lo hicieron y replica sus estrategias para ganar</strong>.</p>",
     });
   });
 
-  it("leaves a tagline without pillars as it is", () => {
+  it("reads a shorter tagline from its end too", () => {
     expect(splitTagline("<p>Deja de pensar en pequeño.</p><p>Aprende.</p>")).toEqual({
       pillars: null,
-      tagline: "<p>Deja de pensar en pequeño.</p><p>Aprende.</p>",
+      headline: "<p>Deja de pensar en pequeño.</p>",
+      line: "<p>Aprende.</p>",
     });
-    expect(splitTagline("Una sola línea")).toEqual({ pillars: null, tagline: "Una sola línea" });
+    expect(splitTagline("Una sola línea")).toEqual({ pillars: null, headline: null, line: "Una sola línea" });
   });
 
-  it("counts from the end, and keeps whatever comes before the pillars", () => {
-    expect(splitTagline('<p>a</p><p class="x">b</p><p>c</p><p>d</p>')).toEqual({
-      pillars: '<p class="x">b</p>',
-      tagline: "<p>a</p><p>c</p><p>d</p>",
-    });
+  it("counts from the end", () => {
+    expect(splitTagline('<p>a</p><p class="x">b</p><p>c</p><p>d</p>')).toEqual({ pillars: '<p class="x">b</p>', headline: "<p>c</p>", line: "<p>d</p>" });
   });
 });
 
@@ -340,7 +338,7 @@ describe("the template", () => {
     }
   });
 
-  it("opens the cover with its headline, then why and what for — and closes with «Nadie nace imparable»", () => {
+  it("keeps the cover's tagline (its headline off the page for now) and «Nadie nace imparable» under the button", () => {
     expect(IMPARABLES_FIELDS.subtitle).toBe(
       "<p>Mentalidad · Dinero · Marketing</p><p>Deja de pensar en pequeño</p><p>Inspírate en quienes empezaron desde abajo, con tus mismos miedos, y hoy tienen el negocio y la vida que sueñas. <strong>Aprende cómo lo hicieron y replica sus estrategias para ganar</strong>.</p>"
     );

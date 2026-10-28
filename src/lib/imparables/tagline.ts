@@ -1,18 +1,19 @@
 // The event's tagline (Event.subtitle: sanitized HTML, one <p> per line)
-// is read counted from the end — see .imp-tag in globals.css: the last
-// paragraph is the line under the headline, the one before it the
-// headline, and a third one before them the pillars («Mentalidad · Dinero
-// · Marketing»). Since 2026-10-28 the pillars are told under the group
-// photo instead, so they come apart from the rest here; whatever else the
-// tagline holds stays where it was, untouched.
+// is read counted from the end: the last paragraph is the cover's line, the
+// one before it the headline, and a third one before them the pillars
+// («Mentalidad · Dinero · Marketing»). The pillars are told under the group
+// photo (2026-10-28), and the headline is no longer on the cover at all —
+// it stays in the tagline, so bringing it back is only a matter of showing
+// it again.
 const PARAGRAPH = /<p\b[^>]*>[\s\S]*?<\/p>/g;
 
-export function splitTagline(html: string): { pillars: string | null; tagline: string } {
-  const paragraphs = [...html.matchAll(PARAGRAPH)];
-  const pillars = paragraphs.length >= 3 ? paragraphs[paragraphs.length - 3] : undefined;
-  if (!pillars || pillars.index === undefined) return { pillars: null, tagline: html };
+export function splitTagline(html: string): { pillars: string | null; headline: string | null; line: string } {
+  const paragraphs = [...html.matchAll(PARAGRAPH)].map((m) => m[0]);
+  const n = paragraphs.length;
+  if (n === 0) return { pillars: null, headline: null, line: html };
   return {
-    pillars: pillars[0],
-    tagline: html.slice(0, pillars.index) + html.slice(pillars.index + pillars[0].length),
+    pillars: n >= 3 ? paragraphs[n - 3]! : null,
+    headline: n >= 2 ? paragraphs[n - 2]! : null,
+    line: paragraphs[n - 1]!,
   };
 }

@@ -102,7 +102,7 @@ export default function ImparablesPage({
   const pillNote = [kind, event.format === "VIRTUAL" ? "100% en vivo" : ""].filter(Boolean).join(" ");
 
   const { cover, rest } = coverOf(blocks);
-  const { pillars, tagline } = splitTagline(event.subtitle ?? "");
+  const { pillars, line: tagline } = splitTagline(event.subtitle ?? "");
   const { speakers } = castOf(blocks);
   const panel = panelOf(rest);
   // Whose photo goes next to a name on the cards: the speakers', and the panel's guests already named.
@@ -180,7 +180,8 @@ export default function ImparablesPage({
           <Tiara />
           <ImpTitle pre={pre} big={big} />
           {tagline && (
-            // Sanitized before storage (lib/events.ts), like every event's tagline.
+            // Its last line only, right under the name (2026-10-28: no headline
+            // above it any more). Sanitized before storage (lib/events.ts).
             <div className="imp-tag" dangerouslySetInnerHTML={{ __html: tagline }} />
           )}
           {/* Right before the group photo (2026-10-28): what it is and when, before who. */}
@@ -217,6 +218,18 @@ export default function ImparablesPage({
             {/* eslint-disable-next-line @next/next/no-img-element -- fixed logo mark */}
             <img src="/logo.png" alt={brandName} />
           </p>
+          {/* «Nadie nace imparable. Se hace.», right under who organizes it
+              (2026-10-28: it used to close the page). */}
+          <p className="imp-hero-close">
+            {closing.length === 2 ? (
+              <>
+                <span>{closing[0]}</span>
+                <span className="imp-gold">{closing[1]}</span>
+              </>
+            ) : (
+              <span className="imp-gold">{closing[0]}</span>
+            )}
+          </p>
         </div>
       </section>
 
@@ -239,15 +252,8 @@ export default function ImparablesPage({
       <section className="imp-close">
         <div className="imp-rays" aria-hidden="true" />
         <div className="imp-hero-in">
+          {/* Its words went up to the cover (2026-10-28): the arc, then the button. */}
           <Tiara />
-          {closing.length === 2 ? (
-            <>
-              <p className="imp-close-1">{closing[0]}</p>
-              <p className="imp-close-2 imp-gold">{closing[1]}</p>
-            </>
-          ) : (
-            <p className="imp-close-2 imp-gold">{closing[0]}</p>
-          )}
           {cta}
           <div className="imp-close-3">
             {capitalize(when.short)}
