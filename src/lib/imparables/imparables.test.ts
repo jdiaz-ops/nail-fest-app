@@ -205,7 +205,7 @@ describe("how the page reads the blocks", () => {
 
   it("names who is under the group photo", () => {
     expect(castLine(IMPARABLES_BLOCKS)).toEqual({
-      names: "Jimena Montalban, Paula Chacón, Cristina Sierra, Alejandro Salinas, Karen, Fabi Pinillo Martínez, Juan Tenorio y Oskar Garzón",
+      names: "Cristina Sierra, Jimena Montalban, Paula Chacón, Oskar Garzón, Juan Tenorio, Karen Pinzón, Fabi Pinillo Martínez y Alejandro Salinas",
       also: "con Heidy Aristizábal y el panel «El día que decidí cambiar»",
     });
   });
@@ -240,7 +240,7 @@ describe("the cover's tagline", () => {
     expect(splitTagline(IMPARABLES_FIELDS.subtitle)).toEqual({
       pillars: "<p>Mentalidad · Dinero · Marketing</p>",
       tagline:
-        "<p>Deja de pensar en pequeño.</p><p>Inspírate en quienes empezaron desde abajo, con tus mismos miedos, y hoy tienen el negocio y la vida que sueñas. <strong>Aprende cómo lo hicieron y replica sus estrategias para ganar</strong>.</p>",
+        "<p>Deja de pensar en pequeño</p><p>Inspírate en quienes empezaron desde abajo, con tus mismos miedos, y hoy tienen el negocio y la vida que sueñas. <strong>Aprende cómo lo hicieron y replica sus estrategias para ganar</strong>.</p>",
     });
   });
 
@@ -298,16 +298,18 @@ describe("the template", () => {
 
   it("has the 8 speakers and one panel, every photo in the app", () => {
     const { speakers, panels } = castOf(IMPARABLES_BLOCKS);
+    // In the team's order (2026-10-28).
     expect(speakers.map((s) => s.name)).toEqual([
+      "Cristina Sierra",
       "Jimena Montalban",
       "Paula Chacón",
-      "Cristina Sierra",
-      "Alejandro Salinas",
-      "Karen",
-      "Fabi Pinillo Martínez",
-      "Juan Tenorio",
       "Oskar Garzón",
+      "Juan Tenorio",
+      "Karen Pinzón",
+      "Fabi Pinillo Martínez",
+      "Alejandro Salinas",
     ]);
+    expect(speakers.every((s) => s.photoUrl)).toBe(true);
     expect(panels).toBe(1);
     const photos = JSON.stringify(IMPARABLES_BLOCKS).match(/\/imparables\/[a-z]+\.jpg/g) ?? [];
     expect(photos.length).toBeGreaterThan(8);
@@ -339,7 +341,7 @@ describe("the template", () => {
 
   it("opens the cover with its headline, then why and what for — and closes with «Nadie nace imparable»", () => {
     expect(IMPARABLES_FIELDS.subtitle).toBe(
-      "<p>Mentalidad · Dinero · Marketing</p><p>Deja de pensar en pequeño.</p><p>Inspírate en quienes empezaron desde abajo, con tus mismos miedos, y hoy tienen el negocio y la vida que sueñas. <strong>Aprende cómo lo hicieron y replica sus estrategias para ganar</strong>.</p>"
+      "<p>Mentalidad · Dinero · Marketing</p><p>Deja de pensar en pequeño</p><p>Inspírate en quienes empezaron desde abajo, con tus mismos miedos, y hoy tienen el negocio y la vida que sueñas. <strong>Aprende cómo lo hicieron y replica sus estrategias para ganar</strong>.</p>"
     );
     expect(IMPARABLES_FIELDS.closingText).toBe("Nadie nace imparable. Se hace.");
     expect(IMPARABLES_FIELDS.registerButtonLabel).toBe("Reservar mi cupo");
@@ -360,11 +362,11 @@ describe("the template", () => {
     }
   });
 
-  it("shows 3 doubts — the results and «Ya hice cursos…» kept hidden — each person on them a speaker, a panelist (or the panel)", () => {
+  it("keeps the 3 results and the 4 doubts, all hidden for now, each person on them a speaker, a panelist (or the panel)", () => {
     const slides = IMPARABLES_BLOCKS.filter((b) => b.type === "slides");
     expect(slides.map((b) => (b.type === "slides" ? [b.style, b.items.length, b.hidden === true] : null))).toEqual([
       ["results", 3, true],
-      ["doubts", 3, false],
+      ["doubts", 3, true],
       ["doubts", 1, true],
     ]);
     const speakers = new Set([...IMPARABLES_SPEAKERS.map((s) => s.name), ...IMPARABLES_PANELISTS.map((p) => p.name).filter(Boolean)]);

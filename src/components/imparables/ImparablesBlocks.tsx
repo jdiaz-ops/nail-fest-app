@@ -10,7 +10,7 @@ import type {
   SlidesLandingBlock,
 } from "@/lib/landingBlocks/types";
 import { youtubeVideo } from "@/lib/landingBlocks/types";
-import { agendaInstant, dayEnd, type EventWhen } from "@/lib/imparables/schedule";
+import { agendaInstant, type EventWhen } from "@/lib/imparables/schedule";
 import { dayMonth, pesos, saving, untilDay, type SalesState } from "@/lib/imparables/stages";
 import { isPanelCard, listNames, namesIn, panelGuestsOf, routeOf } from "@/lib/imparables/blocks";
 import { ImpIcon, Silhouette, iconForPoint, initials, instagramUrl, type ImpIconName } from "./ImpArt";
@@ -435,22 +435,15 @@ function Speakers({ people }: { people: PeopleLandingBlock }) {
 // ── The program ─────────────────────────────────────────────────────────────
 // Both days one under the other, each line told the way the approved boceto
 // does: the talk first (after its small tag, if it has one: its step, or
-// «Charla estrella»), then who gives it (her photo and name), how long it
-// lasts under its hour, a star talk in a box of its own and the active breaks
-// as thin lines. A day's header: its date and hours, its title, its subtitle
-// and, when its talks are steps, the route they make.
+// «Charla estrella»), then who gives it (her photo, name and Instagram), only
+// the hour it starts — no durations since 2026-10-28 — a star talk in a box of
+// its own and the active breaks as thin lines. A day's header: its date, its
+// title, its subtitle and, when its talks are steps, the route they make.
 
 /** "10:15 a. m." -> ["10:15", "a. m."]; anything else stays whole. */
 function splitChip(chip: string): [string, string] {
   const match = /^(\d{1,2}[:.]\d{2})\s*(.*)$/.exec(chip.trim());
   return match ? [match[1]!, match[2]!] : [chip, ""];
-}
-
-/** How long a line lasts: until the next one starts (or its day ends), when that's known and sensible. */
-function minutesBetween(from: string | null, to: string | null | undefined): number | null {
-  if (!from || !to) return null;
-  const minutes = Math.round((new Date(to).getTime() - new Date(from).getTime()) / 60_000);
-  return minutes > 0 && minutes <= 300 ? minutes : null;
 }
 
 function Agenda({ rows, context }: { rows: AgendaRow[]; context: ImparablesContext }) {
@@ -465,15 +458,16 @@ function Agenda({ rows, context }: { rows: AgendaRow[]; context: ImparablesConte
   }
   // The n-th day of the program happens on the event's n-th day.
   const instants = days.map((d, i) => d.rows.map((row) => agendaInstant(context.when.days[i], row.chip, context.timezone)));
-  // A day ends when its own header says ("9:00 a. m. a 2:00 p. m."), else when the event's day does.
-  const ends = days.map((d, i) => dayEnd(d.head?.text ?? "", context.when.days[i], context.timezone) ?? context.when.ends[i] ?? null);
+  // A speaker's Instagram goes next to her name in the program (2026-10-28) — the panel's and the host's lines keep theirs.
+  const handleOf = (name: string) => context.speakers.find((p) => p.name.trim() === name.trim())?.handle.trim() ?? "";
   const cards = days.map((d, i) => {
     const route = routeOf(d.rows);
     return (
       <div className="imp-day" key={i}>
         {d.head && (
           <div className="imp-day-h">
-            {(d.head.chip || d.head.text) && <small>{[d.head.chip, d.head.text].filter(Boolean).join(" · ")}</small>}
+            {/* Only the date: its hours are the program's own (2026-10-28). */}
+            {d.head.chip && <small>{d.head.chip}</small>}
             {d.head.topic && <b>{d.head.topic}</b>}
             {d.head.takeaway && <span className="imp-day-sub">{d.head.takeaway}</span>}
             {route.length > 0 && (
@@ -491,20 +485,16 @@ function Agenda({ rows, context }: { rows: AgendaRow[]; context: ImparablesConte
         )}
         {d.rows.length > 0 && (
           <ol className="imp-ag">
-            {d.rows.map((row, j) => {
-              const start = instants[i]![j] ?? null;
-              const next = instants[i]!.slice(j + 1).find(Boolean) ?? ends[i];
-              return (
-                <AgendaLine
-                  key={j}
-                  row={row}
-                  instant={start}
-                  minutes={minutesBetween(start, next)}
-                  timezone={context.timezone}
-                  panel={context.panel && isPanelRow(row, context.panel.card) ? context.panel : null}
-                />
-              );
-            })}
+            {d.rows.map((row, j) => (
+              <AgendaLine
+                key={j}
+                row={row}
+                instant={instants[i]![j] ?? null}
+                timezone={context.timezone}
+                handle={row.instructor ? handleOf(row.instructor) : ""}
+                panel={context.panel && isPanelRow(row, context.panel.card) ? context.panel : null}
+              />
+            ))}
           </ol>
         )}
       </div>
@@ -526,14 +516,15 @@ function isPanelRow(row: AgendaRow, card: CardLandingBlock): boolean {
 function AgendaLine({
   row,
   instant,
-  minutes,
   timezone,
+  handle,
   panel,
 }: {
   row: AgendaRow;
   instant: string | null;
-  minutes: number | null;
   timezone: string;
+  /** Her Instagram, next to her name. */
+  handle: string;
   panel: ImparablesContext["panel"];
 }) {
   const isPause = !row.instructor && !row.photoUrl && /^pausa/i.test(row.topic.trim());
@@ -553,10 +544,7 @@ function AgendaLine({
   if (isPause) {
     return (
       <li className="is-pause">
-        <span>
-          {title}
-          {minutes ? ` · ${minutes} min` : ""}
-        </span>
+        <span>{title}</span>
       </li>
     );
   }
@@ -566,7 +554,6 @@ function AgendaLine({
         <span className="imp-ag-time">
           <span>{digits}</span>
           {suffix && <small>{suffix}</small>}
-          {minutes && <em className="imp-ag-dur">{minutes} min</em>}
         </span>
       )}
       <span className="imp-what">
@@ -601,7 +588,10 @@ function AgendaLine({
             ) : row.instructor ? (
               <span aria-hidden="true">{initials(row.instructor)}</span>
             ) : null}
-            {who}
+            <i className="imp-by-who">
+              {who}
+              {handle && <> <em>{handle}</em></>}
+            </i>
           </span>
         )}
       </span>

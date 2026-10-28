@@ -11,7 +11,7 @@ import { emptyAgendaRow, type AgendaRow, type LandingBlock } from "@/lib/landing
 // its three price stages as ticket types. The panelists aren't confirmed yet: no one made up, each
 // card says «Por anunciar» (IMPARABLES_PANELISTS); the speakers' photos are
 // their Instagram profile pictures (public/imparables/), to be replaced by
-// better ones from the editor (Karen's, still to come, shows her initial).
+// better ones from the editor.
 
 const PHOTO = (name: string) => `/imparables/${name}.jpg`;
 // The host's card (the team's text, 2026-10-26, may still be adjusted).
@@ -38,6 +38,14 @@ interface ImparablesSpeaker {
 
 export const IMPARABLES_SPEAKERS: ImparablesSpeaker[] = [
   {
+    name: "Cristina Sierra",
+    handle: "@cris_sierra17",
+    tag: "Fundadora de Cristina Sierra Nail Experts: 10 sedes y más de un millón de seguidores. Una historia de resiliencia y superación.",
+    talk: "Lo que no te rompe te hace imparable",
+    subtitle: "La historia detrás de 10 sedes: resiliencia para levantarse de lo más duro.",
+    photoUrl: PHOTO("cris"),
+  },
+  {
     name: "Jimena Montalban",
     handle: "@jimenanails",
     tag: "La manicurista que se convirtió en empresaria. Fundadora de JimenaNails, 10 años construyendo su marca y a sí misma.",
@@ -54,36 +62,12 @@ export const IMPARABLES_SPEAKERS: ImparablesSpeaker[] = [
     photoUrl: PHOTO("pau"),
   },
   {
-    name: "Cristina Sierra",
-    handle: "@cris_sierra17",
-    tag: "Fundadora de Cristina Sierra Nail Experts: 10 sedes y más de un millón de seguidores. Una historia de resiliencia y superación.",
-    talk: "Lo que no te rompe te hace imparable",
-    subtitle: "La historia detrás de 10 sedes: resiliencia para levantarse de lo más duro.",
-    photoUrl: PHOTO("cris"),
-  },
-  {
-    name: "Alejandro Salinas",
-    handle: "@salinas.beautybusiness",
-    tag: "Asesor de negocios de belleza con 15 años en administración, finanzas y marketing. Te enseña a ordenar tu plata.",
-    talk: "Ordena tu plata: precios, costos y cuánto te queda de verdad",
-    subtitle: "Sal sabiendo cuánto cobrar, cuánto gastas y cuánto te queda, con herramientas sencillas que puedes usar desde mañana.",
-    photoUrl: PHOTO("salinas"),
-  },
-  {
-    name: "Karen",
-    handle: "@karenw.trainer",
-    tag: "Creadora del Método Esencia. Te ayuda a descubrir lo que te hace única y a convertirlo en tu sello.",
-    talk: "Tu esencia es tu marca: deja de copiar y crea tu sello",
-    subtitle: "Descubre lo que te hace única y conviértelo en una marca que tus clientas reconozcan y busquen.",
-    photoUrl: "",
-  },
-  {
-    name: "Fabi Pinillo Martínez",
-    handle: "@fabiversatill",
-    tag: "Artista de uñas y estratega de centros de belleza. Te enseña a llenar tu agenda: la técnica ya no es suficiente.",
-    talk: "Agenda llena: estrategias y contenido que traen clientas",
-    subtitle: "Del primer mensaje a la cita confirmada: qué publicar y cómo responder.",
-    photoUrl: PHOTO("fabi"),
+    name: "Oskar Garzón",
+    handle: "@oskarivanquebelleza",
+    tag: "Empresario y creador de marca. Cierra el congreso con visión, redes y la actitud para sobresalir.",
+    talk: "Piensa en grande y hazte ver",
+    subtitle: "Visión, redes y la actitud para sobresalir. Cierre del congreso y tu ruta final.",
+    photoUrl: PHOTO("oskar"),
   },
   {
     name: "Juan Tenorio",
@@ -94,12 +78,28 @@ export const IMPARABLES_SPEAKERS: ImparablesSpeaker[] = [
     photoUrl: PHOTO("juan"),
   },
   {
-    name: "Oskar Garzón",
-    handle: "@oskarivanquebelleza",
-    tag: "Empresario y creador de marca. Cierra el congreso con visión, redes y la actitud para sobresalir.",
-    talk: "Piensa en grande y hazte ver",
-    subtitle: "Visión, redes y la actitud para sobresalir. Cierre del congreso y tu ruta final.",
-    photoUrl: PHOTO("oskar"),
+    name: "Karen Pinzón",
+    handle: "@karenw.trainer",
+    tag: "Creadora del Método Esencia. Te ayuda a descubrir lo que te hace única y a convertirlo en tu sello.",
+    talk: "Tu esencia es tu marca: deja de copiar y crea tu sello",
+    subtitle: "Descubre lo que te hace única y conviértelo en una marca que tus clientas reconozcan y busquen.",
+    photoUrl: PHOTO("karen"),
+  },
+  {
+    name: "Fabi Pinillo Martínez",
+    handle: "@fabiversatill",
+    tag: "Artista de uñas y estratega de centros de belleza. Te enseña a llenar tu agenda: la técnica ya no es suficiente.",
+    talk: "Agenda llena: estrategias y contenido que traen clientas",
+    subtitle: "Del primer mensaje a la cita confirmada: qué publicar y cómo responder.",
+    photoUrl: PHOTO("fabi"),
+  },
+  {
+    name: "Alejandro Salinas",
+    handle: "@salinas.beautybusiness",
+    tag: "«El Señor Finanzas». Asesor de negocios de belleza con 15 años en administración y marketing. Te enseña a ordenar tu plata.",
+    talk: "Ordena tu plata: precios, costos y cuánto te queda de verdad",
+    subtitle: "Sal sabiendo cuánto cobrar, cuánto gastas y cuánto te queda, con herramientas sencillas que puedes usar desde mañana.",
+    photoUrl: PHOTO("salinas"),
   },
 ];
 
@@ -124,7 +124,7 @@ export const IMPARABLES_PANELISTS: ImparablesPanelist[] = [
     name: "Maria Carolina Sebastia Sandoval",
     handle: "@maris_nails_oficial",
     photoUrl: PHOTO("maris"),
-    story: "De empezar desde nada a formar educadoras en toda Chile. En vivo desde Chile.",
+    story: "De migrar de Venezuela a Chile y volver a empezar desde cero, a formar a las futuras educadoras del país.",
   },
 ];
 const PANEL_TONES = ["pink", "teal", "peach", "pink"] as const;
@@ -195,7 +195,7 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
 
   // La agenda: el domingo, las historias (de 9:00 a. m. a 1:45 p. m.); el
   // lunes, el plan en cinco pasos (de 9:00 a. m. a 2:00 p. m.)
-  { type: "heading", eyebrow: "Agenda", title: "Así son los dos días", intro: "" },
+  { type: "heading", eyebrow: "Agenda", title: "", intro: "" },
   {
     type: "agenda",
     rows: [
@@ -224,14 +224,14 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
       withHost("9:00 a. m.", "Repaso", "Con Heidy Aristizábal"),
       speaker("9:05 a. m.", "Alejandro Salinas"),
       pause("9:55 a. m."),
-      speaker("10:05 a. m.", "Karen"),
+      speaker("10:05 a. m.", "Karen Pinzón"),
       pause("10:55 a. m."),
       speaker("11:05 a. m.", "Fabi Pinillo Martínez"),
       pause("11:55 a. m."),
       speaker("12:05 p. m.", "Juan Tenorio"),
       pause("12:55 p. m."),
       speaker("1:05 p. m.", "Oskar Garzón"),
-      withHost("1:35 p. m.", "Agradecimientos", "Con Heidy Aristizábal"),
+      withHost("1:35 p. m.", "Ceremonia de cierre", "Con Heidy Aristizábal"),
     ],
   },
 
@@ -248,7 +248,7 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
         text: "Contenido que atrae, una marca con tu sello y clientas que vuelven y te recomiendan.",
         noteLabel: "Sales sabiendo",
         note: "qué publicar primero.",
-        who: "Karen, Fabi Pinillo Martínez y Juan Tenorio",
+        who: "Karen Pinzón, Fabi Pinillo Martínez y Juan Tenorio",
         icon: "none",
       },
       {
@@ -278,7 +278,7 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
     type: "points",
     tone: "pink",
     items: [
-      { title: "Tu hoja de ruta personal", text: "Sales con tu plan listo para aplicar." },
+      { title: "Tu hoja de ruta imparable", text: "Sales con tu plan y estrategias listas para aplicar." },
       { title: "2 días en vivo", text: "Con 8 conferencistas y un panel, desde tu celular." },
       { title: "Repetición por 30 días", text: "Si te pierdes algo, lo ves cuando puedas." },
       { title: "Guías para descargar", text: "El material de cada conferencista." },
@@ -328,10 +328,11 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
   },
 
   // Las dudas, en su propia voz: una respuesta y una prueba real
-  { type: "heading", eyebrow: "", title: "¿Todavía lo estás pensando?", intro: "" },
+  { type: "heading", eyebrow: "", title: "¿Todavía lo estás pensando?", intro: "", hidden: true },
   {
     type: "slides",
     style: "doubts",
+    hidden: true,
     items: [
       {
         tag: "",
@@ -426,7 +427,7 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
 
 /** The event's own lines, set by the template only where the event has none of its own. */
 export const IMPARABLES_FIELDS = {
-  subtitle: "<p>Mentalidad · Dinero · Marketing</p><p>Deja de pensar en pequeño.</p><p>Inspírate en quienes empezaron desde abajo, con tus mismos miedos, y hoy tienen el negocio y la vida que sueñas. <strong>Aprende cómo lo hicieron y replica sus estrategias para ganar</strong>.</p>",
+  subtitle: "<p>Mentalidad · Dinero · Marketing</p><p>Deja de pensar en pequeño</p><p>Inspírate en quienes empezaron desde abajo, con tus mismos miedos, y hoy tienen el negocio y la vida que sueñas. <strong>Aprende cómo lo hicieron y replica sus estrategias para ganar</strong>.</p>",
   closingText: "Nadie nace imparable. Se hace.",
   registerButtonLabel: "Reservar mi cupo",
   // «Texto debajo del botón»: on this cover, under the button with a shield —

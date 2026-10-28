@@ -4361,8 +4361,9 @@ body:has(.imp) {
   color: var(--imp-marca);
   pointer-events: none;
 }
+/* Bigger since 2026-10-28: «Agenda» is that section's only title now. */
 .imp-eyebrow {
-  font-size: 11.5px;
+  font-size: 15px;
   font-weight: 800;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -4836,14 +4837,6 @@ body:has(.imp) {
   font-weight: 700;
   color: var(--imp-texto-2);
 }
-.imp-ag-dur {
-  display: block;
-  margin-top: 5px;
-  font-size: 10.5px;
-  font-style: normal;
-  font-weight: 700;
-  color: var(--imp-texto-3);
-}
 .imp-what {
   min-width: 0;
 }
@@ -4924,6 +4917,17 @@ body:has(.imp) {
   font-style: normal;
   font-weight: 700;
   color: var(--imp-texto-3);
+}
+/* Who gives the talk, and her Instagram next to her name (2026-10-28) */
+.imp-by-who {
+  font-style: normal;
+}
+/* Whole on its line: a long one goes under the name rather than splitting it. */
+.imp-by-who em {
+  display: inline-block;
+  font-style: normal;
+  font-weight: 600;
+  color: var(--imp-texto-2);
 }
 .imp-by .imp-by-faces {
   display: flex;
