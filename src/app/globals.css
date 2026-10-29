@@ -6582,7 +6582,8 @@ select.imp-co-in {
 
 /* A computer's wide screen, across the whole of it (2026-10-29). The cover:
    the name on top, as big as the screen's width and height allow; under it
-   the words and the button on one side, the group photo on the other. The
+   the words, the date, the button and its stage's bar on one side, the group
+   photo and the signature on the other. The
    sections in the same wide frame, the speakers bigger, the questions beside
    their title. */
 @media (min-width: 1100px) {
@@ -6594,20 +6595,20 @@ select.imp-co-in {
   .imp-hero > .imp-hero-in {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    /* The words centered against the photo: the empty rows around them take
-       whatever height the photo has over them. */
+    /* Laid out as the team drew it (2026-10-29): the words from the top, the
+       stage's bar at the foot; the photo from the top, the signature at the
+       foot, level with the bar. The empty row takes whatever height the
+       photo has over the words, as air between the button and the bar. */
     grid-template-areas:
       "tiara tiara"
       "name  name"
-      ".     pic"
-      "tag   pic"
-      "pill  pic"
-      "cta   pic"
-      "deal  pic"
-      "close pic"
-      ".     pic"
-      "org   org";
-    grid-template-rows: auto auto 1fr repeat(5, auto) 1fr auto;
+      "tag   side"
+      "pill  side"
+      "cta   side"
+      ".     side"
+      "deal  side"
+      "close side";
+    grid-template-rows: auto auto repeat(3, auto) 1fr auto auto;
     column-gap: clamp(40px, 4.5vw, 80px);
     max-width: 1440px;
     text-align: left;
@@ -6642,21 +6643,25 @@ select.imp-co-in {
     font-size: clamp(19px, min(1.65vw, 3.1vh), 26px);
     line-height: 1.45;
   }
+  /* Centered over the button. */
   .imp-hero .imp-pill {
     grid-area: pill;
-    justify-self: start;
+    justify-self: center;
     margin: min(22px, 2.6vh) 0 0;
   }
   .imp-hero .imp-cta,
   .imp-hero .imp-closed-note {
     grid-area: cta;
   }
+  /* As wide as the words. */
   .imp-hero .imp-cta {
-    justify-self: start;
+    justify-self: stretch;
+    max-width: none;
     margin: min(26px, 3vh) 0 0;
   }
   .imp-hero .imp-deal {
     grid-area: deal;
+    margin-top: min(44px, 5vh);
   }
   .imp-hero .imp-stage-pill {
     justify-self: start;
@@ -6686,8 +6691,10 @@ select.imp-co-in {
     font-size: 14px;
     color: var(--imp-texto-2);
   }
+  /* As wide as the button. */
   .imp-hero .imp-deal .imp-bar {
-    justify-self: start;
+    justify-self: stretch;
+    max-width: none;
   }
   /* The button's prices at its right end, no «·» (2026-10-29). */
   .imp-cta:has(.imp-cta-p) {
@@ -6699,15 +6706,19 @@ select.imp-co-in {
   .imp-hero .imp-tagline {
     grid-area: close;
   }
-  /* Its signature under both columns, centered (2026-10-29). */
+  /* Its signature at the foot of the photo's column, level with the bar's
+     last line. */
   .imp-hero .imp-organiza {
-    grid-area: org;
+    grid-area: side;
+    align-self: end;
     justify-content: center;
-    margin-top: min(22px, 2.4vh);
+    margin: 0;
   }
+  /* Room under it for the signature. */
   .imp-hero-pic {
-    grid-area: pic;
-    align-self: center;
+    grid-area: side;
+    align-self: start;
+    margin-bottom: 48px;
     text-align: center;
   }
   .imp-group {
