@@ -2,10 +2,10 @@ import { existsSync } from "fs";
 import path from "path";
 import { describe, expect, it } from "vitest";
 import { landingBlockSchema } from "@/lib/landingBlocks/schema";
-import { emptyAgendaRow, parseLandingBlocks, type AgendaLandingBlock, type LandingBlock } from "@/lib/landingBlocks/types";
-import { castLine, castOf, coverOf, introOf, isPanelCard, namesIn, panelGuestsOf, panelOf, routeOf } from "./blocks";
+import { parseLandingBlocks, type AgendaLandingBlock, type LandingBlock } from "@/lib/landingBlocks/types";
+import { castLine, castOf, coverOf, introOf, isPanelCard, namesIn, panelGuestsOf, panelOf } from "./blocks";
 import { agendaInstant, coverName, dayEnd, eventWhen, readClock } from "./schedule";
-import { pesos, salesState, saving, untilDate, untilDay, type StageTicketType } from "./stages";
+import { dollars, pesos, salesState, saving, untilDate, untilDay, type StageTicketType } from "./stages";
 import { splitTagline } from "./tagline";
 import { IMPARABLES_BLOCKS, IMPARABLES_FIELDS, IMPARABLES_GROUP_PHOTO, IMPARABLES_PANELISTS, IMPARABLES_SPEAKERS, IMPARABLES_STAGES } from "./template";
 
@@ -91,6 +91,13 @@ describe("salesState", () => {
     const state = salesState(types, at("2027-03-01T10:00:00-05:00"), STARTS);
     expect(state.stages.map((s) => s.name)).toEqual(["Etapa 2", "Etapa 3", "Precio normal"]);
     expect(state.mode).toBe("waitlist");
+  });
+
+  it("says today's price in dollars too when its ticket has one (2026-10-29)", () => {
+    const withUsd = stages().map((s, i) => ({ ...s, usdCents: [2500, 3000, 3500, 4500][i] }));
+    expect(salesState(withUsd, at("2027-03-15T12:00:00-05:00"), STARTS).current?.usdCents).toBe(2500);
+    expect(salesState(stages(), at("2027-03-15T12:00:00-05:00"), STARTS).current?.usdCents).toBeNull();
+    expect([dollars(2500), dollars(2550), dollars(100)]).toEqual(["US$25", "US$25.50", "US$1"]);
   });
 
   it("tells each stage's saving against the regular price", () => {
@@ -233,7 +240,7 @@ describe("how the page reads the blocks", () => {
   it("tells what the speakers have in common right under the cover, the speakers' section after it", () => {
     const { rest } = coverOf(IMPARABLES_BLOCKS.filter((b) => !b.hidden));
     const { intro, rest: after } = introOf(rest);
-    expect(intro?.heading.title).toBe("¿Qué tienen en común todos los conferencistas?");
+    expect(intro?.heading.title).toBe("¿Qué tienen en común todos los conferencistas de Manicuristas Imparables?");
     expect(intro?.text.html).toContain("<strong>dejar de pensar en pequeño</strong>");
     // The speakers' section right after it, with no title of its own.
     expect(after[0]).toMatchObject({ type: "heading", eyebrow: "", title: "" });
@@ -263,12 +270,6 @@ describe("how the page reads the blocks", () => {
     ]);
   });
 
-  it("makes a day's route out of its talks' steps", () => {
-    const row = (label: string) => ({ ...emptyAgendaRow("session"), label });
-    expect(routeOf([row("Paso 1 · Tus números"), row(""), row("Paso 2 · Tu esencia"), row("Paso 3: Atraer")])).toEqual(["Tus números", "tu esencia", "atraer"]);
-    expect(routeOf([row("Charla estrella"), row("Paso 1 · Tus números")])).toEqual([]);
-    expect(routeOf([])).toEqual([]);
-  });
 
   it("reads the names on a card as typed", () => {
     expect(namesIn("Fabi, Alejandro Salinas y Oskar")).toEqual(["Fabi", "Alejandro Salinas", "Oskar"]);
@@ -430,7 +431,8 @@ describe("the template", () => {
       ["Mañana · 8:00 a. m.", "Lo lograron con los mismos miedos que tú. Ahora te cuentan cómo."],
       ["Tarde · 1:45 p. m.", "Ahora te toca a ti. Este es tu plan para lograrlo."],
     ]);
-    expect(rows.filter((r) => r.kind === "day").every((r) => r.takeaway.length > 0)).toBe(true);
+    // No subtitle under each part's title (the team, 2026-10-29).
+    expect(rows.filter((r) => r.kind === "day").map((r) => r.takeaway)).toEqual(["", ""]);
     expect(morning.map((r) => [r.chip, r.instructor || r.topic])).toEqual([
       ["8:00 a. m.", "Bienvenida"],
       ["8:15 a. m.", "Jimena Montalban"],
@@ -446,7 +448,7 @@ describe("the template", () => {
     expect(morning.find((r) => r.star)).toMatchObject({ instructor: "Maris", handles: "@maris_nails_oficial", text: "desde Chile", photoUrl: "/imparables/maris.jpg" });
   });
 
-  it("makes the afternoon the plan in five steps, from 1:45, each talk with its step — the route under its title — and the closing last", () => {
+  it("makes the afternoon the plan in five steps, from 1:45, each talk with its step, and the closing last", () => {
     const { afternoon } = agendaOf(IMPARABLES_BLOCKS);
     expect(afternoon.map((r) => [r.chip, r.label, r.instructor || r.topic])).toEqual([
       ["1:45 p. m.", "Paso 1 · Tus números", "Alejandro Salinas"],
@@ -457,7 +459,6 @@ describe("the template", () => {
       ["6:15 p. m.", "Paso 5 · Tu ruta", "Oskar Garzón"],
       ["6:45 p. m.", "", "Cierre y sorteo"],
     ]);
-    expect(routeOf(afternoon)).toEqual(["Tus números", "tu esencia", "atraer", "retener", "tu ruta"]);
   });
 
   it("puts the results right after the program", () => {
@@ -499,6 +500,14 @@ describe("the template", () => {
     if (faq?.type !== "faq") throw new Error("no faq");
     expect(faq.items.map((it) => it.question).slice(0, 3)).toEqual(["¿Cómo me conecto?", "¿Y si no puedo verlo en vivo?", "¿Cuál es el horario?"]);
     expect(faq.items[1]!.answer).toMatch(/grabaciones de todas las charlas.*30 días en nailfest\.lat, con tu cuenta/);
+  });
+
+  it("brings four things with the ticket (2026-10-29: no «hoja de ruta» nor «descuentos»)", () => {
+    const points = IMPARABLES_BLOCKS.find((b) => b.type === "points");
+    if (points?.type !== "points") throw new Error("no points");
+    expect(points.items.map((it) => it.title)).toEqual(["Un día completo en vivo", "Repetición por 30 días", "Guías para descargar", "Certificado digital"]);
+    // No line under «Agenda».
+    expect(IMPARABLES_BLOCKS.find((b) => b.type === "heading" && b.eyebrow === "Agenda")).toMatchObject({ title: "", intro: "" });
   });
 
   it("fits the program in its one day, from 8:00 a. m. to 7:00 p. m.", () => {

@@ -169,7 +169,7 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
 
   // Lo que tienen en común: justo debajo de la portada, en sus colores, y
   // «Nadie nace imparable. Se hace.» como su cierre (2026-10-29)
-  { type: "heading", eyebrow: "", title: "¿Qué tienen en común todos los conferencistas?", intro: "" },
+  { type: "heading", eyebrow: "", title: "¿Qué tienen en común todos los conferencistas de Manicuristas Imparables?", intro: "" },
   {
     type: "text",
     html: "<p>Ninguno empezó arriba. Mesa alquilada, precios bajos, tres clientas, mil dudas. Lo único que tenían era una decisión: <strong>dejar de pensar en pequeño</strong>.</p><p>Hoy tienen marcas, sedes y academias. Y vienen a contarte cómo lo hicieron y a darte las estrategias y herramientas para que tú también lo logres.</p>",
@@ -204,17 +204,13 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
 
   // La agenda, un solo día (2026-10-29): en la mañana, las historias (desde
   // las 8:00 a. m.); en la tarde, el plan en cinco pasos (desde la 1:45 p. m.),
-  // cada charla con su paso. Solo la hora en que empieza cada una.
-  { type: "heading", eyebrow: "Agenda", title: "", intro: "Domingo 27 de junio · 8:00 a. m. a 7:00 p. m. · hora Colombia" },
+  // cada charla con su paso. Solo la hora en que empieza cada una; sin línea
+  // bajo «Agenda» ni subtítulo bajo cada parte.
+  { type: "heading", eyebrow: "Agenda", title: "", intro: "" },
   {
     type: "agenda",
     rows: [
-      day(
-        "Mañana · 8:00 a. m.",
-        "Lo lograron con los mismos miedos que tú. Ahora te cuentan cómo.",
-        "8:00 a. m. a 1:45 p. m.",
-        "Cómo atravesaron las dificultades, tomaron riesgos y vencieron sus miedos para llegar donde están."
-      ),
+      day("Mañana · 8:00 a. m.", "Lo lograron con los mismos miedos que tú. Ahora te cuentan cómo.", "8:00 a. m. a 1:45 p. m.", ""),
       withHost("8:00 a. m.", "Bienvenida", "Con Heidy Aristizábal, maestra de ceremonias"),
       speaker("8:15 a. m.", "Jimena Montalban"),
       // The star talk; its line names Maris its own way, the cards count the rest.
@@ -230,12 +226,7 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
       speaker("10:35 a. m.", "Paula Chacón"),
       speaker("11:40 a. m.", "Cristina Sierra"),
       session("12:40 p. m.", { topic: "Almuerzo" }),
-      day(
-        "Tarde · 1:45 p. m.",
-        "Ahora te toca a ti. Este es tu plan para lograrlo.",
-        "1:45 p. m. a 7:00 p. m.",
-        "Tus números, tu esencia, cómo atraer clientas y hacer que vuelvan: tu plan para ganar más y convertirte en la dueña de tu negocio."
-      ),
+      day("Tarde · 1:45 p. m.", "Ahora te toca a ti. Este es tu plan para lograrlo.", "1:45 p. m. a 7:00 p. m.", ""),
       speaker("1:45 p. m.", "Alejandro Salinas", "Paso 1 · Tus números"),
       speaker("2:50 p. m.", "Karen Pinzón", "Paso 2 · Tu esencia"),
       pause("3:50 p. m."),
@@ -289,12 +280,10 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
     type: "points",
     tone: "pink",
     items: [
-      { title: "Tu hoja de ruta imparable", text: "Un cuaderno imprimible que llenas durante las charlas. Sales con tu plan de 90 días." },
       { title: "Un día completo en vivo", text: "9 conferencistas y un panel, de 8 a. m. a 7 p. m., desde tu celular." },
       { title: "Repetición por 30 días", text: "Lo que te pierdas lo ves cuando puedas, durante 30 días." },
       { title: "Guías para descargar", text: "El material de cada conferencista." },
       { title: "Certificado digital", text: "De asistencia, con tu nombre." },
-      { title: "Descuentos exclusivos", text: "De los conferencistas, solo para quienes asisten." },
     ],
   },
 

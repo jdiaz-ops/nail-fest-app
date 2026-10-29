@@ -34,6 +34,7 @@ export async function imparablesPageData(event: Event, timezone: string, now: Da
       id: t.id,
       name: t.name,
       price: t.price,
+      usdCents: t.priceUsdCents,
       status: t.status,
       hideUntil: t.hideUntil,
       hideAfter: t.hideAfter,

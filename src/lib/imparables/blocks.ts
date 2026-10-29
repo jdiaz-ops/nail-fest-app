@@ -1,4 +1,4 @@
-import type { AgendaRow, CardLandingBlock, HeadingLandingBlock, ImageLandingBlock, LandingBlock, PeopleLandingBlock, TextLandingBlock } from "@/lib/landingBlocks/types";
+import type { CardLandingBlock, HeadingLandingBlock, ImageLandingBlock, LandingBlock, PeopleLandingBlock, TextLandingBlock } from "@/lib/landingBlocks/types";
 
 // How Manicuristas Imparables' page reads an event's blocks
 // (components/imparables/ImparablesBlocks.tsx): an image before the first
@@ -67,16 +67,6 @@ export function namesIn(who: string): string[] {
 export function panelGuestsOf(people: PeopleLandingBlock): PeopleLandingBlock["items"] {
   const guests = people.items.filter((p) => p.name.trim() || p.tag.trim());
   return [...guests.filter((p) => p.name.trim()), ...guests.filter((p) => !p.name.trim())];
-}
-
-/** A day's route, from its talks' steps («Paso 1 · Tus números», «Paso 2 · Tu esencia»…):
- * ["Tus números", "tu esencia"], to read with arrows between. Fewer than two steps make no route. */
-export function routeOf(rows: AgendaRow[]): string[] {
-  const steps = rows
-    .map((row) => /^paso\s*\d+\s*[·:.\-–—]\s*(.+)$/i.exec(row.label.trim())?.[1]?.trim())
-    .filter((step): step is string => Boolean(step));
-  if (steps.length < 2) return [];
-  return steps.map((step, i) => (i === 0 ? step : step.charAt(0).toLowerCase() + step.slice(1)));
 }
 
 /** Who is under the group photo: the speakers' names, then the host and the panel. */

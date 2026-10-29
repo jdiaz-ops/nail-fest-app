@@ -4027,21 +4027,14 @@ body:has(.imp) {
   font-size: 14px;
   font-weight: 700;
 }
-/* The hours on the pill's line where it has room for them; on a phone they
-   go under the button, with the day (.imp-deal-when) — 2026-10-29. */
+/* The hours on the pill's line where it has room for them, not on a phone (2026-10-29). */
 .imp-pill-hours {
   display: none;
-  white-space: nowrap;
-}
-.imp-deal-when span {
   white-space: nowrap;
 }
 @media (min-width: 600px) {
   .imp-pill-hours {
     display: inline;
-  }
-  .imp-deal-when {
-    display: none;
   }
 }
 
@@ -4181,6 +4174,23 @@ body:has(.imp) {
   text-decoration: none;
   cursor: pointer;
   transition: transform 0.15s ease, background-color 0.15s ease;
+}
+/* Its words in a row; under them, small, today's price in dollars when the
+   ticket has one (2026-10-29) */
+.imp-cta-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.imp-cta:has(> .imp-cta-usd) {
+  flex-direction: column;
+  gap: 1px;
+}
+.imp-cta-usd {
+  font-size: 13px;
+  font-weight: 700;
+  opacity: 0.75;
 }
 /* The regular price, struck, between the label and today's */
 .imp-cta-was {
@@ -4467,15 +4477,6 @@ body:has(.imp) {
   font-size: 16px;
   line-height: 1.6;
   color: var(--imp-texto-2);
-}
-/* A section with only a small title and a line under it — «Agenda» and its
-   day and hours (2026-10-29): the line small too. */
-.imp-eyebrow + .imp-lead {
-  margin-top: 6px;
-  font-size: 14px;
-  font-weight: 700;
-  line-height: 1.45;
-  text-wrap: pretty;
 }
 .imp-rich {
   margin-top: 18px;
@@ -5068,24 +5069,13 @@ body:has(.imp) {
   height: 1px;
   background: var(--imp-linea);
 }
-/* A day's subtitle under its title, and the route its steps make */
+/* A day's subtitle under its title */
 .imp-day-sub {
   display: block;
   margin-top: 6px;
   font-size: 15px;
   line-height: 1.5;
   color: var(--imp-texto-2);
-}
-.imp-route {
-  display: block;
-  margin-top: 8px;
-  font-size: 14px;
-  font-weight: 800;
-  line-height: 1.5;
-  color: var(--imp-acento);
-}
-.imp-route span {
-  white-space: nowrap;
 }
 
 /* Cards that slide: the results and the doubts */
@@ -6655,6 +6645,10 @@ select.imp-co-in {
   .imp-inc {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 14px;
+  }
+  /* Four cards two by two, not three and one (2026-10-29). */
+  .imp-inc:has(> li:nth-child(4):last-child) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .imp-inc li {
     padding: 18px 20px;

@@ -14,6 +14,8 @@ export interface StageTicketType {
   id: string;
   name: string;
   price: number;
+  /** The same ticket in US dollars, in cents (TicketType.priceUsdCents), when it has one. */
+  usdCents?: number | null;
   status: string;
   hideUntil: Date | null;
   hideAfter: Date | null;
@@ -28,6 +30,8 @@ export interface PriceStage {
   id: string;
   name: string;
   price: number;
+  /** In US dollars, in cents, when the ticket has a USD price: the cover's button says it too (2026-10-29). */
+  usdCents: number | null;
   opensAt: Date | null;
   closesAt: Date | null;
   state: StageState;
@@ -56,7 +60,7 @@ export function salesState(types: StageTicketType[], now: Date, eventStartsAt: D
     .map((t): PriceStage => {
       const state: StageState =
         t.hideAfter && now > t.hideAfter ? "past" : t.hideUntil && now < t.hideUntil ? "future" : t.remaining > 0 ? "current" : "soldout";
-      return { id: t.id, name: t.name, price: t.price, opensAt: t.hideUntil, closesAt: t.hideAfter, state };
+      return { id: t.id, name: t.name, price: t.price, usdCents: t.usdCents ?? null, opensAt: t.hideUntil, closesAt: t.hideAfter, state };
     });
 
   const normal = stages.filter((s) => /^precio normal\b/i.test(s.name.trim())).sort((a, b) => b.price - a.price)[0] ?? null;
@@ -88,6 +92,11 @@ const MONTHS = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", 
 /** 79900 -> "$79.900", the same way everywhere (not left to the runtime's locale data). */
 export function pesos(amount: number): string {
   return `$${String(Math.round(amount)).replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`;
+}
+
+/** 2500 -> "US$25", 2550 -> "US$25.50" (cents). */
+export function dollars(cents: number): string {
+  return `US$${cents % 100 ? (cents / 100).toFixed(2) : cents / 100}`;
 }
 
 /** The wall-clock date of an instant in `timezone`: { year, month (0–11), day }. */

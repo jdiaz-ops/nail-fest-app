@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { COUNTRY_CODES, GENERIC_ID_PLACEHOLDER, GENERIC_PHONE_PLACEHOLDER, stripTrunkZero } from "@/lib/countryCodes";
 import { WORLD_COUNTRIES } from "@/lib/worldCountries";
 import { attributionFromSearchParams } from "@/lib/utm";
-import { pesos } from "@/lib/imparables/stages";
+import { dollars, pesos } from "@/lib/imparables/stages";
 import type { WompiWidgetParams } from "@/lib/payments/wompi";
 import { getValidFbc, track } from "@/components/tracking";
 import { openWompiWidget } from "@/components/wompiWidget";
@@ -64,11 +64,6 @@ const REGISTER_ERRORS: Record<string, string> = {
   usd_not_available: "Esta entrada no se puede pagar en dólares. Elige pagar en pesos con Wompi.",
   paypal_not_configured: "PayPal no está disponible ahora mismo. Puedes pagar en pesos con Wompi.",
 };
-
-/** 2500 → "US$25", 2550 → "US$25.50" */
-function dollars(cents: number): string {
-  return `US$${cents % 100 ? (cents / 100).toFixed(2) : cents / 100}`;
-}
 
 function money(currency: Currency, cents: number): string {
   return currency === "USD" ? dollars(cents) : pesos(cents / 100);

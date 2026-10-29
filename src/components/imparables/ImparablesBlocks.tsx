@@ -1,4 +1,3 @@
-import { Fragment } from "react";
 import type {
   AgendaRow,
   CardLandingBlock,
@@ -12,7 +11,7 @@ import type {
 import { youtubeVideo } from "@/lib/landingBlocks/types";
 import { agendaInstant, type EventWhen } from "@/lib/imparables/schedule";
 import { dayMonth, pesos, saving, untilDay, type SalesState } from "@/lib/imparables/stages";
-import { isPanelCard, listNames, namesIn, panelGuestsOf, routeOf } from "@/lib/imparables/blocks";
+import { isPanelCard, listNames, namesIn, panelGuestsOf } from "@/lib/imparables/blocks";
 import { ImpIcon, Silhouette, iconForPoint, initials, instagramUrl, type ImpIconName } from "./ImpArt";
 import ImpButton from "./ImpButton";
 import ImpCountdown from "./ImpCountdown";
@@ -445,8 +444,8 @@ function Speakers({ people }: { people: PeopleLandingBlock }) {
 // estrella»), then who gives it (her photo, name and Instagram), only the hour
 // it starts — no durations since 2026-10-28 — a star talk in a box of its own
 // and the active breaks and the lunch as thin lines. A part's header: its
-// label, its title, its subtitle and, when its talks are steps, the route
-// they make.
+// label, its title and its subtitle, if it has one (no route of its steps
+// since 2026-10-29: each talk's tag says its step).
 
 /** "10:15 a. m." -> ["10:15", "a. m."]; anything else stays whole. */
 function splitChip(chip: string): [string, string] {
@@ -471,7 +470,6 @@ function Agenda({ rows, context }: { rows: AgendaRow[]; context: ImparablesConte
   // A speaker's Instagram goes next to her name in the program (2026-10-28) — the panel's and the host's lines keep theirs.
   const handleOf = (name: string) => context.speakers.find((p) => p.name.trim() === name.trim())?.handle.trim() ?? "";
   const cards = days.map((d, i) => {
-    const route = routeOf(d.rows);
     return (
       <div className="imp-day" key={i}>
         {d.head && (
@@ -480,17 +478,6 @@ function Agenda({ rows, context }: { rows: AgendaRow[]; context: ImparablesConte
             {d.head.chip && <small>{d.head.chip}</small>}
             {d.head.topic && <b>{d.head.topic}</b>}
             {d.head.takeaway && <span className="imp-day-sub">{d.head.takeaway}</span>}
-            {route.length > 0 && (
-              <span className="imp-route">
-                {route.map((step, k) => (
-                  // Each step whole on its line: the route breaks only between them.
-                  <Fragment key={k}>
-                    {k > 0 && " "}
-                    <span>{k > 0 ? `→ ${step}` : step}</span>
-                  </Fragment>
-                ))}
-              </span>
-            )}
           </div>
         )}
         {d.rows.length > 0 && (
