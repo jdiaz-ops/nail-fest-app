@@ -425,7 +425,7 @@ describe("the template", () => {
     return { rows: agenda.rows, morning: agenda.rows.slice(1, afternoon), afternoon: agenda.rows.slice(afternoon + 1) };
   };
 
-  it("tells its one day in two parts (2026-10-29): the morning's stories, from 8:00, with the panel as the star talk", () => {
+  it("tells its one day in two parts (2026-10-29): the morning's stories, from 8:00, the panel among them — no star talk", () => {
     const { rows, morning } = agendaOf(IMPARABLES_BLOCKS);
     expect(rows.filter((r) => r.kind === "day").map((r) => [r.chip, r.topic])).toEqual([
       ["Mañana · 8:00 a. m.", "Lo lograron con los mismos miedos que tú. Ahora te cuentan cómo."],
@@ -443,9 +443,9 @@ describe("the template", () => {
       ["12:40 p. m.", "Almuerzo"],
     ]);
     expect(morning.filter((r) => r.label)).toEqual([]);
-    expect(rows.filter((r) => r.star).map((r) => r.topic)).toEqual(["Panel «El día que decidí cambiar»"]);
+    expect(rows.filter((r) => r.star || /charla estrella/i.test(r.label))).toEqual([]);
     // The panel's line names Maris its own way: «Maris @maris_nails_oficial · desde Chile».
-    expect(morning.find((r) => r.star)).toMatchObject({ instructor: "Maris", handles: "@maris_nails_oficial", text: "desde Chile", photoUrl: "/imparables/maris.jpg" });
+    expect(morning.find((r) => r.topic === "Panel «El día que decidí cambiar»")).toMatchObject({ instructor: "Maris", handles: "@maris_nails_oficial", text: "desde Chile", photoUrl: "/imparables/maris.jpg" });
   });
 
   it("makes the afternoon the plan in five steps, from 1:45, each talk with its step, and the closing last", () => {

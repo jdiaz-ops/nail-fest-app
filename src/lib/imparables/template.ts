@@ -213,14 +213,13 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
       day("Mañana · 8:00 a. m.", "Lo lograron con los mismos miedos que tú. Ahora te cuentan cómo.", "8:00 a. m. a 1:45 p. m.", ""),
       withHost("8:00 a. m.", "Bienvenida", "Con Heidy Aristizábal, maestra de ceremonias"),
       speaker("8:15 a. m.", "Jimena Montalban"),
-      // The star talk; its line names Maris its own way, the cards count the rest.
+      // Its line names Maris its own way, the cards count the rest. No star talk (the team, 2026-10-29).
       session("9:20 a. m.", {
         topic: "Panel «El día que decidí cambiar»",
         instructor: "Maris",
         handles: "@maris_nails_oficial",
         photoUrl: PHOTO("maris"),
         text: "desde Chile",
-        star: true,
       }),
       pause("10:20 a. m."),
       speaker("10:35 a. m.", "Paula Chacón"),
