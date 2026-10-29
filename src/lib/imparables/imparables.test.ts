@@ -111,7 +111,7 @@ describe("getActiveStage: the first stage whose date hasn't come and whose cap i
 describe("what the page says about the stages", () => {
   it("under the button, each stage's line: its cap, its date and what comes next", () => {
     expect(line(sales(stages(), "2027-02-01T10:00:00-05:00"))).toBe(
-      "Etapa Creyente · 200 cupos a $90.000 o hasta el 18 de abril (cierre de Nail Fest Cali) · luego $120.000"
+      "Etapa Creyente · 200 cupos a $90.000 o hasta el 18 de abril · luego $120.000"
     );
     expect(line(sales(stages([90]), "2027-04-20T10:00:00-05:00"))).toBe("Etapa Decidida · 300 cupos a $120.000 o hasta el 30 de mayo · luego $150.000");
     expect(line(sales(stages([90, 120]), "2027-06-01T10:00:00-05:00"))).toBe("Precio full · $150.000 · hasta el 27 de junio");

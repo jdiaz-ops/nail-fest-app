@@ -5657,10 +5657,24 @@ body:has(.imp) {
 .imp-st-p {
   display: flex;
   flex: 1;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.imp-st-amt {
+  display: flex;
   align-items: baseline;
   gap: 6px;
-  min-width: 0;
   margin: 0;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+/* Its stage's name (2026-10-29) */
+.imp-st-name {
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--imp-resalte);
   white-space: nowrap;
 }
 .imp-st-p b {
@@ -6575,6 +6589,15 @@ select.imp-co-in {
   }
   .imp-hero .imp-stage-pill {
     justify-self: start;
+  }
+  /* The bar's stage beside its price. */
+  .imp-st-p {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 14px;
+  }
+  .imp-st-name {
+    font-size: 15px;
   }
   /* The button's prices at its right end, no «·» (2026-10-29). */
   .imp-cta:has(.imp-cta-p) {

@@ -328,12 +328,16 @@ export default function ImparablesPage({
       {mode === "sale" && current && (
         <ImpStickyBar>
           {/* One row (2026-10-29): today's price big with the full one
-              struck beside it, and the button. */}
+              struck beside it, and its stage's name — under it on a phone,
+              beside it on a computer — then the button. */}
           <div className="imp-sticky-in">
-            <p className="imp-st-p">
-              <b>{pesos(current.price)}</b>
-              {struck && <s>{pesos(struck.price)}</s>}
-            </p>
+            <div className="imp-st-p">
+              <p className="imp-st-amt">
+                <b>{pesos(current.price)}</b>
+                {struck && <s>{pesos(struck.price)}</s>}
+              </p>
+              <span className="imp-st-name">{current.name}</span>
+            </div>
             <ImpButton action="buy" className="imp-st-b">
               {buyLabel}
             </ImpButton>

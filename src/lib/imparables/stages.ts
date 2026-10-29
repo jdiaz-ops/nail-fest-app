@@ -183,8 +183,9 @@ function together(text: string): string {
   return text.replace(/ /g, "\u00a0");
 }
 
-/** The line under the cover's and the closing's buttons (and the checkout's price):
- *   «Etapa Creyente · 200 cupos a $90.000 o hasta el 18 de abril (cierre de Nail Fest Cali) · luego $120.000»,
+/** The line under the cover's and the closing's buttons (and the checkout's price) — its note only in the doubts
+ * (2026-10-29):
+ *   «Etapa Creyente · 200 cupos a $90.000 o hasta el 18 de abril · luego $120.000»,
  *   «Precio full · $150.000 · hasta el 27 de junio» —
  * and, under 30% of its cap left, «Quedan 41 cupos a $90.000 · luego $120.000». */
 export function stageLine(sales: Pick<SalesState, "current" | "next" | "remaining">, timezone: string): string | null {
@@ -194,7 +195,7 @@ export function stageLine(sales: Pick<SalesState, "current" | "next" | "remainin
   if (stage.cap !== null && remaining !== null && remaining < stage.cap * FEW_LEFT_SHARE) {
     return `${remaining === 1 ? "Queda 1 cupo" : `Quedan ${together(`${remaining} cupos`)}`} a ${pesos(stage.price)}${then}`;
   }
-  const until = stage.closesAt ? `hasta el ${together(untilDay(stage.closesAt, timezone))}${stage.note ? ` (${stage.note})` : ""}` : "";
+  const until = stage.closesAt ? `hasta el ${together(untilDay(stage.closesAt, timezone))}` : "";
   if (stage.cap !== null) return `${stage.name} · ${together(`${stage.cap} cupos`)} a ${pesos(stage.price)}${until ? ` o ${until}` : ""}${then}`;
   return [stage.name, pesos(stage.price), until].filter(Boolean).join(" · ") + then;
 }
