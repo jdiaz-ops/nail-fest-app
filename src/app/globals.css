@@ -5884,7 +5884,8 @@ select.imp-co-in {
 }
 .imp-co-doc {
   display: grid;
-  grid-template-columns: 124px minmax(0, 1fr);
+  /* Wide enough for «Documento» and «Pasaporte», outside Colombia. */
+  grid-template-columns: 140px minmax(0, 1fr);
   gap: 12px;
 }
 .imp-co-phone {
@@ -5969,11 +5970,66 @@ select.imp-co-in {
   font-weight: 800;
   color: var(--imp-texto-2);
 }
-.imp-co-pay p {
+.imp-co-pay p,
+.imp-co-pay-p {
   margin: 0;
   font-size: 14px;
   line-height: 1.5;
   color: var(--imp-texto-2);
+}
+/* With PayPal: pesos (Wompi) or dollars (PayPal), the chosen one open. */
+.imp-co-pays {
+  display: grid;
+  gap: 10px;
+}
+.imp-co-pay-opt {
+  border-color: var(--imp-linea);
+  cursor: pointer;
+}
+.imp-co-pay-opt.is-on {
+  border-color: var(--imp-bronce);
+  background: var(--imp-destacado);
+}
+.imp-co-pay-opt input {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--imp-bronce);
+}
+.imp-co-pay-amt {
+  margin-left: auto;
+  font-size: 16px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--imp-texto);
+}
+/* Under the radio's own column. */
+.imp-co-pay-opt .imp-co-badges,
+.imp-co-pay-p,
+.imp-co-pay-test {
+  margin-left: 28px;
+}
+.imp-co-pay-opt .imp-co-badges {
+  justify-self: start;
+}
+.imp-co-pay-p {
+  display: block;
+}
+.imp-co-pay-test {
+  display: block;
+  padding: 8px 10px;
+  border: 1px dashed var(--imp-bronce);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.45;
+  color: var(--imp-resalte);
+}
+/* PayPal's own buttons (its iframes), where «Pagar» goes in pesos: one
+   button's height kept while its SDK loads. */
+.imp-co-paypal {
+  min-height: 50px;
 }
 .imp-co-recap {
   display: grid;
@@ -6044,8 +6100,19 @@ select.imp-co-in {
   opacity: 0.7;
   cursor: wait;
 }
+.imp-co-end {
+  display: grid;
+  gap: 12px;
+}
+.imp-co-until {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--imp-resalte);
+}
 .imp-co-legal {
-  margin: -14px 0 0;
+  margin: 0;
   font-size: 13px;
   line-height: 1.55;
   color: var(--imp-texto-3);
@@ -6054,8 +6121,8 @@ select.imp-co-in {
   text-decoration: underline;
 }
 
-/* What's being bought: the event, the ticket and how many, what it
-   includes, a discount code, the total, until when the price holds. */
+/* Beside the form: the event, how many (only when a purchase can take
+   more than one) and a discount code. */
 .imp-co-sum {
   display: grid;
   gap: 18px;
@@ -6114,16 +6181,6 @@ select.imp-co-in {
   font-weight: 800;
   color: var(--imp-texto);
 }
-.imp-co-line span {
-  display: block;
-  margin-top: 2px;
-  font-size: 14px;
-  color: var(--imp-texto-2);
-}
-.imp-co-line s {
-  margin-right: 4px;
-  color: var(--imp-texto-3);
-}
 .imp-co-qty {
   flex: none;
   display: inline-flex;
@@ -6153,24 +6210,6 @@ select.imp-co-in {
   font-size: 16px;
   font-weight: 800;
   color: var(--imp-texto);
-}
-.imp-co-inc {
-  display: grid;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  font-size: 14px;
-  color: var(--imp-texto-2);
-}
-.imp-co-inc li {
-  display: flex;
-  gap: 10px;
-}
-.imp-co-inc li::before {
-  content: "✓";
-  font-weight: 900;
-  color: var(--imp-acento);
 }
 .imp-co-code-row {
   display: grid;
@@ -6227,57 +6266,6 @@ select.imp-co-in {
 .imp-co-dark .imp-co-code-err {
   color: var(--imp-error);
 }
-.imp-co-tot {
-  display: grid;
-  gap: 10px;
-  margin: 0;
-}
-.imp-co-tot > div {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  font-size: 15px;
-  color: var(--imp-texto-2);
-}
-.imp-co-tot dd {
-  margin: 0;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  color: var(--imp-texto);
-}
-.imp-co-tot > .imp-co-disc dd {
-  color: var(--imp-resalte);
-}
-.imp-co-tot > .imp-co-total {
-  align-items: baseline;
-  padding-top: 12px;
-  border-top: 1px solid var(--imp-linea);
-}
-.imp-co-total dt {
-  font-size: 17px;
-  font-weight: 800;
-  color: var(--imp-texto);
-}
-.imp-co-tot > .imp-co-total dd {
-  font-size: 28px;
-  font-weight: 800;
-  color: var(--imp-titulo);
-}
-.imp-co-total small {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--imp-texto-3);
-}
-.imp-co-up {
-  margin: 0;
-  padding: 10px 14px;
-  border-radius: 12px;
-  background: var(--imp-oro);
-  color: var(--imp-negro);
-  font-size: 14px;
-  font-weight: 800;
-  text-align: center;
-}
 /* A computer: the summary beside the form, staying in view. */
 @media (min-width: 1000px) {
   .imp-co-top {
@@ -6308,9 +6296,6 @@ select.imp-co-in {
   }
   .imp-co-h1 {
     font-size: 34px;
-  }
-  .imp-co-legal {
-    margin-top: -18px;
   }
 }
 @media (prefers-reduced-motion: reduce) {

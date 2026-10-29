@@ -58,6 +58,16 @@ describe("discount codes", () => {
     expect(await resolveDiscount({ eventId: "e1", ticketTypeId: "t1", code: "NOEXISTE", subtotalCents: SUBTOTAL })).toEqual({ ok: false, error: "not_found" });
   });
 
+  it("takes a percentage off a payment in dollars too, but a fixed amount only off one in pesos", async () => {
+    expect(await resolveDiscount({ eventId: "e1", ticketTypeId: "t1", code: "IMPARABLE10", subtotalCents: 25_00, currency: "USD" })).toMatchObject({
+      ok: true,
+      discountCents: 2_50,
+      totalCents: 22_50,
+    });
+    findCode.mockResolvedValueOnce({ ...CODE, percentOff: null, amountOffCop: 20000 });
+    expect(await resolveDiscount({ eventId: "e1", ticketTypeId: "t1", code: "MENOS20MIL", subtotalCents: 25_00, currency: "USD" })).toEqual({ ok: false, error: "not_for_currency" });
+  });
+
   it("counts as used only the payments already approved with it", async () => {
     countPayments.mockResolvedValueOnce(4);
     findCode.mockResolvedValueOnce({ ...CODE, maxUses: 5 });

@@ -1,4 +1,4 @@
-# Congreso virtual — Wompi (pagos) + Zoom (acceso)
+# Congreso virtual — Wompi y PayPal (pagos) + Zoom (acceso)
 
 **Status: construido, no verificado todavía contra una cuenta real.** Esto
 se construyó sin credenciales reales de Wompi ni de Zoom — el formato de
@@ -9,7 +9,10 @@ documentación pública de Zoom (developers.zoom.us) para Server-to-Server
 OAuth. Lo que **no** se ha probado todavía: una transacción real llegando
 a Wompi y volviendo, y una llamada real a la API de Zoom devolviendo un
 `join_url`. Antes de cobrarle a un asistente real, sigue "Primera prueba
-real" al final de este documento.
+real" al final de este documento. Lo mismo vale para PayPal (2026-10-29):
+está probado contra su API simulada (Orders v2, webhooks y reembolsos tal
+como los documenta PayPal); la primera prueba real es la "Compra de prueba
+en sandbox" de su sección.
 
 ## Variables de entorno necesarias
 
@@ -30,6 +33,9 @@ ZOOM_ACCOUNT_ID=...
 ZOOM_CLIENT_ID=...
 ZOOM_CLIENT_SECRET=...
 ZOOM_WEBHOOK_SECRET_TOKEN=...        # de la MISMA app, pestaña Feature -> Event Subscriptions — ver esa sección más abajo. Distinto de ZOOM_CLIENT_SECRET.
+
+# PayPal (pagos en dólares) — cinco variables, un juego para sandbox y otro
+# para live: ver "PayPal (pagos en dólares)" más abajo.
 ```
 
 ## Wompi — paso a paso
@@ -58,9 +64,13 @@ ZOOM_WEBHOOK_SECRET_TOKEN=...        # de la MISMA app, pestaña Feature -> Even
 ## Checkout de una página (Manicuristas Imparables) y códigos de descuento
 
 Desde el 2026-10-29 los botones de la landing de Imparables llevan a
-`/[evento]/checkout`: contacto, datos (con tipo y número de documento, y
-razón social si es NIT), perfil y pago en una sola página, con el resumen
-al lado (o plegado arriba en el celular). Al tocar «Pagar»:
+`/[evento]/checkout`: tus datos (primero el país, que preselecciona el tipo
+de documento, el indicativo del celular y la moneda; luego nombre,
+documento —y razón social si es empresa—, correo y celular), perfil y pago
+en una sola página, con el evento y el código de descuento al lado (o
+plegados arriba en el celular). La tarifa de la etapa («hasta el …, ¡luego
+sube!») va en pequeño debajo del botón de pagar. Al tocar «Pagar» (en
+pesos; en dólares, ver "PayPal" más abajo):
 
 1. `/api/register` crea la inscripción «pendiente de pago» y el pago
    (`NF-<id del pago>`), con el descuento calculado ahí mismo —nunca el que
@@ -102,6 +112,155 @@ URL es la de Marcolini:
 - `/api/webhooks/wompi` (la URL de antes) sigue funcionando igual, por si
   algún evento llega directo de Wompi.
 
+## PayPal (pagos en dólares)
+
+Desde el 2026-10-29, una entrada con **precio en USD** (Editar evento →
+Entradas → «Precio en USD (opcional, para pagar con PayPal)») se puede
+pagar en dólares con PayPal en el checkout de una página. En «Pago»
+aparecen dos opciones, «Pesos · Wompi» y «Dólares · PayPal», cada una con
+su total: el país donde vive la persona decide con cuál arranca (fuera de
+Colombia, dólares), pero siempre la puede cambiar —alguien de fuera que
+prefiera pagar en pesos elige Wompi, y una vez que la persona elige, el
+país ya no la cambia—. Sin precio en USD, o sin PayPal configurado, el
+checkout queda solo con Wompi. Los demás eventos (su formulario de
+siempre) siguen solo en pesos.
+
+Cómo funciona (Orders v2, con el SDK de JavaScript de PayPal):
+
+1. Al tocar el botón de PayPal, el checkout revisa el formulario y llama
+   a `/api/register` con `currency: "USD"`: crea la inscripción «pendiente
+   de pago» y un pago PayPal en USD (`NF-<id del pago>`), con el descuento
+   calculado ahí. En dólares solo aplican los códigos de **porcentaje**;
+   los de monto fijo son en pesos («Ese código solo aplica pagando en
+   pesos»). Mínimo: US$1.
+2. `POST /api/paypal/orders` crea la orden con el monto de ese pago
+   —nunca uno del navegador—, con `custom_id` e `invoice_id` = `NF-…`.
+3. La persona aprueba en la ventana de PayPal (cuenta PayPal o tarjeta) y
+   `POST /api/paypal/orders/<orderId>/capture` captura en el servidor. Si
+   la captura queda COMPLETED por el monto, la moneda y la referencia del
+   pago, confirma: la misma confirmación idempotente de Wompi (correo,
+   Zoom, todo igual). Si PayPal rechaza la tarjeta, su ventana se abre otra
+   vez para pagar de otra forma, con la misma orden.
+4. La persona llega a `/[evento]/pago?…&paypal=<orderId>`, que vuelve a
+   leer la orden en PayPal y muestra «¡Pago confirmado!».
+5. El webhook `POST /api/paypal/events` es el respaldo (pestaña cerrada,
+   pagos que PayPal deja pendientes). Verifica cada evento con PayPal
+   (`/v1/notifications/verify-webhook-signature` y `PAYPAL_WEBHOOK_ID`; si
+   no pasa, responde 401) y vuelve a consultar a PayPal antes de actuar:
+   - `PAYMENT.CAPTURE.COMPLETED` confirma. Si la captura ya había
+     confirmado, no pasa nada: nunca se confirma dos veces.
+   - `PAYMENT.CAPTURE.DENIED` marca el pago rechazado.
+   - `PAYMENT.CAPTURE.REFUNDED`: reembolso **total** → el pago queda
+     REFUNDED, la inscripción se cancela y se cancela su registro en Zoom
+     (si el evento tiene reunión); reembolso **parcial** → solo se anota lo
+     reembolsado y la persona conserva su cupo.
+   - Un evento que no es de Nail Fest (sin `NF-`): 200, sin hacer nada.
+   - PayPal o la base de datos fallando en ese momento: 500, y PayPal lo
+     reintenta.
+
+Las credenciales nunca llegan al navegador: los botones usan solo el
+client id, que es público.
+
+### Las variables: un juego para sandbox, otro para live
+
+PayPal separa sandbox y live como dos apps distintas (developer.paypal.com
+→ **Apps & Credentials**, con el interruptor Sandbox/Live arriba), cada
+una con su Client ID, su Secret y su propio webhook. **Las cinco variables
+tienen que salir de la misma app.**
+
+Sandbox (pruebas, sin dinero real):
+
+```
+PAYPAL_ENV=sandbox
+PAYPAL_CLIENT_ID=<Client ID de la app de Sandbox>
+PAYPAL_CLIENT_SECRET=<Secret de la app de Sandbox>
+PAYPAL_WEBHOOK_ID=<Webhook ID del webhook de la app de Sandbox>
+NEXT_PUBLIC_PAYPAL_CLIENT_ID=<el mismo Client ID de Sandbox>
+```
+
+Live (cobro real):
+
+```
+PAYPAL_ENV=live
+PAYPAL_CLIENT_ID=<Client ID de la app de Live>
+PAYPAL_CLIENT_SECRET=<Secret de la app de Live>
+PAYPAL_WEBHOOK_ID=<Webhook ID del webhook de la app de Live>
+NEXT_PUBLIC_PAYPAL_CLIENT_ID=<el mismo Client ID de Live>
+```
+
+`PAYPAL_ENV` decide todo lo del servidor: la URL del API
+(`https://api-m.sandbox.paypal.com` o `https://api-m.paypal.com`) y, con
+ella, la creación y la captura de órdenes, la lectura de órdenes y
+reembolsos y la verificación de cada webhook. Vacía cuenta como sandbox.
+Los botones del navegador cargan el mismo SDK en los dos casos: el client
+id decide si corren en sandbox o en live. Si `NEXT_PUBLIC_PAYPAL_CLIENT_ID`
+no es igual a `PAYPAL_CLIENT_ID` (un cambio a medias), el checkout esconde
+PayPal y deja un aviso en los logs, en vez de mostrar un botón que no
+podría cobrar. Mientras esté en sandbox, el checkout lo dice: «Modo de
+pruebas (sandbox)».
+
+### Crear la app y el webhook (una vez por entorno)
+
+1. developer.paypal.com → entra con la cuenta PayPal Business → **Apps &
+   Credentials** → interruptor en **Sandbox** → **Create App** (tipo
+   Merchant). Copia el Client ID y el Secret.
+2. Dentro de la app → **Webhooks** → **Add Webhook**: URL
+   `https://nailfest.lat/api/paypal/events`, eventos «Payment capture
+   completed», «Payment capture denied» y «Payment capture refunded».
+   Guarda y copia el **Webhook ID**.
+3. Lo mismo con el interruptor en **Live** cuando vayas a cobrar de verdad
+   (la app de Live pide la cuenta Business verificada).
+
+### Compra de prueba en sandbox
+
+1. En Vercel → Settings → Environment Variables (Production), carga el
+   juego de **sandbox** y haz **Redeploy**. Vercel solo aplica cambios de
+   variables en un deploy nuevo, y `NEXT_PUBLIC_PAYPAL_CLIENT_ID` además
+   queda dentro del build.
+2. Para que nadie real vea PayPal mientras pruebas: en el admin, «Copiar a
+   nuevo evento» sobre Imparables (la copia trae las entradas y el diseño,
+   no la reunión de Zoom), publica la copia y, en sus Entradas, ponle
+   «Precio en USD» a la entrada que está a la venta hoy (ej. 1.00). La
+   entrada del evento real se queda sin precio en USD: ahí nadie ve PayPal.
+3. developer.paypal.com → **Testing Tools → Sandbox Accounts**: PayPal ya
+   trae una cuenta **Personal** (la compradora) y una **Business** (la
+   tuya). En la Personal → el ícono de la columna «Manage Accounts» →
+   **View/Edit Account** → pestaña Profile: copia el correo y la contraseña
+   («System-generated password»).
+4. Abre `https://nailfest.lat/<slug de la copia>/checkout`, elige un país
+   de fuera de Colombia (o «Dólares · PayPal»), llena el formulario con tu
+   correo y toca el botón de PayPal. Entra con la cuenta Personal de
+   sandbox y paga.
+5. Debe pasar: llegas a `/<slug>/pago` con «¡Pago confirmado!», te llega el
+   correo de confirmación, y en el admin la inscripción queda confirmada.
+   En el panel **Webhooks Events** de sandbox (cómo llegar:
+   https://developer.paypal.com/api/rest/webhooks/events-dashboard/), con la
+   app elegida, aparece `PAYMENT.CAPTURE.COMPLETED` recibido (check verde),
+   y la persona sigue con un solo pago confirmado: captura y webhook no
+   confirman dos veces. Desde ahí también se puede reenviar un evento.
+6. Reembolso: entra a https://www.sandbox.paypal.com con la cuenta
+   **Business** de sandbox → Activity (Actividad) → ese pago → Refund
+   (Reembolsar). Uno **parcial** deja la inscripción confirmada; uno
+   **total** la cancela (en Webhooks Events llega
+   `PAYMENT.CAPTURE.REFUNDED`). Para probar también la cancelación en Zoom,
+   pon antes un ID de reunión en la copia.
+7. Si algo falla: Vercel → Logs, buscando `paypal`.
+
+### Pasar de sandbox a live
+
+1. Crea la app y el webhook en **Live** (arriba).
+2. En Vercel cambia **las cinco** variables al juego de live (con
+   `PAYPAL_ENV=live`) y haz **Redeploy**.
+3. Ponle «Precio en USD» a las entradas reales de Imparables (cada etapa
+   tiene el suyo).
+4. Vuelve a poner en borrador la copia de prueba. No se puede borrar,
+   porque ya tiene una inscripción.
+5. Opcional: una compra real pequeña con tu propia cuenta PayPal, y
+   reembolsarla desde paypal.com.
+
+Para volver a sandbox es el mismo paso al revés: las cinco variables del
+juego de sandbox y Redeploy.
+
 ## Zoom — paso a paso
 
 1. **marketplace.zoom.us** (con tu cuenta de Zoom, no la de un usuario
@@ -116,8 +275,14 @@ URL es la de Marcolini:
    asistencia real y resultados de encuestas (ver más abajo), agrega
    también `report:read:list_meeting_participants:admin` (funciona con
    plan Pro — la versión de "Dashboard" del mismo dato exige Business) y
-   `report:read:list_meeting_polls:admin`. Nunca la variante `:master` de
-   ninguno de estos — esa es solo para cuentas con sub-cuentas.
+   `report:read:list_meeting_polls:admin`. Para que un reembolso total de
+   PayPal también saque a la persona de la reunión (su link deja de
+   funcionar), agrega `meeting:update:registrant_status:admin` (o
+   `webinar:update:registrant_status:admin` si usas Webinars); sin ese
+   scope el reembolso igual cancela la inscripción en Nail Fest, solo que
+   Zoom no se entera (queda en los logs como `zoom: cancelRegistrant
+   failed`). Nunca la variante `:master` de ninguno de estos — esa es solo
+   para cuentas con sub-cuentas.
 3. Copia Account ID, Client ID y Client Secret a las variables de arriba.
 4. **En la Reunión/Webinar misma** (zoom.us, no el marketplace): actívale
    **Registration** y ponla en **Aprobación automática** — si queda en
@@ -232,8 +397,13 @@ Antes de vender la primera entrada real:
 
 ## Lo que falta / limitaciones conocidas de esta primera versión
 
-- **PayPal no está construido todavía** — el modelo de datos (`Payment.provider`)
-  ya lo contempla, pero solo Wompi tiene una implementación real hoy.
+- **Precio en USD solo en el checkout de una página** (Imparables) — los
+  demás eventos cobran solo en pesos con su formulario de siempre.
+- **Un reembolso no bloquea la entrada en la puerta** — un reembolso total
+  de PayPal cancela la inscripción y su registro en Zoom, pero el escáner
+  de la puerta (`lib/scan.ts`) no revisa todavía si la inscripción fue
+  cancelada. Para el congreso virtual no importa; para un evento
+  presencial pago con PayPal habría que agregarlo.
 - **Un `PENDING_PAYMENT` abandonado nunca expira solo** — si alguien abre
   el checkout de Wompi y nunca paga, ese registro se queda en
   `PENDING_PAYMENT` indefinidamente (no bloquea nada — un TicketType

@@ -228,6 +228,7 @@ export async function duplicateEvent(sourceId: string): Promise<Event> {
       name: tt.name,
       quantity: tt.quantity,
       price: tt.price,
+      priceUsd: tt.priceUsdCents != null ? tt.priceUsdCents / 100 : null,
       bookingFee: tt.bookingFee,
       description: tt.description ?? "",
       status: tt.status,

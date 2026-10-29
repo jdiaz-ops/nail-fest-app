@@ -98,6 +98,33 @@ export async function registerParticipant(
   }
 }
 
+/** Takes one person off a meeting/webinar's registrants (Zoom's "cancel"),
+ * so their personal join_url stops working — a refunded registration
+ * (lib/payments/confirmRegistrationPayment.ts's refundPayment, 2026-10-29).
+ * The same Server-to-Server app as registerParticipant, with a scope of its
+ * own: meeting:update:registrant_status:admin (webinar:update:registrant_status:admin
+ * for a webinar) — see docs/PAYMENTS_SETUP.md. False on any failure; never
+ * throws — see this module's own top comment. */
+export async function cancelRegistrant(meetingOrWebinarId: string, isWebinar: boolean, email: string): Promise<boolean> {
+  try {
+    const token = await getAccessToken();
+    const kind = isWebinar ? "webinars" : "meetings";
+    const res = await fetch(`https://api.zoom.us/v2/${kind}/${meetingOrWebinarId}/registrants/status`, {
+      method: "PUT",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "cancel", registrants: [{ email }] }),
+    });
+    if (!res.ok) {
+      console.error("zoom: cancelRegistrant failed", meetingOrWebinarId, res.status, await res.text().catch(() => ""));
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("zoom: cancelRegistrant threw", meetingOrWebinarId, err);
+    return false;
+  }
+}
+
 // --- Event Subscriptions (real-time attendance) --------------------------
 //
 // A SEPARATE piece of setup from the OAuth credentials above — configured

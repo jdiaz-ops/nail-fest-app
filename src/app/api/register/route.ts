@@ -7,6 +7,7 @@ import { recordConsents } from "@/lib/consent";
 import { finalizeConfirmedRegistration } from "@/lib/registrationConfirmation";
 import { buildCheckoutUrl, wompiReference, wompiWidgetParams } from "@/lib/payments/wompi";
 import { DISCOUNT_ERROR_MESSAGES, resolveDiscount, type DiscountResult } from "@/lib/discounts";
+import { paypalConfigured } from "@/lib/payments/paypal";
 import { clientIpFromHeaders, userAgentFromHeaders } from "@/lib/request";
 import { splitName } from "@/lib/name";
 import { getOrgSettings } from "@/lib/settings";
@@ -89,6 +90,9 @@ const bodySchema = z.object({
   // The one-page checkout's discount code (/[eventSlug]/checkout,
   // 2026-10-29) — worked out again below, never taken from the browser.
   discountCode: z.string().max(40).optional(),
+  // Pesos through Wompi (the default) or US dollars through PayPal, at the
+  // ticket's own USD price (TicketType.priceUsdCents) — 2026-10-29.
+  currency: z.enum(["COP", "USD"]).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -257,6 +261,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "no_ticket_on_sale" }, { status: 400 });
   }
 
+  // In dollars only a ticket with its own USD price can be paid, and only
+  // with PayPal set up — checked before anything is written.
+  const currency = input.currency ?? "COP";
+  if (currency === "USD" && (!ticketType?.priceUsdCents || ticketType.price <= 0)) {
+    return NextResponse.json({ error: "usd_not_available" }, { status: 400 });
+  }
+  if (currency === "USD" && !paypalConfigured()) {
+    return NextResponse.json({ error: "paypal_not_configured" }, { status: 400 });
+  }
+  // A paid ticket's subtotal in the payment's own cents: COP's whole pesos ×
+  // 100 (Wompi's unit), or the USD price's cents.
+  const subtotalCents = ticketType ? (currency === "USD" ? (ticketType.priceUsdCents ?? 0) : ticketType.price * 100) * ticketCount : 0;
+
   // A discount code, worked out here on its own: what the checkout's box
   // showed was only a preview (/api/checkout/discount). Checked before
   // anything is written, so a code that no longer applies changes nothing.
@@ -266,7 +283,8 @@ export async function POST(req: NextRequest) {
       eventId: event.id,
       ticketTypeId: ticketType.id,
       code: input.discountCode,
-      subtotalCents: ticketType.price * ticketCount * 100,
+      subtotalCents,
+      currency,
     });
     if (!result.ok) {
       return NextResponse.json({ error: "discount_invalid", reason: result.error, message: DISCOUNT_ERROR_MESSAGES[result.error] }, { status: 400 });
@@ -511,16 +529,21 @@ export async function POST(req: NextRequest) {
   if (registration.status === "PENDING_PAYMENT") {
     // With a discount code, what it took off this subtotal (the same
     // ticket count resolveDiscount was given above).
-    const amountInCents = discount ? discount.totalCents : ticketType!.price * registration.ticketCount * 100;
+    const amountInCents = discount ? discount.totalCents : subtotalCents;
     const payment = await db.payment.create({
       data: {
         registrationId: registration.id,
+        provider: currency === "USD" ? "PAYPAL" : "WOMPI",
         amountInCents,
-        currency: "COP",
+        currency,
         discountCodeId: discount?.discountCode.id ?? null,
         discountCents: discount?.discountCents ?? 0,
       },
     });
+    if (currency === "USD") {
+      // PayPal's buttons ask /api/paypal/orders for this payment's order next.
+      return NextResponse.json({ ok: true, requiresPayment: true, registrationId: registration.id, paypal: { paymentId: payment.id } });
+    }
     const reference = wompiReference(payment.id);
     const redirectUrl = `${process.env.APP_BASE_URL ?? ""}/${event.slug}/pago?registrationId=${registration.id}`;
     const checkoutUrl = buildCheckoutUrl({ reference, amountInCents, currency: "COP", redirectUrl });

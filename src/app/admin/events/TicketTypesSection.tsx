@@ -10,6 +10,7 @@ export interface TicketTypeRow {
   name: string;
   quantity: number;
   price: number;
+  priceUsdCents: number | null;
   bookingFee: number;
   description: string;
   status: string;
@@ -43,6 +44,7 @@ function toModalValues(timezone: string, t?: TicketTypeRow): TicketTypeValues {
     name: t.name,
     quantity: String(t.quantity),
     price: String(t.price),
+    priceUsd: t.priceUsdCents != null ? String(t.priceUsdCents / 100) : "",
     hasBookingFee: t.bookingFee > 0,
     bookingFee: String(t.bookingFee),
     description: t.description,
@@ -90,6 +92,7 @@ export default function TicketTypesSection({
       name: v.name.trim(),
       quantity: Number(v.quantity),
       price: Number(v.price) || 0,
+      priceUsd: v.priceUsd.trim() ? Number(v.priceUsd) || null : null,
       bookingFee: v.hasBookingFee ? Number(v.bookingFee) || 0 : 0,
       description: v.description.trim(),
       status: v.status,
@@ -191,7 +194,10 @@ export default function TicketTypesSection({
           >
             <span>
               <span style={{ fontWeight: 600 }}>{t.name}</span>{" "}
-              <span style={{ color: "#5b5f6b" }}>· {t.quantity} · ${t.price.toLocaleString("es-CO")}</span>{" "}
+              <span style={{ color: "#5b5f6b" }}>
+                · {t.quantity} · ${t.price.toLocaleString("es-CO")}
+                {t.priceUsdCents != null ? ` · US$${(t.priceUsdCents / 100).toLocaleString("en-US")}` : ""}
+              </span>{" "}
               <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 999, background: badge.bg, color: badge.fg, marginLeft: 4 }}>
                 {badge.label}
               </span>

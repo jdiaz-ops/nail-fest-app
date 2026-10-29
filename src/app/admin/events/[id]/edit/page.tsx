@@ -79,6 +79,7 @@ export default async function EditEventPage({ params }: { params: { id: string }
               name: t.name,
               quantity: t.quantity,
               price: t.price,
+              priceUsdCents: t.priceUsdCents,
               bookingFee: t.bookingFee,
               description: t.description ?? "",
               status: t.status,

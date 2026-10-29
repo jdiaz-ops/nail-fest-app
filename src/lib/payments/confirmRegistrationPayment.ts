@@ -1,47 +1,64 @@
 import { db } from "@/lib/db";
-import { Prisma } from "@prisma/client";
-import { paymentIdFromReference, type WompiTransaction } from "@/lib/payments/wompi";
+import type { PaymentProvider, Prisma } from "@prisma/client";
+import type { WompiTransaction } from "@/lib/payments/wompi";
+import { paymentIdFromReference } from "@/lib/payments/reference";
 import { finalizeConfirmedRegistration } from "@/lib/registrationConfirmation";
+import { cancelRegistrant } from "@/lib/zoom";
 
 export type ConfirmResult = "approved" | "declined" | "voided" | "error" | "pending" | "not_found";
 
-/** The one place a Wompi transaction turns into a real CONFIRMED
- * registration — called from BOTH the events (lib/payments/wompiEvents.ts,
- * the async, eventual-consistency path) and /[eventSlug]/pago's own server
- * component (the synchronous check when the customer's browser lands
- * back from Wompi), each with the transaction as Wompi's API returns it —
- * whichever gets here first does the real work; the
- * other finds it already done and returns the same result, thanks to the
- * atomic conditional update below. A real problem here (amount mismatch,
- * no matching Payment) returns "error"/"not_found" for the caller to
- * log/render, not a 500. */
-export async function confirmRegistrationPayment(transaction: WompiTransaction): Promise<ConfirmResult> {
+/** A gateway's word on one of our payments, as its own API reported it (never a browser's or an event's body):
+ * Wompi's transaction, or PayPal's order (lib/payments/paypal.ts). */
+export interface Settlement {
+  provider: PaymentProvider;
+  /** NF-<Payment id>: which payment it's about. */
+  reference: string;
+  /** The gateway's own id for it: Wompi's transaction, PayPal's order. */
+  providerReference: string;
+  status: "PENDING" | "APPROVED" | "DECLINED" | "VOIDED" | "ERROR";
+  amountInCents: number;
+  currency: string;
+  raw: unknown;
+}
+
+/** The one place a payment turns into a real CONFIRMED registration, for
+ * either gateway (Wompi, and PayPal since 2026-10-29) — called from the
+ * async paths (Wompi's events, PayPal's webhooks) and the synchronous ones
+ * (/[eventSlug]/pago when the buyer's browser lands back, PayPal's capture),
+ * each with what the gateway's API says — whichever gets here first does
+ * the real work; the others find it already done and return the same
+ * result, thanks to the atomic conditional update below. A real problem
+ * here (amount or currency mismatch, no matching Payment) returns
+ * "error"/"not_found" for the caller to log/render, not a 500. */
+export async function settlePayment(settlement: Settlement): Promise<ConfirmResult> {
   // Only the Payment its reference names — NF-<id>, or the bare id a
-  // checkout from before 2026-10-29 went out with: a reference that isn't
-  // one of ours confirms nothing, whatever else the transaction says.
+  // checkout from before 2026-10-29 went out with — and through the gateway
+  // it was created for: anything else confirms nothing.
   const payment = await db.payment.findUnique({
-    where: { id: paymentIdFromReference(String(transaction.reference ?? "")) },
+    where: { id: paymentIdFromReference(settlement.reference) },
     include: { registration: { include: { person: true, event: true } } },
   });
-  if (!payment) return "not_found";
+  if (!payment || payment.provider !== settlement.provider) return "not_found";
+  // Refunded in full, it stays so: a late "approved" doesn't bring it back.
+  if (payment.status === "REFUNDED") return "voided";
 
   // Always record the latest raw payload/status we've seen, even on a
   // repeat call — the audit trail (Payment.rawPayload) should reflect
   // reality, not just the first call's snapshot.
   await db.payment.update({
     where: { id: payment.id },
-    data: { providerReference: transaction.id, status: transaction.status, rawPayload: transaction as unknown as Prisma.InputJsonValue },
+    data: { providerReference: settlement.providerReference, status: settlement.status, rawPayload: settlement.raw as Prisma.InputJsonValue },
   });
 
-  if (transaction.status !== "APPROVED") {
-    return transaction.status.toLowerCase() as ConfirmResult;
+  if (settlement.status !== "APPROVED") {
+    return settlement.status.toLowerCase() as ConfirmResult;
   }
 
   // Never trust the amount blindly — a mismatch means either tampering
   // or a real bug, either way this must NOT be treated as a valid
   // payment for the ticket price we actually charged.
-  if (transaction.amount_in_cents !== payment.amountInCents) {
-    console.error("confirmRegistrationPayment: amount mismatch", payment.id, transaction.amount_in_cents, payment.amountInCents);
+  if (settlement.amountInCents !== payment.amountInCents || settlement.currency !== payment.currency) {
+    console.error("settlePayment: amount mismatch", payment.id, settlement.amountInCents, settlement.currency, payment.amountInCents, payment.currency);
     return "error";
   }
 
@@ -68,4 +85,64 @@ export async function confirmRegistrationPayment(transaction: WompiTransaction):
   });
 
   return "approved";
+}
+
+/** A Wompi transaction (from its API) — see settlePayment. */
+export function confirmRegistrationPayment(transaction: WompiTransaction): Promise<ConfirmResult> {
+  return settlePayment({
+    provider: "WOMPI",
+    reference: String(transaction.reference ?? ""),
+    providerReference: transaction.id,
+    status: transaction.status,
+    amountInCents: transaction.amount_in_cents,
+    currency: transaction.currency,
+    raw: transaction,
+  });
+}
+
+export type RefundResult = "revoked" | "partial" | "still_paid" | "already" | "not_found";
+
+/** A refund of one of our payments (PayPal's, 2026-10-29). Records how much
+ * went back. Refunded in full, the payment is REFUNDED and the registration
+ * loses its place: cancelled — out of every send, stat and count — and off
+ * the event's Zoom, so its personal link stops working. A partial refund
+ * keeps the place. Idempotent: the same refund again changes nothing. */
+export async function refundPayment(refund: {
+  provider: PaymentProvider;
+  reference: string;
+  /** The total refunded so far, in the payment's own cents. */
+  refundedCents: number;
+  full: boolean;
+  raw: unknown;
+}): Promise<RefundResult> {
+  const payment = await db.payment.findUnique({
+    where: { id: paymentIdFromReference(refund.reference) },
+    include: { registration: { include: { person: true, event: true } } },
+  });
+  if (!payment || payment.provider !== refund.provider) return "not_found";
+
+  await db.payment.update({
+    where: { id: payment.id },
+    data: {
+      refundedCents: Math.max(payment.refundedCents, refund.refundedCents),
+      rawPayload: refund.raw as Prisma.InputJsonValue,
+      ...(refund.full ? { status: "REFUNDED" as const } : {}),
+    },
+  });
+  if (!refund.full) return "partial";
+
+  const { registration } = payment;
+  // Bought twice and refunded once: the other payment still holds the place.
+  const otherPaid = await db.payment.count({ where: { registrationId: registration.id, id: { not: payment.id }, status: "APPROVED" } });
+  if (otherPaid > 0) return "still_paid";
+
+  // Conditional, like the confirmation: the second delivery of the same
+  // refund finds it already cancelled. No cancelledAt: that's the team's
+  // "no puede ir", which the door undoes on a scan (lib/scan.ts).
+  const { count } = await db.registration.updateMany({ where: { id: registration.id, status: { not: "CANCELLED" } }, data: { status: "CANCELLED" } });
+  if (count === 0) return "already";
+
+  const { event, person } = registration;
+  if (event.zoomMeetingId) await cancelRegistrant(event.zoomMeetingId, event.zoomIsWebinar, person.email);
+  return "revoked";
 }

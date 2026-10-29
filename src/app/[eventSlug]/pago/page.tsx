@@ -2,7 +2,8 @@ import { Fraunces } from "next/font/google";
 import { db } from "@/lib/db";
 import { getOrgSettings } from "@/lib/settings";
 import { fetchTransaction } from "@/lib/payments/wompi";
-import { confirmRegistrationPayment, type ConfirmResult } from "@/lib/payments/confirmRegistrationPayment";
+import { getPayPalOrder, settlementFromOrder } from "@/lib/payments/paypal";
+import { confirmRegistrationPayment, settlePayment, type ConfirmResult } from "@/lib/payments/confirmRegistrationPayment";
 import { INSTAGRAM_HANDLE, INSTAGRAM_URL } from "@/lib/brand";
 import { publicEventName } from "@/lib/eventDisplayName";
 import PostPaymentQuestions from "@/components/PostPaymentQuestions";
@@ -24,13 +25,16 @@ const fraunces = Fraunces({ subsets: ["latin"], weight: ["800", "900"] });
 // the eventual-consistency backstop for when this page never gets a
 // chance to run at all (closed tab, no redirect, etc.). Whichever of the
 // two gets there first does the real work — see
-// confirmRegistrationPayment's own comment on the race.
+// confirmRegistrationPayment's own comment on the race. PayPal's buyers come
+// here too (2026-10-29), sent by the one-page checkout once the capture
+// answered, with ?paypal=<orderId>: the order is read from PayPal's API and
+// settled the same way (a second time changes nothing).
 export default async function PaymentReturnPage({
   params,
   searchParams,
 }: {
   params: { eventSlug: string };
-  searchParams: { registrationId?: string; id?: string };
+  searchParams: { registrationId?: string; id?: string; paypal?: string };
 }) {
   const [event, orgSettings] = await Promise.all([db.event.findUnique({ where: { slug: params.eventSlug } }), getOrgSettings()]);
 
@@ -42,6 +46,10 @@ export default async function PaymentReturnPage({
     // (NF-...) confirms anything — see confirmRegistrationPayment.
     const transaction = await fetchTransaction(searchParams.id);
     result = transaction ? await confirmRegistrationPayment(transaction) : "error";
+  } else if (searchParams.paypal) {
+    const order = await getPayPalOrder(searchParams.paypal);
+    const settlement = order ? settlementFromOrder(order) : null;
+    result = settlement ? await settlePayment(settlement) : "error";
   } else if (searchParams.registrationId) {
     // No transaction id at all — Wompi's own redirect should always
     // include one, so this is an unusual path (direct visit, a bookmark,
@@ -52,10 +60,11 @@ export default async function PaymentReturnPage({
     result = registration?.status === "CONFIRMED" ? "approved" : registration?.status === "PENDING_PAYMENT" ? "pending" : "not_found";
   }
 
-  // Paid, back from Wompi: the optional question the one-page checkout
-  // leaves for now (2026-10-29), unless it's answered already.
+  // Paid, back from Wompi or PayPal: the optional question the one-page
+  // checkout leaves for now (2026-10-29), unless it's answered already.
+  const transactionId = searchParams.id ?? searchParams.paypal;
   const askLater =
-    result === "approved" && searchParams.id && searchParams.registrationId
+    result === "approved" && transactionId && searchParams.registrationId
       ? await db.registration
           .findUnique({ where: { id: searchParams.registrationId }, select: { customFields: true } })
           .then((r) => !(r?.customFields as Record<string, unknown> | null)?.instagram)
@@ -90,7 +99,7 @@ export default async function PaymentReturnPage({
     },
     error: {
       title: "No pudimos confirmar tu pago",
-      body: "Algo salió mal verificando la transacción. Si alcanzaste a pagar, escríbenos y lo confirmamos manualmente con Wompi.",
+      body: `Algo salió mal verificando la transacción. Si alcanzaste a pagar, escríbenos y lo confirmamos manualmente con ${searchParams.paypal ? "PayPal" : "Wompi"}.`,
       tone: "bad",
     },
     not_found: {
@@ -134,7 +143,7 @@ export default async function PaymentReturnPage({
       </h1>
       <p style={{ fontSize: 14.5, color: "#5b5f6b", margin: "0 0 24px" }}>{copy.body}</p>
 
-      {askLater && <PostPaymentQuestions registrationId={searchParams.registrationId!} transactionId={searchParams.id!} />}
+      {askLater && <PostPaymentQuestions registrationId={searchParams.registrationId!} transactionId={transactionId!} />}
 
       {result === "approved" && (
         <div

@@ -10,6 +10,8 @@ export const ticketTypeBodySchema = z.object({
   name: z.string().min(1),
   quantity: z.number().int().positive(),
   price: z.number().int().min(0).default(0),
+  // The same ticket in US dollars (e.g. 25 or 24.99), for PayPal — empty: pesos only (2026-10-29).
+  priceUsd: z.number().min(0).max(100000).nullable().optional(),
   bookingFee: z.number().int().min(0).default(0),
   description: z.string().default(""),
   status: z.enum(["ON_SALE", "HIDDEN", "ACCESS_CODE_REQUIRED", "SOLD_OUT", "UNAVAILABLE", "ADMIN_ONLY"]).default("ON_SALE"),
@@ -26,6 +28,8 @@ export interface TicketTypeInput {
   name: string;
   quantity: number;
   price: number;
+  /** In dollars (25 = US$25), stored as cents; null: pesos only. Left out, an update keeps the one it has. */
+  priceUsd?: number | null;
   bookingFee: number;
   description: string;
   status: TicketTypeStatus;
@@ -36,6 +40,11 @@ export interface TicketTypeInput {
   hideAfter: Date | null;
   hideWhenSoldOut: boolean;
   showRemainingOnPage: boolean;
+}
+
+/** 24.99 → 2499; nothing, or 0, → null (pesos only). */
+function usdCents(dollars: number | null | undefined): number | null {
+  return dollars ? Math.round(dollars * 100) : null;
 }
 
 export async function listTicketTypes(eventId: string): Promise<TicketType[]> {
@@ -50,6 +59,7 @@ export async function createTicketType(eventId: string, input: TicketTypeInput):
       name: input.name,
       quantity: input.quantity,
       price: input.price,
+      priceUsdCents: usdCents(input.priceUsd),
       bookingFee: input.bookingFee,
       description: input.description || null,
       status: input.status,
@@ -72,6 +82,7 @@ export async function updateTicketType(id: string, input: TicketTypeInput): Prom
       name: input.name,
       quantity: input.quantity,
       price: input.price,
+      ...(input.priceUsd !== undefined ? { priceUsdCents: usdCents(input.priceUsd) } : {}),
       bookingFee: input.bookingFee,
       description: input.description || null,
       status: input.status,

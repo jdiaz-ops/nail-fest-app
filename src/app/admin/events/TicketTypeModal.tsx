@@ -25,6 +25,8 @@ export interface TicketTypeValues {
   name: string;
   quantity: string;
   price: string;
+  // Dollars, as typed ("25", "24.99"); empty: this ticket is paid in pesos only.
+  priceUsd: string;
   hasBookingFee: boolean;
   bookingFee: string;
   description: string;
@@ -44,6 +46,7 @@ export const EMPTY_TICKET_TYPE: TicketTypeValues = {
   name: "",
   quantity: "",
   price: "0",
+  priceUsd: "",
   hasBookingFee: false,
   bookingFee: "0",
   description: "",
@@ -167,6 +170,35 @@ export default function TicketTypeModal({
             <div>El comprador paga</div>
             <div style={{ fontWeight: 700, fontSize: 18 }}>${buyerPays.toLocaleString("es-CO")}</div>
           </div>
+        </div>
+        {/* The same ticket in dollars, for buyers who pay with PayPal (2026-10-29). */}
+        <div className="field" style={{ marginTop: 12, marginBottom: 0 }}>
+          <label>Precio en USD (opcional, para pagar con PayPal)</label>
+          <div style={{ display: "flex", maxWidth: 220 }}>
+            <span
+              style={{
+                display: "flex",
+                alignItems: "center",
+                padding: "0 10px",
+                border: "1px solid var(--border, #e3e1dc)",
+                borderRight: "none",
+                borderRadius: "8px 0 0 8px",
+                background: "#f6f5f2",
+              }}
+            >
+              US$
+            </span>
+            <input
+              type="number"
+              min={0}
+              step="0.01"
+              value={values.priceUsd}
+              onChange={(e) => set("priceUsd", e.target.value)}
+              placeholder="Sin precio en USD"
+              style={{ borderRadius: "0 8px 8px 0" }}
+            />
+          </div>
+          <span style={{ fontSize: 12, color: "#5b5f6b" }}>Vacío: esta entrada solo se paga en pesos con Wompi.</span>
         </div>
       </div>
 

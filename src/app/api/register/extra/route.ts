@@ -13,7 +13,8 @@ const bodySchema = z.object({
 // checkout leaves for later (2026-10-29) — the buyer's Instagram/TikTok,
 // kept under the checkout question's own key ("instagram", lib/checkoutForm.ts)
 // as before. Only for that registration's own approved payment: the
-// transaction id Wompi sent the buyer back with is what says it's theirs.
+// transaction id Wompi sent the buyer back with (PayPal's order id, paying
+// in dollars) is what says it's theirs.
 export async function POST(req: NextRequest) {
   const parsed = bodySchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ ok: false, error: "invalid_body" }, { status: 400 });

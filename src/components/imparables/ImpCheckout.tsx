@@ -8,17 +8,24 @@ import { pesos } from "@/lib/imparables/stages";
 import type { WompiWidgetParams } from "@/lib/payments/wompi";
 import { getValidFbc, track } from "@/components/tracking";
 import { openWompiWidget } from "@/components/wompiWidget";
+import PayPalButtons from "@/components/PayPalButtons";
 import { Tiara } from "./ImpArt";
 
 // Manicuristas Imparables' one-page checkout (2026-10-29), after
-// Marcolini's. On the left, numbered: contact, details, profile, payment; on
-// the right (on a phone, folded on top of the form) what's being bought —
-// the ticket, how many, a discount code, the total, until when today's price
-// holds. Paying registers the person through /api/register (pending payment,
-// with the discount worked out there again) and opens Wompi's own window
-// over the page with what it signed; if that window doesn't load, Wompi's
-// page instead. Wompi sends the buyer on to /[eventSlug]/pago, which
-// confirms. Free events keep their usual form.
+// Marcolini's. On the left, numbered: the buyer's details, profile, payment;
+// on the right (on a phone, folded on top of the form) the event and a
+// discount code. Paying in pesos registers the person through /api/register
+// (pending payment, with the discount worked out there again) and opens
+// Wompi's own window over the page with what it signed; if that window
+// doesn't load, Wompi's page instead. Wompi sends the buyer on to
+// /[eventSlug]/pago, which confirms. Paying in dollars — a ticket with a USD
+// price, PayPal set up — PayPal's own buttons take the place of «Pagar»
+// (components/PayPalButtons.tsx): the same registration, then PayPal's order,
+// captured on the server once the buyer approves, and on to /pago too. Where
+// the buyer lives picks the currency to start with (dollars outside
+// Colombia); they can always change it. Free events keep their usual form.
+
+type Currency = "COP" | "USD";
 
 interface Doc {
   value: string;
@@ -54,7 +61,18 @@ const REGISTER_ERRORS: Record<string, string> = {
   invalid_ticket_quantity: "La cantidad elegida ya no es válida — ajústala en el resumen.",
   ticket_window_closed: "Este precio ya cerró. Recarga la página para ver el de hoy.",
   no_ticket_on_sale: "Ahora mismo no hay cupos a la venta.",
+  usd_not_available: "Esta entrada no se puede pagar en dólares. Elige pagar en pesos con Wompi.",
+  paypal_not_configured: "PayPal no está disponible ahora mismo. Puedes pagar en pesos con Wompi.",
 };
+
+/** 2500 → "US$25", 2550 → "US$25.50" */
+function dollars(cents: number): string {
+  return `US$${cents % 100 ? (cents / 100).toFixed(2) : cents / 100}`;
+}
+
+function money(currency: Currency, cents: number): string {
+  return currency === "USD" ? dollars(cents) : pesos(cents / 100);
+}
 
 // The field paying found empty, to say so right under it.
 const Missing = createContext<string | null>(null);
@@ -67,26 +85,36 @@ export interface ImpCheckoutProps {
   dates: string;
   /** "Congreso virtual · 100% en vivo" */
   format: string;
-  ticket: { id: string; name: string; price: number; normalPrice: number | null; min: number; max: number };
+  /** Prices in pesos; in dollars (cents), when the ticket has a USD price. */
+  ticket: { id: string; name: string; price: number; normalPrice: number | null; usdCents: number | null; normalUsdCents: number | null; min: number; max: number };
   /** Until when today's price holds ("31 marzo 2027"), when a higher one comes after it. */
   until: string | null;
   professions: string[];
-  /** The first few things the ticket includes («Qué incluye»). */
-  includes: string[];
+  /** PayPal's buttons (lib/payments/paypal.ts's paypalCheckoutConfig) — null without PayPal, or without a USD price. */
+  paypal: { clientId: string; sandbox: boolean } | null;
 }
 
 interface Applied {
   code: string;
   label: string;
+  /** In the currency it was worked out for. */
   discountCents: number;
+  currency: Currency;
 }
 
-export default function ImpCheckout({ eventSlug, backHref, name, dates, format, ticket, until, professions, includes }: ImpCheckoutProps) {
+interface Registered {
+  checkoutUrl?: string;
+  wompi?: WompiWidgetParams;
+  paypal?: { paymentId: string };
+}
+
+export default function ImpCheckout({ eventSlug, backHref, name, dates, format, ticket, until, professions, paypal }: ImpCheckoutProps) {
   const [form, setForm] = useState({ email: "", firstName: "", lastName: "", docNumber: "", company: "", city: "", phone: "", profession: "", website: "" });
   const [qty, setQty] = useState(Math.max(1, ticket.min));
   const [country, setCountry] = useState("CO");
   const [phoneCountry, setPhoneCountry] = useState("CO");
   const [docType, setDocType] = useState("CC");
+  const [currency, setCurrency] = useState<Currency>("COP");
   const [code, setCode] = useState("");
   const [applied, setApplied] = useState<Applied | null>(null);
   const [codeError, setCodeError] = useState<string | null>(null);
@@ -97,6 +125,13 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
   const [notice, setNotice] = useState<string | null>(null);
   const [paying, setPaying] = useState(false);
   const opened = useRef(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  // Once the buyer picks a currency themselves, the country no longer changes it.
+  const currencyPicked = useRef(false);
+  // Only the latest code check counts (the currency or the count can change while one is on its way).
+  const codeAsk = useRef(0);
+  // Whether paying already said what went wrong — PayPal's own onError comes after it.
+  const explained = useRef(false);
 
   // Opening the checkout: the same counts the modal used to keep — Meta's
   // InitiateCheckout, Clarity's funnel, and our own (/api/funnel/open).
@@ -113,9 +148,13 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
   const idHint = country === "CO" ? undefined : (COUNTRY_CODES.find((c) => c.iso2 === country)?.idPlaceholder ?? GENERIC_ID_PLACEHOLDER);
   const phoneHint = COUNTRY_CODES.find((c) => c.iso2 === phoneCountry)?.phonePlaceholder ?? GENERIC_PHONE_PLACEHOLDER;
 
-  const subtotal = ticket.price * qty;
-  const discount = applied ? applied.discountCents / 100 : 0;
-  const total = subtotal - discount;
+  const canPayUsd = paypal !== null && ticket.usdCents !== null;
+  const usd = canPayUsd && currency === "USD";
+  // What each currency comes to, in its own cents (a code's discount only in the currency it was worked out for).
+  const totalCents = (cur: Currency) => (cur === "USD" ? (ticket.usdCents ?? 0) : ticket.price * 100) * qty - (applied?.currency === cur ? applied.discountCents : 0);
+  const shown: Currency = usd ? "USD" : "COP";
+  const normalCents = usd ? ticket.normalUsdCents : ticket.normalPrice !== null ? ticket.normalPrice * 100 : null;
+  const total = money(shown, totalCents(shown));
 
   function field(key: keyof typeof form) {
     return {
@@ -134,36 +173,47 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
     setCountry(iso2);
     setPhoneCountry(iso2);
     setDocType(iso2 === "CO" ? "CC" : "DOC");
+    if (canPayUsd && !currencyPicked.current) changeCurrency(iso2 === "CO" ? "COP" : "USD");
   }
 
-  // A code's discount depends on how many: asked again whenever that changes.
-  async function checkCode(typed: string, count: number) {
+  function changeCurrency(next: Currency) {
+    if (next === currency) return;
+    setCurrency(next);
+    setError(null);
+    setNotice(null);
+    if (applied) void checkCode(applied.code, qty, next);
+  }
+
+  // A code's discount depends on how many and in which currency: asked again whenever either changes.
+  async function checkCode(typed: string, count: number, cur: Currency) {
+    const ask = ++codeAsk.current;
     setCheckingCode(true);
     setCodeError(null);
     try {
       const res = await fetch("/api/checkout/discount", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ eventSlug, ticketTypeId: ticket.id, ticketCount: count, code: typed }),
+        body: JSON.stringify({ eventSlug, ticketTypeId: ticket.id, ticketCount: count, code: typed, currency: cur }),
       });
       const body = await res.json();
+      if (ask !== codeAsk.current) return;
       if (body?.ok) {
-        setApplied({ code: body.code, label: body.label, discountCents: body.discountCents });
+        setApplied({ code: body.code, label: body.label, discountCents: body.discountCents, currency: cur });
         setCode("");
       } else {
         setApplied(null);
         setCodeError(body?.message ?? "Ese código no aplica.");
       }
     } catch {
-      setCodeError("No pudimos revisar el código, intenta de nuevo.");
+      if (ask === codeAsk.current) setCodeError("No pudimos revisar el código, intenta de nuevo.");
     } finally {
-      setCheckingCode(false);
+      if (ask === codeAsk.current) setCheckingCode(false);
     }
   }
 
   function changeQty(next: number) {
     setQty(next);
-    if (applied) void checkCode(applied.code, next);
+    if (applied) void checkCode(applied.code, next, shown);
   }
 
   // Someone who leaves after giving their email can still be reminded (see /api/register/draft).
@@ -208,21 +258,27 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
     return data;
   }
 
-  async function pay(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    if (paying) return;
-    setError(null);
-    setNotice(null);
-    const firstInvalid = e.currentTarget.querySelector<HTMLElement>(":invalid");
+  // The first field paying finds empty, pointed out right under it: false while there's one.
+  function ready(): boolean {
+    const firstInvalid = formRef.current?.querySelector<HTMLElement>(":invalid");
     if (firstInvalid) {
       setMissing(firstInvalid.closest("[data-label]")?.getAttribute("data-label") ?? null);
       firstInvalid.scrollIntoView({ behavior: "smooth", block: "center" });
       firstInvalid.focus({ preventScroll: true });
-      return;
+      return false;
     }
     setMissing(null);
-    setPaying(true);
+    return true;
+  }
 
+  function fail(message: string) {
+    explained.current = true;
+    setError(message);
+  }
+
+  // Registers the buyer (pending payment) in `cur`: /api/register's answer,
+  // or null once it's said why not (a refusal, or a ticket paid already).
+  async function register(cur: Currency): Promise<Registered | null> {
     const customFields: Record<string, string> = { tipoDocumento: doc.short, cedula: form.docNumber.trim() };
     if (doc.company && form.company.trim()) customFields.razonSocial = form.company.trim();
     const cookie = document.cookie.match(/(?:^|; )_fbp=([^;]*)/);
@@ -249,34 +305,49 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
           fbp: cookie?.[1] ? decodeURIComponent(cookie[1]) : undefined,
           ticketTypeId: ticket.id,
           ticketCount: qty,
-          discountCode: applied?.code,
+          discountCode: applied?.currency === cur ? applied.code : undefined,
+          currency: cur,
           website: form.website,
         }),
       });
     } catch {
-      setPaying(false);
-      setError("No pudimos completar tu registro, intenta de nuevo.");
-      return;
+      fail("No pudimos completar tu registro, intenta de nuevo.");
+      return null;
     }
     const body = await res.json().catch(() => ({}));
     if (!res.ok) {
-      setPaying(false);
       if (body?.error === "discount_invalid") {
         setApplied(null);
-        setError(`${body.message ?? "Ese código ya no aplica."} Revisa el total antes de pagar.`);
+        fail(`${body.message ?? "Ese código ya no aplica."} Revisa el total antes de pagar.`);
       } else {
-        setError(REGISTER_ERRORS[body?.error] ?? "Algo salió mal, intenta de nuevo.");
+        fail(REGISTER_ERRORS[body?.error] ?? "Algo salió mal, intenta de nuevo.");
       }
-      return;
+      return null;
     }
     if (!body?.requiresPayment) {
       // Already paid before (a resend): nothing to charge.
-      setPaying(false);
+      explained.current = true;
       setNotice("Ya tienes tu cupo confirmado. Te reenviamos la confirmación a tu correo.");
+      return null;
+    }
+    return body as Registered;
+  }
+
+  // «Pagar», in pesos: Wompi's window.
+  async function pay(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (paying || usd) return;
+    setError(null);
+    setNotice(null);
+    if (!ready()) return;
+    setPaying(true);
+
+    const body = await register("COP");
+    if (!body) {
+      setPaying(false);
       return;
     }
-
-    const wompi = body.wompi as WompiWidgetParams | undefined;
+    const wompi = body.wompi;
     const openedWindow = wompi
       ? await openWompiWidget(wompi, customerData(), (transactionId) => {
           if (transactionId) {
@@ -289,7 +360,54 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
           }
         })
       : false;
-    if (!openedWindow) window.location.assign(body.checkoutUrl);
+    if (!openedWindow && body.checkoutUrl) window.location.assign(body.checkoutUrl);
+  }
+
+  // PayPal's buttons, in dollars: the same checks as «Pagar» before its
+  // window opens, then the same registration and PayPal's order for it;
+  // once the buyer approves, the capture on the server, which says where
+  // to go next (/pago).
+  function paypalClick(): boolean {
+    explained.current = false;
+    setError(null);
+    setNotice(null);
+    return ready();
+  }
+
+  async function paypalCreateOrder(): Promise<string> {
+    const body = await register("USD");
+    if (!body?.paypal) throw new Error("not registered"); // register said why
+    const res = await fetch("/api/paypal/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ paymentId: body.paypal.paymentId }),
+    }).catch(() => null);
+    const order = res?.ok ? await res.json().catch(() => null) : null;
+    if (!order?.id) {
+      fail("PayPal no respondió. Intenta de nuevo en un momento, o paga en pesos con Wompi.");
+      throw new Error("no order");
+    }
+    return order.id as string;
+  }
+
+  async function paypalApprove(orderId: string, restart: () => Promise<void>) {
+    setPaying(true);
+    setNotice("Confirmando tu pago con PayPal…");
+    const res = await fetch(`/api/paypal/orders/${encodeURIComponent(orderId)}/capture`, { method: "POST" }).catch(() => null);
+    const body = await res?.json().catch(() => null);
+    if (body?.retry) {
+      // A card PayPal declined: its window again, to pay another way.
+      setPaying(false);
+      setNotice("PayPal rechazó ese medio de pago. Elige otro para terminar.");
+      return restart();
+    }
+    if (body?.redirect) {
+      window.location.assign(body.redirect);
+      return;
+    }
+    setPaying(false);
+    setNotice(null);
+    fail("No pudimos confirmar tu pago con PayPal. Si se te cobró, escríbenos y lo revisamos.");
   }
 
   const codeBox = (
@@ -319,11 +437,11 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault();
-                if (code.trim()) void checkCode(code.trim(), qty);
+                if (code.trim()) void checkCode(code.trim(), qty, shown);
               }
             }}
           />
-          <button type="button" onClick={() => void checkCode(code.trim(), qty)} disabled={!code.trim() || checkingCode}>
+          <button type="button" onClick={() => void checkCode(code.trim(), qty, shown)} disabled={!code.trim() || checkingCode}>
             {checkingCode ? "…" : "Aplicar"}
           </button>
         </div>
@@ -332,29 +450,7 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
     </div>
   );
 
-  const totals = (
-    <dl className="imp-co-tot">
-      <div>
-        <dt>
-          {ticket.name} × {qty}
-        </dt>
-        <dd>{pesos(subtotal)}</dd>
-      </div>
-      {applied && (
-        <div className="imp-co-disc">
-          <dt>Descuento {applied.code}</dt>
-          <dd>−{pesos(discount)}</dd>
-        </div>
-      )}
-      <div className="imp-co-total">
-        <dt>Total</dt>
-        <dd>
-          {pesos(total)} <small>COP</small>
-        </dd>
-      </div>
-    </dl>
-  );
-
+  // The event, how many (only when a purchase can take more than one) and a discount code.
   const summary = (
     <div className="imp-co-sum">
       <div className="imp-co-ev">
@@ -369,14 +465,9 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
           {format}
         </p>
       </div>
-      <div className="imp-co-line">
-        <div>
-          <b>{ticket.name}</b>
-          <span>
-            {ticket.normalPrice && <s>{pesos(ticket.normalPrice)}</s>} {pesos(ticket.price)} por cupo
-          </span>
-        </div>
-        {ticket.max > 1 && (
+      {ticket.max > 1 && (
+        <div className="imp-co-line">
+          <b>Cupos</b>
           <div className="imp-co-qty" aria-label="Cupos">
             <button type="button" onClick={() => changeQty(Math.max(Math.max(1, ticket.min), qty - 1))} disabled={qty <= Math.max(1, ticket.min)} aria-label="Un cupo menos">
               −
@@ -386,24 +477,21 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
               +
             </button>
           </div>
-        )}
-      </div>
-      {includes.length > 0 && (
-        <ul className="imp-co-inc">
-          {includes.map((item) => (
-            <li key={item}>{item}</li>
-          ))}
-        </ul>
+        </div>
       )}
       {codeBox}
-      {totals}
-      {until && (
-        <p className="imp-co-up">
-          Tarifa {ticket.name} hasta el {until}. ¡Luego sube!
-        </p>
-      )}
     </div>
   );
+
+  const wompiBadges = (
+    <span className="imp-co-badges">
+      <span>Tarjeta</span>
+      <span>PSE</span>
+      <span>Nequi</span>
+      <span>Bancolombia</span>
+    </span>
+  );
+  const wompiNote = "Al tocar «Pagar» se abre la ventana segura de Wompi encima de esta página. Todas las transacciones son seguras y están encriptadas.";
 
   return (
     <div className="imp-co">
@@ -430,8 +518,8 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
                 {summaryOpen ? "Ocultar resumen" : "Ver resumen"} <Chevron open={summaryOpen} />
               </span>
               <span className="imp-co-fold-p">
-                {ticket.normalPrice && !applied && <s>{pesos(ticket.normalPrice * qty)}</s>}
-                <b>{pesos(total)}</b>
+                {normalCents !== null && applied?.currency !== shown && <s>{money(shown, normalCents * qty)}</s>}
+                <b>{total}</b>
               </span>
             </button>
             {summaryOpen && <div className="imp-co-fold-in">{summary}</div>}
@@ -439,6 +527,7 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
 
           <Missing.Provider value={missing}>
             <form
+              ref={formRef}
               className="imp-co-form"
               noValidate
               onSubmit={pay}
@@ -453,17 +542,23 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
 
               <section className="imp-co-sec">
                 <h2 className="imp-co-h">
-                  <i>1</i>Contacto
+                  <i>1</i>Tus datos
                 </h2>
-                <Field label="Correo electrónico" hint="Ahí te llega tu entrada.">
-                  <input className="imp-co-in" type="email" inputMode="email" autoComplete="email" required {...field("email")} onBlur={saveDraft} />
-                </Field>
-              </section>
-
-              <section className="imp-co-sec">
-                <h2 className="imp-co-h">
-                  <i>2</i>Tus datos
-                </h2>
+                {/* Where they live first: it picks the document's types, the phone's code and the currency. */}
+                <div className="imp-co-two">
+                  <Field label="País donde vives">
+                    <select className="imp-co-in" value={country} onChange={(e) => chooseCountry(e.target.value)}>
+                      {WORLD_COUNTRIES.map((c) => (
+                        <option key={c.iso2} value={c.iso2}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                  <Field label="Ciudad">
+                    <input className="imp-co-in" autoComplete="address-level2" required {...field("city")} />
+                  </Field>
+                </div>
                 <div className="imp-co-two">
                   <Field label="Nombre">
                     <input className="imp-co-in" autoComplete="given-name" required {...field("firstName")} />
@@ -491,20 +586,9 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
                     <input className="imp-co-in" autoComplete="organization" required {...field("company")} />
                   </Field>
                 )}
-                <div className="imp-co-two">
-                  <Field label="País donde vives">
-                    <select className="imp-co-in" value={country} onChange={(e) => chooseCountry(e.target.value)}>
-                      {WORLD_COUNTRIES.map((c) => (
-                        <option key={c.iso2} value={c.iso2}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
-                  </Field>
-                  <Field label="Ciudad">
-                    <input className="imp-co-in" autoComplete="address-level2" required {...field("city")} />
-                  </Field>
-                </div>
+                <Field label="Correo electrónico" hint="Ahí te llega tu entrada.">
+                  <input className="imp-co-in" type="email" inputMode="email" autoComplete="email" required {...field("email")} onBlur={saveDraft} />
+                </Field>
                 <div className={`imp-co-field${missing === "Celular con WhatsApp" ? " is-missing" : ""}`} data-label="Celular con WhatsApp">
                   <span className="imp-co-lab">Celular con WhatsApp</span>
                   <div className="imp-co-phone">
@@ -523,7 +607,7 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
 
               <section className="imp-co-sec">
                 <h2 className="imp-co-h">
-                  <i>3</i>Tu perfil
+                  <i>2</i>Tu perfil
                 </h2>
                 <div className={`imp-co-opts${missing === "Tu perfil" ? " is-missing" : ""}`} role="radiogroup" aria-label="Tu perfil" data-label="Tu perfil">
                   <p className="imp-co-q">¿Cuál de estas opciones te describe mejor?</p>
@@ -539,28 +623,76 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
 
               <section className="imp-co-sec">
                 <h2 className="imp-co-h">
-                  <i>4</i>Pago
+                  <i>3</i>Pago
                 </h2>
-                <div className="imp-co-pay">
-                  <div className="imp-co-pay-h">
-                    <span className="imp-co-dot" aria-hidden="true" />
-                    <b>Wompi</b>
-                    <span className="imp-co-badges">
-                      <span>Tarjeta</span>
-                      <span>PSE</span>
-                      <span>Nequi</span>
-                      <span>Bancolombia</span>
-                    </span>
+                {canPayUsd ? (
+                  // Pesos or dollars: the country picked one to start with, the buyer can switch.
+                  <div className="imp-co-pays" role="radiogroup" aria-label="Moneda y medio de pago">
+                    <label className={`imp-co-pay imp-co-pay-opt${usd ? "" : " is-on"}`}>
+                      <span className="imp-co-pay-h">
+                        <input
+                          type="radio"
+                          name="currency"
+                          checked={!usd}
+                          onChange={() => {
+                            currencyPicked.current = true;
+                            changeCurrency("COP");
+                          }}
+                        />
+                        <b>Pesos · Wompi</b>
+                        <span className="imp-co-pay-amt">{money("COP", totalCents("COP"))}</span>
+                      </span>
+                      {!usd && (
+                        <>
+                          {wompiBadges}
+                          <span className="imp-co-pay-p">{wompiNote}</span>
+                        </>
+                      )}
+                    </label>
+                    <label className={`imp-co-pay imp-co-pay-opt${usd ? " is-on" : ""}`}>
+                      <span className="imp-co-pay-h">
+                        <input
+                          type="radio"
+                          name="currency"
+                          checked={usd}
+                          onChange={() => {
+                            currencyPicked.current = true;
+                            changeCurrency("USD");
+                          }}
+                        />
+                        <b>Dólares · PayPal</b>
+                        <span className="imp-co-pay-amt">{money("USD", totalCents("USD"))}</span>
+                      </span>
+                      {usd && (
+                        <>
+                          <span className="imp-co-badges">
+                            <span>Cuenta PayPal</span>
+                            <span>Tarjeta</span>
+                          </span>
+                          <span className="imp-co-pay-p">
+                            Paga con los botones de PayPal al final: se abre su ventana segura encima de esta página, con tu cuenta PayPal o con tarjeta.
+                          </span>
+                          {paypal?.sandbox && (
+                            <span className="imp-co-pay-test">Modo de pruebas (sandbox): paga con una cuenta de prueba de PayPal. No se cobra dinero real.</span>
+                          )}
+                        </>
+                      )}
+                    </label>
                   </div>
-                  <p>Al tocar «Pagar» se abre la ventana segura de Wompi encima de esta página. Todas las transacciones son seguras y están encriptadas.</p>
-                </div>
+                ) : (
+                  <div className="imp-co-pay">
+                    <div className="imp-co-pay-h">
+                      <span className="imp-co-dot" aria-hidden="true" />
+                      <b>Wompi</b>
+                      {wompiBadges}
+                    </div>
+                    <p>{wompiNote}</p>
+                  </div>
+                )}
               </section>
 
-              {/* On a phone the total comes again right before paying, with the code. */}
-              <div className="imp-co-recap">
-                {codeBox}
-                {totals}
-              </div>
+              {/* On a phone the code comes again right before paying. */}
+              <div className="imp-co-recap">{codeBox}</div>
 
               {/* Honeypot: always empty from a person (see /api/register). */}
               <input className="imp-co-hp" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" {...field("website")} />
@@ -575,23 +707,43 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
                   {notice}
                 </p>
               )}
-              <button type="submit" className="imp-co-btn" disabled={paying}>
-                <Lock />
-                {paying ? "Abriendo el pago…" : `Pagar ${pesos(total)}`}
-              </button>
-              <p className="imp-co-legal">
-                Al tocar «Pagar» aceptas nuestros{" "}
-                <a href="/terminos" target="_blank" rel="noreferrer">
-                  términos y condiciones
-                </a>{" "}
-                y nuestra{" "}
-                <a href="/privacidad" target="_blank" rel="noreferrer">
-                  política de privacidad
-                </a>
-                ; autorizas el tratamiento de tus datos para enviarte tu entrada y la información operativa de este evento (incluyendo por WhatsApp al número que
-                registraste); y autorizas recibir novedades de futuros eventos de Nail Fest y que te mostremos publicidad relevante en Meta con tus datos (de forma
-                cifrada).
-              </p>
+              <div className="imp-co-end">
+                {usd && paypal ? (
+                  <PayPalButtons
+                    clientId={paypal.clientId}
+                    onClick={paypalClick}
+                    createOrder={paypalCreateOrder}
+                    onApprove={paypalApprove}
+                    onCancel={() => setNotice("Cerraste PayPal sin terminar. Puedes intentarlo de nuevo cuando quieras.")}
+                    onError={() => {
+                      if (!explained.current) setError("PayPal tuvo un problema. Intenta de nuevo, o paga en pesos con Wompi.");
+                    }}
+                  />
+                ) : (
+                  <button type="submit" className="imp-co-btn" disabled={paying}>
+                    <Lock />
+                    {paying ? "Abriendo el pago…" : `Pagar ${total}`}
+                  </button>
+                )}
+                {until && (
+                  <p className="imp-co-until">
+                    Tarifa {ticket.name} hasta el {until}. ¡Luego sube!
+                  </p>
+                )}
+                <p className="imp-co-legal">
+                  {usd ? "Al pagar con PayPal" : "Al tocar «Pagar»"} aceptas nuestros{" "}
+                  <a href="/terminos" target="_blank" rel="noreferrer">
+                    términos y condiciones
+                  </a>{" "}
+                  y nuestra{" "}
+                  <a href="/privacidad" target="_blank" rel="noreferrer">
+                    política de privacidad
+                  </a>
+                  ; autorizas el tratamiento de tus datos para enviarte tu entrada y la información operativa de este evento (incluyendo por WhatsApp al número que
+                  registraste); y autorizas recibir novedades de futuros eventos de Nail Fest y que te mostremos publicidad relevante en Meta con tus datos (de forma
+                  cifrada).
+                </p>
+              </div>
             </form>
           </Missing.Provider>
         </div>

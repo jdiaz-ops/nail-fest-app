@@ -5,7 +5,7 @@ import { getOrgSettings } from "@/lib/settings";
 import { getOrderedProfessionOptions } from "@/lib/professions";
 import { getPublicTicketTypes } from "@/lib/ticketTypes";
 import { publicEventName } from "@/lib/eventDisplayName";
-import type { LandingBlock } from "@/lib/landingBlocks/types";
+import { paypalCheckoutConfig } from "@/lib/payments/paypal";
 import { imparablesPageData } from "@/lib/imparables/page";
 import { coverName } from "@/lib/imparables/schedule";
 import { untilDate } from "@/lib/imparables/stages";
@@ -28,7 +28,9 @@ export async function generateMetadata({ params }: { params: { eventSlug: string
 // An event's one-page checkout (2026-10-29), after Marcolini's — the
 // landing's buttons come here while a price is on sale. Only Manicuristas
 // Imparables' for now (EventTheme IMPARABLES): every other event keeps its
-// own form. Without a price on sale it goes back to the event's page.
+// own form. Without a price on sale it goes back to the event's page. Paying
+// in dollars with PayPal shows up only for a ticket with a USD price, with
+// PayPal set up (lib/payments/paypal.ts).
 export default async function CheckoutPage({ params }: { params: { eventSlug: string } }) {
   const event = await db.event.findUnique({
     where: { slug: params.eventSlug },
@@ -42,11 +44,17 @@ export default async function CheckoutPage({ params }: { params: { eventSlug: st
   const { current, normal, next } = data.sales;
   if (data.sales.mode !== "sale" || !current) redirect(`/${event.slug}`);
 
-  const [professions, ticketTypes] = await Promise.all([getOrderedProfessionOptions(), getPublicTicketTypes(event.id, now)]);
+  const hasNormal = normal && normal.id !== current.id;
+  const [professions, ticketTypes, usdPrices] = await Promise.all([
+    getOrderedProfessionOptions(),
+    getPublicTicketTypes(event.id, now),
+    db.ticketType.findMany({ where: { id: { in: hasNormal ? [current.id, normal.id] : [current.id] } }, select: { id: true, priceUsdCents: true } }),
+  ]);
   const onSale = ticketTypes.find((t) => t.id === current.id);
   const words = coverName(publicEventName(event)).split(/\s+/);
   const big = words.pop() ?? "";
-  const points = data.blocks.find((b): b is Extract<LandingBlock, { type: "points" }> => b.type === "points");
+  const usdCents = usdPrices.find((t) => t.id === current.id)?.priceUsdCents ?? null;
+  const normalUsdCents = hasNormal ? (usdPrices.find((t) => t.id === normal.id)?.priceUsdCents ?? null) : null;
 
   return (
     <main className={`imp ${cinzel.variable} ${manrope.variable}`}>
@@ -61,16 +69,15 @@ export default async function CheckoutPage({ params }: { params: { eventSlug: st
           id: current.id,
           name: current.name,
           price: current.price,
-          normalPrice: normal && normal.id !== current.id && normal.price > current.price ? normal.price : null,
+          normalPrice: hasNormal && normal.price > current.price ? normal.price : null,
+          usdCents,
+          normalUsdCents: usdCents && normalUsdCents && normalUsdCents > usdCents ? normalUsdCents : null,
           min: onSale?.minPerOrder ?? 1,
           max: Math.max(1, Math.min(onSale?.maxPerOrder ?? 1, onSale?.remaining ?? 1)),
         }}
         until={current.closesAt && next ? untilDate(current.closesAt, orgSettings.timezone) : null}
         professions={professions}
-        includes={(points?.items ?? [])
-          .map((item) => item.title)
-          .filter(Boolean)
-          .slice(0, 4)}
+        paypal={usdCents ? paypalCheckoutConfig() : null}
       />
     </main>
   );

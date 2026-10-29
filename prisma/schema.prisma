@@ -371,6 +371,10 @@ model TicketType {
   // up, but the field is real, not hardcoded, so it's ready the day that
   // changes.
   price               Int              @default(0)
+  // The same ticket in US dollars, in cents (2500 = US$25), for buyers who
+  // pay with PayPal from outside Colombia (2026-10-29). Null: this ticket is
+  // paid in pesos only (Wompi). Shown only at the one-page checkout.
+  priceUsdCents       Int?
   bookingFee          Int              @default(0)
   description         String?
   status              TicketTypeStatus @default(ON_SALE)
@@ -540,6 +544,10 @@ enum PaymentStatus {
   DECLINED
   VOIDED
   ERROR
+  // Refunded in full (PayPal's PAYMENT.CAPTURE.REFUNDED, 2026-10-29): the
+  // registration is cancelled. A partial refund keeps APPROVED, with
+  // Payment.refundedCents saying how much went back.
+  REFUNDED
 }
 
 // One row per checkout ATTEMPT, not one per Registration — a declined
@@ -574,6 +582,9 @@ model Payment {
   discountCode      DiscountCode?   @relation(fields: [discountCodeId], references: [id], onDelete: SetNull)
   discountCodeId    String?
   discountCents     Int             @default(0)
+  // How much of it has been refunded, in the same cents (PayPal's
+  // refunds); the whole of it makes the payment REFUNDED.
+  refundedCents     Int             @default(0)
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 

@@ -16,7 +16,7 @@ function send(body: unknown) {
 }
 
 beforeEach(() => {
-  findTicketType.mockReset().mockResolvedValue({ id: "t1", eventId: "e1", price: 80000, event: { slug: "manicuristas-imparables-2027", status: "PUBLISHED" } });
+  findTicketType.mockReset().mockResolvedValue({ id: "t1", eventId: "e1", price: 80000, priceUsdCents: 2500, event: { slug: "manicuristas-imparables-2027", status: "PUBLISHED" } });
   resolveDiscount.mockReset().mockResolvedValue({ ok: true, discountCode: { code: "IMPARABLE10" }, discountCents: 16000_00, totalCents: 144000_00, label: "−10%" });
 });
 
@@ -24,7 +24,14 @@ describe("POST /api/checkout/discount", () => {
   it("says what a code takes off this ticket times how many", async () => {
     const res = await send(ASK);
     expect(await res.json()).toEqual({ ok: true, code: "IMPARABLE10", label: "−10%", discountCents: 16000_00, totalCents: 144000_00 });
-    expect(resolveDiscount).toHaveBeenCalledWith({ eventId: "e1", ticketTypeId: "t1", code: "imparable10", subtotalCents: 160000_00 });
+    expect(resolveDiscount).toHaveBeenCalledWith({ eventId: "e1", ticketTypeId: "t1", code: "imparable10", subtotalCents: 160000_00, currency: "COP" });
+  });
+
+  it("in dollars, on the ticket's own USD price", async () => {
+    await send({ ...ASK, currency: "USD" });
+    expect(resolveDiscount).toHaveBeenCalledWith({ eventId: "e1", ticketTypeId: "t1", code: "imparable10", subtotalCents: 50_00, currency: "USD" });
+    findTicketType.mockResolvedValueOnce({ id: "t1", eventId: "e1", price: 80000, priceUsdCents: null, event: { slug: "manicuristas-imparables-2027", status: "PUBLISHED" } });
+    expect(await (await send({ ...ASK, currency: "USD" })).json()).toMatchObject({ ok: false, error: "not_found" });
   });
 
   it("says why a code doesn't apply, as a normal answer", async () => {

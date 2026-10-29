@@ -10,11 +10,15 @@ vi.mock("@/lib/db", () => ({ db }));
 
 const { finalizeConfirmedRegistration } = vi.hoisted(() => ({ finalizeConfirmedRegistration: vi.fn() }));
 vi.mock("@/lib/registrationConfirmation", () => ({ finalizeConfirmedRegistration }));
+vi.mock("@/lib/zoom", () => ({ cancelRegistrant: vi.fn() }));
 
 import { confirmRegistrationPayment } from "./confirmRegistrationPayment";
 
 const PAYMENT = {
   id: "cmhb2k9x40001ab12cd34ef5",
+  provider: "WOMPI",
+  status: "PENDING",
+  currency: "COP",
   amountInCents: 8000000,
   registration: { id: "reg_1", confirmedAt: null, person: { id: "p1" }, event: { id: "e1" } },
 };

@@ -36,24 +36,12 @@ function env(name: string): string {
   return value;
 }
 
-/** Every reference this app sends to Wompi starts with this, so whoever
- * receives the comercio's events (Marcolini, since 2026-10-29) can tell
- * ours apart and relay them here. */
-export const WOMPI_REFERENCE_PREFIX = "NF-";
-
-/** A checkout attempt's reference: NF- + its Payment row's id — unique per
- * attempt, as Wompi requires (a declined attempt's reference can't be
- * used again; see the Payment model's own comment). */
-export function wompiReference(paymentId: string): string {
-  return `${WOMPI_REFERENCE_PREFIX}${paymentId}`;
-}
-
-/** The Payment row a reference names: NF-<id>, or the bare id references
- * were before 2026-10-29 (a checkout started before then can still come
- * back). Anything else names no Payment of ours. */
-export function paymentIdFromReference(reference: string): string {
-  return reference.startsWith(WOMPI_REFERENCE_PREFIX) ? reference.slice(WOMPI_REFERENCE_PREFIX.length) : reference;
-}
+// The NF- reference (lib/payments/reference.ts), under the names Wompi's code has used since 2026-10-29.
+export {
+  PAYMENT_REFERENCE_PREFIX as WOMPI_REFERENCE_PREFIX,
+  paymentReference as wompiReference,
+  paymentIdFromReference,
+} from "./reference";
 
 /** Constant-time, and of equal length whatever the inputs (both hashed
  * first), so the comparison itself gives away nothing about how much of a
