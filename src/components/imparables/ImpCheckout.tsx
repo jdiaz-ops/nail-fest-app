@@ -83,8 +83,8 @@ export interface ImpCheckoutProps {
   format: string;
   /** The price stage on sale (lib/imparables/pricing.ts): in pesos; in dollars (cents), when it has a USD price. */
   ticket: CheckoutTicket;
-  /** Its line, as under the cover's button: «Etapa Creyente · 200 cupos a $90.000 o hasta el 18 de abril … · luego $120.000». */
-  line: string | null;
+  /** Whether it takes a discount code — not for now (2026-10-29). */
+  codes: boolean;
   professions: string[];
   /** PayPal's buttons (lib/payments/paypal.ts's paypalCheckoutConfig) — null without PayPal, or without a USD price. */
   paypal: { clientId: string } | null;
@@ -104,10 +104,9 @@ interface Registered {
   paypal?: { paymentId: string };
 }
 
-export default function ImpCheckout({ eventSlug, backHref, name, dates, format, ticket: openedWith, line: openedLine, professions, paypal }: ImpCheckoutProps) {
+export default function ImpCheckout({ eventSlug, backHref, name, dates, format, ticket: openedWith, codes, professions, paypal }: ImpCheckoutProps) {
   // What's on sale: the stage the page opened with, until paying finds another one is (/api/register's price_changed).
   const [ticket, setTicket] = useState(openedWith);
-  const [line, setLine] = useState(openedLine);
   const [form, setForm] = useState({ email: "", firstName: "", lastName: "", docNumber: "", company: "", city: "", phone: "", profession: "", website: "" });
   const [qty, setQty] = useState(Math.max(1, ticket.min));
   const [country, setCountry] = useState("CO");
@@ -324,7 +323,6 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
         const count = Math.min(Math.max(qty, next.min), next.max);
         const inUsd = cur === "USD" && next.usdCents !== null;
         setTicket(next);
-        setLine(body.line ?? null);
         setQty(count);
         if (cur === "USD" && !inUsd) setCurrency("COP");
         const hadCode = applied !== null;
@@ -496,7 +494,7 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
           </div>
         </div>
       )}
-      {codeBox}
+      {codes && codeBox}
     </div>
   );
 
@@ -691,12 +689,10 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
                     <p>{wompiNote}</p>
                   </div>
                 )}
-                {/* Under the prices it's about, before the code: the stage's line, as on the cover (2026-10-29). */}
-                {line && <p className="imp-co-until">{line}</p>}
               </section>
 
               {/* On a phone the code comes again right before paying. */}
-              <div className="imp-co-recap">{codeBox}</div>
+              {codes && <div className="imp-co-recap">{codeBox}</div>}
 
               {/* Honeypot: always empty from a person (see /api/register). */}
               <input className="imp-co-hp" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" {...field("website")} />

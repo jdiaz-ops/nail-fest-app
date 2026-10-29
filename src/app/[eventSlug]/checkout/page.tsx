@@ -59,7 +59,8 @@ export default async function CheckoutPage({ params }: { params: { eventSlug: st
         dates={data.when.compact}
         format={event.format === "VIRTUAL" ? "Congreso virtual · 100% en vivo" : event.format === "HYBRID" ? "Presencial y virtual" : (event.city ?? "")}
         ticket={offer.ticket}
-        line={offer.line}
+        // No discount code box for now (the team, 2026-10-29).
+        codes={false}
         professions={professions}
         paypal={offer.ticket.usdCents ? paypalCheckoutConfig() : null}
       />
