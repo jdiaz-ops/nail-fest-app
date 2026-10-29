@@ -47,6 +47,12 @@ export interface ImparablesContext {
 
 type Section = { heading: HeadingLandingBlock | null; blocks: LandingBlock[] };
 
+/** "8:00 a. m." and "7 p. m." whole on their line, wherever a line breaks (2026-10-29: the day's hours under
+ * «Agenda» and in what the ticket brings). */
+function keepTimes(text: string): string {
+  return text.replace(/(\d{1,2}(?:[:.]\d{2})?) ([ap])\. m\./g, "$1\u00a0$2.\u00a0m.");
+}
+
 function sectionsOf(blocks: LandingBlock[]): Section[] {
   const sections: Section[] = [];
   for (const block of blocks) {
@@ -80,7 +86,7 @@ export default function ImparablesBlocks({ blocks, context }: { blocks: LandingB
               )}
               {heading?.eyebrow && <div className="imp-eyebrow">{heading.eyebrow}</div>}
               {heading?.title && <h2 className="imp-h2">{heading.title}</h2>}
-              {heading?.intro && <p className="imp-lead">{heading.intro}</p>}
+              {heading?.intro && <p className="imp-lead">{keepTimes(heading.intro)}</p>}
               {content}
             </div>
           </section>
@@ -198,7 +204,7 @@ function renderBlock(block: LandingBlock, key: number, context: ImparablesContex
               <ImpIcon name={iconForPoint(item.title || item.text)} size={28} />
               <span>
                 {item.title && <b>{item.title}</b>}
-                {item.text && <small>{item.text}</small>}
+                {item.text && <small>{keepTimes(item.text)}</small>}
               </span>
             </li>
           ))}
@@ -433,12 +439,14 @@ function Speakers({ people }: { people: PeopleLandingBlock }) {
 }
 
 // ── The program ─────────────────────────────────────────────────────────────
-// Both days one under the other, each line told the way the approved boceto
-// does: the talk first (after its small tag, if it has one: its step, or
-// «Charla estrella»), then who gives it (her photo, name and Instagram), only
-// the hour it starts — no durations since 2026-10-28 — a star talk in a box of
-// its own and the active breaks as thin lines. A day's header: its date, its
-// title, its subtitle and, when its talks are steps, the route they make.
+// Its parts one under the other — the two days, or since 2026-10-29 one day's
+// morning and afternoon — each line told the way the approved boceto does:
+// the talk first (after its small tag, if it has one: its step, or «Charla
+// estrella»), then who gives it (her photo, name and Instagram), only the hour
+// it starts — no durations since 2026-10-28 — a star talk in a box of its own
+// and the active breaks and the lunch as thin lines. A part's header: its
+// label, its title, its subtitle and, when its talks are steps, the route
+// they make.
 
 /** "10:15 a. m." -> ["10:15", "a. m."]; anything else stays whole. */
 function splitChip(chip: string): [string, string] {
@@ -456,8 +464,10 @@ function Agenda({ rows, context }: { rows: AgendaRow[]; context: ImparablesConte
       days[days.length - 1]!.rows.push(row);
     }
   }
-  // The n-th day of the program happens on the event's n-th day.
-  const instants = days.map((d, i) => d.rows.map((row) => agendaInstant(context.when.days[i], row.chip, context.timezone)));
+  // The n-th part of the program happens on the event's n-th day; a one-day
+  // event's parts (its morning, its afternoon) all on its one day.
+  const dayOf = (i: number) => context.when.days[Math.min(i, context.when.days.length - 1)];
+  const instants = days.map((d, i) => d.rows.map((row) => agendaInstant(dayOf(i), row.chip, context.timezone)));
   // A speaker's Instagram goes next to her name in the program (2026-10-28) — the panel's and the host's lines keep theirs.
   const handleOf = (name: string) => context.speakers.find((p) => p.name.trim() === name.trim())?.handle.trim() ?? "";
   const cards = days.map((d, i) => {
@@ -527,18 +537,24 @@ function AgendaLine({
   handle: string;
   panel: ImparablesContext["panel"];
 }) {
-  const isPause = !row.instructor && !row.photoUrl && /^pausa/i.test(row.topic.trim());
+  const isPause = !row.instructor && !row.photoUrl && /^(pausa|almuerzo)/i.test(row.topic.trim());
   // Rows saved before topic/instructor existed keep everything in `text`.
   const title = row.topic || row.instructor || row.text;
   // A talk: its title, its subtitle (the row's «Nota extra»), then who gives
   // it. A line with a photo and no speaker (the host's): its title, then the
   // photo next to its text.
   // The panel's line tells what its card says instead (2026-10-26).
-  const subtitle = panel?.card.html ? "" : row.topic && (row.instructor || !row.photoUrl) ? row.text : "";
   const guests = panel ? panelGuestsOf(panel.people) : [];
   const named = guests.filter((p) => p.name.trim()).map((p) => p.name.trim());
   const pending = guests.length - named.length;
-  const who = row.topic ? row.instructor || (row.photoUrl ? row.text : "") : "";
+  // Or it names its guests its own way (2026-10-29): «Maris
+  // @maris_nails_oficial · desde Chile» — its «Quién la da», its Instagram,
+  // its note — with her round photo, instead of the full names on the
+  // panel's cards, which still count who is to be announced.
+  const panelWho = panel ? row.instructor.trim() : "";
+  const subtitle = panel?.card.html || panelWho ? "" : row.topic && (row.instructor || !row.photoUrl) ? row.text : "";
+  const toAnnounce = pending > 0 ? ` y ${pending} ${pending === 1 ? "panelista" : "panelistas"} por anunciar` : "";
+  const who = panel ? "" : row.topic ? row.instructor || (row.photoUrl ? row.text : "") : "";
   const [digits, suffix] = splitChip(row.chip);
   if (!title && !row.chip) return null;
   if (isPause) {
@@ -561,7 +577,22 @@ function AgendaLine({
         <b>{title}</b>
         {subtitle && <span>{subtitle}</span>}
         {panel?.card.html && <span className="imp-ag-desc" dangerouslySetInnerHTML={{ __html: panel.card.html }} />}
-        {guests.length > 0 && (
+        {panelWho ? (
+          <span className="imp-by">
+            {row.photoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element -- admin-uploaded photo, arbitrary Blob URL
+              <img src={row.photoUrl} alt="" loading="lazy" />
+            ) : (
+              <span aria-hidden="true">{initials(panelWho)}</span>
+            )}
+            <i className="imp-by-who">
+              Con {panelWho}
+              {row.handles.trim() && <> <em>{row.handles.trim()}</em></>}
+              {row.text.trim() && ` · ${row.text.trim()}`}
+              {toAnnounce}
+            </i>
+          </span>
+        ) : guests.length > 0 && (
           <span className="imp-by">
             <span className="imp-by-faces" aria-hidden="true">
               {guests.map((p, k) =>

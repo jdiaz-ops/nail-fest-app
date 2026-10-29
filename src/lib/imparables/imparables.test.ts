@@ -71,10 +71,12 @@ describe("salesState", () => {
     expect(state.stages.map((s) => s.state)).toEqual(["past", "past", "past", "current"]);
   });
 
-  it("closes when the congress ends", () => {
-    const state = salesState(stages(), at("2027-06-28T15:00:00-05:00"), STARTS);
+  it("closes when the congress ends: 7:00 p. m. on its one day (2026-10-29)", () => {
+    expect(salesState(stages(), at("2027-06-27T18:59:00-05:00"), STARTS).current?.name).toBe("Precio normal");
+    const state = salesState(stages(), at("2027-06-27T19:01:00-05:00"), STARTS);
     expect(state.mode).toBe("closed");
     expect(state.countdown).toBeNull();
+    expect(salesState(stages(), at("2027-06-28T15:00:00-05:00"), STARTS).mode).toBe("closed");
   });
 
   it("goes back to the waiting list when a stage sells out before the next one opens", () => {
@@ -136,6 +138,7 @@ describe("eventWhen", () => {
     );
     expect(when).toEqual({
       dates: "Domingo 27 y lunes 28 de junio de 2027",
+      named: "Domingo 27 y lunes 28 de junio",
       hours: "9:00 a. m. a 2:00 p. m.",
       short: "27 y 28 de junio",
       compact: "27 y 28 de junio de 2027",
@@ -143,6 +146,30 @@ describe("eventWhen", () => {
       span: { opensAt: "2027-06-27T14:00:00.000Z", closesAt: "2027-06-27T19:00:00.000Z" },
       ends: ["2027-06-27T19:00:00.000Z", "2027-06-28T19:00:00.000Z"],
     });
+  });
+
+  it("names the congress's one day and its hours (2026-10-29): Sunday the 27th, 8:00 a. m. to 7:00 p. m.", () => {
+    const when = eventWhen(
+      {
+        startsAt: at("2027-06-27T08:00:00-05:00"),
+        endsAt: at("2027-06-27T19:00:00-05:00"),
+        scheduleDays: [{ opensAt: "2027-06-27T13:00:00.000Z", closesAt: "2027-06-28T00:00:00.000Z" }],
+      },
+      TZ
+    );
+    expect(when).toEqual({
+      dates: "Domingo 27 de junio de 2027",
+      named: "Domingo 27 de junio",
+      hours: "8:00 a. m. a 7:00 p. m.",
+      short: "27 de junio",
+      compact: "27 de junio de 2027",
+      days: ["2027-06-27"],
+      span: { opensAt: "2027-06-27T13:00:00.000Z", closesAt: "2027-06-28T00:00:00.000Z" },
+      ends: ["2027-06-28T00:00:00.000Z"],
+    });
+    // The same from the span alone.
+    const span = eventWhen({ startsAt: at("2027-06-27T08:00:00-05:00"), endsAt: at("2027-06-27T19:00:00-05:00") }, TZ);
+    expect([span.dates, span.named, span.hours, span.days]).toEqual(["Domingo 27 de junio de 2027", "Domingo 27 de junio", "8:00 a. m. a 7:00 p. m.", ["2027-06-27"]]);
   });
 
   it("writes the cover's dates as short as they get", () => {
@@ -393,27 +420,44 @@ describe("the template", () => {
   const agendaOf = (blocks: LandingBlock[]) => {
     const agenda = blocks.find((b): b is AgendaLandingBlock => b.type === "agenda");
     if (!agenda) throw new Error("no agenda");
-    const monday = agenda.rows.findIndex((r, i) => i > 0 && r.kind === "day");
-    return { rows: agenda.rows, sunday: agenda.rows.slice(1, monday), monday: agenda.rows.slice(monday + 1) };
+    const afternoon = agenda.rows.findIndex((r, i) => i > 0 && r.kind === "day");
+    return { rows: agenda.rows, morning: agenda.rows.slice(1, afternoon), afternoon: agenda.rows.slice(afternoon + 1) };
   };
 
-  it("gives each day its subtitle; Sunday tells the stories, no talk tagged nor boxed as the star", () => {
-    const { rows, sunday } = agendaOf(IMPARABLES_BLOCKS);
-    expect(rows.filter((r) => r.kind === "day").map((r) => [r.chip, r.text])).toEqual([
-      ["Domingo 27 de junio", "9:00 a. m. a 1:45 p. m."],
-      ["Lunes 28 de junio", "9:00 a. m. a 2:00 p. m."],
+  it("tells its one day in two parts (2026-10-29): the morning's stories, from 8:00, with the panel as the star talk", () => {
+    const { rows, morning } = agendaOf(IMPARABLES_BLOCKS);
+    expect(rows.filter((r) => r.kind === "day").map((r) => [r.chip, r.topic])).toEqual([
+      ["Mañana · 8:00 a. m.", "Lo lograron con los mismos miedos que tú. Ahora te cuentan cómo."],
+      ["Tarde · 1:45 p. m.", "Ahora te toca a ti. Este es tu plan para lograrlo."],
     ]);
     expect(rows.filter((r) => r.kind === "day").every((r) => r.takeaway.length > 0)).toBe(true);
-    expect(sunday.filter((r) => r.label)).toEqual([]);
-    expect(sunday.some((r) => r.topic === "Panel «El día que decidí cambiar»")).toBe(true);
-    expect(rows.filter((r) => r.star)).toEqual([]);
+    expect(morning.map((r) => [r.chip, r.instructor || r.topic])).toEqual([
+      ["8:00 a. m.", "Bienvenida"],
+      ["8:15 a. m.", "Jimena Montalban"],
+      ["9:20 a. m.", "Maris"],
+      ["10:20 a. m.", "Pausa activa"],
+      ["10:35 a. m.", "Paula Chacón"],
+      ["11:40 a. m.", "Cristina Sierra"],
+      ["12:40 p. m.", "Almuerzo"],
+    ]);
+    expect(morning.filter((r) => r.label)).toEqual([]);
+    expect(rows.filter((r) => r.star).map((r) => r.topic)).toEqual(["Panel «El día que decidí cambiar»"]);
+    // The panel's line names Maris its own way: «Maris @maris_nails_oficial · desde Chile».
+    expect(morning.find((r) => r.star)).toMatchObject({ instructor: "Maris", handles: "@maris_nails_oficial", text: "desde Chile", photoUrl: "/imparables/maris.jpg" });
   });
 
-  it("makes Monday «Tu plan para lograrlo.», with no step named on its talks — so no route under the day either", () => {
-    const { rows, monday } = agendaOf(IMPARABLES_BLOCKS);
-    expect(rows.filter((r) => r.kind === "day").map((r) => r.topic)).toEqual(["Así lo lograron", "Tu plan para lograrlo."]);
-    expect(monday.filter((r) => r.label)).toEqual([]);
-    expect(routeOf(monday)).toEqual([]);
+  it("makes the afternoon the plan in five steps, from 1:45, each talk with its step — the route under its title — and the closing last", () => {
+    const { afternoon } = agendaOf(IMPARABLES_BLOCKS);
+    expect(afternoon.map((r) => [r.chip, r.label, r.instructor || r.topic])).toEqual([
+      ["1:45 p. m.", "Paso 1 · Tus números", "Alejandro Salinas"],
+      ["2:50 p. m.", "Paso 2 · Tu esencia", "Karen Pinzón"],
+      ["3:50 p. m.", "", "Pausa activa"],
+      ["4:05 p. m.", "Paso 3 · Atraer", "Fabi Pinillo Martínez"],
+      ["5:10 p. m.", "Paso 4 · Retener", "Juan Tenorio"],
+      ["6:15 p. m.", "Paso 5 · Tu ruta", "Oskar Garzón"],
+      ["6:45 p. m.", "", "Cierre y sorteo"],
+    ]);
+    expect(routeOf(afternoon)).toEqual(["Tus números", "tu esencia", "atraer", "retener", "tu ruta"]);
   });
 
   it("puts the results right after the program", () => {
@@ -441,18 +485,29 @@ describe("the template", () => {
     expect(shown).not.toMatch(/\bspeakers?\b|nail artist/i);
   });
 
-  it("says nothing on the page about artificial intelligence, a raffle or the next edition, nor the days' old titles", () => {
+  it("says nothing on the page about artificial intelligence or the next edition, nor the days' old titles", () => {
     const shown = JSON.stringify(IMPARABLES_BLOCKS.filter((b) => !b.hidden));
     expect(shown).not.toMatch(/inteligencia artificial|\bIA\b/i);
-    expect(shown).not.toMatch(/sorteo|próxima edición|charla estrella/i);
-    for (const old of ["De la mesa a empresaria", "Sobresalir y pasar a la acción", "Hazte ver y pasa a la acción"]) expect(shown).not.toContain(old);
+    expect(shown).not.toMatch(/próxima edición/i);
+    for (const old of ["De la mesa a empresaria", "Sobresalir y pasar a la acción", "Hazte ver y pasa a la acción", "Así lo lograron", "Repaso", "Cierre del día"]) expect(shown).not.toContain(old);
   });
 
-  it("fits each day of the program between 9:00 a. m. and 2:00 p. m.", () => {
+  it("says one day everywhere (2026-10-29): no 28th, no Monday, no two days — hidden texts too", () => {
+    const all = JSON.stringify([IMPARABLES_FIELDS, IMPARABLES_BLOCKS]);
+    expect(all).not.toMatch(/\b28\b|lunes|dos días|2 días/i);
+    const faq = IMPARABLES_BLOCKS.find((b) => b.type === "faq");
+    if (faq?.type !== "faq") throw new Error("no faq");
+    expect(faq.items.map((it) => it.question).slice(0, 3)).toEqual(["¿Cómo me conecto?", "¿Y si no puedo verlo en vivo?", "¿Cuál es el horario?"]);
+    expect(faq.items[1]!.answer).toMatch(/grabaciones de todas las charlas.*30 días en nailfest\.lat, con tu cuenta/);
+  });
+
+  it("fits the program in its one day, from 8:00 a. m. to 7:00 p. m.", () => {
     const agenda = IMPARABLES_BLOCKS.find((b) => b.type === "agenda");
     if (agenda?.type !== "agenda") throw new Error("no agenda");
     const times = agenda.rows.filter((r) => r.kind === "session").map((r) => readClock(r.chip)!);
-    for (const [h, m] of times) expect(h * 60 + m >= 9 * 60 && h * 60 + m < 14 * 60).toBe(true);
+    for (const [h, m] of times) expect(h * 60 + m >= 8 * 60 && h * 60 + m < 19 * 60).toBe(true);
+    // In order, each after the one before.
+    for (let i = 1; i < times.length; i++) expect(times[i]![0] * 60 + times[i]![1]).toBeGreaterThan(times[i - 1]![0] * 60 + times[i - 1]![1]);
     expect(agenda.rows.filter((r) => r.kind === "day")).toHaveLength(2);
   });
 

@@ -4,7 +4,7 @@ import { emptyAgendaRow, type AgendaRow, type LandingBlock } from "@/lib/landing
 // /api/admin/events/[id]/plantilla-imparables, 2026-10-26): the page of the
 // approved boceto, as ordinary blocks the team edits like any other event's —
 // the cover's group photo, the hook, the 8 speakers, the panel, the host, the
-// two days' program, the 3 results, what the ticket includes, who it is for,
+// program (one day since 2026-10-29), the 3 results, what the ticket includes, who it is for,
 // the prices with the guarantee, the doubts, the questions and the sponsors
 // (hidden until there are logos). Plus the event's own lines
 // (tagline, closing, button and the line under the cover's countdown) and
@@ -181,7 +181,7 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
   { type: "people", items: IMPARABLES_SPEAKERS.map(({ name, handle, tag, photoUrl }) => ({ name, handle, tag, photoUrl, tone: "pink" as const })) },
   {
     type: "card",
-    eyebrow: "Panel · Domingo 27 · 10:25 a. m.",
+    eyebrow: "Panel · 9:20 a. m.",
     title: "El día que decidí cambiar",
     html: "<p>Cuatro manicuristas cuentan la decisión que transformó su negocio y su vida.</p><p><em>Su antes, el momento del quiebre, su después y el consejo que te darían hoy.</em></p>",
     icon: "none",
@@ -202,50 +202,52 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
     imageUrl: HOST.photo,
   },
 
-  // La agenda: el domingo, las historias (de 9:00 a. m. a 1:45 p. m.); el
-  // lunes, el plan en cinco pasos (de 9:00 a. m. a 2:00 p. m.)
-  { type: "heading", eyebrow: "Agenda", title: "", intro: "" },
+  // La agenda, un solo día (2026-10-29): en la mañana, las historias (desde
+  // las 8:00 a. m.); en la tarde, el plan en cinco pasos (desde la 1:45 p. m.),
+  // cada charla con su paso. Solo la hora en que empieza cada una.
+  { type: "heading", eyebrow: "Agenda", title: "", intro: "Domingo 27 de junio · 8:00 a. m. a 7:00 p. m. · hora Colombia" },
   {
     type: "agenda",
     rows: [
       day(
-        "Domingo 27 de junio",
-        "Así lo lograron",
-        "9:00 a. m. a 1:45 p. m.",
+        "Mañana · 8:00 a. m.",
+        "Lo lograron con los mismos miedos que tú. Ahora te cuentan cómo.",
+        "8:00 a. m. a 1:45 p. m.",
         "Cómo atravesaron las dificultades, tomaron riesgos y vencieron sus miedos para llegar donde están."
       ),
-      withHost("9:00 a. m.", "Bienvenida", "Con Heidy Aristizábal, maestra de ceremonias"),
-      speaker("9:15 a. m.", "Jimena Montalban"),
-      pause("10:15 a. m."),
-      session("10:25 a. m.", { topic: "Panel «El día que decidí cambiar»", text: "Cuatro historias reales de transformación" }),
-      pause("11:10 a. m."),
-      speaker("11:25 a. m.", "Paula Chacón"),
-      pause("12:25 p. m."),
-      speaker("12:35 p. m.", "Cristina Sierra"),
-      // No raffle and no next edition's announcement (the team, 2026-10-26).
-      withHost("1:35 p. m.", "Cierre del día", "Con Heidy Aristizábal"),
+      withHost("8:00 a. m.", "Bienvenida", "Con Heidy Aristizábal, maestra de ceremonias"),
+      speaker("8:15 a. m.", "Jimena Montalban"),
+      // The star talk; its line names Maris its own way, the cards count the rest.
+      session("9:20 a. m.", {
+        topic: "Panel «El día que decidí cambiar»",
+        instructor: "Maris",
+        handles: "@maris_nails_oficial",
+        photoUrl: PHOTO("maris"),
+        text: "desde Chile",
+        star: true,
+      }),
+      pause("10:20 a. m."),
+      speaker("10:35 a. m.", "Paula Chacón"),
+      speaker("11:40 a. m.", "Cristina Sierra"),
+      session("12:40 p. m.", { topic: "Almuerzo" }),
       day(
-        "Lunes 28 de junio",
-        "Tu plan para lograrlo.",
-        "9:00 a. m. a 2:00 p. m.",
+        "Tarde · 1:45 p. m.",
+        "Ahora te toca a ti. Este es tu plan para lograrlo.",
+        "1:45 p. m. a 7:00 p. m.",
         "Tus números, tu esencia, cómo atraer clientas y hacer que vuelvan: tu plan para ganar más y convertirte en la dueña de tu negocio."
       ),
-      withHost("9:00 a. m.", "Repaso", "Con Heidy Aristizábal"),
-      speaker("9:05 a. m.", "Alejandro Salinas"),
-      pause("9:55 a. m."),
-      speaker("10:05 a. m.", "Karen Pinzón"),
-      pause("10:55 a. m."),
-      speaker("11:05 a. m.", "Fabi Pinillo Martínez"),
-      pause("11:55 a. m."),
-      speaker("12:05 p. m.", "Juan Tenorio"),
-      pause("12:55 p. m."),
-      speaker("1:05 p. m.", "Oskar Garzón"),
-      withHost("1:35 p. m.", "Ceremonia de cierre", "Con Heidy Aristizábal"),
+      speaker("1:45 p. m.", "Alejandro Salinas", "Paso 1 · Tus números"),
+      speaker("2:50 p. m.", "Karen Pinzón", "Paso 2 · Tu esencia"),
+      pause("3:50 p. m."),
+      speaker("4:05 p. m.", "Fabi Pinillo Martínez", "Paso 3 · Atraer"),
+      speaker("5:10 p. m.", "Juan Tenorio", "Paso 4 · Retener"),
+      speaker("6:15 p. m.", "Oskar Garzón", "Paso 5 · Tu ruta"),
+      withHost("6:45 p. m.", "Cierre y sorteo", "Con Heidy Aristizábal"),
     ],
   },
 
   // Los 3 resultados, en tarjetas que se deslizan: después de la agenda
-  { type: "heading", eyebrow: "Resultados", title: "Lo que vas a resolver en estos dos días", intro: "", hidden: true },
+  { type: "heading", eyebrow: "Resultados", title: "Lo que vas a resolver en un solo día", intro: "", hidden: true },
   {
     type: "slides",
     style: "results",
@@ -287,9 +289,9 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
     type: "points",
     tone: "pink",
     items: [
-      { title: "Tu hoja de ruta imparable", text: "Sales con tu plan y estrategias listas para aplicar." },
-      { title: "2 días en vivo", text: "Con 8 conferencistas y un panel, desde tu celular." },
-      { title: "Repetición por 30 días", text: "Si te pierdes algo, lo ves cuando puedas." },
+      { title: "Tu hoja de ruta imparable", text: "Un cuaderno imprimible que llenas durante las charlas. Sales con tu plan de 90 días." },
+      { title: "Un día completo en vivo", text: "9 conferencistas y un panel, de 8 a. m. a 7 p. m., desde tu celular." },
+      { title: "Repetición por 30 días", text: "Lo que te pierdas lo ves cuando puedas, durante 30 días." },
       { title: "Guías para descargar", text: "El material de cada conferencista." },
       { title: "Certificado digital", text: "De asistencia, con tu nombre." },
       { title: "Descuentos exclusivos", text: "De los conferencistas, solo para quienes asisten." },
@@ -346,7 +348,7 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
       {
         tag: "",
         title: "No tengo tiempo.",
-        text: "Son dos días, de 9:00 a. m. a 2:00 p. m., desde tu celular.",
+        text: "Es un solo día, de 8:00 a. m. a 7:00 p. m., desde tu celular.",
         noteLabel: "",
         note: "La repetición por 30 días viene con tu boleta.",
         who: "",
@@ -401,7 +403,15 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
         answer:
           "Con tu enlace personal, que te llega por correo y por WhatsApp; antes de empezar te mandamos recordatorios. Lo ves desde el celular o desde el computador.",
       },
-      { question: "¿Y si no puedo verlo en vivo?", answer: "Tienes la repetición de todo el congreso durante 30 días, para verlo cuando puedas." },
+      {
+        question: "¿Y si no puedo verlo en vivo?",
+        answer: "Las grabaciones de todas las charlas quedan disponibles durante 30 días en nailfest.lat, con tu cuenta, para que las veas cuando puedas.",
+      },
+      {
+        question: "¿Cuál es el horario?",
+        answer:
+          "Domingo 27 de junio de 2027, de 8:00 a. m. a 7:00 p. m., hora Colombia, con una hora de almuerzo y pausas activas. Si estás en otro país, ajusta la hora a tu zona.",
+      },
       {
         question: "¿Sirve si estoy fuera de Colombia?",
         answer:
@@ -449,13 +459,13 @@ export const IMPARABLES_FIELDS = {
  * 2026-10-28) is on sale from the moment the event is published, no start
  * date. Plain words, no «preventa» or «early
  * bird»: three stages and the regular price, which is real — what it costs
- * to come in on the congress's two days — so each stage tells what it saves
+ * to come in on the congress's day — so each stage tells what it saves
  * against it (lib/imparables/stages.ts). */
 export const IMPARABLES_STAGES: { name: string; price: number; opensAt: string | null; closesAt: string }[] = [
   { name: "Etapa Creyente", price: 80_000, opensAt: null, closesAt: "2027-04-01T00:00:00-05:00" },
   { name: "Etapa 2", price: 100_000, opensAt: "2027-04-01T00:00:00-05:00", closesAt: "2027-06-21T00:00:00-05:00" },
   { name: "Etapa 3", price: 120_000, opensAt: "2027-06-21T00:00:00-05:00", closesAt: "2027-06-27T00:00:00-05:00" },
-  { name: "Precio normal", price: 150_000, opensAt: "2027-06-27T00:00:00-05:00", closesAt: "2027-06-28T14:00:00-05:00" },
+  { name: "Precio normal", price: 150_000, opensAt: "2027-06-27T00:00:00-05:00", closesAt: "2027-06-27T19:00:00-05:00" },
 ];
 /** Room in each stage: a cap that won't be the limit, to lower once Zoom's capacity is known. */
 export const IMPARABLES_STAGE_QUANTITY = 3000;

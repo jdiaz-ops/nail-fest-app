@@ -81,7 +81,7 @@ export interface ImpCheckoutProps {
   eventSlug: string;
   backHref: string;
   name: { pre: string; big: string };
-  /** "27 y 28 de junio de 2027" */
+  /** "27 de junio de 2027" */
   dates: string;
   /** "Congreso virtual · 100% en vivo" */
   format: string;

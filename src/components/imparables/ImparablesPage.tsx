@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import type { EventFormat } from "@prisma/client";
 import MetaPixelScript from "@/components/MetaPixelScript";
 import type { LandingBlock } from "@/lib/landingBlocks/types";
@@ -47,8 +48,6 @@ export interface ImparablesPreview {
   shortcuts: { label: string; date: string }[];
 }
 
-const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
-
 /** "Tienes el talento. Ahora, a construir tu negocio." -> the first sentence, then the rest. */
 function twoLines(text: string): [string, string] | [string] {
   const match = /^(.+?[.!?])\s+(.+)$/s.exec(text.trim());
@@ -88,12 +87,17 @@ export default function ImparablesPage({
   const pre = words.join(" ");
   const liveNote = event.format === "IN_PERSON" ? "" : "100% en vivo, desde tu celular";
   // The pill right before the group photo (2026-10-28): when, big — written
-  // the way the team writes it there, «27 y 28 junio 2027» — and under it,
-  // smaller, what it is. No platform named.
+  // the way the team writes it there, «27 de junio 2027» (2026-10-29: no «de»
+  // before the year only) — and under it, smaller, what it is and its hours.
+  // No platform named.
   const place = event.venueName || event.city;
   const kind = event.format === "VIRTUAL" ? "Congreso virtual" : event.format === "HYBRID" ? `Presencial${place ? ` en ${place}` : ""} y virtual` : place;
-  const pillDate = when.compact.replace(/ de /g, " ");
+  const pillDate = when.compact.replace(/ de (\d{4})$/, " $1");
   const pillNote = [kind, event.format === "VIRTUAL" ? "100% en vivo" : ""].filter(Boolean).join(" ");
+  // The day and its hours in a line of their own, under the button, where the
+  // pill has no room for the hours (a phone) — 2026-10-29. Each part whole on
+  // its line: it breaks only between them.
+  const whenParts = when.hours ? [when.named, when.hours, "hora Colombia"] : null;
 
   const { cover, rest: afterCover } = coverOf(blocks);
   const { intro, rest } = introOf(afterCover);
@@ -184,7 +188,12 @@ export default function ImparablesPage({
           {/* Right before the group photo (2026-10-28): what it is and when, before who. */}
           <p className="imp-pill">
             <span className="imp-pill-date">{pillDate}</span>
-            {pillNote && <span className="imp-pill-note">{pillNote}</span>}
+            {(pillNote || when.hours) && (
+              <span className="imp-pill-note">
+                {pillNote}
+                {when.hours && <span className="imp-pill-hours">{`${pillNote ? " · " : ""}${when.hours}`}</span>}
+              </span>
+            )}
           </p>
           {(cover || pillars) && (
             // On a computer, the column beside the words (2026-10-29); on a
@@ -205,13 +214,26 @@ export default function ImparablesPage({
           {cta}
           {mode === "closed" && <p className="imp-closed-note">La venta de boletas está cerrada.</p>}
           {/* Under the button: which price it is and until when it holds
-              (2026-10-28). The guarantee («Texto debajo del botón») is
-              hidden from the cover for now; it stays on the event. */}
-          {mode === "sale" && current?.closesAt && (
+              (2026-10-28), and on a phone the day and its hours (2026-10-29).
+              The guarantee («Texto debajo del botón») is hidden from the
+              cover for now; it stays on the event. */}
+          {((mode === "sale" && current?.closesAt) || whenParts) && (
             <div className="imp-deal">
-              <p className="imp-deal-until">
-                Tarifa {current.name} hasta el {untilDate(current.closesAt, timezone)}
-              </p>
+              {mode === "sale" && current?.closesAt && (
+                <p className="imp-deal-until">
+                  Tarifa {current.name} hasta el {untilDate(current.closesAt, timezone)}
+                </p>
+              )}
+              {whenParts && (
+                <p className="imp-deal-when">
+                  {whenParts.map((part, i) => (
+                    <Fragment key={i}>
+                      {i > 0 && " · "}
+                      <span>{part}</span>
+                    </Fragment>
+                  ))}
+                </p>
+              )}
             </div>
           )}
           {!intro && closingLine}
@@ -256,11 +278,13 @@ export default function ImparablesPage({
       <section className="imp-close">
         <div className="imp-rays" aria-hidden="true" />
         <div className="imp-hero-in">
-          {/* Its words went up to the cover (2026-10-28): the arc, then the button. */}
+          {/* The arc, «Nadie nace imparable. Se hace.» as the page's last word
+              (2026-10-29), then the button and the day. */}
           <Tiara />
+          {closingLine}
           {cta}
           <div className="imp-close-3">
-            {capitalize(when.short)}
+            {when.named}
             {liveNote ? ` · ${liveNote}` : ""}
           </div>
         </div>

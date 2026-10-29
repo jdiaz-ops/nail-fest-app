@@ -4027,6 +4027,23 @@ body:has(.imp) {
   font-size: 14px;
   font-weight: 700;
 }
+/* The hours on the pill's line where it has room for them; on a phone they
+   go under the button, with the day (.imp-deal-when) — 2026-10-29. */
+.imp-pill-hours {
+  display: none;
+  white-space: nowrap;
+}
+.imp-deal-when span {
+  white-space: nowrap;
+}
+@media (min-width: 600px) {
+  .imp-pill-hours {
+    display: inline;
+  }
+  .imp-deal-when {
+    display: none;
+  }
+}
 
 /* «Mentalidad · Dinero · Marketing», under the group photo (2026-10-28):
    spaced capitals in the titles' face, like «Manicuristas» */
@@ -4450,6 +4467,15 @@ body:has(.imp) {
   font-size: 16px;
   line-height: 1.6;
   color: var(--imp-texto-2);
+}
+/* A section with only a small title and a line under it — «Agenda» and its
+   day and hours (2026-10-29): the line small too. */
+.imp-eyebrow + .imp-lead {
+  margin-top: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.45;
+  text-wrap: pretty;
 }
 .imp-rich {
   margin-top: 18px;

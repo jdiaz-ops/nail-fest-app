@@ -1,6 +1,7 @@
 // When Manicuristas Imparables happens, the way its page says it: "Domingo 27
-// y lunes 28 de junio de 2027 · 9:00 a. m. a 2:00 p. m. · hora Colombia",
-// from the event's own days (Event.scheduleDays, else startsAt–endsAt), and
+// de junio de 2027 · 8:00 a. m. a 7:00 p. m. · hora Colombia" (one day since
+// 2026-10-29; two read "Domingo 27 y lunes 28 de junio de 2027"), from the
+// event's own days (Event.scheduleDays, else startsAt–endsAt), and
 // the instant of each line of its program, so a visitor in another country
 // sees her own hour next to Colombia's. Names and hours are written here,
 // not left to the runtime's locale data, so they read the same everywhere.
@@ -57,13 +58,15 @@ export function coverName(name: string): string {
 }
 
 export interface EventWhen {
-  /** "Domingo 27 y lunes 28 de junio de 2027" */
+  /** "Domingo 27 de junio de 2027" (two days: "Domingo 27 y lunes 28 de junio de 2027") */
   dates: string;
-  /** "9:00 a. m. a 2:00 p. m." when every day keeps the same hours, else null. */
+  /** "Domingo 27 de junio": `dates` without the year — the closing's line (2026-10-29). */
+  named: string;
+  /** "8:00 a. m. a 7:00 p. m." when every day keeps the same hours, else null. */
   hours: string | null;
-  /** "27 y 28 de junio" */
+  /** "27 de junio" */
   short: string;
-  /** "27 y 28 de junio de 2027": the cover's, as short as it gets in plain Spanish. */
+  /** "27 de junio de 2027": the cover's, as short as it gets in plain Spanish. */
   compact: string;
   /** Each day's date where it happens ("2027-06-27"), in order: the program's days. */
   days: string[];
@@ -133,7 +136,16 @@ export function eventWhen(event: { startsAt: Date; endsAt: Date | null; schedule
     dates = sameMonth ? `del ${named(first)} al ${named(last)} ${monthYear}` : `del ${named(first)} de ${MONTHS[first.month]} al ${named(last)} ${monthYear}`;
     short = sameMonth ? `del ${first.day} al ${last.day} de ${MONTHS[last.month]}` : `del ${first.day} de ${MONTHS[first.month]} al ${last.day} de ${MONTHS[last.month]}`;
   }
-  return { dates: capitalize(dates), hours, short, compact: compactDates(unique), days: unique.map((d) => d.date), span, ends: unique.map((d) => endOf(d.date)) };
+  return {
+    dates: capitalize(dates),
+    named: capitalize(dates.replace(/ de \d{4}$/, "")),
+    hours,
+    short,
+    compact: compactDates(unique),
+    days: unique.map((d) => d.date),
+    span,
+    ends: unique.map((d) => endOf(d.date)),
+  };
 }
 
 /** "27 de junio de 2027", "27 y 28 de junio de 2027", "27 al 29 de junio de 2027",
