@@ -8,6 +8,7 @@ import { getOrgSettings } from "@/lib/settings";
 import { confirmationCodeFor, ticketHolderName, ticketsFor } from "@/lib/ticket";
 import { publicEventName } from "@/lib/eventDisplayName";
 import { purchaseNote } from "@/lib/imparables/pricing";
+import { imparablesConfirmationFor } from "@/lib/imparables/confirmation";
 
 // Shared by /api/register (first send + resend-on-resubmit), /api/resend-
 // ticket (the self-serve "I lost my email" flow), and /api/admin/
@@ -104,7 +105,16 @@ export async function sendTicketEmail(params: {
     // whole branch is additive, not a rewrite of the default path.
     const format = params.event.format ?? "IN_PERSON";
     const customTemplate = params.event.confirmationEmailHtml ?? orgSettings.confirmationEmailHtml;
-    const { text, html } = customTemplate
+    // Manicuristas Imparables' own design, when its event chose it in
+    // «Confirmación del evento» (Event.confirmationEmailDesign, 2026-10-29)
+    // — and, if it can't be built, the usual template below.
+    const designed = params.registration
+      ? await imparablesConfirmationFor(params.registration.id, { firstName: params.person.firstName, code: confirmationCode }).catch((err) => {
+          console.error("sendTicketEmail: designed confirmation failed, using the template", err);
+          return null;
+        })
+      : null;
+    const { text, html } = designed ?? (customTemplate
       ? renderConfirmationFromTemplate(customTemplate, {
           firstName: params.person.firstName ?? "",
           lastName: params.person.lastName ?? undefined,
@@ -148,7 +158,7 @@ export async function sendTicketEmail(params: {
           zoomJoinUrl: params.zoomJoinUrl,
           tickets,
           purchase,
-        });
+        }));
 
     // Same fallback chain as the body, computed independently of which
     // body path ran above — an admin can set a custom subject without

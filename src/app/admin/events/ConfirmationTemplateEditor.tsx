@@ -32,19 +32,24 @@ const SUBJECT_MERGE_TAGS = ["EVENTO_NOMBRE", "EVENTO_FECHA_RANGO", "EVENTO_FORMA
 // fallback chain this feeds. `scope="event"` adds the Global/Event-
 // specific radio the reference screenshots showed; `scope="global"`
 // has no such toggle — the account-wide template just always applies
-// when nothing more specific overrides it.
+// when nothing more specific overrides it. `design` (an event with a
+// designed email of its own — Manicuristas Imparables', 2026-10-29) adds a
+// third choice: that email, with its preview, and only its subject to edit.
 export default function ConfirmationTemplateEditor({
   scope,
   initialHtml,
   initialSubject,
+  design,
   onSave,
 }: {
   scope: "event" | "global";
   initialHtml: string | null;
   initialSubject: string | null;
-  onSave: (html: string, subject: string) => Promise<{ ok: boolean }>;
+  design?: { initial: boolean; previewUrl: string };
+  onSave: (html: string, subject: string, design: boolean) => Promise<{ ok: boolean }>;
 }) {
   const [useOverride, setUseOverride] = useState(scope === "global" ? true : initialHtml != null || initialSubject != null);
+  const [useDesign, setUseDesign] = useState(Boolean(design?.initial));
   const [html, setHtml] = useState(initialHtml ?? STARTER_HTML);
   const [subject, setSubject] = useState(initialSubject ?? STARTER_SUBJECT);
   const [saving, setSaving] = useState(false);
@@ -62,7 +67,10 @@ export default function ConfirmationTemplateEditor({
   async function handleSave() {
     setSaving(true);
     setMessage(null);
-    const result = await onSave(useOverride ? html || STARTER_HTML : "", useOverride ? subject || STARTER_SUBJECT : "");
+    const result = useDesign
+      ? // The designed email keeps whatever body the event had, for coming back to it.
+        await onSave(html === STARTER_HTML && initialHtml == null ? "" : html, subject || STARTER_SUBJECT, true)
+      : await onSave(useOverride ? html || STARTER_HTML : "", useOverride ? subject || STARTER_SUBJECT : "", false);
     setSaving(false);
     setMessage(result.ok ? "Guardado." : "No se pudo guardar.");
   }
@@ -71,7 +79,7 @@ export default function ConfirmationTemplateEditor({
     if (!confirm("¿Volver al diseño original? Se borra el contenido personalizado.")) return;
     setSaving(true);
     setMessage(null);
-    const result = await onSave("", "");
+    const result = await onSave("", "", false);
     setSaving(false);
     setHtml(STARTER_HTML);
     setSubject(STARTER_SUBJECT);
@@ -84,7 +92,15 @@ export default function ConfirmationTemplateEditor({
         <div style={{ marginBottom: 20 }}>
           <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Contenido del correo</div>
           <label style={{ display: "flex", alignItems: "flex-start", gap: 8, marginBottom: 8, fontWeight: 400 }}>
-            <input type="radio" checked={!useOverride} onChange={() => setUseOverride(false)} style={{ marginTop: 3 }} />
+            <input
+              type="radio"
+              checked={!useOverride && !useDesign}
+              onChange={() => {
+                setUseOverride(false);
+                setUseDesign(false);
+              }}
+              style={{ marginTop: 3 }}
+            />
             <span>
               <strong>Confirmación global</strong>
               <br />
@@ -94,17 +110,54 @@ export default function ConfirmationTemplateEditor({
             </span>
           </label>
           <label style={{ display: "flex", alignItems: "flex-start", gap: 8, fontWeight: 400 }}>
-            <input type="radio" checked={useOverride} onChange={() => setUseOverride(true)} style={{ marginTop: 3 }} />
+            <input
+              type="radio"
+              checked={useOverride && !useDesign}
+              onChange={() => {
+                setUseOverride(true);
+                setUseDesign(false);
+              }}
+              style={{ marginTop: 3 }}
+            />
             <span>
               <strong>Confirmación específica del evento</strong>
               <br />
               <span style={{ fontSize: 12, color: "#5b5f6b" }}>(Aplica solo a este evento)</span>
             </span>
           </label>
+          {design && (
+            <label style={{ display: "flex", alignItems: "flex-start", gap: 8, marginTop: 8, fontWeight: 400 }}>
+              <input type="radio" checked={useDesign} onChange={() => setUseDesign(true)} style={{ marginTop: 3 }} />
+              <span>
+                <strong>Diseño del congreso</strong>
+                <br />
+                <span style={{ fontSize: 12, color: "#5b5f6b" }}>
+                  (El correo de Manicuristas Imparables, con los colores del evento: se llena solo con los datos de cada compra)
+                </span>
+              </span>
+            </label>
+          )}
         </div>
       )}
 
-      {useOverride && (
+      {useDesign && design && (
+        <>
+          <div className="field" style={{ marginBottom: 16 }}>
+            <label htmlFor="confirmationSubjectDesign">Asunto del correo</label>
+            <input id="confirmationSubjectDesign" type="text" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder={STARTER_SUBJECT} />
+          </div>
+          <p style={{ fontSize: 12, color: "#5b5f6b", marginBottom: 8 }}>
+            Vista previa con datos de ejemplo (Laura, el precio de hoy, un código de muestra). No se envía a nadie.
+          </p>
+          <iframe
+            src={design.previewUrl}
+            title="Vista previa del correo"
+            style={{ display: "block", width: "100%", maxWidth: 660, height: 1100, border: "1px solid #e3e1dc", borderRadius: 12, background: "#fff" }}
+          />
+        </>
+      )}
+
+      {useOverride && !useDesign && (
         <>
           <div className="field" style={{ marginBottom: 16 }}>
             <label htmlFor="confirmationSubject">Asunto del correo</label>

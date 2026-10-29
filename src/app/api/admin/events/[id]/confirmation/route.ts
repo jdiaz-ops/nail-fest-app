@@ -9,7 +9,14 @@ import { sanitizeEventDescription } from "@/lib/sanitizeHtml";
 // back to whatever the account-wide template resolves to. See
 // Event.confirmationEmailHtml's own schema comment for the full chain.
 // confirmationEmailSubject follows the exact same "" = clear convention.
-const bodySchema = z.object({ confirmationEmailHtml: z.string(), confirmationEmailSubject: z.string().optional() });
+// confirmationEmailDesign: "IMPARABLES" picks Manicuristas Imparables' own
+// designed email (2026-10-29), null goes back to the body above; omitted,
+// it stays as it is.
+const bodySchema = z.object({
+  confirmationEmailHtml: z.string(),
+  confirmationEmailSubject: z.string().optional(),
+  confirmationEmailDesign: z.enum(["IMPARABLES"]).nullable().optional(),
+});
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const auth = await requireUser(["ADMIN"]);
@@ -22,12 +29,14 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   const html = parsed.data.confirmationEmailHtml;
   const subject = parsed.data.confirmationEmailSubject;
+  const design = parsed.data.confirmationEmailDesign;
   try {
     await db.event.update({
       where: { id: params.id },
       data: {
         confirmationEmailHtml: html ? sanitizeEventDescription(html) : null,
         ...(subject !== undefined ? { confirmationEmailSubject: subject || null } : {}),
+        ...(design !== undefined ? { confirmationEmailDesign: design } : {}),
       },
     });
   } catch {

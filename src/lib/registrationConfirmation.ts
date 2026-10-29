@@ -8,14 +8,7 @@ import { sendTicketLinkViaWhatsApp } from "@/lib/whatsapp/sendTicketLink";
 import { registerParticipant } from "@/lib/zoom";
 import { scheduleZoomAccessReminder } from "@/lib/qstash";
 import type { Event, Person, Registration } from "@prisma/client";
-
-// How long before a VIRTUAL/HYBRID event starts the personal Zoom link
-// actually goes out (see WhatsAppAutomationTrigger.ZOOM_ACCESS_REMINDER's
-// own schema comment for why it's withheld until then). 30 minutes is a
-// reasonable default for "unos minutos antes" — change this single
-// constant if the business wants a different lead time; there is no
-// per-event override today.
-const ZOOM_ACCESS_REMINDER_MINUTES_BEFORE = 30;
+import { ZOOM_ACCESS_REMINDER_MINUTES_BEFORE } from "@/lib/zoomAccessReminder";
 
 /** Everything that has to happen the MOMENT a registration becomes real
  * (status -> CONFIRMED) — shared by /api/register's own free/immediate

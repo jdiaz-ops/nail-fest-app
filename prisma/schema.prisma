@@ -262,6 +262,11 @@ model Event {
   // tags as the body — see lib/confirmationTemplate.ts's
   // renderSubjectFromTemplate.
   confirmationEmailSubject  String?
+  // A designed confirmation instead of the body above (2026-10-29):
+  // "IMPARABLES" — Manicuristas Imparables' own email, in the congress's
+  // colors (lib/imparables/confirmationEmail.ts). The subject still comes
+  // from confirmationEmailSubject's chain. Null: the body's chain as usual.
+  confirmationEmailDesign   String?
   // A richer, structured alternative to `description` for an event that
   // wants a real sales-script landing (hero/story/value-stack table/
   // schedule/speakers/FAQ/etc. — see lib/salesPage/types.ts) instead of

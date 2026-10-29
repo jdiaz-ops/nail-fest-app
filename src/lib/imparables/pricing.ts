@@ -100,6 +100,32 @@ const SHARE = "compartir esto con una colega es un buen regalo.";
  * $120.000: compartir esto con una colega es un buen regalo.» once it went up, or «Luego sube a $120.000: …» while it
  * hasn't yet (the email goes out the moment it's paid). Null for anything not bought at a price stage. */
 export async function purchaseNote(registrationId: string, now: Date = new Date()): Promise<{ bought: string; share: string | null } | null> {
+  const purchase = await purchaseOf(registrationId, now);
+  if (!purchase) return null;
+  const { stage, paid, count, usd, sales } = purchase;
+  const priceOf = (s: PriceStage) => (usd && s.usdCents ? dollars(s.usdCents) : pesos(s.price));
+  const name = stage.name.trim();
+  const bought = /^etapa\b/i.test(name)
+    ? `Compraste en la ${name} a ${paid}${count > 1 ? " cada una" : ""}`
+    : `Compraste a ${paid}${count > 1 ? " cada una" : ""}, ${name.charAt(0).toLowerCase()}${name.slice(1)}`;
+
+  const at = sales.stages.indexOf(stage);
+  const then = sales.stages[at + 1];
+  let share: string | null = null;
+  if (then) {
+    const today = sales.active;
+    share =
+      today && today.price > stage.price ? `Hoy el precio ya es de ${priceOf(today)}: ${SHARE}` : `Luego sube a ${priceOf(then)}: ${SHARE}`;
+  }
+  return { bought, share };
+}
+
+/** What a paid registration bought: its price stage, what it paid for each ticket (in the payment's currency) and
+ * how many, and the stages as they are now. Null for anything not bought at a price stage. */
+export async function purchaseOf(
+  registrationId: string,
+  now: Date = new Date()
+): Promise<{ stage: PriceStage; paid: string; count: number; usd: boolean; sales: SalesState } | null> {
   const registration = await db.registration.findUnique({
     where: { id: registrationId },
     include: {
@@ -116,20 +142,5 @@ export async function purchaseNote(registrationId: string, now: Date = new Date(
   const usd = payment.currency === "USD";
   const count = Math.max(1, registration.ticketCount);
   const each = Math.round(payment.amountInCents / count);
-  const paid = usd ? dollars(each) : pesos(each / 100);
-  const priceOf = (s: PriceStage) => (usd && s.usdCents ? dollars(s.usdCents) : pesos(s.price));
-  const name = stage.name.trim();
-  const bought = /^etapa\b/i.test(name)
-    ? `Compraste en la ${name} a ${paid}${count > 1 ? " cada una" : ""}`
-    : `Compraste a ${paid}${count > 1 ? " cada una" : ""}, ${name.charAt(0).toLowerCase()}${name.slice(1)}`;
-
-  const at = sales.stages.indexOf(stage);
-  const then = sales.stages[at + 1];
-  let share: string | null = null;
-  if (then) {
-    const today = sales.active;
-    share =
-      today && today.price > stage.price ? `Hoy el precio ya es de ${priceOf(today)}: ${SHARE}` : `Luego sube a ${priceOf(then)}: ${SHARE}`;
-  }
-  return { bought, share };
+  return { stage, paid: usd ? dollars(each) : pesos(each / 100), count, usd, sales };
 }
