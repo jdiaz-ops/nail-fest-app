@@ -86,7 +86,7 @@ export interface ImpCheckoutProps {
   until: string | null;
   professions: string[];
   /** PayPal's buttons (lib/payments/paypal.ts's paypalCheckoutConfig) — null without PayPal, or without a USD price. */
-  paypal: { clientId: string; sandbox: boolean } | null;
+  paypal: { clientId: string } | null;
 }
 
 interface Applied {
@@ -532,7 +532,6 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
             >
               <div className="imp-co-head">
                 <h1 className="imp-co-h1">Reserva tu cupo</h1>
-                <p>Tus datos y el pago, en un solo paso.</p>
               </div>
 
               <section className="imp-co-sec">
@@ -581,7 +580,7 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
                     <input className="imp-co-in" autoComplete="organization" required {...field("company")} />
                   </Field>
                 )}
-                <Field label="Correo electrónico" hint="Ahí te llega tu entrada.">
+                <Field label="Correo electrónico">
                   <input className="imp-co-in" type="email" inputMode="email" autoComplete="email" required {...field("email")} onBlur={saveDraft} />
                 </Field>
                 <div className={`imp-co-field${missing === "Celular con WhatsApp" ? " is-missing" : ""}`} data-label="Celular con WhatsApp">
@@ -667,9 +666,6 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
                           <span className="imp-co-pay-p">
                             Paga con los botones de PayPal al final: se abre su ventana segura encima de esta página, con tu cuenta PayPal o con tarjeta.
                           </span>
-                          {paypal?.sandbox && (
-                            <span className="imp-co-pay-test">Modo de pruebas (sandbox): paga con una cuenta de prueba de PayPal. No se cobra dinero real.</span>
-                          )}
                         </>
                       )}
                     </label>
@@ -683,6 +679,12 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
                     </div>
                     <p>{wompiNote}</p>
                   </div>
+                )}
+                {/* Under the prices it's about, before the code (2026-10-29). */}
+                {until && (
+                  <p className="imp-co-until">
+                    Tarifa {ticket.name} hasta el {until}. ¡Luego sube!
+                  </p>
                 )}
               </section>
 
@@ -719,11 +721,6 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
                     <Lock />
                     {paying ? "Abriendo el pago…" : `Pagar ${total}`}
                   </button>
-                )}
-                {until && (
-                  <p className="imp-co-until">
-                    Tarifa {ticket.name} hasta el {until}. ¡Luego sube!
-                  </p>
                 )}
                 <p className="imp-co-legal">
                   {usd ? "Al pagar con PayPal" : "Al tocar «Pagar»"} aceptas nuestros{" "}

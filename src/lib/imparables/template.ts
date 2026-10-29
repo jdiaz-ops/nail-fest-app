@@ -210,7 +210,8 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
   {
     type: "agenda",
     rows: [
-      day("Mañana · 8:00 a. m.", "Lo lograron con los mismos miedos que tú. Ahora te cuentan cómo.", "8:00 a. m. a 1:45 p. m.", ""),
+      // Each part says only when it starts: no title nor subtitle (the team, 2026-10-29).
+      day("Mañana · 8:00 a. m.", "", "8:00 a. m. a 1:45 p. m.", ""),
       withHost("8:00 a. m.", "Bienvenida", "Con Heidy Aristizábal, maestra de ceremonias"),
       speaker("8:15 a. m.", "Jimena Montalban"),
       // Its line names Maris its own way, the cards count the rest. No star talk (the team, 2026-10-29).
@@ -225,14 +226,14 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
       speaker("10:35 a. m.", "Paula Chacón"),
       speaker("11:40 a. m.", "Cristina Sierra"),
       session("12:40 p. m.", { topic: "1 hora de almuerzo", text: "De 12:40 a 1:45 p. m." }),
-      day("Tarde · 1:45 p. m.", "Ahora te toca a ti. Este es tu plan para lograrlo.", "1:45 p. m. a 7:00 p. m.", ""),
-      // Each talk tagged with its step's name, no «Paso 1, 2…» (the team, 2026-10-29).
-      speaker("1:45 p. m.", "Alejandro Salinas", "Tus números"),
-      speaker("2:50 p. m.", "Karen Pinzón", "Tu esencia"),
+      day("Tarde · 1:45 p. m.", "", "1:45 p. m. a 7:00 p. m.", ""),
+      // No tag on the talks (the team, 2026-10-29).
+      speaker("1:45 p. m.", "Alejandro Salinas"),
+      speaker("2:50 p. m.", "Karen Pinzón"),
       pause("3:50 p. m."),
-      speaker("4:05 p. m.", "Fabi Pinillo Martínez", "Atraer"),
-      speaker("5:10 p. m.", "Juan Tenorio", "Retener"),
-      speaker("6:15 p. m.", "Oskar Garzón", "Tu ruta"),
+      speaker("4:05 p. m.", "Fabi Pinillo Martínez"),
+      speaker("5:10 p. m.", "Juan Tenorio"),
+      speaker("6:15 p. m.", "Oskar Garzón"),
       withHost("6:45 p. m.", "Cierre y sorteo", "Con Heidy Aristizábal"),
     ],
   },

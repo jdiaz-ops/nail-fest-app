@@ -4027,16 +4027,6 @@ body:has(.imp) {
   font-size: 14px;
   font-weight: 700;
 }
-/* The hours on the pill's line where it has room for them, not on a phone (2026-10-29). */
-.imp-pill-hours {
-  display: none;
-  white-space: nowrap;
-}
-@media (min-width: 600px) {
-  .imp-pill-hours {
-    display: inline;
-  }
-}
 
 /* «Mentalidad · Dinero · Marketing», under the group photo (2026-10-28):
    spaced capitals in the titles' face, like «Manicuristas» */
@@ -5858,11 +5848,6 @@ body:has(.imp) {
   line-height: 1.1;
   color: var(--imp-texto);
 }
-.imp-co-head p {
-  margin: 6px 0 0;
-  font-size: 15px;
-  color: var(--imp-texto-2);
-}
 .imp-co-sec {
   display: grid;
   gap: 14px;
@@ -6064,8 +6049,7 @@ select.imp-co-in {
 }
 /* Under the radio's own column. */
 .imp-co-pay-opt .imp-co-badges,
-.imp-co-pay-p,
-.imp-co-pay-test {
+.imp-co-pay-p {
   margin-left: 28px;
 }
 .imp-co-pay-opt .imp-co-badges {
@@ -6073,16 +6057,6 @@ select.imp-co-in {
 }
 .imp-co-pay-p {
   display: block;
-}
-.imp-co-pay-test {
-  display: block;
-  padding: 8px 10px;
-  border: 1px dashed var(--imp-bronce);
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 1.45;
-  color: var(--imp-resalte);
 }
 /* PayPal's own buttons (its iframes), where «Pagar» goes in pesos: one
    button's height kept while its SDK loads. */
@@ -6531,9 +6505,9 @@ select.imp-co-in {
       "cta   pic"
       "deal  pic"
       "close pic"
-      "org   pic"
-      ".     pic";
-    grid-template-rows: auto auto 1fr repeat(6, auto) 1fr;
+      ".     pic"
+      "org   org";
+    grid-template-rows: auto auto 1fr repeat(5, auto) 1fr auto;
     column-gap: clamp(40px, 4.5vw, 80px);
     max-width: 1440px;
     text-align: left;
@@ -6587,9 +6561,10 @@ select.imp-co-in {
   .imp-hero .imp-tagline {
     grid-area: close;
   }
+  /* Its signature under both columns, centered (2026-10-29). */
   .imp-hero .imp-organiza {
     grid-area: org;
-    justify-content: flex-start;
+    justify-content: center;
     margin-top: min(22px, 2.4vh);
   }
   .imp-hero-pic {

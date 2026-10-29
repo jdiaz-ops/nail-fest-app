@@ -427,9 +427,10 @@ describe("the template", () => {
 
   it("tells its one day in two parts (2026-10-29): the morning's stories, from 8:00, the panel among them — no star talk", () => {
     const { rows, morning } = agendaOf(IMPARABLES_BLOCKS);
+    // Each part says only when it starts: no title (the team, 2026-10-29).
     expect(rows.filter((r) => r.kind === "day").map((r) => [r.chip, r.topic])).toEqual([
-      ["Mañana · 8:00 a. m.", "Lo lograron con los mismos miedos que tú. Ahora te cuentan cómo."],
-      ["Tarde · 1:45 p. m.", "Ahora te toca a ti. Este es tu plan para lograrlo."],
+      ["Mañana · 8:00 a. m.", ""],
+      ["Tarde · 1:45 p. m.", ""],
     ]);
     // No subtitle under each part's title (the team, 2026-10-29).
     expect(rows.filter((r) => r.kind === "day").map((r) => r.takeaway)).toEqual(["", ""]);
@@ -448,18 +449,18 @@ describe("the template", () => {
     expect(morning.find((r) => r.topic === "Panel «El día que decidí cambiar»")).toMatchObject({ instructor: "Maris", handles: "@maris_nails_oficial", text: "desde Chile", photoUrl: "/imparables/maris.jpg" });
   });
 
-  it("makes the afternoon the plan in five steps, from 1:45, each talk tagged with its step's name (no «Paso 1, 2…»), and the closing last", () => {
+  it("makes the afternoon its five talks from 1:45, with no tag on them (2026-10-29), and the closing last", () => {
     const { afternoon } = agendaOf(IMPARABLES_BLOCKS);
-    expect(afternoon.map((r) => [r.chip, r.label, r.instructor || r.topic])).toEqual([
-      ["1:45 p. m.", "Tus números", "Alejandro Salinas"],
-      ["2:50 p. m.", "Tu esencia", "Karen Pinzón"],
-      ["3:50 p. m.", "", "Pausa activa"],
-      ["4:05 p. m.", "Atraer", "Fabi Pinillo Martínez"],
-      ["5:10 p. m.", "Retener", "Juan Tenorio"],
-      ["6:15 p. m.", "Tu ruta", "Oskar Garzón"],
-      ["6:45 p. m.", "", "Cierre y sorteo"],
+    expect(afternoon.map((r) => [r.chip, r.instructor || r.topic])).toEqual([
+      ["1:45 p. m.", "Alejandro Salinas"],
+      ["2:50 p. m.", "Karen Pinzón"],
+      ["3:50 p. m.", "Pausa activa"],
+      ["4:05 p. m.", "Fabi Pinillo Martínez"],
+      ["5:10 p. m.", "Juan Tenorio"],
+      ["6:15 p. m.", "Oskar Garzón"],
+      ["6:45 p. m.", "Cierre y sorteo"],
     ]);
-    expect(afternoon.filter((r) => /paso/i.test(r.label))).toEqual([]);
+    expect(afternoon.filter((r) => r.label)).toEqual([]);
   });
 
   it("puts the results right after the program", () => {

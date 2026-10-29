@@ -103,8 +103,8 @@ export default function ImparablesPage({
   const liveNote = event.format === "IN_PERSON" ? "" : "100% en vivo, desde tu celular";
   // The pill right before the group photo (2026-10-28): when, big — written
   // the way the team writes it there, «27 de junio 2027» (2026-10-29: no «de»
-  // before the year only) — and under it, smaller, what it is and, where its
-  // line has room (not a phone), its hours. No platform named.
+  // before the year only) — and under it, smaller, what it is. No hours, no
+  // platform named.
   const place = event.venueName || event.city;
   const kind = event.format === "VIRTUAL" ? "Congreso virtual" : event.format === "HYBRID" ? `Presencial${place ? ` en ${place}` : ""} y virtual` : place;
   const pillDate = when.compact.replace(/ de (\d{4})$/, " $1");
@@ -203,12 +203,7 @@ export default function ImparablesPage({
           {/* Right before the group photo (2026-10-28): what it is and when, before who. */}
           <p className="imp-pill">
             <span className="imp-pill-date">{pillDate}</span>
-            {(pillNote || when.hours) && (
-              <span className="imp-pill-note">
-                {pillNote}
-                {when.hours && <span className="imp-pill-hours">{`${pillNote ? " · " : ""}${when.hours}`}</span>}
-              </span>
-            )}
+            {pillNote && <span className="imp-pill-note">{pillNote}</span>}
           </p>
           {(cover || pillars) && (
             // On a computer, the column beside the words (2026-10-29); on a
