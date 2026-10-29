@@ -4421,8 +4421,22 @@ body:has(.imp) {
   padding: 40px 22px;
   text-align: center;
 }
+/* Its title stretched to three lines on a phone, and the event's name at its
+   end in gold, on a line of its own (2026-10-29). */
 .imp-intro .imp-h2 {
   margin: 0 auto;
+  max-width: none;
+  font-size: clamp(16px, calc(5.8vw - 3px), 42px);
+  text-wrap: balance;
+}
+.imp-h2-end {
+  display: block;
+}
+.imp-h2-name {
+  background: linear-gradient(180deg, #b8925a 0%, #8c6a3e 60%, #6e5230 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 .imp-intro .imp-rich {
   max-width: 560px;
@@ -5068,6 +5082,34 @@ body:has(.imp) {
   flex: 1;
   height: 1px;
   background: var(--imp-linea);
+}
+/* The lunch: a band of its own, how long it is and its hours (2026-10-29) */
+.imp-ag li.is-lunch {
+  display: block;
+  margin: 10px -4px 4px;
+  padding: 14px 16px;
+  border: 1.5px solid var(--imp-oro);
+  border-radius: 14px;
+  background: var(--imp-destacado);
+  text-align: center;
+}
+.imp-ag li.is-lunch + li {
+  border-top: 0;
+}
+.imp-ag li.is-lunch b {
+  display: block;
+  font-family: var(--imp-display), Georgia, serif;
+  font-weight: 800;
+  font-size: 19px;
+  line-height: 1.25;
+  color: var(--imp-texto);
+}
+.imp-ag li.is-lunch span {
+  display: block;
+  margin-top: 2px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--imp-texto-2);
 }
 /* A day's subtitle under its title */
 .imp-day-sub {

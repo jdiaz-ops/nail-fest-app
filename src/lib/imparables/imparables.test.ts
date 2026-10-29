@@ -440,7 +440,7 @@ describe("the template", () => {
       ["10:20 a. m.", "Pausa activa"],
       ["10:35 a. m.", "Paula Chacón"],
       ["11:40 a. m.", "Cristina Sierra"],
-      ["12:40 p. m.", "Almuerzo"],
+      ["12:40 p. m.", "1 hora de almuerzo"],
     ]);
     expect(morning.filter((r) => r.label)).toEqual([]);
     expect(rows.filter((r) => r.star || /charla estrella/i.test(r.label))).toEqual([]);

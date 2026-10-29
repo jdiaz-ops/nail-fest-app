@@ -224,7 +224,7 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
       pause("10:20 a. m."),
       speaker("10:35 a. m.", "Paula Chacón"),
       speaker("11:40 a. m.", "Cristina Sierra"),
-      session("12:40 p. m.", { topic: "Almuerzo" }),
+      session("12:40 p. m.", { topic: "1 hora de almuerzo", text: "De 12:40 a 1:45 p. m." }),
       day("Tarde · 1:45 p. m.", "Ahora te toca a ti. Este es tu plan para lograrlo.", "1:45 p. m. a 7:00 p. m.", ""),
       // Each talk tagged with its step's name, no «Paso 1, 2…» (the team, 2026-10-29).
       speaker("1:45 p. m.", "Alejandro Salinas", "Tus números"),

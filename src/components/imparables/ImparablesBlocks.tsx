@@ -442,8 +442,8 @@ function Speakers({ people }: { people: PeopleLandingBlock }) {
 // morning and afternoon — each line told the way the approved boceto does:
 // the talk first (after its small tag, if it has one: its step, or «Charla
 // estrella»), then who gives it (her photo, name and Instagram), only the hour
-// it starts — no durations since 2026-10-28 — a star talk in a box of its own
-// and the active breaks and the lunch as thin lines. A part's header: its
+// it starts — no durations since 2026-10-28 — a star talk in a box of its own,
+// the active breaks as thin lines and the lunch as a band. A part's header: its
 // label, its title and its subtitle, if it has one (no route of its steps
 // since 2026-10-29: each talk's tag says its step).
 
@@ -524,7 +524,9 @@ function AgendaLine({
   handle: string;
   panel: ImparablesContext["panel"];
 }) {
-  const isPause = !row.instructor && !row.photoUrl && /^(pausa|almuerzo)/i.test(row.topic.trim());
+  const isPause = !row.instructor && !row.photoUrl && /^pausa/i.test(row.topic.trim());
+  // The lunch, a band of its own: how long it is («1 hora de almuerzo») and its hours (2026-10-29).
+  const isLunch = !row.instructor && !row.photoUrl && /almuerzo/i.test(row.topic);
   // Rows saved before topic/instructor existed keep everything in `text`.
   const title = row.topic || row.instructor || row.text;
   // A talk: its title, its subtitle (the row's «Nota extra»), then who gives
@@ -548,6 +550,14 @@ function AgendaLine({
     return (
       <li className="is-pause">
         <span>{title}</span>
+      </li>
+    );
+  }
+  if (isLunch) {
+    return (
+      <li className="is-lunch">
+        <b>{title}</b>
+        {row.text && <span>{keepTimes(row.text)}</span>}
       </li>
     );
   }

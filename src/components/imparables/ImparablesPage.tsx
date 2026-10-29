@@ -53,6 +53,22 @@ function twoLines(text: string): [string, string] | [string] {
   return match ? [match[1]!, match[2]!] : [text.trim()];
 }
 
+/** The event's name in a title — «¿Qué tienen en común todos los conferencistas de Manicuristas Imparables?» —
+ * in gold, on a line of its own with what follows it (2026-10-29). Without the name, the title as it is. */
+function titleWithName(title: string, name: string): React.ReactNode {
+  const at = name ? title.indexOf(name) : -1;
+  if (at < 0) return title;
+  return (
+    <>
+      {title.slice(0, at)}
+      <span className="imp-h2-end">
+        <span className="imp-h2-name">{name}</span>
+        {title.slice(at + name.length)}
+      </span>
+    </>
+  );
+}
+
 function secondsUntil(to: Date, now: Date): number {
   return Math.max(0, Math.floor((to.getTime() - now.getTime()) / 1000));
 }
@@ -251,7 +267,7 @@ export default function ImparablesPage({
         // Right under the cover, in its colors (2026-10-29): what all the speakers have in common.
         <section className="imp-sec imp-intro">
           <div className="imp-sec-in">
-            <h2 className="imp-h2">{intro.heading.title}</h2>
+            <h2 className="imp-h2">{titleWithName(intro.heading.title, coverName(event.displayName))}</h2>
             {/* Sanitized before storage (lib/events.ts). */}
             <div className="imp-rich" dangerouslySetInnerHTML={{ __html: intro.text.html }} />
             {closingLine}
