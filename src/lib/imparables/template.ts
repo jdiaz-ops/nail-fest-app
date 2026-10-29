@@ -18,7 +18,7 @@ const PHOTO = (name: string) => `/imparables/${name}.jpg`;
 const HOST = {
   name: "Heidy Aristizábal",
   handle: "@hlacosedora",
-  bio: "Empezó haciendo uñas en un puesto alquilado. Hoy es cofundadora de H La Cosedora, Nail Fest, Guerra de Pinceles y Manicuristas Imparables. Tiene un récord Guinness y pasó por Shark Tank. Más de 10 años impulsando a la comunidad de uñas.",
+  bio: "Empezó haciendo uñas en un puesto alquilado. Hoy es cofundadora de H La Cosedora, Nail Fest, Guerra de Pinceles, MEU (Mujeres Empresarias Unidas) y Manicuristas Imparables. Tiene un récord Guinness y pasó por Shark Tank. Más de 10 años impulsando a la comunidad de uñas.",
   photo: PHOTO("heidy"),
 };
 
