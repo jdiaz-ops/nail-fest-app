@@ -150,20 +150,25 @@ export default function ImparablesPage({
 
   const cta =
     mode === "sale" && current ? (
+      // Its words and today's price, nothing else (2026-10-29).
       <ImpButton action="buy" className="imp-cta">
-        <span className="imp-cta-row">
-          <span>{heroLabel} ·</span>
-          {/* Today's price against the regular one, struck (2026-10-28). */}
-          {save > 0 && <s className="imp-cta-was">{pesos(sales.normal!.price)}</s>}
-          <span>{pesos(current.price)}</span>
-        </span>
-        {/* And in dollars, small, when today's ticket has its USD price (2026-10-29). */}
-        {current.usdCents ? <small className="imp-cta-usd">o {dollars(current.usdCents)}</small> : null}
+        {`${heroLabel} · ${pesos(current.price)}`}
       </ImpButton>
     ) : mode === "waitlist" ? (
       <ImpButton action="waitlist" className="imp-cta">
         Quiero estar en la lista de espera
       </ImpButton>
+    ) : null;
+  // Under the button, in one line (2026-10-29): today's price in dollars,
+  // when its ticket has one, and the regular price, struck, when today's is
+  // lower.
+  const priceMore =
+    mode === "sale" && current && (current.usdCents || save > 0) ? (
+      <p className="imp-cta-more">
+        {current.usdCents ? `o ${dollars(current.usdCents)}` : null}
+        {current.usdCents && save > 0 ? " · " : null}
+        {save > 0 && <s>{pesos(sales.normal!.price)}</s>}
+      </p>
     ) : null;
 
   return (
@@ -223,14 +228,18 @@ export default function ImparablesPage({
           )}
           {cta}
           {mode === "closed" && <p className="imp-closed-note">La venta de boletas está cerrada.</p>}
-          {/* Under the button: which price it is and until when it holds
-              (2026-10-28). The guarantee («Texto debajo del botón») is
+          {/* Under the button: its price in dollars and the regular one,
+              struck (2026-10-29), then which price it is and until when it
+              holds (2026-10-28). The guarantee («Texto debajo del botón») is
               hidden from the cover for now; it stays on the event. */}
-          {mode === "sale" && current?.closesAt && (
+          {mode === "sale" && current && (priceMore || current.closesAt) && (
             <div className="imp-deal">
-              <p className="imp-deal-until">
-                Tarifa {current.name} hasta el {untilDate(current.closesAt, timezone)}
-              </p>
+              {priceMore}
+              {current.closesAt && (
+                <p className="imp-deal-until">
+                  Tarifa {current.name} hasta el {untilDate(current.closesAt, timezone)}
+                </p>
+              )}
             </div>
           )}
           {!intro && closingLine}
@@ -276,10 +285,11 @@ export default function ImparablesPage({
         <div className="imp-rays" aria-hidden="true" />
         <div className="imp-hero-in">
           {/* The arc, «Nadie nace imparable. Se hace.» as the page's last word
-              (2026-10-29), then the button and the day. */}
+              (2026-10-29), then the button, the line under it and the day. */}
           <Tiara />
           {closingLine}
           {cta}
+          {priceMore}
           <div className="imp-close-3">
             {when.named}
             {liveNote ? ` · ${liveNote}` : ""}

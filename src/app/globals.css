@@ -4165,28 +4165,20 @@ body:has(.imp) {
   cursor: pointer;
   transition: transform 0.15s ease, background-color 0.15s ease;
 }
-/* Its words in a row; under them, small, today's price in dollars when the
-   ticket has one (2026-10-29) */
-.imp-cta-row {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-.imp-cta:has(> .imp-cta-usd) {
-  flex-direction: column;
-  gap: 1px;
-}
-.imp-cta-usd {
-  font-size: 13px;
+/* Under the button, in one line: today's price in dollars and the regular
+   one, struck (2026-10-29) */
+.imp-cta-more {
+  margin: 0;
+  font-size: 14px;
   font-weight: 700;
-  opacity: 0.75;
+  color: var(--imp-texto-2);
 }
-/* The regular price, struck, between the label and today's */
-.imp-cta-was {
-  font-size: 0.86em;
+.imp-cta-more s {
   font-weight: 600;
-  opacity: 0.6;
+  text-decoration-thickness: 1.5px;
+}
+.imp-close .imp-cta-more {
+  margin-top: 10px;
 }
 /* A little tighter on the cover, so all of it fits the first screen. */
 .imp-hero .imp-cta {

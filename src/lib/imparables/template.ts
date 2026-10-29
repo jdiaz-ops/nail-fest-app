@@ -65,8 +65,9 @@ export const IMPARABLES_SPEAKERS: ImparablesSpeaker[] = [
     name: "Oskar Garzón",
     handle: "@oskarivanquebelleza",
     tag: "Del humor de la mesa de trabajo creó un personaje que siguen cientos de miles en todo Latam. Se convirtió en la voz del gremio con un solo mensaje: con esta profesión cualquiera puede sobresalir.",
-    talk: "Piensa en grande y hazte ver",
-    subtitle: "Visión, redes y la actitud para sobresalir. Cierre del congreso y tu ruta final.",
+    // His talk as the team approved it (2026-10-29).
+    talk: "Atrévete y piensa en grande",
+    subtitle: "Redes, actitud y orgullo por tu oficio: lo que necesitas para dejar de pensar en pequeño.",
     photoUrl: PHOTO("oskar"),
   },
   {

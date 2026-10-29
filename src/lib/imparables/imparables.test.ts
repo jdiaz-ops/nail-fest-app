@@ -461,6 +461,11 @@ describe("the template", () => {
       ["6:45 p. m.", "Cierre y sorteo"],
     ]);
     expect(afternoon.filter((r) => r.label)).toEqual([]);
+    // Oskar's talk as the team approved it (2026-10-29).
+    expect(afternoon.find((r) => r.instructor === "Oskar Garzón")).toMatchObject({
+      topic: "Atrévete y piensa en grande",
+      text: "Redes, actitud y orgullo por tu oficio: lo que necesitas para dejar de pensar en pequeño.",
+    });
   });
 
   it("puts the results right after the program", () => {
