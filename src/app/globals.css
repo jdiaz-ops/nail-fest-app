@@ -4050,9 +4050,9 @@ body:has(.imp) {
   height: auto;
   /* The photo gives way so the whole cover fits the first screen (2026-10-28):
      what's left of the screen's height after the cover's other parts
-     (about 606px of them on a phone), never smaller than 110px. */
-  max-height: clamp(110px, calc(100vh - 606px), 260px);
-  max-height: clamp(110px, calc(100svh - 606px), 260px);
+     (about 548px of them on a phone), never smaller than 110px. */
+  max-height: clamp(110px, calc(100vh - 548px), 260px);
+  max-height: clamp(110px, calc(100svh - 548px), 260px);
   margin: 0 auto;
   -webkit-mask-image: linear-gradient(180deg, #000 68%, transparent 98%);
   mask-image: linear-gradient(180deg, #000 68%, transparent 98%);
@@ -4087,8 +4087,8 @@ body:has(.imp) {
   justify-content: center;
   align-items: center;
   gap: 8px;
-  /* Last on the cover, under «Nadie nace imparable» (2026-10-28). */
-  margin: 12px 0 0;
+  /* Last on the cover, under the button's price line (2026-10-29). */
+  margin: 18px 0 0;
   font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.14em;
@@ -4096,22 +4096,26 @@ body:has(.imp) {
   color: var(--imp-texto-2);
 }
 /* «Nadie nace imparable. Se hace.», at the foot of the cover (2026-10-28) */
-/* Well under the button and its price line, giving them room. */
-.imp-hero-close {
+/* «Nadie nace imparable. Se hace.»: closing the section under the cover (or
+   the cover itself, without one) — 2026-10-29 */
+.imp-tagline {
   margin: 18px 0 0;
   font-family: var(--imp-display), Georgia, serif;
   line-height: 1.15;
   text-wrap: balance;
 }
-.imp-hero-close span {
+.imp-tagline span {
   display: block;
   font-weight: 700;
-  font-size: 16px;
+  font-size: 18px;
 }
-.imp-hero-close .imp-gold {
+.imp-tagline .imp-gold {
   margin-top: 2px;
   font-weight: 900;
-  font-size: 24px;
+  font-size: 28px;
+}
+.imp-intro .imp-tagline {
+  margin-top: 26px;
 }
 .imp-organiza img {
   height: 16px;
@@ -4378,6 +4382,30 @@ body:has(.imp) {
   position: relative;
   max-width: 1040px;
   margin: 0 auto;
+}
+/* «¿Qué tienen en común todos los conferencistas?»: right under the cover, in
+   its colors (2026-10-29) — the title centered, two paragraphs of secondary
+   text under it, the phrase in bold in the titles' gold. */
+.imp-sec.imp-intro {
+  padding: 40px 22px;
+  text-align: center;
+}
+.imp-intro .imp-h2 {
+  margin: 0 auto;
+}
+.imp-intro .imp-rich {
+  max-width: 560px;
+  margin: 16px auto 0;
+}
+.imp-intro .imp-rich p {
+  margin: 0;
+}
+.imp-intro .imp-rich p + p {
+  margin-top: 12px;
+}
+.imp-intro .imp-rich strong {
+  font-weight: 800;
+  color: var(--imp-titulo);
 }
 .imp-quote {
   position: absolute;
@@ -5673,10 +5701,10 @@ body:has(.imp) {
     margin-right: auto;
     font-size: 25px;
   }
-  .imp-hero-close span {
+  .imp-tagline span {
     font-size: 24px;
   }
-  .imp-hero-close .imp-gold {
+  .imp-tagline .imp-gold {
     font-size: 36px;
   }
   .imp-pill-date {
@@ -5694,6 +5722,9 @@ body:has(.imp) {
   }
   .imp-sec {
     padding: 72px 40px;
+  }
+  .imp-sec.imp-intro {
+    padding: 56px 40px;
   }
   .imp-h2 {
     font-size: 38px;

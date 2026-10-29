@@ -167,8 +167,16 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
   },
   { type: "card", eyebrow: "Ellas empezaron donde tú estás hoy:", title: "en una mesa de manicure.", html: "", icon: "none", tone: "pink", imageUrl: "", hidden: true },
 
+  // Lo que tienen en común: justo debajo de la portada, en sus colores, y
+  // «Nadie nace imparable. Se hace.» como su cierre (2026-10-29)
+  { type: "heading", eyebrow: "", title: "¿Qué tienen en común todos los conferencistas?", intro: "" },
+  {
+    type: "text",
+    html: "<p>Ninguno empezó arriba. Mesa alquilada, precios bajos, tres clientas, mil dudas. Lo único que tenían era una decisión: <strong>dejar de pensar en pequeño</strong>.</p><p>Hoy tienen marcas, sedes y academias. Y vienen a contarte cómo lo hicieron y a darte las estrategias y herramientas para que tú también lo logres.</p>",
+  },
+
   // Speakers, el panel y la maestra de ceremonias
-  { type: "heading", eyebrow: "Conferencistas", title: "De quién vas a aprender", intro: "" },
+  { type: "heading", eyebrow: "Conferencistas", title: "", intro: "" },
   { type: "people", items: IMPARABLES_SPEAKERS.map(({ name, handle, tag, photoUrl }) => ({ name, handle, tag, photoUrl, tone: "pink" as const })) },
   {
     type: "card",

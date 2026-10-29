@@ -1,4 +1,4 @@
-import type { AgendaRow, CardLandingBlock, ImageLandingBlock, LandingBlock, PeopleLandingBlock } from "@/lib/landingBlocks/types";
+import type { AgendaRow, CardLandingBlock, HeadingLandingBlock, ImageLandingBlock, LandingBlock, PeopleLandingBlock, TextLandingBlock } from "@/lib/landingBlocks/types";
 
 // How Manicuristas Imparables' page reads an event's blocks
 // (components/imparables/ImparablesBlocks.tsx): an image before the first
@@ -36,6 +36,18 @@ export function coverOf(blocks: LandingBlock[]): { cover: ImageLandingBlock | nu
   const i = blocks.findIndex((b, j) => b.type === "image" && Boolean(b.url) && (firstHeading === -1 || j < firstHeading));
   if (i === -1) return { cover: null, rest: blocks };
   return { cover: blocks[i] as ImageLandingBlock, rest: blocks.filter((_, j) => j !== i) };
+}
+
+/** The cover's sequel (2026-10-29): when the page opens with a section that is
+ * only a title without an eyebrow and a text — «¿Qué tienen en común todos los
+ * conferencistas?» — it is told right under the cover, in the cover's colors,
+ * and the sections after it keep taking turns as before. */
+export function introOf(blocks: LandingBlock[]): { intro: { heading: HeadingLandingBlock; text: TextLandingBlock } | null; rest: LandingBlock[] } {
+  const [heading, text, next] = blocks;
+  const isIntro =
+    heading?.type === "heading" && !heading.eyebrow.trim() && Boolean(heading.title.trim()) && text?.type === "text" && Boolean(text.html.trim()) && (!next || next.type === "heading");
+  if (!isIntro) return { intro: null, rest: blocks };
+  return { intro: { heading: heading as HeadingLandingBlock, text: text as TextLandingBlock }, rest: blocks.slice(2) };
 }
 
 /** ["Jimena", "Pau", "Oskar"] -> "Jimena, Pau y Oskar" */

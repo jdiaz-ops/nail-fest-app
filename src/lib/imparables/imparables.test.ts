@@ -3,7 +3,7 @@ import path from "path";
 import { describe, expect, it } from "vitest";
 import { landingBlockSchema } from "@/lib/landingBlocks/schema";
 import { emptyAgendaRow, parseLandingBlocks, type AgendaLandingBlock, type LandingBlock } from "@/lib/landingBlocks/types";
-import { castLine, castOf, coverOf, isPanelCard, namesIn, panelGuestsOf, panelOf, routeOf } from "./blocks";
+import { castLine, castOf, coverOf, introOf, isPanelCard, namesIn, panelGuestsOf, panelOf, routeOf } from "./blocks";
 import { agendaInstant, coverName, dayEnd, eventWhen, readClock } from "./schedule";
 import { pesos, salesState, saving, untilDate, untilDay, type StageTicketType } from "./stages";
 import { splitTagline } from "./tagline";
@@ -201,6 +201,19 @@ describe("how the page reads the blocks", () => {
     // An image further down is just an image.
     const later = [{ type: "heading", eyebrow: "", title: "x", intro: "" }, { type: "image", url: "/a.jpg", caption: "" }] as LandingBlock[];
     expect(coverOf(later).cover).toBeNull();
+  });
+
+  it("tells what the speakers have in common right under the cover, the speakers' section after it", () => {
+    const { rest } = coverOf(IMPARABLES_BLOCKS.filter((b) => !b.hidden));
+    const { intro, rest: after } = introOf(rest);
+    expect(intro?.heading.title).toBe("¿Qué tienen en común todos los conferencistas?");
+    expect(intro?.text.html).toContain("<strong>dejar de pensar en pequeño</strong>");
+    expect(after[0]).toMatchObject({ type: "heading", eyebrow: "Conferencistas", title: "" });
+    // A section with an eyebrow, or more than a text, is just a section.
+    const plain = [{ type: "heading", eyebrow: "Agenda", title: "x", intro: "" }, { type: "text", html: "<p>y</p>" }] as LandingBlock[];
+    expect(introOf(plain).intro).toBeNull();
+    const more = [{ type: "heading", eyebrow: "", title: "x", intro: "" }, { type: "text", html: "<p>y</p>" }, { type: "text", html: "<p>z</p>" }] as LandingBlock[];
+    expect(introOf(more).intro).toBeNull();
   });
 
   it("names who is under the group photo", () => {

@@ -5,7 +5,7 @@ import type { LandingBlock } from "@/lib/landingBlocks/types";
 import { coverName, type EventWhen } from "@/lib/imparables/schedule";
 import { dayMonth, pesos, saving, untilDate, type SalesState } from "@/lib/imparables/stages";
 import { utcToZonedInputValue } from "@/lib/dateFormat";
-import { castLine, castOf, coverOf, panelOf } from "@/lib/imparables/blocks";
+import { castLine, castOf, coverOf, introOf, panelOf } from "@/lib/imparables/blocks";
 import { splitTagline } from "@/lib/imparables/tagline";
 import ImparablesBlocks from "./ImparablesBlocks";
 import { Tiara } from "./ImpArt";
@@ -101,7 +101,8 @@ export default function ImparablesPage({
   const pillDate = when.compact.replace(/ de /g, " ");
   const pillNote = [kind, event.format === "VIRTUAL" ? "100% en vivo" : ""].filter(Boolean).join(" ");
 
-  const { cover, rest } = coverOf(blocks);
+  const { cover, rest: afterCover } = coverOf(blocks);
+  const { intro, rest } = introOf(afterCover);
   const { pillars, line: tagline } = splitTagline(event.subtitle ?? "");
   const { speakers } = castOf(blocks);
   const panel = panelOf(rest);
@@ -122,6 +123,21 @@ export default function ImparablesPage({
   const save = current ? saving(current, sales.normal) : 0;
   // The team's preview of another day runs its countdowns on that day's clock.
   const offsetMs = preview?.simulated ? now.getTime() - Date.now() : 0;
+
+  // «Nadie nace imparable. Se hace.» (2026-10-29): it closes the section under
+  // the cover when there is one, else the cover itself.
+  const closingLine = (
+    <p className="imp-tagline">
+      {closing.length === 2 ? (
+        <>
+          <span>{closing[0]}</span>
+          <span className="imp-gold">{closing[1]}</span>
+        </>
+      ) : (
+        <span className="imp-gold">{closing[0]}</span>
+      )}
+    </p>
+  );
 
   const cta =
     mode === "sale" && current ? (
@@ -198,18 +214,7 @@ export default function ImparablesPage({
               </p>
             </div>
           )}
-          {/* «Nadie nace imparable. Se hace.», under the button and its price
-              line (2026-10-28: it used to close the page). */}
-          <p className="imp-hero-close">
-            {closing.length === 2 ? (
-              <>
-                <span>{closing[0]}</span>
-                <span className="imp-gold">{closing[1]}</span>
-              </>
-            ) : (
-              <span className="imp-gold">{closing[0]}</span>
-            )}
-          </p>
+          {!intro && closingLine}
           {/* Who organizes it, last on the cover, as its signature (2026-10-28:
               it was «Nail Fest presenta», above the name). */}
           <p className="imp-organiza">
@@ -232,6 +237,18 @@ export default function ImparablesPage({
             }
           />
         </div>
+      )}
+
+      {intro && (
+        // Right under the cover, in its colors (2026-10-29): what all the speakers have in common.
+        <section className="imp-sec imp-intro">
+          <div className="imp-sec-in">
+            <h2 className="imp-h2">{intro.heading.title}</h2>
+            {/* Sanitized before storage (lib/events.ts). */}
+            <div className="imp-rich" dangerouslySetInnerHTML={{ __html: intro.text.html }} />
+            {closingLine}
+          </div>
+        </section>
       )}
 
       <ImparablesBlocks blocks={rest} context={{ sales, offsetMs, when, timezone, now, buyLabel, speakers: faces, panel }} />
