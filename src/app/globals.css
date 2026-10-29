@@ -4231,6 +4231,33 @@ body:has(.imp) {
   margin-top: 14px;
   padding: 15px 18px;
 }
+/* On a phone, the buying button in two lines (2026-10-29): its words big,
+   the prices under them, with more air around it and a soft shadow. */
+@media (max-width: 1099px) {
+  .imp-cta:has(.imp-cta-p) {
+    flex-direction: column;
+    gap: 2px;
+    padding: 15px 16px 14px;
+    border-radius: 16px;
+    box-shadow: 0 12px 26px -10px rgba(140, 106, 62, 0.6);
+  }
+  .imp-cta:has(.imp-cta-p) > span:first-child {
+    font-size: 19px;
+  }
+  .imp-cta-dot {
+    display: none;
+  }
+  .imp-cta-p {
+    font-size: 16px;
+  }
+  .imp-hero .imp-cta:has(.imp-cta-p) {
+    margin-top: 28px;
+  }
+  .imp-hero .imp-deal,
+  .imp-close .imp-deal {
+    margin-top: 20px;
+  }
+}
 .imp-cta:hover {
   transform: translateY(-1px);
   background: var(--imp-oro-hover);
