@@ -10,7 +10,7 @@ import type {
 } from "@/lib/landingBlocks/types";
 import { youtubeVideo } from "@/lib/landingBlocks/types";
 import { agendaInstant, type EventWhen } from "@/lib/imparables/schedule";
-import { dayMonth, pesos, saving, untilDay, type SalesState } from "@/lib/imparables/stages";
+import { dayMonth, pesos, saving, stageLine, stagesSummary, type SalesState } from "@/lib/imparables/stages";
 import { isPanelCard, listNames, namesIn, panelGuestsOf } from "@/lib/imparables/blocks";
 import { ImpIcon, Silhouette, iconForPoint, initials, instagramUrl, type ImpIconName } from "./ImpArt";
 import ImpButton from "./ImpButton";
@@ -184,7 +184,7 @@ function renderBlock(block: LandingBlock, key: number, context: ImparablesContex
                 {item.question.trim() || "Leer más"}
                 <i aria-hidden="true" />
               </summary>
-              <p className="imp-faq-a">{item.answer}</p>
+              <p className="imp-faq-a">{withStages(item.answer, context)}</p>
             </details>
           ))}
         </div>
@@ -627,6 +627,12 @@ function AgendaLine({
   );
 }
 
+/** «{{etapas}}» in a question's answer: every price stage in a sentence each, as its ticket types say today
+ * («¿Por qué sube el precio?», 2026-10-29) — the answer follows any change to them. */
+function withStages(answer: string, context: ImparablesContext): string {
+  return answer.includes("{{etapas}}") ? answer.split("{{etapas}}").join(stagesSummary(context.sales.stages, context.timezone)) : answer;
+}
+
 // ── Tu boleta ───────────────────────────────────────────────────────────────
 
 function secondsUntil(to: Date, now: Date): number {
@@ -639,9 +645,10 @@ const COUNTDOWN_DAYS = 30;
 function Prices({ block, context }: { block: PricesLandingBlock; context: ImparablesContext }) {
   const { sales, timezone, now, offsetMs } = context;
   if (sales.stages.length === 0) return null;
-  const { current, next, countdown, normal } = sales;
+  const { current, next, countdown, full } = sales;
   // Each stage says where it stands, no dates (2026-10-26); today's price
-  // says until when it holds, and the countdown comes in its last days.
+  // says what the cover says under its button (2026-10-29), and the
+  // countdown comes in its last days.
   const STATE_NOTE = { current: "Ahora", past: "Cerrada", soldout: "Agotada", future: "Próximamente" } as const;
   const STATE_CLASS = { current: "is-on", past: "is-off", soldout: "is-off", future: "is-soon" } as const;
   return (
@@ -649,22 +656,17 @@ function Prices({ block, context }: { block: PricesLandingBlock; context: Impara
       {current ? (
         <div className="imp-now">
           <span className="imp-now-badge">Precio de hoy · {current.name}</span>
-          {saving(current, normal) > 0 && (
+          {saving(current, full) > 0 && (
             <div className="imp-now-was">
-              Precio normal <s>{pesos(normal!.price)}</s>
+              {full!.name} <s>{pesos(full!.price)}</s>
             </div>
           )}
           <div className="imp-now-amt">
             {pesos(current.price)} <small>COP</small>
           </div>
-          {saving(current, normal) > 0 && <div className="imp-now-save">Ahorras {pesos(saving(current, normal))}</div>}
+          {saving(current, full) > 0 && <div className="imp-now-save">Ahorras {pesos(saving(current, full))}</div>}
           {block.note && <div className="imp-now-iva">{block.note}</div>}
-          {next && (
-            <div className="imp-now-up">
-              {current.closesAt ? `Este precio termina el ${untilDay(current.closesAt, timezone)}; después sube a ` : "Después sube a "}
-              <b>{pesos(next.price)}</b>
-            </div>
-          )}
+          <div className="imp-now-up">{stageLine(sales, timezone)}</div>
           {countdown && secondsUntil(countdown.to, now) <= COUNTDOWN_DAYS * 86_400 && (
             <ImpCountdown to={countdown.to.toISOString()} label="Faltan" initialSeconds={secondsUntil(countdown.to, now)} seconds={false} offsetMs={offsetMs} />
           )}
@@ -703,7 +705,7 @@ function Prices({ block, context }: { block: PricesLandingBlock; context: Impara
             </span>
             <span className="imp-stage-p">
               <strong>{pesos(stage.price)}</strong>
-              {saving(stage, normal) > 0 && stage.state !== "past" && <small>Ahorras {pesos(saving(stage, normal))}</small>}
+              {saving(stage, full) > 0 && stage.state !== "past" && stage.state !== "soldout" && <small>Ahorras {pesos(saving(stage, full))}</small>}
             </span>
           </li>
         ))}

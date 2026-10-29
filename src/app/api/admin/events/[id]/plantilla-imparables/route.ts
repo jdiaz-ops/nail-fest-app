@@ -40,7 +40,7 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
   let createdStages = 0;
   if (event._count.ticketTypes === 0) {
     for (const stage of IMPARABLES_STAGES) {
-      await createTicketType(event.id, {
+      const created = await createTicketType(event.id, {
         name: stage.name,
         quantity: IMPARABLES_STAGE_QUANTITY,
         price: stage.price,
@@ -51,11 +51,13 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
         // One ticket, one person: each buyer gets her own Zoom link.
         maxPerOrder: 1,
         issuance: "INDIVIDUAL",
-        hideUntil: stage.opensAt ? new Date(stage.opensAt) : null,
+        hideUntil: null,
         hideAfter: new Date(stage.closesAt),
         hideWhenSoldOut: false,
         showRemainingOnPage: false,
       });
+      // A price stage: its name in code, its cap, the words after its date (2026-10-29).
+      await db.ticketType.update({ where: { id: created.id }, data: { stageSlug: stage.slug, stageCap: stage.cap, stageNote: stage.note } });
       createdStages += 1;
     }
   }

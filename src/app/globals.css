@@ -4165,8 +4165,20 @@ body:has(.imp) {
   cursor: pointer;
   transition: transform 0.15s ease, background-color 0.15s ease;
 }
-/* Under the button, in one line: today's price in dollars and the regular
-   one, struck (2026-10-29) */
+/* Its prices: today's after the full one, struck (2026-10-29) */
+.imp-cta-p {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  white-space: nowrap;
+}
+.imp-cta-p s {
+  font-size: 0.86em;
+  font-weight: 600;
+  opacity: 0.6;
+}
+/* Under the button: today's price in dollars, the full one in dollars
+   struck beside it (2026-10-29) */
 .imp-cta-more {
   margin: 0;
   font-size: 14px;
@@ -4177,8 +4189,18 @@ body:has(.imp) {
   font-weight: 600;
   text-decoration-thickness: 1.5px;
 }
-.imp-close .imp-cta-more {
-  margin-top: 10px;
+/* The week after the stage before closed: «Etapa Creyente agotada» */
+.imp-stage-pill {
+  justify-self: center;
+  margin: 2px 0 0;
+  padding: 3px 10px;
+  border: 1px solid var(--imp-oro);
+  border-radius: 999px;
+  background: var(--imp-destacado);
+  color: var(--imp-resalte);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
 }
 /* A little tighter on the cover, so all of it fits the first screen. */
 .imp-hero .imp-cta {
@@ -5623,56 +5645,41 @@ body:has(.imp) {
   transform: none;
   transition: transform 0.25s ease;
 }
-/* «Tarifa hasta el … ¡Luego sube!», a gold strip across the foot of the bar,
-   down to the phone's very edge */
-.imp-st-up {
-  margin: 0;
-  padding: 7px 16px calc(8px + env(safe-area-inset-bottom));
-  background: var(--imp-oro);
-  color: var(--imp-negro);
-  font-size: 14px;
-  font-weight: 800;
-  text-align: center;
-}
+/* One row, no taller than 64px on a phone (2026-10-29): the price, the button. */
 .imp-sticky-in {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 16px calc(14px + env(safe-area-inset-bottom));
+  padding: 8px 16px calc(8px + env(safe-area-inset-bottom));
   max-width: 560px;
   margin: 0 auto;
 }
-/* With the strip under it, the strip takes the phone's edge. */
-.imp-sticky-in:has(+ .imp-st-up) {
-  padding-bottom: 12px;
-}
 .imp-st-p {
+  display: flex;
   flex: 1;
+  align-items: baseline;
+  gap: 6px;
   min-width: 0;
-  line-height: 1.25;
+  margin: 0;
+  white-space: nowrap;
 }
 .imp-st-p b {
-  display: block;
   font-size: 20px;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   color: var(--imp-resalte);
 }
-/* The regular price, struck, beside today's (2026-10-28) */
-.imp-st-p b s {
-  margin-right: 3px;
+/* The full price, struck, beside today's */
+.imp-st-p s {
   font-size: 14px;
   font-weight: 600;
   color: var(--imp-texto-2);
 }
-.imp-st-p span {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--imp-resalte);
-}
 .imp-st-b {
   flex: none;
-  padding: 15px 20px;
+  padding: 12px 18px;
+  line-height: 1.25;
+  white-space: nowrap;
   border: none;
   border-radius: 12px;
   background: var(--imp-oro);
@@ -5688,11 +5695,11 @@ body:has(.imp) {
   .imp-st-p b {
     font-size: 18px;
   }
-  .imp-st-p b s {
+  .imp-st-p s {
     font-size: 13px;
   }
   .imp-st-b {
-    padding: 13px 14px;
+    padding: 12px 14px;
     font-size: 15px;
   }
 }
@@ -6024,6 +6031,22 @@ select.imp-co-in {
 .imp-co-pay-opt.is-on {
   border-color: var(--imp-bronce);
   background: var(--imp-destacado);
+}
+/* The country's one way to pay (2026-10-29), and the other one, small, under it. */
+.imp-co-pay-one {
+  cursor: default;
+}
+.imp-co-switch {
+  justify-self: start;
+  padding: 0;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--imp-resalte);
+  text-decoration: underline;
+  cursor: pointer;
 }
 .imp-co-pay-opt input {
   flex: none;
@@ -6549,6 +6572,16 @@ select.imp-co-in {
   }
   .imp-hero .imp-deal {
     grid-area: deal;
+  }
+  .imp-hero .imp-stage-pill {
+    justify-self: start;
+  }
+  /* The button's prices at its right end, no «·» (2026-10-29). */
+  .imp-cta:has(.imp-cta-p) {
+    justify-content: space-between;
+  }
+  .imp-cta-dot {
+    display: none;
   }
   .imp-hero .imp-tagline {
     grid-area: close;

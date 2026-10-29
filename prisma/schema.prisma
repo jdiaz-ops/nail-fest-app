@@ -386,6 +386,19 @@ model TicketType {
   hideWhenSoldOut     Boolean          @default(false)
   showRemainingOnPage Boolean          @default(false)
   order               Int              @default(0)
+  // A price stage (Manicuristas Imparables, 2026-10-29 — see
+  // lib/imparables/stages.ts): its name in code ("creyente", "decidida",
+  // "full"); how many it sells at its price, counting paid purchases only
+  // (null: no cap — the last one, the full price); the words after its date
+  // on the page («cierre de Nail Fest Cali»); and when it sold out, once it
+  // did — it stays closed then, even if a refund frees a place: the price
+  // never goes down. It closes on its date (hideAfter) or at its cap,
+  // whichever comes first. Its cap isn't `quantity`, which stays how many
+  // tickets of it can go out at all.
+  stageSlug           String?
+  stageCap            Int?
+  stageNote           String?
+  stageSoldOutAt      DateTime?
   createdAt           DateTime         @default(now())
   updatedAt           DateTime         @updatedAt
 
@@ -393,6 +406,7 @@ model TicketType {
   broadcasts         EmailBroadcast[]
   whatsappBroadcasts WhatsAppBroadcast[]
   discountCodes      DiscountCode[]
+  stageChanges       PricingStageChange[]
 
   @@index([eventId])
 }
@@ -585,6 +599,9 @@ model Payment {
   // How much of it has been refunded, in the same cents (PayPal's
   // refunds); the whole of it makes the payment REFUNDED.
   refundedCents     Int             @default(0)
+  // The price stage it was bought at (TicketType.stageSlug, 2026-10-29), as
+  // it was when the payment was created; what it charged is amountInCents.
+  stageSlug         String?
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
@@ -1731,6 +1748,27 @@ model AdminUser {
   consultorioQuestions  ConsultorioQuestion[]
   consultorioAnswers    ConsultorioAnswer[]
   consultorioVotes      ConsultorioVote[]
+  stageChanges          PricingStageChange[]
+}
+
+// Each change to a price stage's cap, closing date or note from the event's
+// «Etapas de precio» (/admin/events/[id]/etapas, 2026-10-29): who made it,
+// when, and from what to what, as the panel showed it.
+model PricingStageChange {
+  id            String     @id @default(cuid())
+  ticketType    TicketType @relation(fields: [ticketTypeId], references: [id], onDelete: Cascade)
+  ticketTypeId  String
+  // "cap", "closesAt" or "note"
+  field         String
+  before        String?
+  after         String?
+  changedBy     AdminUser? @relation(fields: [changedById], references: [id], onDelete: SetNull)
+  changedById   String?
+  // Their name (or username) as it was then, so the record reads the same if the user goes.
+  changedByName String
+  createdAt     DateTime   @default(now())
+
+  @@index([ticketTypeId, createdAt])
 }
 
 // ---------------------------------------------------------------------------

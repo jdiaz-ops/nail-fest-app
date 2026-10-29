@@ -22,6 +22,7 @@ import { htmlToPlainText } from "@/lib/email/templates";
 // see ConfirmationTemplateEditor.tsx's own STARTER_HTML.
 export const CONFIRMATION_MERGE_TAGS: { key: string; label: string }[] = [
   { key: "ENTRADAS", label: "Entradas (código QR — vacío en eventos virtuales)" },
+  { key: "COMPRA", label: "Tu compra: etapa y precio pagado (si no se pone, va antes de las entradas)" },
   { key: "EVENTO_NOMBRE", label: "Nombre del evento" },
   { key: "EVENTO_FORMATO", label: "Formato (Presencial/Virtual/Híbrido)" },
   { key: "EVENTO_FECHA_RANGO", label: "Fecha de inicio y fin" },
@@ -69,6 +70,10 @@ export interface ConfirmationTemplateData {
    * lib/email/templates.ts's EmailTicket (kept structural so this module,
    * which a client component imports, never pulls in lib/ticket.ts). */
   tickets?: { qrImageUrl: string; confirmationCode: string; holderName: string; label: string }[];
+  /** For a ticket bought at a price stage (lib/imparables/pricing.ts's purchaseNote, 2026-10-29): «Compraste en la
+   * Etapa Creyente a $90.000», and the line on what it costs now — at {{COMPRA}}, else right before {{ENTRADAS}},
+   * else at the end. */
+  purchase?: { bought: string; share: string | null };
 }
 
 function escapeHtml(input: string): string {
@@ -133,6 +138,21 @@ function renderSingleVoucher(v: { qrImageUrl: string; holderName: string; label?
 // hardcoded "Lugar: {{...}} — {{...}}" that used to render as a bare
 // "Lugar: —" once both venue fields were empty (which is exactly what
 // happens on a real VIRTUAL event, since it has no venue to fill in).
+function renderPurchaseHtml(data: ConfirmationTemplateData): string {
+  if (!data.purchase) return "";
+  return `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f5f2;border-radius:10px;margin:12px 0;">
+      <tr>
+        <td style="padding:14px 16px;">
+          <p style="margin:0 0 4px;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#8a8478;">Tu compra</p>
+          <p style="margin:0;font-size:14px;font-weight:700;color:#17181c;">${escapeHtml(data.purchase.bought)}</p>
+          ${data.purchase.share ? `<p style="margin:6px 0 0;font-size:13px;color:#5b5f6b;">${escapeHtml(data.purchase.share)}</p>` : ""}
+        </td>
+      </tr>
+    </table>
+  `;
+}
+
 function renderUbicacionLinea(data: ConfirmationTemplateData): string {
   const venueLine = [data.venueName, data.venueAddress].filter(Boolean).join(" — ");
   const format = data.format ?? "IN_PERSON";
@@ -200,8 +220,14 @@ export function renderConfirmationFromTemplate(templateHtml: string, data: Confi
     .split("Presenta el código QR de abajo en la entrada. Puedes reingresar las veces que necesites durante el evento.")
     .join("{{EVENTO_INSTRUCCION_ENTRADA}}");
 
+  // The purchase's price, where the template puts it: {{COMPRA}}, else with the tickets, else at the end.
+  const purchaseHtml = renderPurchaseHtml(data);
+  const purchaseAt = body.includes("{{COMPRA}}") ? "COMPRA" : body.includes("{{ENTRADAS}}") ? "ENTRADAS" : null;
+  if (purchaseHtml && !purchaseAt) body += purchaseHtml;
+
   const replacements: Record<string, string> = {
-    ENTRADAS: renderVoucherHtml(data),
+    COMPRA: purchaseHtml,
+    ENTRADAS: (purchaseAt === "ENTRADAS" ? purchaseHtml : "") + renderVoucherHtml(data),
     EVENTO_NOMBRE: escapeHtml(data.eventName),
     EVENTO_FORMATO: data.format === "VIRTUAL" ? "Virtual" : data.format === "HYBRID" ? "Híbrido" : "Presencial",
     EVENTO_FECHA_RANGO: rangeWhenHtml,

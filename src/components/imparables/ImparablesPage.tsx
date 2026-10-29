@@ -2,7 +2,7 @@ import type { EventFormat } from "@prisma/client";
 import MetaPixelScript from "@/components/MetaPixelScript";
 import type { LandingBlock } from "@/lib/landingBlocks/types";
 import { coverName, type EventWhen } from "@/lib/imparables/schedule";
-import { dayMonth, dollars, pesos, saving, untilDate, type SalesState } from "@/lib/imparables/stages";
+import { dayMonth, dollars, pesos, saving, stageLine, stagePill, type SalesState } from "@/lib/imparables/stages";
 import { utcToZonedInputValue } from "@/lib/dateFormat";
 import { castLine, castOf, coverOf, introOf, panelOf } from "@/lib/imparables/blocks";
 import { splitTagline } from "@/lib/imparables/tagline";
@@ -126,10 +126,10 @@ export default function ImparablesPage({
   const { mode, current, next } = sales;
   const closing = twoLines(event.closingText?.trim() || `Nos vemos el ${when.short}.`);
   // The lowest price the congress will have, when the one about to open is it.
-  const opensCheapest = next && sales.stages.every((s) => s.state === "past" || s.price >= next.price);
-  // Beside the bar's price, the regular one struck, when today's is lower
-  // (2026-10-28: the saving itself isn't spelled out any more).
-  const save = current ? saving(current, sales.normal) : 0;
+  const opensCheapest = next && sales.stages.every((s) => s.state === "past" || s.state === "soldout" || s.price >= next.price);
+  // Beside today's price, the full one struck — always the full price
+  // (2026-10-29), unless today's is it.
+  const struck = current && saving(current, sales.full) > 0 ? sales.full : null;
   // The team's preview of another day runs its countdowns on that day's clock.
   const offsetMs = preview?.simulated ? now.getTime() - Date.now() : 0;
 
@@ -150,25 +150,47 @@ export default function ImparablesPage({
 
   const cta =
     mode === "sale" && current ? (
-      // Its words and today's price, nothing else (2026-10-29).
+      // Its words, then today's price after the full one struck (2026-10-29);
+      // on a computer the prices go to the button's right end, with no «·».
       <ImpButton action="buy" className="imp-cta">
-        {`${heroLabel} · ${pesos(current.price)}`}
+        <span>
+          {heroLabel}
+          <span className="imp-cta-dot"> ·</span>
+        </span>
+        <span className="imp-cta-p">
+          {struck && <s>{pesos(struck.price)}</s>}
+          <span>{pesos(current.price)}</span>
+        </span>
       </ImpButton>
     ) : mode === "waitlist" ? (
       <ImpButton action="waitlist" className="imp-cta">
         Quiero estar en la lista de espera
       </ImpButton>
     ) : null;
-  // Under the button, in one line (2026-10-29): today's price in dollars,
-  // when its ticket has one, and the regular price, struck, when today's is
-  // lower.
-  const priceMore =
-    mode === "sale" && current && (current.usdCents || save > 0) ? (
-      <p className="imp-cta-more">
-        {current.usdCents ? `o ${dollars(current.usdCents)}` : null}
-        {current.usdCents && save > 0 ? " · " : null}
-        {save > 0 && <s>{pesos(sales.normal!.price)}</s>}
-      </p>
+  // Under the button, the same on the cover and the closing (2026-10-29):
+  // today's price in dollars, when its ticket has one, with the full price in
+  // dollars struck beside it; for a week after the stage before closed, a
+  // pill saying so; and the stage's line — its cap, its date, what comes
+  // next (lib/imparables/stages.ts).
+  const pill = mode === "sale" ? stagePill(sales, now) : null;
+  const terms = mode === "sale" ? stageLine(sales, timezone) : null;
+  const deal =
+    mode === "sale" && current ? (
+      <div className="imp-deal">
+        {current.usdCents ? (
+          <p className="imp-cta-more">
+            o {dollars(current.usdCents)}
+            {struck?.usdCents && struck.usdCents > current.usdCents ? (
+              <>
+                {" "}
+                <s>{dollars(struck.usdCents)}</s>
+              </>
+            ) : null}
+          </p>
+        ) : null}
+        {pill && <p className="imp-stage-pill">{pill}</p>}
+        {terms && <p className="imp-deal-until">{terms}</p>}
+      </div>
     ) : null;
 
   return (
@@ -228,20 +250,9 @@ export default function ImparablesPage({
           )}
           {cta}
           {mode === "closed" && <p className="imp-closed-note">La venta de boletas está cerrada.</p>}
-          {/* Under the button: its price in dollars and the regular one,
-              struck (2026-10-29), then which price it is and until when it
-              holds (2026-10-28). The guarantee («Texto debajo del botón») is
-              hidden from the cover for now; it stays on the event. */}
-          {mode === "sale" && current && (priceMore || current.closesAt) && (
-            <div className="imp-deal">
-              {priceMore}
-              {current.closesAt && (
-                <p className="imp-deal-until">
-                  Tarifa {current.name} hasta el {untilDate(current.closesAt, timezone)}
-                </p>
-              )}
-            </div>
-          )}
+          {/* The guarantee («Texto debajo del botón») is hidden from the
+              cover for now; it stays on the event. */}
+          {deal}
           {!intro && closingLine}
           {/* Who organizes it, last on the cover, as its signature (2026-10-28:
               it was «Nail Fest presenta», above the name). */}
@@ -289,7 +300,7 @@ export default function ImparablesPage({
           <Tiara />
           {closingLine}
           {cta}
-          {priceMore}
+          {deal}
           <div className="imp-close-3">
             {when.named}
             {liveNote ? ` · ${liveNote}` : ""}
@@ -316,22 +327,17 @@ export default function ImparablesPage({
 
       {mode === "sale" && current && (
         <ImpStickyBar>
+          {/* One row (2026-10-29): today's price big with the full one
+              struck beside it, and the button. */}
           <div className="imp-sticky-in">
-            <div className="imp-st-p">
-              <b>
-                {save > 0 && <s>{pesos(sales.normal!.price)}</s>} {pesos(current.price)}
-              </b>
-              {/* The stage's name under the price (2026-10-28). */}
-              <span>{current.name}</span>
-            </div>
+            <p className="imp-st-p">
+              <b>{pesos(current.price)}</b>
+              {struck && <s>{pesos(struck.price)}</s>}
+            </p>
             <ImpButton action="buy" className="imp-st-b">
               {buyLabel}
             </ImpButton>
           </div>
-          {/* Until when today's price holds, across the foot of the bar (2026-10-28). */}
-          {current.closesAt && next && (
-            <p className="imp-st-up">Tarifa hasta el {untilDate(current.closesAt, timezone)}. ¡Luego sube!</p>
-          )}
         </ImpStickyBar>
       )}
       {mode === "waitlist" && next?.opensAt && (

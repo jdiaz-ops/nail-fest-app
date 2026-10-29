@@ -412,6 +412,8 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
         question: "¿Cómo pago?",
         answer: "En línea, con Wompi: tarjeta de crédito o débito, PSE o Nequi. Apenas se confirma el pago te llega la confirmación a tu correo.",
       },
+      // {{etapas}}: each price stage as its ticket type says (2026-10-29).
+      { question: "¿Por qué sube el precio?", answer: "Porque premiamos a las que deciden primero. {{etapas}} El precio nunca baja." },
       { question: "¿Puedo pedir reembolso?", answer: IMPARABLES_REFUND },
     ],
   },
@@ -445,18 +447,16 @@ export const IMPARABLES_FIELDS = {
   ctaNote: "Garantía de 30 minutos: si en la primera media hora sientes que no es para ti, te devolvemos el 100%.",
 };
 
-/** The price stages, as ticket types (only for an event with none yet). Dates are Bogotá's.
- * No waiting list (2026-10-26): the first stage («Etapa Creyente» since
- * 2026-10-28) is on sale from the moment the event is published, no start
- * date. Plain words, no «preventa» or «early
- * bird»: three stages and the regular price, which is real — what it costs
- * to come in on the congress's day — so each stage tells what it saves
- * against it (lib/imparables/stages.ts). */
-export const IMPARABLES_STAGES: { name: string; price: number; opensAt: string | null; closesAt: string }[] = [
-  { name: "Etapa Creyente", price: 80_000, opensAt: null, closesAt: "2027-04-01T00:00:00-05:00" },
-  { name: "Etapa 2", price: 100_000, opensAt: "2027-04-01T00:00:00-05:00", closesAt: "2027-06-21T00:00:00-05:00" },
-  { name: "Etapa 3", price: 120_000, opensAt: "2027-06-21T00:00:00-05:00", closesAt: "2027-06-27T00:00:00-05:00" },
-  { name: "Precio normal", price: 150_000, opensAt: "2027-06-27T00:00:00-05:00", closesAt: "2027-06-27T19:00:00-05:00" },
+/** The price stages, as ticket types (only for an event with none yet), in
+ * order (the team, 2026-10-29). Each closes on its date (Bogotá's) or at its
+ * cap of paid purchases, whichever comes first, and the next one opens right
+ * then; the last, the full price, has no cap (lib/imparables/stages.ts). The
+ * first is on sale from the moment the event is published: no waiting list. */
+export const IMPARABLES_STAGES: { slug: string; name: string; price: number; cap: number | null; closesAt: string; note: string | null }[] = [
+  { slug: "creyente", name: "Etapa Creyente", price: 90_000, cap: 200, closesAt: "2027-04-18T23:59:00-05:00", note: "cierre de Nail Fest Cali" },
+  { slug: "decidida", name: "Etapa Decidida", price: 120_000, cap: 300, closesAt: "2027-05-30T23:59:00-05:00", note: null },
+  { slug: "full", name: "Precio full", price: 150_000, cap: null, closesAt: "2027-06-27T08:00:00-05:00", note: null },
 ];
-/** Room in each stage: a cap that won't be the limit, to lower once Zoom's capacity is known. */
+/** How many tickets of each stage can go out at all — not its cap: a number that won't be the limit, to lower once
+ * Zoom's capacity is known. */
 export const IMPARABLES_STAGE_QUANTITY = 3000;

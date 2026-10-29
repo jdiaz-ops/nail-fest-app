@@ -5,7 +5,7 @@ import { landingBlockSchema } from "@/lib/landingBlocks/schema";
 import { parseLandingBlocks, type AgendaLandingBlock, type LandingBlock } from "@/lib/landingBlocks/types";
 import { castLine, castOf, coverOf, introOf, isPanelCard, namesIn, panelGuestsOf, panelOf } from "./blocks";
 import { agendaInstant, coverName, dayEnd, eventWhen, readClock } from "./schedule";
-import { dollars, pesos, salesState, saving, untilDate, untilDay, type StageTicketType } from "./stages";
+import { dollars, pesos, salesState, saving, stageLine, stagePill, stagesSummary, untilDay, type StageTicketType } from "./stages";
 import { splitTagline } from "./tagline";
 import { IMPARABLES_BLOCKS, IMPARABLES_FIELDS, IMPARABLES_GROUP_PHOTO, IMPARABLES_PANELISTS, IMPARABLES_SPEAKERS, IMPARABLES_STAGES } from "./template";
 
@@ -13,101 +13,130 @@ const TZ = "America/Bogota";
 const at = (iso: string) => new Date(iso);
 const STARTS = at("2027-06-27T09:00:00-05:00");
 
-// The template's stages; `firstOpensAt` gives the first one (Etapa Creyente) a start date (the template has none).
-const stages = (remaining = [3000, 3000, 3000, 3000], firstOpensAt: string | null = null): StageTicketType[] =>
-  IMPARABLES_STAGES.map((s, i) => {
-    const opensAt = i === 0 ? firstOpensAt : s.opensAt;
-    return {
-      id: `t${i}`,
-      name: s.name,
-      price: s.price,
-      status: "ON_SALE",
-      hideUntil: opensAt ? at(opensAt) : null,
-      hideAfter: at(s.closesAt),
-      remaining: remaining[i]!,
-      order: i,
-    };
-  });
+// The template's stages as their ticket types (pricing.ts's loadStages): each one's paid tickets, and when it sold out.
+const stages = (paid: number[] = [], soldOutAt: (string | null)[] = []): StageTicketType[] =>
+  IMPARABLES_STAGES.map((s, i) => ({
+    id: `t${i}`,
+    name: s.name,
+    slug: s.slug,
+    price: s.price,
+    status: "ON_SALE",
+    hideUntil: null,
+    hideAfter: at(s.closesAt),
+    cap: s.cap,
+    paid: paid[i] ?? 0,
+    soldOutAt: soldOutAt[i] ? at(soldOutAt[i]!) : null,
+    note: s.note,
+    order: i,
+  }));
+const sales = (types: StageTicketType[], iso: string) => salesState(types, at(iso), STARTS);
+// The line keeps "18 de abril" and "200 cupos" together with non-breaking spaces.
+const line = (state: ReturnType<typeof salesState>) => stageLine(state, TZ)?.replace(/\u00a0/g, " ");
 
-describe("salesState", () => {
-  it("sells the first stage, «Etapa Creyente», from the moment the event is out: no waiting list", () => {
-    const state = salesState(stages(), at("2026-10-26T10:00:00-05:00"), STARTS);
+// getActiveStage (pricing.ts) is this rule on what the database has (pricing.test.ts covers what it counts).
+describe("getActiveStage: the first stage whose date hasn't come and whose cap isn't reached (America/Bogota)", () => {
+  it("before any sale: Etapa Creyente, $90.000, its 200 places left, Etapa Decidida next", () => {
+    const state = sales(stages(), "2026-10-29T10:00:00-05:00");
     expect(state.mode).toBe("sale");
-    expect(state.current?.name).toBe("Etapa Creyente");
-    expect(state.next?.name).toBe("Etapa 2");
-    expect(state.countdown).toEqual({ to: at("2027-04-01T00:00:00-05:00"), label: "Este precio termina en" });
+    expect([state.active?.slug, state.current?.price, state.remaining, state.next?.name]).toEqual(["creyente", 90_000, 200, "Etapa Decidida"]);
+    expect(state.previous).toBeNull();
+    expect(state.countdown).toEqual({ to: at("2027-04-18T23:59:00-05:00"), label: "Este precio termina en" });
   });
 
-  it("takes names for a waiting list when the first stage starts later, counting down to it", () => {
-    const state = salesState(stages(undefined, "2027-02-27T00:00:00-05:00"), at("2027-01-15T10:00:00-05:00"), STARTS);
-    expect(state.mode).toBe("waitlist");
-    expect(state.current).toBeNull();
-    expect(state.next?.name).toBe("Etapa Creyente");
-    expect(state.countdown).toEqual({ to: at("2027-02-27T00:00:00-05:00"), label: "La venta abre en" });
+  it("with 199 Creyente sales, still Creyente with 1 place left; with 200, Etapa Decidida", () => {
+    const at199 = sales(stages([199]), "2027-02-01T10:00:00-05:00");
+    expect([at199.active?.slug, at199.remaining]).toEqual(["creyente", 1]);
+    const at200 = sales(stages([200], ["2027-01-31T18:00:00-05:00"]), "2027-02-01T10:00:00-05:00");
+    expect([at200.active?.slug, at200.remaining, at200.next?.slug]).toEqual(["decidida", 300, "full"]);
+    expect(at200.stages.map((s) => s.state)).toEqual(["soldout", "current", "future"]);
+    expect(at200.previous).toEqual({ stage: at200.stages[0], reason: "cap", closedAt: at("2027-01-31T18:00:00-05:00") });
   });
 
-  it("sells today's stage and counts down to when its price ends", () => {
-    const state = salesState(stages(), at("2027-03-01T10:00:00-05:00"), STARTS);
-    expect(state.mode).toBe("sale");
-    expect(state.current?.name).toBe("Etapa Creyente");
-    expect(state.next?.name).toBe("Etapa 2");
-    expect(state.countdown).toEqual({ to: at("2027-04-01T00:00:00-05:00"), label: "Este precio termina en" });
-    expect(state.stages.map((s) => s.state)).toEqual(["current", "future", "future", "future"]);
+  it("on 18 April at 23:58, Creyente; at 00:00 on the 19th, Decidida — Creyente closed on its date", () => {
+    expect(sales(stages(), "2027-04-18T23:58:00-05:00").active?.slug).toBe("creyente");
+    const state = sales(stages(), "2027-04-19T00:00:00-05:00");
+    expect(state.active?.slug).toBe("decidida");
+    expect(state.previous).toEqual({ stage: state.stages[0], reason: "date", closedAt: at("2027-04-18T23:59:00-05:00") });
   });
 
-  it("in Etapa 3, counts down to the regular price", () => {
-    const state = salesState(stages(), at("2027-06-22T10:00:00-05:00"), STARTS);
-    expect(state.current?.name).toBe("Etapa 3");
-    expect(state.next?.name).toBe("Precio normal");
-    expect(state.countdown).toEqual({ to: at("2027-06-27T00:00:00-05:00"), label: "Este precio termina en" });
-    expect(state.stages.map((s) => s.state)).toEqual(["past", "past", "current", "future"]);
+  it("with 300 Decidida sales before 30 May, the full price", () => {
+    const state = sales(stages([120, 300]), "2027-05-10T10:00:00-05:00");
+    expect([state.active?.slug, state.current?.price, state.remaining, state.next]).toEqual(["full", 150_000, null, null]);
+    expect(state.stages.map((s) => s.state)).toEqual(["past", "soldout", "current"]);
   });
 
-  it("sells the regular price on the congress's days, counting down to it", () => {
-    const state = salesState(stages(), at("2027-06-27T07:00:00-05:00"), STARTS);
-    expect(state.current?.name).toBe("Precio normal");
-    expect(state.next).toBeNull();
+  it("after 30 May, the full price, counting down to the congress", () => {
+    const state = sales(stages([150, 40]), "2027-05-31T00:00:00-05:00");
+    expect(state.active?.slug).toBe("full");
     expect(state.countdown).toEqual({ to: STARTS, label: "El congreso empieza en" });
-    expect(state.stages.map((s) => s.state)).toEqual(["past", "past", "past", "current"]);
   });
 
-  it("closes when the congress ends: 7:00 p. m. on its one day (2026-10-29)", () => {
-    expect(salesState(stages(), at("2027-06-27T18:59:00-05:00"), STARTS).current?.name).toBe("Precio normal");
-    const state = salesState(stages(), at("2027-06-27T19:01:00-05:00"), STARTS);
-    expect(state.mode).toBe("closed");
-    expect(state.countdown).toBeNull();
-    expect(salesState(stages(), at("2027-06-28T15:00:00-05:00"), STARTS).mode).toBe("closed");
+  it("on 27 June after 8:00 it's still the full price — and the sale is closed", () => {
+    expect(sales(stages(), "2027-06-27T07:59:00-05:00").current?.slug).toBe("full");
+    const state = sales(stages(), "2027-06-27T08:30:00-05:00");
+    expect(state.active?.slug).toBe("full");
+    expect([state.mode, state.current, state.countdown]).toEqual(["closed", null, null]);
   });
 
-  it("goes back to the waiting list when a stage sells out before the next one opens", () => {
-    const state = salesState(stages([0, 3000, 3000, 3000], "2027-02-27T00:00:00-05:00"), at("2027-03-15T10:00:00-05:00"), STARTS);
-    expect(state.mode).toBe("waitlist");
-    expect(state.stages[0]!.state).toBe("soldout");
-    expect(state.next?.name).toBe("Etapa 2");
+  it("keeps a stage that sold out closed though a refund frees a place: the price never goes down", () => {
+    expect(sales(stages([199], ["2027-02-10T12:00:00-05:00"]), "2027-02-20T10:00:00-05:00").active?.slug).toBe("decidida");
   });
 
-  it("ignores ticket types that aren't on sale", () => {
-    const types = stages().map((t, i) => (i === 0 ? { ...t, status: "HIDDEN" } : t));
-    const state = salesState(types, at("2027-03-01T10:00:00-05:00"), STARTS);
-    expect(state.stages.map((s) => s.name)).toEqual(["Etapa 2", "Etapa 3", "Precio normal"]);
-    expect(state.mode).toBe("waitlist");
+  it("takes names for a waiting list while the first stage hasn't opened", () => {
+    const types = stages().map((t, i) => (i === 0 ? { ...t, hideUntil: at("2027-01-10T00:00:00-05:00") } : t));
+    const state = salesState(types, at("2026-12-01T10:00:00-05:00"), STARTS);
+    expect([state.mode, state.current, state.next?.slug]).toEqual(["waitlist", null, "creyente"]);
+    expect(state.countdown).toEqual({ to: at("2027-01-10T00:00:00-05:00"), label: "La venta abre en" });
   });
 
-  it("says today's price in dollars too when its ticket has one (2026-10-29)", () => {
-    const withUsd = stages().map((s, i) => ({ ...s, usdCents: [2500, 3000, 3500, 4500][i] }));
-    expect(salesState(withUsd, at("2027-03-15T12:00:00-05:00"), STARTS).current?.usdCents).toBe(2500);
-    expect(salesState(stages(), at("2027-03-15T12:00:00-05:00"), STARTS).current?.usdCents).toBeNull();
+  it("leaves out ticket types that aren't on sale", () => {
+    const types = [...stages(), { ...stages()[0]!, id: "old", name: "Etapa 3", status: "HIDDEN", order: 9 }];
+    expect(sales(types, "2027-02-01T10:00:00-05:00").stages.map((s) => s.name)).toEqual(["Etapa Creyente", "Etapa Decidida", "Precio full"]);
+  });
+
+  it("says today's price in dollars too when its ticket has one", () => {
+    const withUsd = stages().map((s, i) => ({ ...s, usdCents: [2800, 3500, 4500][i] }));
+    expect(sales(withUsd, "2027-02-01T10:00:00-05:00").current?.usdCents).toBe(2800);
+    expect(sales(stages(), "2027-02-01T10:00:00-05:00").current?.usdCents).toBeNull();
     expect([dollars(2500), dollars(2550), dollars(100)]).toEqual(["US$25", "US$25.50", "US$1"]);
   });
 
-  it("tells each stage's saving against the regular price", () => {
-    const state = salesState(stages(), at("2026-10-26T10:00:00-05:00"), STARTS);
-    expect(state.normal?.name).toBe("Precio normal");
-    expect(state.stages.map((s) => saving(s, state.normal))).toEqual([70_000, 50_000, 30_000, 0]);
-    // With no regular price there's nothing to save against.
-    const without = salesState(stages().slice(0, 3), at("2026-10-26T10:00:00-05:00"), STARTS);
-    expect(without.normal).toBeNull();
-    expect(saving(without.current!, without.normal)).toBe(0);
+  it("strikes the full price beside every other stage's", () => {
+    const state = sales(stages(), "2027-02-01T10:00:00-05:00");
+    expect(state.full?.name).toBe("Precio full");
+    expect(state.stages.map((s) => saving(s, state.full))).toEqual([60_000, 30_000, 0]);
+  });
+});
+
+describe("what the page says about the stages", () => {
+  it("under the button, each stage's line: its cap, its date and what comes next", () => {
+    expect(line(sales(stages(), "2027-02-01T10:00:00-05:00"))).toBe(
+      "Etapa Creyente · 200 cupos a $90.000 o hasta el 18 de abril (cierre de Nail Fest Cali) · luego $120.000"
+    );
+    expect(line(sales(stages([90]), "2027-04-20T10:00:00-05:00"))).toBe("Etapa Decidida · 300 cupos a $120.000 o hasta el 30 de mayo · luego $150.000");
+    expect(line(sales(stages([90, 120]), "2027-06-01T10:00:00-05:00"))).toBe("Precio full · $150.000 · hasta el 27 de junio");
+  });
+
+  it("the places left only under 30% of the cap", () => {
+    expect(line(sales(stages([140]), "2027-02-01T10:00:00-05:00"))).toMatch(/^Etapa Creyente · 200 cupos/);
+    expect(line(sales(stages([141]), "2027-02-01T10:00:00-05:00"))).toBe("Quedan 59 cupos a $90.000 · luego $120.000");
+    expect(line(sales(stages([199]), "2027-02-01T10:00:00-05:00"))).toBe("Queda 1 cupo a $90.000 · luego $120.000");
+    expect(line(sales(stages([10, 211]), "2027-05-01T10:00:00-05:00"))).toBe("Quedan 89 cupos a $120.000 · luego $150.000");
+  });
+
+  it("for 7 days after the stage before closed, a pill: «agotada» at its cap, «cerrada» on its date", () => {
+    const soldOut = stages([200], ["2027-03-10T15:00:00-05:00"]);
+    expect(stagePill(sales(soldOut, "2027-03-12T10:00:00-05:00"), at("2027-03-12T10:00:00-05:00"))).toBe("Etapa Creyente agotada");
+    expect(stagePill(sales(soldOut, "2027-03-18T10:00:00-05:00"), at("2027-03-18T10:00:00-05:00"))).toBeNull();
+    expect(stagePill(sales(stages(), "2027-04-25T12:00:00-05:00"), at("2027-04-25T12:00:00-05:00"))).toBe("Etapa Creyente cerrada");
+    expect(stagePill(sales(stages(), "2027-04-26T00:00:00-05:00"), at("2027-04-26T00:00:00-05:00"))).toBeNull();
+    expect(stagePill(sales(stages(), "2027-02-01T10:00:00-05:00"), at("2027-02-01T10:00:00-05:00"))).toBeNull();
+  });
+
+  it("«¿Por qué sube el precio?» tells every stage as the team wrote it", () => {
+    expect(stagesSummary(sales(stages(), "2027-02-01T10:00:00-05:00").stages, TZ)).toBe(
+      "Etapa Creyente: $90.000, 200 cupos o hasta el 18 de abril, cierre de Nail Fest Cali. Etapa Decidida: $120.000, 300 cupos o hasta el 30 de mayo. Después, $150.000 hasta el día del evento."
+    );
   });
 });
 
@@ -119,14 +148,10 @@ describe("how prices and dates read", () => {
     expect(pesos(900)).toBe("$900");
   });
 
-  it("says the last day a stage's price holds, the day before it closes", () => {
+  it("says the last day a stage's price holds: the day it closes, or the day before when it closes at midnight", () => {
     expect(untilDay(at("2027-04-01T00:00:00-05:00"), TZ)).toBe("31 de marzo");
-    expect(untilDay(at("2027-06-27T00:00:00-05:00"), TZ)).toBe("26 de junio");
-  });
-
-  it("adds the year under the cover's button, as the team writes it there — no «de»", () => {
-    expect(untilDate(at("2027-04-01T00:00:00-05:00"), TZ)).toBe("31 marzo 2027");
-    expect(untilDate(at("2027-01-01T00:00:00-05:00"), TZ)).toBe("31 diciembre 2026");
+    expect(untilDay(at("2027-04-18T23:59:00-05:00"), TZ)).toBe("18 de abril");
+    expect(untilDay(at("2027-06-27T08:00:00-05:00"), TZ)).toBe("27 de junio");
   });
 });
 
@@ -527,10 +552,23 @@ describe("the template", () => {
     expect(agenda.rows.filter((r) => r.kind === "day")).toHaveLength(2);
   });
 
-  it("opens «Etapa Creyente» with the event and chains the stages without gaps, the regular price last", () => {
-    expect(IMPARABLES_STAGES[0]!.opensAt).toBeNull();
-    for (let i = 1; i < IMPARABLES_STAGES.length; i++) expect(IMPARABLES_STAGES[i]!.opensAt).toBe(IMPARABLES_STAGES[i - 1]!.closesAt);
-    expect(IMPARABLES_STAGES.map((s) => s.name)).toEqual(["Etapa Creyente", "Etapa 2", "Etapa 3", "Precio normal"]);
-    expect(IMPARABLES_STAGES.map((s) => s.price)).toEqual([80_000, 100_000, 120_000, 150_000]);
+  it("has three stages in order — Creyente, Decidida, the full price — each closing on its date or at its cap (2026-10-29)", () => {
+    expect(IMPARABLES_STAGES.map((s) => [s.slug, s.name, s.price, s.cap])).toEqual([
+      ["creyente", "Etapa Creyente", 90_000, 200],
+      ["decidida", "Etapa Decidida", 120_000, 300],
+      ["full", "Precio full", 150_000, null],
+    ]);
+    expect(IMPARABLES_STAGES.map((s) => s.closesAt)).toEqual(["2027-04-18T23:59:00-05:00", "2027-05-30T23:59:00-05:00", "2027-06-27T08:00:00-05:00"]);
+    expect(IMPARABLES_STAGES.map((s) => s.note)).toEqual(["cierre de Nail Fest Cali", null, null]);
+  });
+
+  it("asks «¿Por qué sube el precio?» right after «¿Cómo pago?», its stages read from the ticket types", () => {
+    const faq = IMPARABLES_BLOCKS.find((b) => b.type === "faq");
+    if (faq?.type !== "faq") throw new Error("no faq");
+    const questions = faq.items.map((it) => it.question);
+    expect(questions[questions.indexOf("¿Cómo pago?") + 1]).toBe("¿Por qué sube el precio?");
+    expect(faq.items.find((it) => it.question === "¿Por qué sube el precio?")!.answer).toBe(
+      "Porque premiamos a las que deciden primero. {{etapas}} El precio nunca baja."
+    );
   });
 });

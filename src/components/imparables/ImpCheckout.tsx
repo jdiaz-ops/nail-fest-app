@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { COUNTRY_CODES, GENERIC_ID_PLACEHOLDER, GENERIC_PHONE_PLACEHOLDER, stripTrunkZero } from "@/lib/countryCodes";
 import { WORLD_COUNTRIES } from "@/lib/worldCountries";
 import { attributionFromSearchParams } from "@/lib/utm";
+import type { CheckoutTicket } from "@/lib/imparables/pricing";
 import { dollars, pesos } from "@/lib/imparables/stages";
 import type { WompiWidgetParams } from "@/lib/payments/wompi";
 import { getValidFbc, track } from "@/components/tracking";
@@ -80,10 +81,10 @@ export interface ImpCheckoutProps {
   dates: string;
   /** "Congreso virtual · 100% en vivo" */
   format: string;
-  /** Prices in pesos; in dollars (cents), when the ticket has a USD price. */
-  ticket: { id: string; name: string; price: number; normalPrice: number | null; usdCents: number | null; normalUsdCents: number | null; min: number; max: number };
-  /** Until when today's price holds ("31 marzo 2027"), when a higher one comes after it. */
-  until: string | null;
+  /** The price stage on sale (lib/imparables/pricing.ts): in pesos; in dollars (cents), when it has a USD price. */
+  ticket: CheckoutTicket;
+  /** Its line, as under the cover's button: «Etapa Creyente · 200 cupos a $90.000 o hasta el 18 de abril … · luego $120.000». */
+  line: string | null;
   professions: string[];
   /** PayPal's buttons (lib/payments/paypal.ts's paypalCheckoutConfig) — null without PayPal, or without a USD price. */
   paypal: { clientId: string } | null;
@@ -103,7 +104,10 @@ interface Registered {
   paypal?: { paymentId: string };
 }
 
-export default function ImpCheckout({ eventSlug, backHref, name, dates, format, ticket, until, professions, paypal }: ImpCheckoutProps) {
+export default function ImpCheckout({ eventSlug, backHref, name, dates, format, ticket: openedWith, line: openedLine, professions, paypal }: ImpCheckoutProps) {
+  // What's on sale: the stage the page opened with, until paying finds another one is (/api/register's price_changed).
+  const [ticket, setTicket] = useState(openedWith);
+  const [line, setLine] = useState(openedLine);
   const [form, setForm] = useState({ email: "", firstName: "", lastName: "", docNumber: "", company: "", city: "", phone: "", profession: "", website: "" });
   const [qty, setQty] = useState(Math.max(1, ticket.min));
   const [country, setCountry] = useState("CO");
@@ -148,7 +152,7 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
   // What each currency comes to, in its own cents (a code's discount only in the currency it was worked out for).
   const totalCents = (cur: Currency) => (cur === "USD" ? (ticket.usdCents ?? 0) : ticket.price * 100) * qty - (applied?.currency === cur ? applied.discountCents : 0);
   const shown: Currency = usd ? "USD" : "COP";
-  const normalCents = usd ? ticket.normalUsdCents : ticket.normalPrice !== null ? ticket.normalPrice * 100 : null;
+  const normalCents = usd ? ticket.fullUsdCents : ticket.fullPrice !== null ? ticket.fullPrice * 100 : null;
   const total = money(shown, totalCents(shown));
 
   function field(key: keyof typeof form) {
@@ -302,6 +306,7 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
           ticketCount: qty,
           discountCode: applied?.currency === cur ? applied.code : undefined,
           currency: cur,
+          shownUnitCents: cur === "USD" ? (ticket.usdCents ?? undefined) : ticket.price * 100,
           website: form.website,
         }),
       });
@@ -311,7 +316,24 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
     }
     const body = await res.json().catch(() => ({}));
     if (!res.ok) {
-      if (body?.error === "discount_invalid") {
+      if (body?.error === "price_changed" && body.ticket) {
+        // The stage changed since the page opened (one closed on its date or
+        // its cap): its price, shown before anything is charged — paying
+        // again pays it.
+        const next = body.ticket as CheckoutTicket;
+        const count = Math.min(Math.max(qty, next.min), next.max);
+        const inUsd = cur === "USD" && next.usdCents !== null;
+        setTicket(next);
+        setLine(body.line ?? null);
+        setQty(count);
+        if (cur === "USD" && !inUsd) setCurrency("COP");
+        const hadCode = applied !== null;
+        setApplied(null);
+        explained.current = true;
+        setNotice(
+          `El precio cambió: ahora es ${inUsd ? money("USD", next.usdCents! * count) : money("COP", next.price * 100 * count)} (${next.name}).${hadCode ? " Vuelve a aplicar tu código." : ""} Revisa el total y vuelve a ${cur === "USD" ? "tocar el botón de PayPal" : "tocar «Pagar»"}.`
+        );
+      } else if (body?.error === "discount_invalid") {
         setApplied(null);
         fail(`${body.message ?? "Ese código ya no aplica."} Revisa el total antes de pagar.`);
       } else {
@@ -620,44 +642,18 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
                   <i>3</i>Pago
                 </h2>
                 {canPayUsd ? (
-                  // Pesos or dollars: the country picked one to start with, the buyer can switch.
-                  <div className="imp-co-pays" role="radiogroup" aria-label="Moneda y medio de pago">
-                    <label className={`imp-co-pay imp-co-pay-opt${usd ? "" : " is-on"}`}>
+                  // Only the country's way to pay (2026-10-29): in pesos with
+                  // Wompi from Colombia, in dollars with PayPal from anywhere
+                  // else — and, small under it, the other one, for whoever
+                  // needs it (a Colombian abroad, a card PayPal won't take).
+                  <div className="imp-co-pays">
+                    <div className="imp-co-pay imp-co-pay-opt imp-co-pay-one is-on">
                       <span className="imp-co-pay-h">
-                        <input
-                          type="radio"
-                          name="currency"
-                          checked={!usd}
-                          onChange={() => {
-                            currencyPicked.current = true;
-                            changeCurrency("COP");
-                          }}
-                        />
-                        <b>Pesos · Wompi</b>
-                        <span className="imp-co-pay-amt">{money("COP", totalCents("COP"))}</span>
+                        <span className="imp-co-dot" aria-hidden="true" />
+                        <b>{usd ? "Dólares · PayPal" : "Pesos · Wompi"}</b>
+                        <span className="imp-co-pay-amt">{money(shown, totalCents(shown))}</span>
                       </span>
-                      {!usd && (
-                        <>
-                          {wompiBadges}
-                          <span className="imp-co-pay-p">{wompiNote}</span>
-                        </>
-                      )}
-                    </label>
-                    <label className={`imp-co-pay imp-co-pay-opt${usd ? " is-on" : ""}`}>
-                      <span className="imp-co-pay-h">
-                        <input
-                          type="radio"
-                          name="currency"
-                          checked={usd}
-                          onChange={() => {
-                            currencyPicked.current = true;
-                            changeCurrency("USD");
-                          }}
-                        />
-                        <b>Dólares · PayPal</b>
-                        <span className="imp-co-pay-amt">{money("USD", totalCents("USD"))}</span>
-                      </span>
-                      {usd && (
+                      {usd ? (
                         <>
                           <span className="imp-co-badges">
                             <span>Cuenta PayPal</span>
@@ -667,8 +663,23 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
                             Paga con los botones de PayPal al final: se abre su ventana segura encima de esta página, con tu cuenta PayPal o con tarjeta.
                           </span>
                         </>
+                      ) : (
+                        <>
+                          {wompiBadges}
+                          <span className="imp-co-pay-p">{wompiNote}</span>
+                        </>
                       )}
-                    </label>
+                    </div>
+                    <button
+                      type="button"
+                      className="imp-co-switch"
+                      onClick={() => {
+                        currencyPicked.current = true;
+                        changeCurrency(usd ? "COP" : "USD");
+                      }}
+                    >
+                      {usd ? "Pagar en pesos con Wompi" : "Pagar en dólares con PayPal"}
+                    </button>
                   </div>
                 ) : (
                   <div className="imp-co-pay">
@@ -680,12 +691,8 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
                     <p>{wompiNote}</p>
                   </div>
                 )}
-                {/* Under the prices it's about, before the code (2026-10-29). */}
-                {until && (
-                  <p className="imp-co-until">
-                    Tarifa {ticket.name} hasta el {until}. ¡Luego sube!
-                  </p>
-                )}
+                {/* Under the prices it's about, before the code: the stage's line, as on the cover (2026-10-29). */}
+                {line && <p className="imp-co-until">{line}</p>}
               </section>
 
               {/* On a phone the code comes again right before paying. */}

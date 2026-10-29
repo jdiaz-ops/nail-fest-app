@@ -36,6 +36,7 @@ export default async function EventShellLayout({ children, params }: { children:
       eventSlug={event.slug}
       eventFormat={event.format}
       isAdmin={user?.role === "ADMIN"}
+      hasStages={event.theme === "IMPARABLES"}
     >
       {children}
     </EventModuleShell>

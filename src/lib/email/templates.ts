@@ -87,6 +87,8 @@ export function confirmationEmail(params: {
    * entry = the original one-QR layout, driven by qrImageUrl/
    * confirmationCode above. */
   tickets?: EmailTicket[];
+  /** A ticket bought at a price stage (2026-10-29): «Compraste en la Etapa Creyente a $90.000», and what it costs now. */
+  purchase?: { bought: string; share: string | null };
 }): { subject: string; text: string; html: string } {
   const orgName = params.orgName || "Nail Fest";
   const tz = params.timezone || "America/Bogota";
@@ -135,6 +137,7 @@ export function confirmationEmail(params: {
     // once scheduleDays is configured, so each day's own hours actually
     // reads as separate days, not one long run-on sentence.
     ...(whenLines.length > 1 ? [`Fecha:`, ...whenLines] : [`Fecha: ${whenLines[0]}`]),
+    ...(params.purchase ? [`${params.purchase.bought}.`, ...(params.purchase.share ? [params.purchase.share] : [])] : []),
     ...(venueLine ? [`Lugar: ${venueLine}`] : []),
     ...(attendeeName ? [`A nombre de: ${attendeeName}`] : []),
     ...(ticketTypeLine ? [`Entrada: ${ticketTypeLine}`] : []),
@@ -194,6 +197,17 @@ export function confirmationEmail(params: {
                       ${whenLines.map((line) => `<p style="margin:2px 0 0;font-size:14px;font-weight:600;color:${INK};">${escapeHtml(line)}</p>`).join("")}
                     </td>
                   </tr>
+                  ${
+                    params.purchase
+                      ? `<tr>
+                          <td style="padding:14px 24px 0;">
+                            <p style="margin:0;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:#8a8478;">Tu compra</p>
+                            <p style="margin:2px 0 0;font-size:14px;font-weight:600;color:${INK};">${escapeHtml(params.purchase.bought)}</p>
+                            ${params.purchase.share ? `<p style="margin:4px 0 0;font-size:13px;color:${INK_MUTED};">${escapeHtml(params.purchase.share)}</p>` : ""}
+                          </td>
+                        </tr>`
+                      : ""
+                  }
                   ${
                     venueLine
                       ? `<tr>
@@ -266,6 +280,7 @@ export function confirmationEmail(params: {
                         </tr>`
                         }`
                   }
+                  ${/* With no ticket to show, its last lines still clear the card's edge. */ isVirtualOnly ? `<tr><td style="padding:0 0 20px;"></td></tr>` : ""}
                 </table>
               </td>
             </tr>

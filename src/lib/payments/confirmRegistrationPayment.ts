@@ -3,6 +3,7 @@ import type { PaymentProvider, Prisma } from "@prisma/client";
 import type { WompiTransaction } from "@/lib/payments/wompi";
 import { paymentIdFromReference } from "@/lib/payments/reference";
 import { finalizeConfirmedRegistration } from "@/lib/registrationConfirmation";
+import { closeStageIfFull } from "@/lib/imparables/pricing";
 import { cancelRegistrant } from "@/lib/zoom";
 
 export type ConfirmResult = "approved" | "declined" | "voided" | "error" | "pending" | "not_found";
@@ -77,6 +78,10 @@ export async function settlePayment(settlement: Settlement): Promise<ConfirmResu
   if (count === 0) return "approved";
 
   const updated = await db.registration.findUniqueOrThrow({ where: { id: registration.id } });
+  // Its stage's cap counted again with it (2026-10-29): filled, the stage
+  // closes for good — and the purchase stands at what it paid, even past
+  // the cap. Before the email, so it already says the price went up.
+  await closeStageIfFull(updated.ticketTypeId);
   await finalizeConfirmedRegistration({
     person: registration.person,
     event: registration.event,

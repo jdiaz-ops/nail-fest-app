@@ -7,6 +7,7 @@ import { renderTicketPdfBuffer } from "@/lib/ticketPdf";
 import { getOrgSettings } from "@/lib/settings";
 import { confirmationCodeFor, ticketHolderName, ticketsFor } from "@/lib/ticket";
 import { publicEventName } from "@/lib/eventDisplayName";
+import { purchaseNote } from "@/lib/imparables/pricing";
 
 // Shared by /api/register (first send + resend-on-resubmit), /api/resend-
 // ticket (the self-serve "I lost my email" flow), and /api/admin/
@@ -92,6 +93,10 @@ export async function sendTicketEmail(params: {
           })
         : undefined;
 
+    // A ticket bought at a price stage says at which and for how much, and
+    // what it costs now (2026-10-29); anything else, nothing.
+    const purchase = params.registration ? ((await purchaseNote(params.registration.id).catch(() => null)) ?? undefined) : undefined;
+
     // Fallback chain: this event's own override -> the account-wide
     // template -> the original hand-built design (confirmationEmail()),
     // exactly as before this feature existed. Whoever never opens
@@ -119,6 +124,7 @@ export async function sendTicketEmail(params: {
           format,
           zoomJoinUrl: params.zoomJoinUrl,
           tickets,
+          purchase,
         })
       : confirmationEmail({
           firstName: params.person.firstName ?? "",
@@ -141,6 +147,7 @@ export async function sendTicketEmail(params: {
           format,
           zoomJoinUrl: params.zoomJoinUrl,
           tickets,
+          purchase,
         });
 
     // Same fallback chain as the body, computed independently of which

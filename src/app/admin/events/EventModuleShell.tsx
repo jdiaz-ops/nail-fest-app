@@ -20,6 +20,7 @@ export default function EventModuleShell({
   eventSlug,
   eventFormat,
   isAdmin,
+  hasStages,
   children,
 }: {
   eventId: string;
@@ -38,6 +39,8 @@ export default function EventModuleShell({
   // the nav/buttons that would otherwise bounce a COORDINADOR straight
   // back out.
   isAdmin: boolean;
+  // Priced by stages (Manicuristas Imparables, 2026-10-29): shows «Etapas de precio».
+  hasStages: boolean;
   children: React.ReactNode;
 }) {
   const pathname = usePathname() ?? "";
@@ -65,6 +68,7 @@ export default function EventModuleShell({
             heading: "Configuración",
             items: [
               { href: `${base}/edit`, label: "Editar evento y entradas" },
+              ...(hasStages ? [{ href: `${base}/etapas`, label: "Etapas de precio" }] : []),
               { href: `${base}/descuentos`, label: "Códigos de descuento" },
               { href: `${base}/confirmation`, label: "Confirmación del evento" },
             ],

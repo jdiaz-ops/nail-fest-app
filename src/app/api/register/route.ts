@@ -8,6 +8,7 @@ import { finalizeConfirmedRegistration } from "@/lib/registrationConfirmation";
 import { buildCheckoutUrl, wompiReference, wompiWidgetParams } from "@/lib/payments/wompi";
 import { DISCOUNT_ERROR_MESSAGES, resolveDiscount, type DiscountResult } from "@/lib/discounts";
 import { paypalConfigured } from "@/lib/payments/paypal";
+import { checkoutOffer, getActiveStage } from "@/lib/imparables/pricing";
 import { clientIpFromHeaders, userAgentFromHeaders } from "@/lib/request";
 import { splitName } from "@/lib/name";
 import { getOrgSettings } from "@/lib/settings";
@@ -93,6 +94,9 @@ const bodySchema = z.object({
   // Pesos through Wompi (the default) or US dollars through PayPal, at the
   // ticket's own USD price (TicketType.priceUsdCents) — 2026-10-29.
   currency: z.enum(["COP", "USD"]).optional(),
+  // What one ticket cost on the checkout's screen, in that currency's cents
+  // (2026-10-29): a different price now comes back to be shown first.
+  shownUnitCents: z.number().int().nonnegative().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -247,6 +251,22 @@ export async function POST(req: NextRequest) {
     // the change. A price stage (lib/imparables/stages.ts) is exactly that:
     // its price stops being for sale the moment the next one starts.
     const now = new Date();
+    // A congress priced by stages (EventTheme IMPARABLES, 2026-10-29 — see
+    // lib/imparables/pricing.ts): what's charged is the stage on sale right
+    // now, never the one the page was opened with. One that changed in
+    // between (the other closed on its date or its cap) comes back with its
+    // price, for the checkout to show before anything is charged; paying
+    // again pays it.
+    if (event.theme === "IMPARABLES") {
+      const sales = await getActiveStage(event, now);
+      if (!sales.current) return NextResponse.json({ error: "no_ticket_on_sale" }, { status: 400 });
+      // The same stage at another price (changed from the admin) is a change too.
+      const unitCents = input.currency === "USD" ? ticketType.priceUsdCents : ticketType.price * 100;
+      if (sales.current.id !== ticketType.id || (input.shownUnitCents !== undefined && input.shownUnitCents !== unitCents)) {
+        const offer = await checkoutOffer(sales, orgSettings.timezone);
+        return NextResponse.json({ error: "price_changed", ticket: offer?.ticket, line: offer?.line ?? null }, { status: 409 });
+      }
+    }
     if ((ticketType.hideUntil && now < ticketType.hideUntil) || (ticketType.hideAfter && now > ticketType.hideAfter)) {
       return NextResponse.json({ error: "ticket_window_closed" }, { status: 400 });
     }
@@ -538,6 +558,8 @@ export async function POST(req: NextRequest) {
         currency,
         discountCodeId: discount?.discountCode.id ?? null,
         discountCents: discount?.discountCents ?? 0,
+        // The stage it's bought at, kept with what it charges (2026-10-29).
+        stageSlug: ticketType?.stageSlug ?? null,
       },
     });
     if (currency === "USD") {
