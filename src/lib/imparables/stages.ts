@@ -222,3 +222,29 @@ export function stagesSummary(stages: PriceStage[], timezone: string): string {
     })
     .join(" ");
 }
+
+/** Today's stage's cap as a progress bar (2026-10-29), from its first ticket: how many are taken (paid), how many
+ * are left, how full it is. Null for a stage with no cap. */
+export function stageProgress(sales: Pick<SalesState, "current">): { taken: number; cap: number; left: number; share: number } | null {
+  const stage = sales.current;
+  if (!stage || stage.cap === null || stage.cap <= 0) return null;
+  const taken = Math.min(stage.paid, stage.cap);
+  return { taken, cap: stage.cap, left: stage.cap - taken, share: taken / stage.cap };
+}
+
+/** Over the bar: «Quedan 136 de 200 cupos a $90.000». */
+export function progressTitle(sales: Pick<SalesState, "current">): string | null {
+  const progress = stageProgress(sales);
+  if (!progress || !sales.current) return null;
+  return `${progress.left === 1 ? "Queda 1" : `Quedan ${progress.left}`} de ${together(`${progress.cap} cupos`)} a ${pesos(sales.current.price)}`;
+}
+
+/** Under the bar: «Etapa Creyente · hasta completar los 200 cupos o hasta el 18 de abril · luego $120.000»; with no
+ * cap, the stage's line. */
+export function stageTerms(sales: Pick<SalesState, "current" | "next" | "remaining">, timezone: string): string | null {
+  const { current: stage, next } = sales;
+  if (!stage) return null;
+  if (stage.cap === null) return stageLine(sales, timezone);
+  const until = stage.closesAt ? ` o hasta el ${together(untilDay(stage.closesAt, timezone))}` : "";
+  return `${stage.name} · hasta completar los ${together(`${stage.cap} cupos`)}${until}${next ? ` · luego ${pesos(next.price)}` : ""}`;
+}

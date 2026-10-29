@@ -2,7 +2,7 @@ import type { EventFormat } from "@prisma/client";
 import MetaPixelScript from "@/components/MetaPixelScript";
 import type { LandingBlock } from "@/lib/landingBlocks/types";
 import { coverName, type EventWhen } from "@/lib/imparables/schedule";
-import { dayMonth, pesos, saving, stageLine, stagePill, type SalesState } from "@/lib/imparables/stages";
+import { dayMonth, pesos, progressTitle, saving, stageLine, stagePill, stageProgress, stageTerms, type SalesState } from "@/lib/imparables/stages";
 import { utcToZonedInputValue } from "@/lib/dateFormat";
 import { castLine, castOf, coverOf, introOf, panelOf } from "@/lib/imparables/blocks";
 import { splitTagline } from "@/lib/imparables/tagline";
@@ -45,6 +45,15 @@ export interface ImparablesPreview {
   simulated: Date | null;
   /** Days worth looking at: the waiting list and each stage's first day. */
   shortcuts: { label: string; date: string }[];
+}
+
+/** How full today's stage is (2026-10-29): its bar, filled as far as its paid tickets go. */
+function ProgressBar({ progress, className }: { progress: NonNullable<ReturnType<typeof stageProgress>>; className?: string }) {
+  return (
+    <span className={`imp-bar${className ? ` ${className}` : ""}`} role="img" aria-label={`${progress.taken} de ${progress.cap} cupos tomados`}>
+      {progress.taken > 0 && <i style={{ width: `${Math.round(progress.share * 1000) / 10}%` }} />}
+    </span>
+  );
 }
 
 /** "Tienes el talento. Ahora, a construir tu negocio." -> the first sentence, then the rest. */
@@ -168,16 +177,26 @@ export default function ImparablesPage({
       </ImpButton>
     ) : null;
   // Under the button, the same on the cover and the closing (2026-10-29):
-  // for a week after the stage before closed, a pill saying so; and the
-  // stage's line — its cap, its date, what comes next (lib/imparables/
-  // stages.ts). No dollars on the page: only the checkout's PayPal says them.
+  // for a week after the stage before closed, a pill saying so; then, for a
+  // stage with a cap, its places left over a bar of how full it is — from its
+  // first ticket — and under it its terms («hasta completar los 200 cupos o
+  // hasta el 18 de abril · luego $120.000»); with no cap, its line
+  // (lib/imparables/stages.ts). No dollars on the page: only the checkout's
+  // PayPal says them.
   const pill = mode === "sale" ? stagePill(sales, now) : null;
-  const terms = mode === "sale" ? stageLine(sales, timezone) : null;
+  const progress = mode === "sale" ? stageProgress(sales) : null;
+  const terms = mode === "sale" ? (progress ? stageTerms(sales, timezone) : stageLine(sales, timezone)) : null;
   const deal =
     mode === "sale" && current ? (
       <div className="imp-deal">
         {pill && <p className="imp-stage-pill">{pill}</p>}
-        {terms && <p className="imp-deal-until">{terms}</p>}
+        {progress && (
+          <>
+            <p className="imp-prog-t">{progressTitle(sales)}</p>
+            <ProgressBar progress={progress} />
+          </>
+        )}
+        {terms && <p className={`imp-deal-until${progress ? " imp-deal-terms" : ""}`}>{terms}</p>}
       </div>
     ) : null;
 
@@ -316,15 +335,29 @@ export default function ImparablesPage({
       {mode === "sale" && current && (
         <ImpStickyBar>
           {/* One row (2026-10-29): today's price big with the full one
-              struck beside it, and its stage's name — under it on a phone,
-              beside it on a computer — then the button. */}
+              struck beside it, and its stage's name with its places left —
+              under it on a phone («Etapa Creyente · Quedan 136»), beside it
+              on a computer with its bar («Quedan 136 de 200») — then the
+              button. */}
           <div className="imp-sticky-in">
             <div className="imp-st-p">
               <p className="imp-st-amt">
                 <b>{pesos(current.price)}</b>
                 {struck && <s>{pesos(struck.price)}</s>}
               </p>
-              <span className="imp-st-name">{current.name}</span>
+              <span className="imp-st-name">
+                <span className="imp-st-stage">{current.name}</span>
+                {progress && (
+                  <>
+                    <ProgressBar progress={progress} className="imp-st-bar" />
+                    <span className="imp-st-left">
+                      <span className="imp-st-dot">· </span>
+                      {progress.left === 1 ? "Queda" : "Quedan"} {progress.left}
+                      <span className="imp-st-of"> de {progress.cap}</span>
+                    </span>
+                  </>
+                )}
+              </span>
             </div>
             <ImpButton action="buy" className="imp-st-b">
               {buyLabel}

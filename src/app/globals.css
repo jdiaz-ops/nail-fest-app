@@ -4177,6 +4177,42 @@ body:has(.imp) {
   font-weight: 600;
   opacity: 0.6;
 }
+/* Today's stage as a bar, from its first ticket (2026-10-29): over it its
+   places left, under it its terms */
+.imp-prog-t {
+  margin: 2px 0 0;
+  font-size: 15px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--imp-texto);
+}
+.imp-bar {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--imp-linea);
+  overflow: hidden;
+}
+.imp-bar > i {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  /* A first ticket still shows. */
+  min-width: 6px;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--imp-oro-hover), var(--imp-oro));
+}
+.imp-deal .imp-bar {
+  justify-self: center;
+  max-width: 440px;
+  margin: 3px 0 2px;
+}
+.imp-deal-terms {
+  font-size: 13px;
+}
 /* The week after the stage before closed: «Etapa Creyente agotada» */
 .imp-stage-pill {
   justify-self: center;
@@ -5648,6 +5684,8 @@ body:has(.imp) {
   flex-direction: column;
   gap: 1px;
   min-width: 0;
+  /* On the narrowest phone it gives way, never under the button. */
+  overflow: hidden;
 }
 .imp-st-amt {
   display: flex;
@@ -5657,13 +5695,31 @@ body:has(.imp) {
   line-height: 1.15;
   white-space: nowrap;
 }
-/* Its stage's name (2026-10-29) */
+/* Its stage's name (2026-10-29), with a small bar of how full it is */
 .imp-st-name {
-  font-size: 12.5px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
   font-weight: 700;
   line-height: 1.2;
   color: var(--imp-resalte);
   white-space: nowrap;
+}
+/* On a phone its places left after it, no bar; the bar on a computer. */
+.imp-st-bar,
+.imp-st-of {
+  display: none;
+}
+.imp-st-left {
+  font-variant-numeric: tabular-nums;
+}
+/* The narrowest phones keep its places left, not its name. */
+@media (max-width: 340px) {
+  .imp-st-name:has(.imp-st-left) .imp-st-stage,
+  .imp-st-dot {
+    display: none;
+  }
 }
 .imp-st-p b {
   font-size: 20px;
@@ -5700,10 +5756,14 @@ body:has(.imp) {
   .imp-st-p s {
     font-size: 13px;
   }
+  .imp-st-name {
+    font-size: 11px;
+  }
   .imp-st-b {
     padding: 12px 14px;
     font-size: 15px;
   }
+
 }
 .imp-st-b:hover {
   background: var(--imp-oro-hover);
@@ -6585,7 +6645,26 @@ select.imp-co-in {
     gap: 14px;
   }
   .imp-st-name {
+    gap: 12px;
     font-size: 15px;
+  }
+  .imp-st-bar {
+    display: block;
+    width: 180px;
+    height: 6px;
+  }
+  .imp-st-of {
+    display: inline;
+  }
+  .imp-st-dot {
+    display: none;
+  }
+  .imp-st-left {
+    font-size: 14px;
+    color: var(--imp-texto-2);
+  }
+  .imp-hero .imp-deal .imp-bar {
+    justify-self: start;
   }
   /* The button's prices at its right end, no «·» (2026-10-29). */
   .imp-cta:has(.imp-cta-p) {

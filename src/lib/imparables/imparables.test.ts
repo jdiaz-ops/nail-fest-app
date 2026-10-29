@@ -5,7 +5,7 @@ import { landingBlockSchema } from "@/lib/landingBlocks/schema";
 import { parseLandingBlocks, type AgendaLandingBlock, type LandingBlock } from "@/lib/landingBlocks/types";
 import { castLine, castOf, coverOf, introOf, isPanelCard, namesIn, panelGuestsOf, panelOf } from "./blocks";
 import { agendaInstant, coverName, dayEnd, eventWhen, readClock } from "./schedule";
-import { dollars, pesos, salesState, saving, stageLine, stagePill, stagesSummary, untilDay, type StageTicketType } from "./stages";
+import { dollars, pesos, progressTitle, salesState, saving, stageLine, stagePill, stageProgress, stagesSummary, stageTerms, untilDay, type StageTicketType } from "./stages";
 import { splitTagline } from "./tagline";
 import { IMPARABLES_BLOCKS, IMPARABLES_FIELDS, IMPARABLES_GROUP_PHOTO, IMPARABLES_PANELISTS, IMPARABLES_SPEAKERS, IMPARABLES_STAGES } from "./template";
 
@@ -131,6 +131,20 @@ describe("what the page says about the stages", () => {
     expect(stagePill(sales(stages(), "2027-04-25T12:00:00-05:00"), at("2027-04-25T12:00:00-05:00"))).toBe("Etapa Creyente cerrada");
     expect(stagePill(sales(stages(), "2027-04-26T00:00:00-05:00"), at("2027-04-26T00:00:00-05:00"))).toBeNull();
     expect(stagePill(sales(stages(), "2027-02-01T10:00:00-05:00"), at("2027-02-01T10:00:00-05:00"))).toBeNull();
+  });
+
+  it("under the button, a stage with a cap as a bar from its first ticket: its places left over it, its terms under it", () => {
+    const plain = (text: string | null) => text?.replace(/\u00a0/g, " ");
+    const first = sales(stages([1]), "2027-02-01T10:00:00-05:00");
+    expect(stageProgress(first)).toEqual({ taken: 1, cap: 200, left: 199, share: 0.005 });
+    expect(plain(progressTitle(first))).toBe("Quedan 199 de 200 cupos a $90.000");
+    expect(plain(stageTerms(first, TZ))).toBe("Etapa Creyente · hasta completar los 200 cupos o hasta el 18 de abril · luego $120.000");
+    expect(plain(progressTitle(sales(stages([199]), "2027-02-01T10:00:00-05:00")))).toBe("Queda 1 de 200 cupos a $90.000");
+    expect(stageProgress(sales(stages(), "2027-02-01T10:00:00-05:00"))?.taken).toBe(0);
+    // The full price has no cap: no bar, its line.
+    const full = sales(stages([90, 120]), "2027-06-01T10:00:00-05:00");
+    expect(stageProgress(full)).toBeNull();
+    expect(plain(stageTerms(full, TZ))).toBe("Precio full · $150.000 · hasta el 27 de junio");
   });
 
   it("«¿Por qué sube el precio?» tells every stage as the team wrote it", () => {
