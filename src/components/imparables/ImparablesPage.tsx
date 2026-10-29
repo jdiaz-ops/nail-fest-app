@@ -1,4 +1,3 @@
-import { Cinzel, Manrope } from "next/font/google";
 import type { EventFormat } from "@prisma/client";
 import MetaPixelScript from "@/components/MetaPixelScript";
 import type { LandingBlock } from "@/lib/landingBlocks/types";
@@ -14,6 +13,7 @@ import ImpPageTracking from "./ImpPageTracking";
 import ImpStickyBar from "./ImpStickyBar";
 import ImpTitle from "./ImpTitle";
 import ImpWaitlistForm from "./ImpWaitlistForm";
+import { cinzel, manrope } from "./fonts";
 
 // Manicuristas Imparables' own page (EventTheme IMPARABLES, 2026-10-26):
 // the approved boceto, deep blue and gold, cinematic, mobile first, with
@@ -21,12 +21,9 @@ import ImpWaitlistForm from "./ImpWaitlistForm";
 // name, tagline and days on the cover, the group photo (the first image of
 // its blocks) with the speakers' names, its blocks below, its ticket types
 // as price stages — so the team edits it like any other event's page. With
-// a price on sale the cover sells it and the checkout is the usual one
-// (EventRegistration, rendered here as just its modal); before the first
-// stage opens, the page takes names for the waiting list instead.
-
-const cinzel = Cinzel({ subsets: ["latin"], weight: ["700", "800", "900"], variable: "--imp-display" });
-const manrope = Manrope({ subsets: ["latin"], weight: ["400", "600", "700", "800"], variable: "--imp-body" });
+// a price on sale the cover sells it and its buttons go to the event's
+// one-page checkout (/[eventSlug]/checkout, ImpCheckout.tsx); before the
+// first stage opens, the page takes names for the waiting list instead.
 
 export interface ImparablesEvent {
   slug: string;
@@ -73,7 +70,6 @@ export default function ImparablesPage({
   whatsappUrl,
   brandName,
   preview,
-  checkout,
 }: {
   event: ImparablesEvent;
   blocks: LandingBlock[];
@@ -85,8 +81,6 @@ export default function ImparablesPage({
   whatsappUrl: string | null;
   brandName: string;
   preview: ImparablesPreview | null;
-  /** The checkout (EventRegistration as a modal), only while a price is on sale. */
-  checkout: React.ReactNode;
 }) {
   // The name is the cover's title; a date in it is left out (the dates are right below).
   const words = coverName(event.displayName).split(/\s+/);
@@ -323,8 +317,6 @@ export default function ImparablesPage({
         </ImpStickyBar>
       )}
 
-      {/* The checkout keeps the app's own light look: a form to fill, not a poster. */}
-      {checkout && <div className="imp-checkout">{checkout}</div>}
     </main>
   );
 }

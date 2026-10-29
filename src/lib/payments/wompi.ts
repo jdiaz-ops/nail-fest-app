@@ -76,13 +76,16 @@ function computeIntegritySignature(reference: string, amountInCents: number, cur
  * Web Checkout payment — GET to checkout.wompi.co/p/ with the payment's
  * details as query params, integrity-signed so Wompi can trust them. Same
  * checkout.wompi.co host for sandbox and production; the public key alone
- * determines which environment actually processes the payment. */
+ * determines which environment actually processes the payment. Only the
+ * essentials: with the buyer's details too, Wompi's firewall answered
+ * marcolini.lat (the same comercio) with a 403 (2026-10-01). The checkout
+ * opens Wompi's own window instead (wompiWidgetParams); this is its
+ * fallback, and the old modal's way to pay. */
 export function buildCheckoutUrl(params: {
   reference: string; // wompiReference(this Payment row's id) — unique per checkout attempt
   amountInCents: number;
   currency?: string; // Wompi only supports COP today
   redirectUrl: string; // where Wompi sends the browser back to, with ?id=<transactionId> appended
-  customerEmail?: string;
 }): string {
   const currency = params.currency ?? "COP";
   const signature = computeIntegritySignature(params.reference, params.amountInCents, currency);
@@ -94,9 +97,26 @@ export function buildCheckoutUrl(params: {
     "signature:integrity": signature,
     "redirect-url": params.redirectUrl,
   });
-  if (params.customerEmail) query.set("customer-data:email", params.customerEmail);
   return `https://checkout.wompi.co/p/?${query.toString()}`;
 }
+
+/** The same payment for Wompi's own window over the checkout (WidgetCheckout,
+ * docs.wompi.co/docs/colombia/widget-checkout-web/): what the page needs to
+ * open it — the public key, the amount, the reference and its integrity
+ * signature, signed here so the secret never reaches the browser. */
+export function wompiWidgetParams(params: { reference: string; amountInCents: number; currency?: string; redirectUrl: string }) {
+  const currency = params.currency ?? "COP";
+  return {
+    publicKey: env("WOMPI_PUBLIC_KEY"),
+    currency,
+    amountInCents: params.amountInCents,
+    reference: params.reference,
+    signature: computeIntegritySignature(params.reference, params.amountInCents, currency),
+    redirectUrl: params.redirectUrl,
+  };
+}
+
+export type WompiWidgetParams = ReturnType<typeof wompiWidgetParams>;
 
 export interface WompiTransaction {
   id: string;

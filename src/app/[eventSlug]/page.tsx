@@ -85,14 +85,13 @@ export default async function EventLandingPage({
   }
 
   const draftPreview = event.status === "DRAFT";
-  // Manicuristas Imparables: its own page, same checkout.
+  // Manicuristas Imparables: its own page, and its own one-page checkout
+  // (/[eventSlug]/checkout, where its buttons go).
   if (event.theme === "IMPARABLES") {
     const orgSettings = await getOrgSettings();
     const simulated = staff && fecha ? zonedTimeToUtc(`${fecha}T12:00`, orgSettings.timezone) : null;
     const now = simulated && !Number.isNaN(simulated.getTime()) ? simulated : new Date();
     const data = await imparablesPageData(event, orgSettings.timezone, now);
-    const [professionOptions, checkoutQuestions, ticketTypes] =
-      data.sales.mode === "sale" ? await Promise.all([getOrderedProfessionOptions(), getCheckoutQuestions(), getPublicTicketTypes(event.id, now)]) : [[], [], []];
     if (!staff) {
       // Same landing count as every event page (see LandingView), never the team's own looks.
       await db.landingView.create({ data: { eventId: event.id, country: headers().get("x-vercel-ip-country") } }).catch(() => null);
@@ -119,39 +118,6 @@ export default async function EventLandingPage({
         whatsappUrl={data.whatsappUrl}
         brandName={orgSettings.name}
         preview={staff ? { draft: draftPreview, simulated: now === simulated ? simulated : null, shortcuts: data.shortcuts } : null}
-        checkout={
-          data.sales.mode === "sale" ? (
-            <Suspense>
-              <EventRegistration
-                layout="modal"
-                eventSlug={event.slug}
-                eventName={publicEventName(event)}
-                eventCity={event.city}
-                eventWhen={data.when.dates}
-                eventVenue=""
-                professionOptions={professionOptions}
-                questions={checkoutQuestions.map((q) => ({
-                  key: q.key,
-                  label: q.label,
-                  type: q.type,
-                  required: q.required,
-                  options: q.options,
-                  locked: q.locked,
-                  nameFormat: q.nameFormat,
-                  confirmEmail: q.confirmEmail,
-                }))}
-                ticketTypes={ticketTypes}
-                registerButtonLabel={event.registerButtonLabel || "Quiero mi boleta"}
-                brandName={orgSettings.name}
-                descriptionHtml={null}
-                galleryImageUrls={[]}
-                galleryTitle={null}
-                ctaNote={null}
-                closingText=""
-              />
-            </Suspense>
-          ) : null
-        }
       />
     );
   }

@@ -5,6 +5,7 @@ import { fetchTransaction } from "@/lib/payments/wompi";
 import { confirmRegistrationPayment, type ConfirmResult } from "@/lib/payments/confirmRegistrationPayment";
 import { INSTAGRAM_HANDLE, INSTAGRAM_URL } from "@/lib/brand";
 import { publicEventName } from "@/lib/eventDisplayName";
+import PostPaymentQuestions from "@/components/PostPaymentQuestions";
 
 export const dynamic = "force-dynamic";
 
@@ -50,6 +51,15 @@ export default async function PaymentReturnPage({
     const registration = await db.registration.findUnique({ where: { id: searchParams.registrationId } });
     result = registration?.status === "CONFIRMED" ? "approved" : registration?.status === "PENDING_PAYMENT" ? "pending" : "not_found";
   }
+
+  // Paid, back from Wompi: the optional question the one-page checkout
+  // leaves for now (2026-10-29), unless it's answered already.
+  const askLater =
+    result === "approved" && searchParams.id && searchParams.registrationId
+      ? await db.registration
+          .findUnique({ where: { id: searchParams.registrationId }, select: { customFields: true } })
+          .then((r) => !(r?.customFields as Record<string, unknown> | null)?.instagram)
+      : false;
 
   const brandName = orgSettings.name;
   const eventName = event ? publicEventName(event) : "tu evento";
@@ -123,6 +133,8 @@ export default async function PaymentReturnPage({
         {copy.title}
       </h1>
       <p style={{ fontSize: 14.5, color: "#5b5f6b", margin: "0 0 24px" }}>{copy.body}</p>
+
+      {askLater && <PostPaymentQuestions registrationId={searchParams.registrationId!} transactionId={searchParams.id!} />}
 
       {result === "approved" && (
         <div

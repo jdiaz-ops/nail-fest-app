@@ -65,6 +65,7 @@ export default function EventModuleShell({
             heading: "Configuración",
             items: [
               { href: `${base}/edit`, label: "Editar evento y entradas" },
+              { href: `${base}/descuentos`, label: "Códigos de descuento" },
               { href: `${base}/confirmation`, label: "Confirmación del evento" },
             ],
           },

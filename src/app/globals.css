@@ -3722,8 +3722,8 @@ button.pt-item { width: 100%; border: 0; border-radius: 0; background: none; fon
    The approved boceto in the team's «Editorial hueso» palette: light (bone)
    and dark (chocolate) sections in turn, bronze and gold on them, flat
    colors; Cinzel over Manrope, mobile first, widening into columns on a
-   computer. Everything is scoped under .imp; the checkout modal inside it
-   keeps the app's light look (.imp-checkout). */
+   computer. Everything is scoped under .imp, its one-page checkout too
+   (.imp-co). */
 .imp {
   /* «Editorial hueso»: every color on the page is one of these. */
   --imp-hueso: #ede8e1;
@@ -3808,7 +3808,8 @@ body:has(.imp) {
    light; the sections in between, the waiting list and the closing are dark;
    what is outside them (the bar, the footer) keeps the black of .imp. */
 .imp-hero,
-.imp-sec:not(.imp-sec--alt) {
+.imp-sec:not(.imp-sec--alt),
+.imp-co-main {
   --imp-fondo: var(--imp-hueso);
   --imp-tarjeta: var(--imp-hueso-tarjeta);
   --imp-tarjeta-borde: var(--imp-borde-claro);
@@ -3830,7 +3831,8 @@ body:has(.imp) {
 }
 .imp-sec--alt,
 .imp-wl-wrap,
-.imp-close {
+.imp-close,
+.imp-co-dark {
   --imp-fondo: var(--imp-chocolate);
   --imp-tarjeta: var(--imp-chocolate-tarjeta);
   --imp-tarjeta-borde: var(--imp-bronce);
@@ -3852,7 +3854,9 @@ body:has(.imp) {
 .imp-hero,
 .imp-sec,
 .imp-wl-wrap,
-.imp-close {
+.imp-close,
+.imp-co-main,
+.imp-co-dark {
   background: var(--imp-fondo);
   color: var(--imp-texto);
 }
@@ -5656,19 +5660,663 @@ body:has(.imp) {
   background: var(--imp-oro-hover);
 }
 
-/* The checkout keeps the app's own light look. */
-.imp-checkout {
-  color: var(--ink);
-  font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  text-align: left;
+
+/* The one-page checkout (/<event>/checkout — boceto, 2026-10-29), after
+   Marcolini's: the form on bone, what's being bought on chocolate — beside
+   it on a computer, folded on top of it on a phone. */
+.imp-co {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100svh;
 }
-.imp-checkout button.primary {
-  background: var(--imp-oro) !important;
-  color: var(--imp-negro) !important;
-  box-shadow: none !important;
+.imp-co-top {
+  position: relative;
+  z-index: 3;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--imp-negro);
+  border-bottom: 2px solid var(--imp-oro);
+  color: var(--imp-crema);
 }
-.imp-checkout button.primary:hover:not(:disabled) {
-  background: var(--imp-oro-hover) !important;
+.imp-co-back {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--imp-arena) !important;
+  text-decoration: none;
+}
+.imp-co-back span:first-child {
+  font-size: 22px;
+  line-height: 1;
+}
+.imp-co-mark {
+  font-family: var(--imp-display), Georgia, serif;
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--imp-crema) !important;
+  text-decoration: none;
+}
+.imp-co-mark b {
+  font-weight: 900;
+  color: var(--imp-oro-claro);
+}
+.imp-co-safe {
+  justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--imp-arena);
+}
+/* A phone: the arrow and the lock without their words. */
+@media (max-width: 560px) {
+  .imp-co-back-t {
+    display: none;
+  }
+  .imp-co-safe {
+    gap: 0;
+    font-size: 0;
+  }
+  .imp-co-mark {
+    font-size: 13px;
+    letter-spacing: 0.1em;
+  }
+}
+.imp-co-grid {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.imp-co-main {
+  flex: 1;
+}
+.imp-co-side {
+  display: none;
+}
+.imp-co-fold-b {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 18px;
+  border: 0;
+  background: none;
+  color: var(--imp-oro-claro);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.imp-co-fold-b > span:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.imp-co-fold-p {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.imp-co-fold-p s {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--imp-arena);
+}
+.imp-co-fold-p b {
+  font-size: 19px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--imp-crema);
+}
+.imp-co-fold-in {
+  padding: 4px 18px 22px;
+}
+
+.imp-co-form {
+  display: grid;
+  gap: 30px;
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 26px 18px 48px;
+}
+.imp-co-h1 {
+  margin: 0;
+  font-family: var(--imp-display), Georgia, serif;
+  font-weight: 800;
+  font-size: 28px;
+  line-height: 1.1;
+  color: var(--imp-texto);
+}
+.imp-co-head p {
+  margin: 6px 0 0;
+  font-size: 15px;
+  color: var(--imp-texto-2);
+}
+.imp-co-sec {
+  display: grid;
+  gap: 14px;
+}
+/* Each part numbered: they're filled in that order. */
+.imp-co-h {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-family: var(--imp-display), Georgia, serif;
+  font-weight: 800;
+  font-size: 19px;
+  color: var(--imp-texto);
+}
+.imp-co-h i {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--imp-chocolate);
+  color: var(--imp-oro-claro);
+  font-family: var(--imp-body), system-ui, sans-serif;
+  font-style: normal;
+  font-size: 14px;
+  font-weight: 800;
+}
+.imp-co-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.imp-co-lab {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--imp-texto);
+}
+.imp-co-hint {
+  font-size: 13px;
+  color: var(--imp-texto-3);
+}
+.imp-co-in {
+  width: 100%;
+  min-width: 0;
+  height: 52px;
+  padding: 0 14px;
+  border: 1.5px solid var(--imp-linea);
+  border-radius: 12px;
+  background: var(--imp-tarjeta);
+  color: var(--imp-texto);
+  font: inherit;
+  font-size: 16px;
+}
+.imp-co-in::placeholder {
+  color: var(--imp-texto-3);
+  opacity: 1;
+}
+.imp-co-in:focus {
+  outline: none;
+  border-color: var(--imp-oro);
+  box-shadow: 0 0 0 3px rgba(201, 164, 106, 0.28);
+}
+select.imp-co-in {
+  -webkit-appearance: none;
+  appearance: none;
+  padding-right: 34px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238c6a3e' stroke-width='3'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+.imp-co-two {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+}
+.imp-co-doc {
+  display: grid;
+  grid-template-columns: 124px minmax(0, 1fr);
+  gap: 12px;
+}
+.imp-co-phone {
+  display: grid;
+  grid-template-columns: 116px minmax(0, 1fr);
+  gap: 12px;
+}
+.imp-co-opts {
+  display: grid;
+  gap: 8px;
+}
+.imp-co-q {
+  margin: 0 0 2px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--imp-texto);
+}
+.imp-co-opt {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1.5px solid var(--imp-linea);
+  border-radius: 12px;
+  background: var(--imp-tarjeta);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--imp-texto);
+  cursor: pointer;
+}
+.imp-co-opt input {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--imp-bronce);
+}
+.imp-co-opt:has(input:checked) {
+  border-color: var(--imp-bronce);
+  background: var(--imp-destacado);
+}
+.imp-co-pay {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1.5px solid var(--imp-bronce);
+  border-radius: 14px;
+  background: var(--imp-tarjeta);
+}
+.imp-co-pay-h {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.imp-co-pay-h b {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--imp-texto);
+}
+.imp-co-dot {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border: 5px solid var(--imp-chocolate);
+  border-radius: 50%;
+  background: var(--imp-hueso-tarjeta);
+}
+.imp-co-badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-left: auto;
+}
+.imp-co-badges span {
+  padding: 3px 8px;
+  border: 1px solid var(--imp-linea);
+  border-radius: 6px;
+  background: var(--imp-hueso);
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--imp-texto-2);
+}
+.imp-co-pay p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--imp-texto-2);
+}
+.imp-co-recap {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 14px;
+  background: var(--imp-caja);
+}
+.imp-co-note {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+.imp-co-note {
+  border: 1px solid var(--imp-oro);
+  background: var(--imp-estrella);
+  color: var(--imp-negro);
+}
+.imp-co-note.is-error {
+  border-color: #e7b4ad;
+  background: #fbe9e7;
+  color: #9a2b1f;
+}
+/* The honeypot: out of sight and out of reach (see /api/register). */
+.imp-co-hp {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+/* What paying found empty: said right under it. */
+.imp-co-err {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #a3251f;
+}
+.is-missing .imp-co-in,
+.is-missing .imp-co-opt {
+  border-color: #c4473a;
+}
+.imp-co-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 18px 20px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--imp-oro);
+  color: var(--imp-negro);
+  font: inherit;
+  font-size: 18px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 10px 24px -12px rgba(59, 36, 24, 0.6);
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+.imp-co-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  background: var(--imp-oro-hover);
+}
+.imp-co-btn:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+.imp-co-legal {
+  margin: -14px 0 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--imp-texto-3);
+}
+.imp-co-legal a {
+  text-decoration: underline;
+}
+
+/* What's being bought: the event, the ticket and how many, what it
+   includes, a discount code, the total, until when the price holds. */
+.imp-co-sum {
+  display: grid;
+  gap: 18px;
+}
+.imp-co-ev {
+  padding: 18px 16px;
+  border: 1px solid var(--imp-linea);
+  border-radius: 16px;
+  background: var(--imp-tarjeta);
+  text-align: center;
+}
+.imp-co-ev .imp-tiara {
+  width: 96px;
+  height: 26px;
+  margin: 0 auto 4px;
+}
+.imp-co-ev-name {
+  margin: 0;
+  line-height: 1.05;
+}
+.imp-co-ev-name span {
+  display: block;
+  font-family: var(--imp-display), Georgia, serif;
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.24em;
+  text-indent: 0.24em;
+  text-transform: uppercase;
+  color: var(--imp-texto);
+}
+.imp-co-ev-name b {
+  display: block;
+  margin-top: 2px;
+  font-family: var(--imp-display), Georgia, serif;
+  font-weight: 900;
+  font-size: 34px;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  color: var(--imp-titulo);
+}
+.imp-co-ev-when {
+  margin: 10px 0 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--imp-texto-2);
+}
+.imp-co-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.imp-co-line b {
+  display: block;
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--imp-texto);
+}
+.imp-co-line span {
+  display: block;
+  margin-top: 2px;
+  font-size: 14px;
+  color: var(--imp-texto-2);
+}
+.imp-co-line s {
+  margin-right: 4px;
+  color: var(--imp-texto-3);
+}
+.imp-co-qty {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  border: 1.5px solid var(--imp-linea);
+  border-radius: 999px;
+}
+.imp-co-qty button {
+  width: 38px;
+  height: 38px;
+  border: 0;
+  background: none;
+  color: var(--imp-resalte);
+  font: inherit;
+  font-size: 20px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.imp-co-qty button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.imp-co-qty span {
+  min-width: 22px;
+  margin: 0;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--imp-texto);
+}
+.imp-co-inc {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+  color: var(--imp-texto-2);
+}
+.imp-co-inc li {
+  display: flex;
+  gap: 10px;
+}
+.imp-co-inc li::before {
+  content: "✓";
+  font-weight: 900;
+  color: var(--imp-acento);
+}
+.imp-co-code-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+.imp-co-code-row button {
+  padding: 0 18px;
+  border: 1.5px solid var(--imp-acento);
+  border-radius: 12px;
+  background: none;
+  color: var(--imp-resalte);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.imp-co-code-row button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.imp-co-applied {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1.5px dashed var(--imp-acento);
+  border-radius: 12px;
+  font-size: 15px;
+  color: var(--imp-texto);
+}
+.imp-co-applied b {
+  letter-spacing: 0.04em;
+  color: var(--imp-resalte);
+}
+.imp-co-applied button {
+  border: 0;
+  background: none;
+  color: var(--imp-texto-2);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.imp-co-code-err {
+  margin: 6px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #a3251f;
+}
+.imp-co-dark .imp-co-code-err {
+  color: var(--imp-error);
+}
+.imp-co-tot {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+.imp-co-tot > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 15px;
+  color: var(--imp-texto-2);
+}
+.imp-co-tot dd {
+  margin: 0;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--imp-texto);
+}
+.imp-co-tot > .imp-co-disc dd {
+  color: var(--imp-resalte);
+}
+.imp-co-tot > .imp-co-total {
+  align-items: baseline;
+  padding-top: 12px;
+  border-top: 1px solid var(--imp-linea);
+}
+.imp-co-total dt {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--imp-texto);
+}
+.imp-co-tot > .imp-co-total dd {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--imp-titulo);
+}
+.imp-co-total small {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--imp-texto-3);
+}
+.imp-co-up {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--imp-oro);
+  color: var(--imp-negro);
+  font-size: 14px;
+  font-weight: 800;
+  text-align: center;
+}
+/* A computer: the summary beside the form, staying in view. */
+@media (min-width: 1000px) {
+  .imp-co-top {
+    padding: 14px clamp(24px, 4vw, 56px);
+  }
+  .imp-co-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  }
+  .imp-co-fold,
+  .imp-co-recap {
+    display: none;
+  }
+  .imp-co-side {
+    display: block;
+  }
+  .imp-co-form {
+    gap: 34px;
+    max-width: 640px;
+    margin: 0 0 0 auto;
+    padding: 48px clamp(32px, 4vw, 64px) 72px;
+  }
+  .imp-co-side-in {
+    position: sticky;
+    top: 0;
+    max-width: 480px;
+    padding: 48px clamp(32px, 4vw, 64px);
+  }
+  .imp-co-h1 {
+    font-size: 34px;
+  }
+  .imp-co-legal {
+    margin-top: -18px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .imp-co-btn {
+    transition: none;
+  }
 }
 
 @media (min-width: 900px) {

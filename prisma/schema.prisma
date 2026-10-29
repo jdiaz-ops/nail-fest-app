@@ -306,6 +306,7 @@ model Event {
   whatsappBroadcasts WhatsAppBroadcast[]
   landingViews       LandingView[]
   infoPages          InfoPage[]
+  discountCodes      DiscountCode[]
 
   @@index([city])
   @@index([status])
@@ -387,6 +388,7 @@ model TicketType {
   registrations      Registration[]
   broadcasts         EmailBroadcast[]
   whatsappBroadcasts WhatsAppBroadcast[]
+  discountCodes      DiscountCode[]
 
   @@index([eventId])
 }
@@ -567,11 +569,41 @@ model Payment {
   // cliente dice que le cobraron, ¿qué dice Wompi de verdad?") without
   // needing to go dig through Wompi's own dashboard.
   rawPayload        Json?
+  // The discount code the checkout applied, and what it took off
+  // amountInCents (already the discounted total) — see lib/discounts.ts.
+  discountCode      DiscountCode?   @relation(fields: [discountCodeId], references: [id], onDelete: SetNull)
+  discountCodeId    String?
+  discountCents     Int             @default(0)
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
   @@index([registrationId])
   @@index([status])
+  @@index([discountCodeId])
+}
+
+// A discount code for an event's checkout (/admin/events/[id]/descuentos,
+// 2026-10-29): a percentage off (1–99) or a fixed amount off in whole COP,
+// for any of the event's paid tickets or just one of them, until a date
+// and/or a number of paid uses. Typed at the checkout in any case; stored
+// and compared in capitals. See lib/discounts.ts.
+model DiscountCode {
+  id           String      @id @default(cuid())
+  event        Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId      String
+  code         String
+  percentOff   Int?
+  amountOffCop Int?
+  ticketType   TicketType? @relation(fields: [ticketTypeId], references: [id], onDelete: SetNull)
+  ticketTypeId String?
+  maxUses      Int?
+  expiresAt    DateTime?
+  active       Boolean     @default(true)
+  note         String?
+  createdAt    DateTime    @default(now())
+  payments     Payment[]
+
+  @@unique([eventId, code])
 }
 
 // Append-only — see lib/ticket.ts's note on why the QR token itself never

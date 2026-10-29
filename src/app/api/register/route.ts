@@ -5,7 +5,8 @@ import type { RegistrationStatus } from "@prisma/client";
 import { pushNewRegistrantToEventAudiences } from "@/lib/meta/audiences";
 import { recordConsents } from "@/lib/consent";
 import { finalizeConfirmedRegistration } from "@/lib/registrationConfirmation";
-import { buildCheckoutUrl, wompiReference } from "@/lib/payments/wompi";
+import { buildCheckoutUrl, wompiReference, wompiWidgetParams } from "@/lib/payments/wompi";
+import { DISCOUNT_ERROR_MESSAGES, resolveDiscount, type DiscountResult } from "@/lib/discounts";
 import { clientIpFromHeaders, userAgentFromHeaders } from "@/lib/request";
 import { splitName } from "@/lib/name";
 import { getOrgSettings } from "@/lib/settings";
@@ -85,6 +86,9 @@ const bodySchema = z.object({
   // itself. Always empty from the real form; a script filling every
   // input it finds is the only thing likely to populate it.
   website: z.string().optional(),
+  // The one-page checkout's discount code (/[eventSlug]/checkout,
+  // 2026-10-29) — worked out again below, never taken from the browser.
+  discountCode: z.string().max(40).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -251,6 +255,23 @@ export async function POST(req: NextRequest) {
     // picked — none on sale right now: before its first price stage, after
     // its last — there is nothing to buy yet.
     return NextResponse.json({ error: "no_ticket_on_sale" }, { status: 400 });
+  }
+
+  // A discount code, worked out here on its own: what the checkout's box
+  // showed was only a preview (/api/checkout/discount). Checked before
+  // anything is written, so a code that no longer applies changes nothing.
+  let discount: Extract<DiscountResult, { ok: true }> | null = null;
+  if (input.discountCode?.trim() && ticketType && ticketType.price > 0) {
+    const result = await resolveDiscount({
+      eventId: event.id,
+      ticketTypeId: ticketType.id,
+      code: input.discountCode,
+      subtotalCents: ticketType.price * ticketCount * 100,
+    });
+    if (!result.ok) {
+      return NextResponse.json({ error: "discount_invalid", reason: result.error, message: DISCOUNT_ERROR_MESSAGES[result.error] }, { status: 400 });
+    }
+    discount = result;
   }
 
   const customFields = input.customFields;
@@ -488,18 +509,30 @@ export async function POST(req: NextRequest) {
   // starts with NF- (2026-10-29): the comercio's events URL is Marcolini's,
   // and that prefix is how it knows to relay this transaction's events here. ---
   if (registration.status === "PENDING_PAYMENT") {
-    const amountInCents = ticketType!.price * registration.ticketCount * 100;
+    // With a discount code, what it took off this subtotal (the same
+    // ticket count resolveDiscount was given above).
+    const amountInCents = discount ? discount.totalCents : ticketType!.price * registration.ticketCount * 100;
     const payment = await db.payment.create({
-      data: { registrationId: registration.id, amountInCents, currency: "COP" },
+      data: {
+        registrationId: registration.id,
+        amountInCents,
+        currency: "COP",
+        discountCodeId: discount?.discountCode.id ?? null,
+        discountCents: discount?.discountCents ?? 0,
+      },
     });
-    const checkoutUrl = buildCheckoutUrl({
-      reference: wompiReference(payment.id),
-      amountInCents,
-      currency: "COP",
-      redirectUrl: `${process.env.APP_BASE_URL ?? ""}/${event.slug}/pago?registrationId=${registration.id}`,
-      customerEmail: person.email,
+    const reference = wompiReference(payment.id);
+    const redirectUrl = `${process.env.APP_BASE_URL ?? ""}/${event.slug}/pago?registrationId=${registration.id}`;
+    const checkoutUrl = buildCheckoutUrl({ reference, amountInCents, currency: "COP", redirectUrl });
+    // The checkout opens Wompi's own window with `wompi`, falling back to
+    // checkoutUrl if it doesn't load; the old modal still goes to checkoutUrl.
+    return NextResponse.json({
+      ok: true,
+      requiresPayment: true,
+      registrationId: registration.id,
+      checkoutUrl,
+      wompi: wompiWidgetParams({ reference, amountInCents, currency: "COP", redirectUrl }),
     });
-    return NextResponse.json({ ok: true, requiresPayment: true, registrationId: registration.id, checkoutUrl });
   }
 
   // --- Free ticket, or a resend of something already CONFIRMED — the

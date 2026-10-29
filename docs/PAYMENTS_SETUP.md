@@ -55,6 +55,27 @@ ZOOM_WEBHOOK_SECRET_TOKEN=...        # de la MISMA app, pestaña Feature -> Even
    sandbox y producción como dos "comercios" distintos, cada uno con sus
    propias llaves y su propia configuración de eventos).
 
+## Checkout de una página (Manicuristas Imparables) y códigos de descuento
+
+Desde el 2026-10-29 los botones de la landing de Imparables llevan a
+`/[evento]/checkout`: contacto, datos (con tipo y número de documento, y
+razón social si es NIT), perfil y pago en una sola página, con el resumen
+al lado (o plegado arriba en el celular). Al tocar «Pagar»:
+
+1. `/api/register` crea la inscripción «pendiente de pago» y el pago
+   (`NF-<id del pago>`), con el descuento calculado ahí mismo —nunca el que
+   manda el navegador— y devuelve los datos firmados para la ventana de Wompi.
+2. Se abre la ventana de Wompi (WidgetCheckout) encima de la página; si no
+   carga, la página de pago de Wompi. Al terminar, Wompi lleva a
+   `/[evento]/pago`, que confirma como siempre.
+3. En «¡Pago confirmado!» se pregunta (opcional) el Instagram/TikTok.
+
+Los códigos se crean en `/admin/events/[id]/descuentos`: porcentaje
+(1–95) o monto fijo en pesos, para cualquier entrada o una sola, con
+vencimiento y máximo de usos opcionales. Un uso cuenta solo cuando el pago
+se aprueba, y ningún código deja el total por debajo de $1.500 (el mínimo
+de Wompi). Los demás eventos siguen con su formulario de siempre.
+
 ## Cuenta compartida con Marcolini — cómo llegan los eventos
 
 Este comercio de Wompi (el mismo `pago a H la Cosedora` que verás en el
