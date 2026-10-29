@@ -5815,6 +5815,212 @@ body:has(.imp) {
   }
 }
 
+/* A computer's wide screen, across the whole of it (2026-10-29). The cover:
+   the name on top, as big as the screen's width and height allow; under it
+   the words and the button on one side, the group photo on the other. The
+   sections in the same wide frame, the speakers bigger, the questions beside
+   their title. */
+@media (min-width: 1100px) {
+  /* The cover's sizes follow the screen's height too, so all of it fits the
+     first screen of a short laptop as well. */
+  .imp-hero {
+    padding: min(24px, 2.4vh) clamp(40px, 5vw, 80px) min(40px, 3.6vh);
+  }
+  .imp-hero > .imp-hero-in {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    /* The words centered against the photo: the empty rows around them take
+       whatever height the photo has over them. */
+    grid-template-areas:
+      "tiara tiara"
+      "name  name"
+      ".     pic"
+      "tag   pic"
+      "pill  pic"
+      "cta   pic"
+      "deal  pic"
+      "close pic"
+      "org   pic"
+      ".     pic";
+    grid-template-rows: auto auto 1fr repeat(6, auto) 1fr;
+    column-gap: clamp(40px, 4.5vw, 80px);
+    max-width: 1440px;
+    text-align: left;
+  }
+  .imp-hero .imp-tiara {
+    grid-area: tiara;
+    width: auto;
+    height: min(60px, 7vh);
+    aspect-ratio: 190 / 52;
+    margin-top: 0;
+  }
+  .imp-hero .imp-name {
+    grid-area: name;
+    margin-bottom: min(30px, 3vh);
+    text-align: center;
+  }
+  .imp-hero .imp-pre {
+    font-size: clamp(26px, min(2.6vw, 4.6vh), 40px);
+    line-height: 1.2;
+  }
+  .imp-hero .imp-title {
+    font-size: clamp(100px, min(13.4vw, 21vh), 215px);
+  }
+  .imp-hero .imp-tag {
+    grid-area: tag;
+    max-width: none;
+    margin: 0;
+  }
+  .imp-hero .imp-tag > p:last-child {
+    max-width: none;
+    margin: 0;
+    font-size: clamp(19px, min(1.65vw, 3.1vh), 26px);
+    line-height: 1.45;
+  }
+  .imp-hero .imp-pill {
+    grid-area: pill;
+    justify-self: start;
+    margin: min(22px, 2.6vh) 0 0;
+  }
+  .imp-hero .imp-cta,
+  .imp-hero .imp-closed-note {
+    grid-area: cta;
+  }
+  .imp-hero .imp-cta {
+    justify-self: start;
+    margin: min(26px, 3vh) 0 0;
+  }
+  .imp-hero .imp-deal {
+    grid-area: deal;
+  }
+  .imp-hero .imp-tagline {
+    grid-area: close;
+  }
+  .imp-hero .imp-organiza {
+    grid-area: org;
+    justify-content: flex-start;
+    margin-top: min(22px, 2.4vh);
+  }
+  .imp-hero-pic {
+    grid-area: pic;
+    align-self: center;
+    text-align: center;
+  }
+  .imp-group {
+    margin: 0;
+  }
+  /* Its sides fade into the cover too, now that they show. */
+  .imp-group img {
+    max-width: 100%;
+    max-height: min(46vh, 460px);
+    -webkit-mask-image: linear-gradient(180deg, #000 68%, transparent 98%), linear-gradient(90deg, transparent 0, #000 7%, #000 93%, transparent 100%);
+    -webkit-mask-composite: source-in;
+    mask-image: linear-gradient(180deg, #000 68%, transparent 98%), linear-gradient(90deg, transparent 0, #000 7%, #000 93%, transparent 100%);
+    mask-composite: intersect;
+  }
+  .imp-pillars p {
+    margin-top: 12px;
+  }
+
+  .imp-sec {
+    padding: 88px clamp(40px, 5vw, 80px);
+  }
+  .imp-sec.imp-intro {
+    padding: 56px clamp(40px, 5vw, 80px);
+  }
+  .imp-sec-in,
+  .imp-sticky-in {
+    max-width: 1440px;
+  }
+  /* The bar's price and button at the frame's edges, like the sections'. */
+  .imp-sticky-in {
+    box-sizing: content-box;
+    padding-left: clamp(40px, 5vw, 80px);
+    padding-right: clamp(40px, 5vw, 80px);
+  }
+  .imp-h2 {
+    font-size: 42px;
+  }
+  .imp-intro .imp-rich {
+    font-size: 18px;
+  }
+  .imp-intro .imp-rich p {
+    text-wrap: balance;
+  }
+  .imp-sp-grid {
+    gap: 0 32px;
+  }
+  .imp-sp-ring {
+    width: 148px;
+    height: 148px;
+  }
+  .imp-sp-name {
+    margin-top: 14px;
+    font-size: 18px;
+  }
+  .imp-sp-line {
+    font-size: 16px;
+  }
+  .imp-pnl-t {
+    font-size: 24px;
+  }
+  /* The host's card across the frame, what's in it in the middle of it. */
+  .imp-host {
+    justify-content: center;
+    gap: 22px;
+    max-width: none;
+    padding: 24px 28px;
+  }
+  .imp-host-ring {
+    width: 108px;
+    height: 108px;
+  }
+  .imp-host-t {
+    max-width: 760px;
+  }
+  .imp-host-body {
+    font-size: 16px;
+  }
+  .imp-day-h {
+    padding: 18px 24px;
+  }
+  .imp-day-h b {
+    font-size: 22px;
+  }
+  .imp-ag {
+    padding: 4px 24px 12px;
+  }
+  .imp-ag-time {
+    width: 64px;
+  }
+  .imp-inc {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+  .imp-inc li {
+    padding: 18px 20px;
+  }
+  /* The questions beside their title. */
+  .imp-sec-in:has(> .imp-faq) {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    grid-template-rows: auto auto auto 1fr;
+    column-gap: 64px;
+  }
+  .imp-sec-in:has(> .imp-faq) > :not(.imp-faq) {
+    grid-column: 1;
+  }
+  .imp-sec-in:has(> .imp-faq) > .imp-faq {
+    grid-column: 2;
+    grid-row: 1 / -1;
+    max-width: none;
+    margin-top: 0;
+  }
+  .imp-faq-a {
+    max-width: 72ch;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .imp-cta,
   .imp-sticky,

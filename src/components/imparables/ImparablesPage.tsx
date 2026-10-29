@@ -192,16 +192,22 @@ export default function ImparablesPage({
             <span className="imp-pill-date">{pillDate}</span>
             {pillNote && <span className="imp-pill-note">{pillNote}</span>}
           </p>
-          {cover && (
-            // The group photo (2026-10-28: back from a strip of portraits).
-            // Who is in it goes only to those who can't see it.
-            <figure className="imp-group">
-              {/* eslint-disable-next-line @next/next/no-img-element -- admin-uploaded photo, arbitrary Blob URL */}
-              <img src={cover.url} alt={cover.caption || [line.names, line.also].filter(Boolean).join(", ")} />
-            </figure>
+          {(cover || pillars) && (
+            // On a computer, the column beside the words (2026-10-29); on a
+            // phone it changes nothing.
+            <div className="imp-hero-pic">
+              {cover && (
+                // The group photo (2026-10-28: back from a strip of portraits).
+                // Who is in it goes only to those who can't see it.
+                <figure className="imp-group">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- admin-uploaded photo, arbitrary Blob URL */}
+                  <img src={cover.url} alt={cover.caption || [line.names, line.also].filter(Boolean).join(", ")} />
+                </figure>
+              )}
+              {/* «Mentalidad · Dinero · Marketing», under the group photo (2026-10-28). */}
+              {pillars && <div className="imp-pillars" dangerouslySetInnerHTML={{ __html: pillars }} />}
+            </div>
           )}
-          {/* «Mentalidad · Dinero · Marketing», under the group photo (2026-10-28). */}
-          {pillars && <div className="imp-pillars" dangerouslySetInnerHTML={{ __html: pillars }} />}
           {cta}
           {mode === "closed" && <p className="imp-closed-note">La venta de boletas está cerrada.</p>}
           {/* Under the button: which price it is and until when it holds
