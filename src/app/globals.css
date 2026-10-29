@@ -4177,18 +4177,6 @@ body:has(.imp) {
   font-weight: 600;
   opacity: 0.6;
 }
-/* Under the button: today's price in dollars, the full one in dollars
-   struck beside it (2026-10-29) */
-.imp-cta-more {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--imp-texto-2);
-}
-.imp-cta-more s {
-  font-weight: 600;
-  text-decoration-thickness: 1.5px;
-}
 /* The week after the stage before closed: «Etapa Creyente agotada» */
 .imp-stage-pill {
   justify-self: center;

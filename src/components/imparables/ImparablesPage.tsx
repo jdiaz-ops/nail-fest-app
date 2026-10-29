@@ -2,7 +2,7 @@ import type { EventFormat } from "@prisma/client";
 import MetaPixelScript from "@/components/MetaPixelScript";
 import type { LandingBlock } from "@/lib/landingBlocks/types";
 import { coverName, type EventWhen } from "@/lib/imparables/schedule";
-import { dayMonth, dollars, pesos, saving, stageLine, stagePill, type SalesState } from "@/lib/imparables/stages";
+import { dayMonth, pesos, saving, stageLine, stagePill, type SalesState } from "@/lib/imparables/stages";
 import { utcToZonedInputValue } from "@/lib/dateFormat";
 import { castLine, castOf, coverOf, introOf, panelOf } from "@/lib/imparables/blocks";
 import { splitTagline } from "@/lib/imparables/tagline";
@@ -168,26 +168,14 @@ export default function ImparablesPage({
       </ImpButton>
     ) : null;
   // Under the button, the same on the cover and the closing (2026-10-29):
-  // today's price in dollars, when its ticket has one, with the full price in
-  // dollars struck beside it; for a week after the stage before closed, a
-  // pill saying so; and the stage's line — its cap, its date, what comes
-  // next (lib/imparables/stages.ts).
+  // for a week after the stage before closed, a pill saying so; and the
+  // stage's line — its cap, its date, what comes next (lib/imparables/
+  // stages.ts). No dollars on the page: only the checkout's PayPal says them.
   const pill = mode === "sale" ? stagePill(sales, now) : null;
   const terms = mode === "sale" ? stageLine(sales, timezone) : null;
   const deal =
     mode === "sale" && current ? (
       <div className="imp-deal">
-        {current.usdCents ? (
-          <p className="imp-cta-more">
-            o {dollars(current.usdCents)}
-            {struck?.usdCents && struck.usdCents > current.usdCents ? (
-              <>
-                {" "}
-                <s>{dollars(struck.usdCents)}</s>
-              </>
-            ) : null}
-          </p>
-        ) : null}
         {pill && <p className="imp-stage-pill">{pill}</p>}
         {terms && <p className="imp-deal-until">{terms}</p>}
       </div>
