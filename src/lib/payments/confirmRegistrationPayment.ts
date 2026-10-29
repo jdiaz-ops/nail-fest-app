@@ -1,22 +1,26 @@
 import { db } from "@/lib/db";
 import { Prisma } from "@prisma/client";
-import type { WompiTransaction } from "@/lib/payments/wompi";
+import { paymentIdFromReference, type WompiTransaction } from "@/lib/payments/wompi";
 import { finalizeConfirmedRegistration } from "@/lib/registrationConfirmation";
 
 export type ConfirmResult = "approved" | "declined" | "voided" | "error" | "pending" | "not_found";
 
 /** The one place a Wompi transaction turns into a real CONFIRMED
- * registration — called from BOTH /api/webhooks/wompi (the async,
- * eventual-consistency path) and /[eventSlug]/pago's own server
+ * registration — called from BOTH the events (lib/payments/wompiEvents.ts,
+ * the async, eventual-consistency path) and /[eventSlug]/pago's own server
  * component (the synchronous check when the customer's browser lands
- * back from Wompi) — whichever gets here first does the real work; the
+ * back from Wompi), each with the transaction as Wompi's API returns it —
+ * whichever gets here first does the real work; the
  * other finds it already done and returns the same result, thanks to the
- * atomic conditional update below. Never throws: a real problem here
- * (amount mismatch, no matching Payment) returns "error"/"not_found" for
- * the caller to log/render, not a 500. */
+ * atomic conditional update below. A real problem here (amount mismatch,
+ * no matching Payment) returns "error"/"not_found" for the caller to
+ * log/render, not a 500. */
 export async function confirmRegistrationPayment(transaction: WompiTransaction): Promise<ConfirmResult> {
-  const payment = await db.payment.findFirst({
-    where: { OR: [{ providerReference: transaction.id }, { id: transaction.reference }] },
+  // Only the Payment its reference names — NF-<id>, or the bare id a
+  // checkout from before 2026-10-29 went out with: a reference that isn't
+  // one of ours confirms nothing, whatever else the transaction says.
+  const payment = await db.payment.findUnique({
+    where: { id: paymentIdFromReference(String(transaction.reference ?? "")) },
     include: { registration: { include: { person: true, event: true } } },
   });
   if (!payment) return "not_found";

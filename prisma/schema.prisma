@@ -551,9 +551,9 @@ model Payment {
   registration      Registration    @relation(fields: [registrationId], references: [id])
   registrationId    String
   provider          PaymentProvider @default(WOMPI)
-  // Wompi's own transaction id — null until the checkout redirect or the
-  // webhook first reports one (this row's OWN id is what's sent to Wompi
-  // as `reference` before that point, see wompi.ts's buildCheckoutUrl).
+  // Wompi's own transaction id — null until the checkout redirect or an
+  // event first reports one (NF- + this row's OWN id is what's sent to
+  // Wompi as `reference`, see wompi.ts's wompiReference).
   providerReference String?         @unique
   // Whole cents of `currency` (Wompi's own unit — COP has no sub-unit in
   // practice, so this is ticketType.price * 100), not

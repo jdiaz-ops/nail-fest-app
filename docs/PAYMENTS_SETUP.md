@@ -16,24 +16,20 @@ real" al final de este documento.
 En Vercel (o `.env.local` para probar en tu máquina):
 
 ```
-# Wompi — dashboard.wompi.co → tu comercio → API Keys
+# Wompi — dashboard.wompi.co → tu comercio → API Keys. El MISMO comercio
+# que usa marcolini.lat (ver "Cuenta compartida con Marcolini" más abajo).
 WOMPI_PUBLIC_KEY=pub_test_...       # pub_prod_... en producción
-WOMPI_PRIVATE_KEY=prv_test_...      # prv_prod_... en producción (no se usa hoy, reservada)
+WOMPI_PRIVATE_KEY=prv_test_...      # prv_prod_... en producción — con ella se consulta cada transacción antes de confirmar
 WOMPI_INTEGRITY_SECRET=...          # dashboard.wompi.co → API Keys → "Secreto de integridad"
 WOMPI_EVENTS_SECRET=...             # dashboard.wompi.co → API Keys → "Secreto de eventos" (DISTINTO del de integridad)
-WOMPI_ENV=sandbox                   # "sandbox" mientras pruebas, "production" cuando ya cobres de verdad
+RELAY_SHARED_SECRET=...             # `openssl rand -hex 32` — el MISMO valor que Marcolini manda en x-relay-secret
+# Sandbox o producción sale del prefijo de las llaves (_test_ / _prod_): WOMPI_ENV ya no se usa.
 
 # Zoom — marketplace.zoom.us → Develop → Build App → "Server-to-Server OAuth"
 ZOOM_ACCOUNT_ID=...
 ZOOM_CLIENT_ID=...
 ZOOM_CLIENT_SECRET=...
 ZOOM_WEBHOOK_SECRET_TOKEN=...        # de la MISMA app, pestaña Feature -> Event Subscriptions — ver esa sección más abajo. Distinto de ZOOM_CLIENT_SECRET.
-
-# Solo si este comercio de Wompi es compartido con otra integración (ver
-# "Cuenta compartida con Shopify" más abajo) — la URL que HOY está puesta
-# en "URL de Eventos" del dashboard de Wompi, ANTES de reemplazarla por la
-# nuestra. Cópiala primero, no la pierdas.
-WOMPI_SHOPIFY_RELAY_URL=https://wompi-event-shopify.conexa.ai/api/v1/shopify/webhooks/...
 ```
 
 ## Wompi — paso a paso
@@ -44,51 +40,46 @@ WOMPI_SHOPIFY_RELAY_URL=https://wompi-event-shopify.conexa.ai/api/v1/shopify/web
    siempre con las de **sandbox** (`pub_test_`/`prv_test_`) — puedes
    probar todo el flujo completo (incluyendo tarjetas de prueba que Wompi
    documenta) sin mover dinero real.
-2. **Configuración → Webhooks (Eventos)** → pega la URL:
-   `https://<tu-dominio>/api/webhooks/wompi`. Esto es lo que confirma un
-   pago cuando el cliente ya no está mirando la pantalla (ver
-   `lib/payments/confirmRegistrationPayment.ts` — hay un SEGUNDO camino de
-   confirmación, el que corre cuando el cliente vuelve a `/[evento]/pago`,
-   así que el registro no depende SOLO de que este webhook llegue a
-   tiempo).
-3. Cuando ya quieras cobrar de verdad: repite el proceso con las llaves
-   `pub_prod_`/`prv_prod_`, cambia `WOMPI_ENV=production`, y verifica que
-   el webhook de Eventos también esté configurado en el modo producción
-   del dashboard (Wompi separa sandbox/producción como dos "comercios"
-   distintos, cada uno con su propia config de webhooks).
+2. **Eventos:** la "URL de Eventos" del comercio NO apunta a Nail Fest:
+   apunta a Marcolini, que reenvía a `https://nailfest.lat/api/wompi/events`
+   los eventos cuya referencia empieza por `NF-` (ver la sección
+   siguiente). Es lo que confirma un pago cuando el cliente ya no está
+   mirando la pantalla; hay un SEGUNDO camino de confirmación, el que corre
+   cuando el cliente vuelve a `/[evento]/pago`, así que el registro no
+   depende SOLO de que el evento llegue a tiempo. En los dos casos la
+   transacción se consulta al API de Wompi con la llave privada antes de
+   confirmar (ver `lib/payments/wompiEvents.ts` y
+   `lib/payments/confirmRegistrationPayment.ts`).
+3. Cuando ya quieras cobrar de verdad: cambia a las llaves
+   `pub_prod_`/`prv_prod_` y a los secretos de producción (Wompi separa
+   sandbox y producción como dos "comercios" distintos, cada uno con sus
+   propias llaves y su propia configuración de eventos).
 
-## Cuenta compartida con Shopify — por qué el webhook hace un "relevo"
+## Cuenta compartida con Marcolini — cómo llegan los eventos
 
 Este comercio de Wompi (el mismo `pago a H la Cosedora` que verás en el
-checkout — Wompi no deja personalizar ese nombre por transacción) ya
-tenía su "URL de Eventos" apuntando a una integración con Shopify
-(`wompi-event-shopify.conexa.ai/...`) antes de que Nail Fest la
-necesitara también. Wompi solo permite UNA URL de eventos por comercio —
-no una lista — así que no se puede simplemente agregar la nuestra al
-lado.
+checkout — Wompi no deja personalizar ese nombre por transacción) lo
+usan también marcolini.lat y una integración con Shopify (Conexa). Wompi
+solo permite UNA "URL de Eventos" por comercio, y desde el 2026-10-29 esa
+URL es la de Marcolini:
 
-La solución (ver `lib/payments/wompi.ts`'s `relayToOtherIntegration` y
-`/api/webhooks/wompi`'s propio comentario): esta ruta ahora es la ÚNICA
-URL de eventos del comercio. Cada evento que le llega se revisa contra
-las propias transacciones de Nail Fest (`Payment` en la base de datos);
-si es nuestro, se procesa normal; si NO es nuestro, se reenvía intacto a
-la URL que antes tenía Shopify — que sigue recibiendo exactamente lo
-mismo que recibía antes, sin enterarse de que pasó por acá.
-
-**Antes de cambiar nada en el dashboard de Wompi:**
-1. Copia el valor ACTUAL de "URL de Eventos" (Configuración → Webhooks)
-   → guárdalo en Vercel como `WOMPI_SHOPIFY_RELAY_URL`.
-2. Espera a que ese cambio esté desplegado (mismo motivo que con Zoom:
-   la variable nueva necesita un redeploy).
-3. Solo entonces, en el dashboard de Wompi, reemplaza "URL de Eventos"
-   por `https://<tu-dominio>/api/webhooks/wompi`.
-
-**El riesgo real que esto acepta**: si el servidor de Nail Fest tiene un
-problema, la integración de Shopify se queda sin su aviso de pagos
-también, hasta que se resuelva — antes, cada una era independiente. Es
-un riesgo aceptado a propósito, no un descuido — si algún día prefieres
-eliminarlo del todo, la alternativa es un comercio de Wompi separado
-exclusivamente para Nail Fest (más trámite, cero riesgo compartido).
+- Toda referencia que genera Nail Fest empieza por `NF-` (`NF-<id del
+  pago>`, una por intento de pago).
+- Marcolini recibe todos los eventos del comercio, le responde 200 a
+  Wompi de inmediato y reenvía los `NF-` a
+  `https://nailfest.lat/api/wompi/events` con el body intacto y el header
+  `x-relay-secret` (= `RELAY_SHARED_SECRET`, el mismo valor en los dos
+  proyectos). Si Nail Fest no responde 2xx, Marcolini reintenta hasta 4
+  veces. Los eventos de Shopify también se los reenvía Marcolini: Nail
+  Fest ya no reenvía nada.
+- `/api/wompi/events` acepta el reenvío (header correcto y, además, el
+  checksum de Wompi si `WOMPI_EVENTS_SECRET` está cargado) o un evento
+  directo de Wompi (checksum); si no pasa ninguna, responde 401. Antes de
+  confirmar, consulta la transacción al API de Wompi y confirma con lo
+  que dice el API, no el body. Responde 500 si Wompi o la base de datos
+  fallan en ese momento, para que Marcolini reintente.
+- `/api/webhooks/wompi` (la URL de antes) sigue funcionando igual, por si
+  algún evento llega directo de Wompi.
 
 ## Zoom — paso a paso
 
@@ -206,7 +197,7 @@ verifica al instante en cuanto la guardas.
 
 Antes de vender la primera entrada real:
 
-1. Con `WOMPI_ENV=sandbox`, crea un evento virtual de prueba con un
+1. Con las llaves de sandbox (`pub_test_`/`prv_test_`), crea un evento virtual de prueba con un
    TicketType a precio bajo (ej. $1.000) y regístrate tú mismo — Wompi
    documenta tarjetas de prueba que siempre aprueban/rechazan a propósito.
 2. Confirma que: (a) `/[evento]/pago` muestra "¡Pago confirmado!", (b) te
@@ -216,8 +207,7 @@ Antes de vender la primera entrada real:
 3. Repite con una tarjeta de prueba que Wompi rechaza — confirma que
    `/[evento]/pago` muestra el mensaje de rechazo y que NO te llega
    ningún correo de ticket.
-4. Solo entonces cambia a `WOMPI_ENV=production` con las llaves de
-   producción.
+4. Solo entonces cambia a las llaves de producción.
 
 ## Lo que falta / limitaciones conocidas de esta primera versión
 

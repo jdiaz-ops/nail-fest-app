@@ -19,7 +19,7 @@ const fraunces = Fraunces({ subsets: ["latin"], weight: ["800", "900"] });
 // appends its own ?id=<transactionId> on top). This is the SYNCHRONOUS
 // confirmation path: the customer's browser lands here right after
 // paying, so it checks Wompi directly and confirms right then — it does
-// NOT just wait on the async webhook (see /api/webhooks/wompi), which is
+// NOT just wait on the async events (see lib/payments/wompiEvents.ts), which are
 // the eventual-consistency backstop for when this page never gets a
 // chance to run at all (closed tab, no redirect, etc.). Whichever of the
 // two gets there first does the real work — see
@@ -35,6 +35,10 @@ export default async function PaymentReturnPage({
 
   let result: ConfirmResult | "unknown" = "unknown";
   if (searchParams.id) {
+    // Read from Wompi's API here on the server (private key — the public
+    // one, with a warning in the logs, until it's loaded), never on the
+    // link's own word; and only a reference naming one of our payments
+    // (NF-...) confirms anything — see confirmRegistrationPayment.
     const transaction = await fetchTransaction(searchParams.id);
     result = transaction ? await confirmRegistrationPayment(transaction) : "error";
   } else if (searchParams.registrationId) {

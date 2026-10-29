@@ -5,7 +5,7 @@ import type { RegistrationStatus } from "@prisma/client";
 import { pushNewRegistrantToEventAudiences } from "@/lib/meta/audiences";
 import { recordConsents } from "@/lib/consent";
 import { finalizeConfirmedRegistration } from "@/lib/registrationConfirmation";
-import { buildCheckoutUrl } from "@/lib/payments/wompi";
+import { buildCheckoutUrl, wompiReference } from "@/lib/payments/wompi";
 import { clientIpFromHeaders, userAgentFromHeaders } from "@/lib/request";
 import { splitName } from "@/lib/name";
 import { getOrgSettings } from "@/lib/settings";
@@ -369,7 +369,7 @@ export async function POST(req: NextRequest) {
         const wasAlreadyConfirmed = existingRegistration?.status === "CONFIRMED";
 
         // A paid ticket type (TicketType.price > 0) goes to PENDING_PAYMENT
-        // instead of straight to CONFIRMED — see /api/webhooks/wompi and
+        // instead of straight to CONFIRMED — see lib/payments/wompiEvents.ts and
         // lib/payments/confirmRegistrationPayment.ts for what actually
         // confirms it once Wompi says the transaction is APPROVED. A
         // resend of something ALREADY confirmed (they paid before, this is
@@ -481,17 +481,19 @@ export async function POST(req: NextRequest) {
   // --- Paid ticket, not yet confirmed: send them to Wompi instead of
   // finalizing anything. No QR email, no WhatsApp, no Purchase CAPI yet —
   // all of that waits for a real APPROVED transaction (see
-  // /api/webhooks/wompi and /[eventSlug]/pago). A retried checkout (they
+  // lib/payments/wompiEvents.ts and /[eventSlug]/pago). A retried checkout (they
   // abandoned Wompi and resubmitted the form) lands right back here and
   // gets a FRESH Payment row/reference — see that model's own comment on
-  // why it's one row per attempt, not one per registration. ---
+  // why it's one row per attempt, not one per registration. The reference
+  // starts with NF- (2026-10-29): the comercio's events URL is Marcolini's,
+  // and that prefix is how it knows to relay this transaction's events here. ---
   if (registration.status === "PENDING_PAYMENT") {
     const amountInCents = ticketType!.price * registration.ticketCount * 100;
     const payment = await db.payment.create({
       data: { registrationId: registration.id, amountInCents, currency: "COP" },
     });
     const checkoutUrl = buildCheckoutUrl({
-      reference: payment.id,
+      reference: wompiReference(payment.id),
       amountInCents,
       currency: "COP",
       redirectUrl: `${process.env.APP_BASE_URL ?? ""}/${event.slug}/pago?registrationId=${registration.id}`,
