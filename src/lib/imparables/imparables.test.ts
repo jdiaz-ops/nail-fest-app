@@ -208,7 +208,9 @@ describe("how the page reads the blocks", () => {
     const { intro, rest: after } = introOf(rest);
     expect(intro?.heading.title).toBe("¿Qué tienen en común todos los conferencistas?");
     expect(intro?.text.html).toContain("<strong>dejar de pensar en pequeño</strong>");
-    expect(after[0]).toMatchObject({ type: "heading", eyebrow: "Conferencistas", title: "" });
+    // The speakers' section right after it, with no title of its own.
+    expect(after[0]).toMatchObject({ type: "heading", eyebrow: "", title: "" });
+    expect(after[1]).toMatchObject({ type: "people" });
     // A section with an eyebrow, or more than a text, is just a section.
     const plain = [{ type: "heading", eyebrow: "Agenda", title: "x", intro: "" }, { type: "text", html: "<p>y</p>" }] as LandingBlock[];
     expect(introOf(plain).intro).toBeNull();

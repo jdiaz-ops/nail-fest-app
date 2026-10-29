@@ -4619,6 +4619,10 @@ body:has(.imp) {
   gap: 0 14px;
   margin: 26px 0 -26px;
 }
+/* With no title over them (2026-10-29), the cards start the section. */
+.imp-sec-in > .imp-sp-grid:first-child {
+  margin-top: 0;
+}
 .imp-sp {
   text-align: center;
 }

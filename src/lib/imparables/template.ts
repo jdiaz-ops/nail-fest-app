@@ -175,8 +175,9 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
     html: "<p>Ninguno empezó arriba. Mesa alquilada, precios bajos, tres clientas, mil dudas. Lo único que tenían era una decisión: <strong>dejar de pensar en pequeño</strong>.</p><p>Hoy tienen marcas, sedes y academias. Y vienen a contarte cómo lo hicieron y a darte las estrategias y herramientas para que tú también lo logres.</p>",
   },
 
-  // Speakers, el panel y la maestra de ceremonias
-  { type: "heading", eyebrow: "Conferencistas", title: "", intro: "" },
+  // Speakers, el panel y la maestra de ceremonias: sin título, las tarjetas
+  // directo bajo «¿Qué tienen en común…?» (2026-10-29)
+  { type: "heading", eyebrow: "", title: "", intro: "" },
   { type: "people", items: IMPARABLES_SPEAKERS.map(({ name, handle, tag, photoUrl }) => ({ name, handle, tag, photoUrl, tone: "pink" as const })) },
   {
     type: "card",
