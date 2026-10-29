@@ -448,17 +448,18 @@ describe("the template", () => {
     expect(morning.find((r) => r.topic === "Panel «El día que decidí cambiar»")).toMatchObject({ instructor: "Maris", handles: "@maris_nails_oficial", text: "desde Chile", photoUrl: "/imparables/maris.jpg" });
   });
 
-  it("makes the afternoon the plan in five steps, from 1:45, each talk with its step, and the closing last", () => {
+  it("makes the afternoon the plan in five steps, from 1:45, each talk tagged with its step's name (no «Paso 1, 2…»), and the closing last", () => {
     const { afternoon } = agendaOf(IMPARABLES_BLOCKS);
     expect(afternoon.map((r) => [r.chip, r.label, r.instructor || r.topic])).toEqual([
-      ["1:45 p. m.", "Paso 1 · Tus números", "Alejandro Salinas"],
-      ["2:50 p. m.", "Paso 2 · Tu esencia", "Karen Pinzón"],
+      ["1:45 p. m.", "Tus números", "Alejandro Salinas"],
+      ["2:50 p. m.", "Tu esencia", "Karen Pinzón"],
       ["3:50 p. m.", "", "Pausa activa"],
-      ["4:05 p. m.", "Paso 3 · Atraer", "Fabi Pinillo Martínez"],
-      ["5:10 p. m.", "Paso 4 · Retener", "Juan Tenorio"],
-      ["6:15 p. m.", "Paso 5 · Tu ruta", "Oskar Garzón"],
+      ["4:05 p. m.", "Atraer", "Fabi Pinillo Martínez"],
+      ["5:10 p. m.", "Retener", "Juan Tenorio"],
+      ["6:15 p. m.", "Tu ruta", "Oskar Garzón"],
       ["6:45 p. m.", "", "Cierre y sorteo"],
     ]);
+    expect(afternoon.filter((r) => /paso/i.test(r.label))).toEqual([]);
   });
 
   it("puts the results right after the program", () => {
