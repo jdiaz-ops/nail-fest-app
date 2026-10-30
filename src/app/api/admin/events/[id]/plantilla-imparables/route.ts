@@ -7,7 +7,9 @@ import { sanitizeEventDescription } from "@/lib/sanitizeHtml";
 import { createTicketType } from "@/lib/ticketTypes";
 import { IMPARABLES_BLOCKS, IMPARABLES_FIELDS, IMPARABLES_STAGES, IMPARABLES_STAGE_QUANTITY } from "@/lib/imparables/template";
 
-// «Usar la plantilla de Manicuristas Imparables» (EventForm.tsx): the
+// «Usar la plantilla de Manicuristas Imparables» (EventForm.tsx's button until
+// 2026-10-30, when the team had it taken out: the event was built from it, and
+// another click would have put back the boceto over their edits): the
 // event's page becomes the approved boceto in the congress's design — its
 // blocks replaced by the template's (the admin confirmed that first, seeing
 // how many there were), its tagline, closing line, button and the line

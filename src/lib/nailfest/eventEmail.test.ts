@@ -69,7 +69,8 @@ describe("the body, ordered", () => {
   it("emoji lines as rows, a short line ending in «:» as a subtitle, the warning in a box with the line under it", () => {
     const main = sections[0]!.parts.join("");
     expect(main).toContain(">🛍️</td>");
-    expect(main).toMatch(/text-transform:uppercase;[^"]*">Prepárate para disfrutar de<\/div>/);
+    expect(main).toMatch(/color:#0f7d75;[^"]*">Prepárate para disfrutar de:<\/div>/);
+    expect(main).not.toContain("text-transform:uppercase");
     expect(main).toMatch(/background:#fff1ea[^"]*"><tr><td[^>]*><table[\s\S]*⚠️[\s\S]*Para ingresar/);
     expect(main).not.toContain("banner.jpg");
   });
@@ -102,6 +103,29 @@ describe("the email", () => {
     expect(text).toContain("Tu entrada va adjunta en PDF");
   });
 
+  it("its message, her ticket, her «Asistiré» and the colleague, then its doubts", () => {
+    const { html } = nailFestEventEmail(FRAME, mail);
+    const at = (s: string) => html.indexOf(s);
+    expect(at("Equipo Nail Fest")).toBeLessThan(at("Tu entrada va adjunta"));
+    expect(at("Tu entrada va adjunta")).toBeLessThan(at("¡Cuéntale a todos que vas!"));
+    expect(at("¡Cuéntale a todos que vas!")).toBeLessThan(at("¿Vas con una colega?"));
+    expect(at("¿Vas con una colega?")).toBeLessThan(at("Resolvemos tus dudas"));
+    expect(at("Ver el cronograma")).toBeLessThan(at("Síguenos en"));
+  });
+
+  it("the band as it's written, the banners' faces, the city in the script when there's its image", () => {
+    const { html } = nailFestEventEmail(FRAME, mail);
+    expect(html).not.toContain("text-transform");
+    expect(html).toMatch(/font-family:Dosis[^"]*">Falta 1 semana<\/td>/);
+    expect(html).toContain("family=Quicksand");
+    expect(html).not.toContain("Fraunces");
+    expect(html).not.toMatch(/[^-]serif/);
+    const lettering = { url: "https://nailfest.lat/api/correo/ciudad?c=C%C3%BAcuta&s=abc", width: 158, height: 77 };
+    const lettered = nailFestEventEmail({ ...FRAME, cityLettering: lettering }, mail).html;
+    expect(lettered).toContain('<img src="https://nailfest.lat/api/correo/ciudad?c=C%C3%BAcuta&amp;s=abc" width="158" height="77" alt="Cúcuta"');
+    expect(lettered).not.toContain(">Cúcuta</div>");
+  });
+
   it("nothing Gmail drops: no positioning, no negative margins", () => {
     const { html } = nailFestEventEmail(FRAME, mail);
     expect(html).not.toMatch(/position\s*:/);
@@ -110,7 +134,7 @@ describe("the email", () => {
 
   it("no band nor PDF note when there's none", () => {
     const { html } = nailFestEventEmail({ ...FRAME, helpUrl: null }, { ...mail, bodyHtml: "<p>Hola</p>", band: " ", pdfAttached: false, asistire: null });
-    expect(html).not.toContain("letter-spacing:0.16em;text-transform:uppercase;\">");
+    expect(html).not.toContain("font-family:Dosis");
     expect(html).not.toContain("Tu entrada va adjunta");
     expect(html).not.toContain("Escríbenos por WhatsApp");
     expect(html).not.toContain("Crear mi imagen");

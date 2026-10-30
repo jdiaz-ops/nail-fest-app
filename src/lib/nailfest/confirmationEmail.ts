@@ -1,3 +1,5 @@
+import type { CityLettering } from "./cityLettering";
+
 // Nail Fest's own confirmation email for its in-person events (2026-10-30,
 // first for Cúcuta), as in the approved boceto: the brand's header with the
 // city, «Entrada confirmada», the hello, her ticket — its QR big, her name,
@@ -45,6 +47,8 @@ export interface NailFestConfirmation {
   instagram: { handle: string; url: string };
   images: { logo: string };
   site: { url: string; host: string };
+  /** The city in Nail Fest's script (cityLettering.ts); its words without it. */
+  cityLettering?: CityLettering | null;
 }
 
 // The brand's colors (globals.css' --accent and EventRegistration's own), and
@@ -65,14 +69,29 @@ export const PEACH = "#ffc5a8";
 export const PEACH_SOFT = "#fff1ea";
 export const PINK = "#f6a5b8";
 
-export const SANS = "Inter, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
-export const SERIF = "Fraunces, Georgia, 'Times New Roman', serif";
+// The faces of Nail Fest's graphics (its banners, 2026-10-30): Quicksand for
+// the words and the titles, Dosis for the band, and the city in Satisfy as an
+// image (cityLettering.ts). Where the mail app loads fonts (Apple's,
+// Samsung's) they're these; Gmail and Outlook load none and show the next
+// ones — Roboto, Helvetica, Arial —, never a serif.
+export const SANS = "Quicksand, Nunito, 'Varela Round', 'Helvetica Neue', Helvetica, Roboto, Arial, sans-serif";
+export const BAND = "Dosis, Quicksand, 'Helvetica Neue', Helvetica, Roboto, Arial, sans-serif";
+export const FONTS = `<link href="https://fonts.googleapis.com/css2?family=Dosis:wght@700;800&amp;family=Quicksand:wght@400;500;600;700&amp;display=swap" rel="stylesheet">`;
 
 export const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 export const table = (inner: string, style = "") =>
   `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;${style}">${inner}</table>`;
 export const sans = (size: number, weight = 400, color = INK, extra = "") => `font-family:${SANS};font-size:${size}px;font-weight:${weight};color:${color};${extra}`;
-export const serif = (size: number, weight = 900, color = INK, extra = "") => `font-family:${SERIF};font-size:${size}px;font-weight:${weight};color:${color};line-height:1.12;${extra}`;
+export const display = (size: number, weight = 700, color = INK, extra = "") => `font-family:${SANS};font-size:${size}px;font-weight:${weight};color:${color};line-height:1.2;${extra}`;
+/** The band under the header: its words as they're written, in the banners' face. */
+export const band = (html: string) =>
+  `<tr><td align="center" style="padding:11px 18px;background:${TEAL};font-family:${BAND};font-size:16px;font-weight:800;color:${TEAL_INK};letter-spacing:0.05em;line-height:1.35;">${html}</td></tr>`;
+/** The city in the header: in Nail Fest's script, as an image; its words where there's none (its alt, in the same
+ * teal, when the mail app hides images). */
+export const cityHeading = (city: string, lettering: CityLettering | null | undefined) =>
+  lettering
+    ? `<img src="${esc(lettering.url)}" width="${lettering.width}" height="${lettering.height}" alt="${esc(city)}" style="display:block;margin:2px auto 0;width:${lettering.width}px;max-width:100%;height:auto;border:0;${display(34, 700, TEAL_DEEP)}">`
+    : `<div style="margin-top:6px;${display(36, 700, TEAL_DEEP, "line-height:1.1;")}">${esc(city)}</div>`;
 const eyebrow = (text: string) => `<div style="${sans(11.5, 800, TEAL_DEEP, "letter-spacing:0.16em;text-transform:uppercase;")}">${esc(text)}</div>`;
 export const button = (href: string, label: string, colors = `background:${TEAL};color:${TEAL_INK};`) =>
   `<a href="${esc(href)}" style="display:inline-block;padding:14px 26px;border-radius:999px;${colors}text-decoration:none;${sans(15.5, 800, "inherit")}">${label}</a>`;
@@ -137,7 +156,7 @@ export function nailFestConfirmationEmail(c: NailFestConfirmation): { html: stri
 <meta name="color-scheme" content="light only">
 <meta name="supported-color-schemes" content="light only">
 <title>${esc(hello)}</title>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,900&amp;family=Inter:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+${FONTS}
 <style>
 body{margin:0;padding:0;background:${PAGE};-webkit-text-size-adjust:100%;}
 a{color:inherit;}
@@ -151,12 +170,12 @@ ${table(
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background:#ffffff;border-radius:20px;overflow:hidden;border-collapse:separate;">
 <tr><td align="center" style="padding:30px 24px 26px;background:${BG};">
 <img src="${esc(c.images.logo)}" width="150" alt="Nail Fest" style="display:block;margin:0 auto;width:150px;height:auto;border:0;">
-<div style="margin-top:6px;${serif(54, 900, TEAL_DEEP, "line-height:1;")}">${esc(c.city)}</div>
+${cityHeading(c.city, c.cityLettering)}
 <div style="margin-top:10px;${sans(15, 700)}">${esc(c.dates)}&nbsp;<span style="font-weight:500;color:${GREY};">·&nbsp;${esc(c.year)}</span></div>
 </td></tr>
-<tr><td align="center" style="padding:11px 20px;background:${TEAL};${sans(13, 800, TEAL_INK, "letter-spacing:0.16em;")}">&#10003;&nbsp; ENTRADA CONFIRMADA</td></tr>
+${band("&#10003;&nbsp; Entrada confirmada")}
 <tr><td class="px" style="padding:28px 34px 4px;">
-<div style="${serif(30)}">${esc(hello)}</div>
+<div style="${display(30)}">${esc(hello)}</div>
 <div style="margin-top:10px;${sans(16, 400, GREY, "line-height:1.6;")}">${intro}</div>
 </td></tr>
 ${c.tickets.map((t, i) => `<tr><td class="px" style="padding:${i ? 14 : 20}px 34px 0;">${ticket(t, c.tickets.length === 1)}</td></tr>`).join("")}
@@ -169,7 +188,7 @@ ${
   c.asistire
     ? `<tr><td class="px" style="padding:30px 34px 0;">${table(
         `<tr><td align="center" style="padding:24px 22px;">
-<div style="${serif(22)}">¡Cuéntale a todos que vas!</div>
+<div style="${display(22)}">¡Cuéntale a todos que vas!</div>
 <div style="margin:8px auto 14px;max-width:420px;${sans(15, 400, GREY, "line-height:1.55;")}">Sube una foto tuya y te armamos tu imagen «Asistiré» para historias y publicaciones.</div>
 <a href="${esc(c.asistire.url)}" style="display:block;text-decoration:none;"><img src="${esc(c.asistire.image)}" width="132" alt="Tu imagen «¡Asistiré!»" style="display:block;margin:0 auto 16px;width:132px;height:auto;border:0;border-radius:12px;"></a>
 ${button(c.asistire.url, "Crear mi imagen")}
@@ -180,7 +199,7 @@ ${button(c.asistire.url, "Crear mi imagen")}
 }
 <tr><td class="px" style="padding:30px 34px 0;">${table(
   `<tr><td align="center" style="padding:26px 24px;">
-<div style="${serif(22, 900, "#ffffff", "line-height:1.2;")}">¿Vas con una colega?</div>
+<div style="${display(22, 700, "#ffffff")}">¿Vas con una colega?</div>
 <div style="margin:8px auto 16px;max-width:400px;${sans(15, 400, MINT_TEXT, "line-height:1.55;")}">La entrada es gratis: compártele el enlace para que se inscriba y tenga la suya.</div>
 ${button(c.share.url, "Compartir por WhatsApp", `background:#ffffff;color:${TEAL_INK};`)}
 </td></tr>`,

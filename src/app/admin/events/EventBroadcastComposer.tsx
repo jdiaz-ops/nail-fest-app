@@ -220,7 +220,7 @@ export default function EventBroadcastComposer({
       <div className="field">
         <label htmlFor="eb-check-in">Check-in</label>
         <select id="eb-check-in" value={checkIn} onChange={(e) => setCheckIn(e.target.value as CheckIn)}>
-          <option value="all">Todos, hayan hecho check-in o no</option>
+          <option value="all">Todos, hayan hecho check-in o no ({audience.count})</option>
           <option value="notCheckedIn">Solo quienes aún no han hecho check-in ({notCheckedInCount})</option>
           <option value="checkedIn">Solo quienes ya hicieron check-in ({audience.checkedIn})</option>
         </select>
@@ -242,7 +242,7 @@ export default function EventBroadcastComposer({
           <label htmlFor="eb-band">Franja (opcional)</label>
           <input id="eb-band" value={designBand} maxLength={60} onChange={(e) => setDesignBand(e.target.value)} placeholder="Falta 1 semana" />
           <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>
-            La franja turquesa bajo el encabezado del diseño Nail Fest. Vacía, no sale.
+            La franja turquesa bajo el encabezado del diseño Nail Fest, tal como la escribas. Vacía, no sale.
           </p>
         </div>
       )}

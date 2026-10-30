@@ -1,7 +1,7 @@
 import { emptyAgendaRow, type AgendaRow, type LandingBlock } from "@/lib/landingBlocks/types";
 
-// «Usar la plantilla de Manicuristas Imparables» (EventForm.tsx →
-// /api/admin/events/[id]/plantilla-imparables, 2026-10-26): the page of the
+// «Usar la plantilla de Manicuristas Imparables» (EventForm.tsx's button, gone
+// since 2026-10-30 → /api/admin/events/[id]/plantilla-imparables, 2026-10-26): the page of the
 // approved boceto, as ordinary blocks the team edits like any other event's —
 // the cover's group photo, the hook, the 8 speakers, the panel, the host, the
 // program (one day since 2026-10-29), the 3 results, what the ticket includes, who it is for,

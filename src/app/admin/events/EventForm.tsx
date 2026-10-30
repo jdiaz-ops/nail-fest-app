@@ -154,9 +154,6 @@ export default function EventForm({
   const [openCards, setOpenCards] = useState<Set<CardId>>(() => new Set(["contenido"]));
   const [baseline, setBaseline] = useState(() => JSON.stringify(initial));
   const [savedAt, setSavedAt] = useState<number | null>(null);
-  const [templating, setTemplating] = useState(false);
-  // Set right before reloading on purpose (after the template), so leaving doesn't ask.
-  const leaving = useRef(false);
   const dirty = JSON.stringify(values) !== baseline;
 
   // The tab lives in the address (#pagina…) so a reload, or a link from
@@ -174,7 +171,6 @@ export default function EventForm({
   useEffect(() => {
     if (!dirty) return;
     function onBeforeUnload(e: BeforeUnloadEvent) {
-      if (leaving.current) return;
       e.preventDefault();
       e.returnValue = "";
     }
@@ -219,35 +215,6 @@ export default function EventForm({
 
   function set<K extends keyof EventFormValues>(key: K, value: EventFormValues[K]) {
     setValues((v) => ({ ...v, [key]: value }));
-  }
-
-  // «Usar la plantilla de Manicuristas Imparables»: saved by the server
-  // (/api/admin/events/[id]/plantilla-imparables), then the editor reloads
-  // with it. Any other unsaved change would be lost, so those go first.
-  async function applyImparablesTemplate() {
-    if (!initial.id) return;
-    const saved = JSON.parse(baseline) as EventFormValues;
-    if (JSON.stringify({ ...values, theme: saved.theme, useLandingBlocks: saved.useLandingBlocks }) !== baseline) {
-      setError("Guarda tus cambios primero (botón Guardar cambios) y luego usa la plantilla.");
-      return;
-    }
-    const replaced = values.landingBlocks.length
-      ? `\n\nOjo: reemplaza los ${values.landingBlocks.length} bloques que tiene hoy el contenido.`
-      : "";
-    const ok = confirm(
-      `La página queda como el boceto: gancho, speakers, panel, maestra de ceremonias, agenda, qué incluye, ¿es para ti?, precios con garantía, preguntas y patrocinadores (ocultos hasta que haya logos).${replaced}\n\nTambién pone la bajada, la frase de cierre y el texto del botón si están vacíos, y crea las 3 etapas de precio si el evento no tiene entradas. No cambia fechas ni Zoom, y no le envía nada a nadie.`
-    );
-    if (!ok) return;
-    setTemplating(true);
-    setError(null);
-    const res = await fetch(`/api/admin/events/${initial.id}/plantilla-imparables`, { method: "POST" });
-    if (!res.ok) {
-      setTemplating(false);
-      setError("No se pudo aplicar la plantilla. Intenta de nuevo.");
-      return;
-    }
-    leaving.current = true;
-    window.location.reload();
   }
 
   function applyDuplicate(id: string) {
@@ -910,18 +877,6 @@ export default function EventForm({
                     (si la primera empezara más adelante, mientras tanto la página recibiría una lista de espera). La imagen de portada
                     y el carrusel de esta pestaña no se muestran en este diseño.
                   </p>
-                  {isEdit && (
-                    <div>
-                      <button
-                        type="button"
-                        onClick={applyImparablesTemplate}
-                        disabled={templating}
-                        style={{ padding: "8px 16px", borderRadius: 999, border: "none", background: "#14256c", color: "#fbe3a0", fontSize: 13, fontWeight: 700, cursor: "pointer", opacity: templating ? 0.6 : 1 }}
-                      >
-                        {templating ? "Aplicando…" : "Usar la plantilla de Manicuristas Imparables"}
-                      </button>
-                    </div>
-                  )}
                   {waitlist && waitlist.count > 0 && (
                     <p style={{ fontSize: 13, margin: 0 }}>
                       <strong>Lista de espera:</strong> {waitlist.count} {waitlist.count === 1 ? "persona" : "personas"}. Están en el CRM con la

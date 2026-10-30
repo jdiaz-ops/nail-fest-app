@@ -9,6 +9,7 @@ import { probeImageDimensions } from "@/lib/imageDimensions";
 import { asistireSampleUrl, asistireUrl } from "@/lib/imparables/asistire";
 import { defaultNailFestShareText, longDates, NAIL_FEST_DESIGN } from "./confirmation";
 import { hasNailFestAsistire } from "./asistire";
+import { cityLettering } from "./cityLettering";
 import { nailFestEventEmail, topBlocks, type NailFestEventEmailFrame } from "./eventEmail";
 
 // The event's part of Nail Fest's design for its emails (2026-10-30,
@@ -36,9 +37,11 @@ export async function nailFestEventEmailFrame(event: Event): Promise<NailFestEve
   page.searchParams.set("utm_medium", "referido");
   page.searchParams.set("utm_campaign", "correo_evento");
   const shareText = event.shareText?.trim() || defaultNailFestShareText(event, orgSettings.timezone);
+  const city = event.city?.trim() || publicEventName(event);
   return {
     eventName: publicEventName(event),
-    city: event.city?.trim() || publicEventName(event),
+    city,
+    cityLettering: cityLettering(base, city),
     dates: longDates(event, orgSettings.timezone),
     venue: event.venueName?.trim() || null,
     share: { url: `https://wa.me/?text=${encodeURIComponent(`${shareText} ${page.toString()}`)}`, free: paid === 0 },

@@ -1,14 +1,17 @@
 import { htmlToPlainText } from "@/lib/email/templates";
-import { BG, GREY, INK, LINE, MINT, MINT_LINE, MINT_TEXT, PAGE, PEACH, PEACH_SOFT, PINK, TEAL, TEAL_DEEP, TEAL_INK, button, esc, sans, serif, table } from "./confirmationEmail";
+import { BG, FONTS, GREY, INK, LINE, MINT, MINT_LINE, MINT_TEXT, PAGE, PEACH, PEACH_SOFT, PINK, TEAL_DEEP, TEAL_INK, band, button, cityHeading, display, esc, sans, table } from "./confirmationEmail";
+import type { CityLettering } from "./cityLettering";
 
 // Nail Fest's design for an event's emails (Correos del evento, 2026-10-30,
 // the team's boceto), chosen per event (Event.broadcastDesign "NAIL_FEST"):
 // each email as it was written — its subject, body, links and images — in the
-// event's frame: the logo, the city big, its days and place, an optional band
-// («Falta 1 semana», EmailBroadcast.designBand), her «Asistiré» image, a
-// colleague to invite, and a footer with help and Instagram. The email's own
-// banner, the wide image it opens with, gives way to the frame's header (the
-// team: it said the same twice). Its body is ordered on the way: a line that
+// event's frame: the logo, the city big in Nail Fest's script, its days and
+// place, an optional band («Falta 1 semana», EmailBroadcast.designBand, as
+// it's written), her «Asistiré» image and a colleague to invite — right after
+// its message, before its doubts (the team, same day) —, and a footer with
+// help and Instagram; in the faces of Nail Fest's banners (confirmationEmail.ts).
+// The email's own banner, the wide image it opens with, gives way to the
+// frame's header (the team: it said the same twice). Its body is ordered on the way: a line that
 // starts with an emoji becomes a row with the emoji in its own column (lines
 // right under it line up with its words), a short line ending in «:» a
 // subtitle, a ⚠️ line a box, an image full width with round corners, a link
@@ -24,6 +27,8 @@ export interface NailFestEventEmailFrame {
   eventName: string;
   /** «Cúcuta», big in the header. */
   city: string;
+  /** The city in Nail Fest's script (cityLettering.ts); its words without it. */
+  cityLettering?: CityLettering | null;
   /** «Sábado 7 y domingo 8 de noviembre» */
   dates: string;
   venue: string | null;
@@ -243,7 +248,7 @@ export function designedSections(bodyHtml: string, banner: string | null = null)
     }
     if (/^h[123]$/.test(b.tag)) {
       const heading = b.tag === "h1" ? 25 : b.tag === "h2" ? 21 : 18;
-      push(`<div style="margin:16px 0 10px;${serif(heading, 900, INK, `line-height:1.18;${align(b.attrs) ? `text-align:${align(b.attrs)};` : ""}`)}">${inline(b.inner)}</div>`);
+      push(`<div style="margin:16px 0 10px;${display(heading, 700, INK, align(b.attrs) ? `text-align:${align(b.attrs)};` : "")}">${inline(b.inner)}</div>`);
       continue;
     }
     if (b.tag === "ul" || b.tag === "ol") {
@@ -289,8 +294,9 @@ export function designedSections(bodyHtml: string, banner: string | null = null)
       }
       continue;
     }
+    // As it's written (2026-10-30, the team: no capitals it didn't type).
     if (words.length <= 70 && words.endsWith(":")) {
-      push(`<div style="margin:18px 0 8px;${sans(11, 800, TEAL_DEEP, "letter-spacing:0.12em;text-transform:uppercase;line-height:1.4;")}">${esc(words.replace(/:$/, ""))}</div>`);
+      push(`<div style="margin:18px 0 8px;${sans(15.5, 700, TEAL_DEEP, "line-height:1.4;")}">${esc(words)}</div>`);
       continue;
     }
     // A link alone on its line: a button.
@@ -320,13 +326,19 @@ const card = (inner: string, look: string, padding = "22px 20px 12px") =>
 export function nailFestEventEmail(frame: NailFestEventEmailFrame, mail: NailFestEventEmailContent): { subject: string; text: string; html: string } {
   const sections = designedSections(mail.bodyHtml, mail.banner);
   const preheader = textOf(mail.bodyHtml).slice(0, 110);
-  const cards = sections
-    .map((s) =>
-      s.title
-        ? card(`<div style="margin:0 0 12px;${serif(20, 900, INK, "line-height:1.2;")}">${esc(s.title)}</div>${s.parts.join("")}`, `background:${MINT};border:1px solid ${MINT_LINE};`, "20px 18px 10px")
-        : card(s.parts.join(""), "background:#ffffff;")
-    )
-    .join("");
+  const cards = (list: Section[]) =>
+    list
+      .map((s) =>
+        s.title
+          ? card(`<div style="margin:0 0 12px;${display(20)}">${esc(s.title)}</div>${s.parts.join("")}`, `background:${MINT};border:1px solid ${MINT_LINE};`, "20px 18px 10px")
+          : card(s.parts.join(""), "background:#ffffff;")
+      )
+      .join("");
+  // Its message, then her ticket, her «Asistiré» and the colleague; its doubts (its first titled card) and what follows,
+  // after them.
+  const doubts = sections.findIndex((s) => s.title);
+  const message = doubts < 0 ? sections : sections.slice(0, doubts);
+  const rest = doubts < 0 ? [] : sections.slice(doubts);
   const pdf = mail.pdfAttached
     ? `<tr><td style="padding:14px 12px 0;">${table(
         `<tr><td width="52" style="width:52px;padding:14px 0 14px 16px;"><div style="width:40px;height:40px;border-radius:10px;background:${PEACH};text-align:center;${sans(12, 900, INK, "line-height:40px;")}">PDF</div></td><td style="padding:14px 16px 14px 12px;"><div style="${sans(14.5, 700, "#ffffff")}">Tu entrada va adjunta</div><div style="${sans(12.5, 400, "#cfd2d8")}">Muéstrala en la puerta, en el celular o impresa.</div></td></tr>`,
@@ -336,7 +348,7 @@ export function nailFestEventEmail(frame: NailFestEventEmailFrame, mail: NailFes
   const asistire = mail.asistire
     ? card(
         `<div style="text-align:center;">
-<div style="${serif(21, 900, INK, "line-height:1.2;")}">¡Cuéntale a todos que vas!</div>
+<div style="${display(21)}">¡Cuéntale a todos que vas!</div>
 <div style="margin:8px auto 14px;max-width:400px;${sans(14.5, 400, GREY, "line-height:1.55;")}">Sube una foto tuya y te armamos tu imagen «Asistiré» para historias y publicaciones.</div>
 <a href="${esc(mail.asistire)}" style="display:block;text-decoration:none;"><img src="${esc(frame.asistireImage)}" width="120" alt="Tu imagen «¡Asistiré!»" style="display:block;margin:0 auto 14px;width:120px;height:auto;border:0;border-radius:12px;"></a>
 ${button(mail.asistire, "Crear mi imagen")}
@@ -347,7 +359,7 @@ ${button(mail.asistire, "Crear mi imagen")}
     : "";
   const colega = card(
     `<div style="text-align:center;">
-<div style="${serif(21, 900, "#ffffff", "line-height:1.2;")}">¿Vas con una colega?</div>
+<div style="${display(21, 700, "#ffffff")}">¿Vas con una colega?</div>
 <div style="margin:8px auto 14px;max-width:400px;${sans(14.5, 400, MINT_TEXT, "line-height:1.55;")}">${frame.share.free ? "La entrada es gratis: compártele el enlace para que se inscriba y tenga la suya." : "Compártele el enlace para que se inscriba y tenga la suya."}</div>
 ${button(frame.share.url, "Compartir por WhatsApp", `background:#ffffff;color:${TEAL_INK};`)}
 </div>`,
@@ -363,7 +375,7 @@ ${button(frame.share.url, "Compartir por WhatsApp", `background:#ffffff;color:${
 <meta name="color-scheme" content="light only">
 <meta name="supported-color-schemes" content="light only">
 <title>${esc(mail.subject)}</title>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,900&amp;family=Inter:wght@400;600;700;800&amp;display=swap" rel="stylesheet">
+${FONTS}
 <style>
 body{margin:0;padding:0;background:${PAGE};-webkit-text-size-adjust:100%;}
 a{color:inherit;}
@@ -376,14 +388,15 @@ ${table(
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background:${BG};border-radius:20px;overflow:hidden;border-collapse:separate;">
 <tr><td align="center" style="padding:24px 18px 20px;background:${BG};">
 <img src="${esc(frame.logo)}" width="110" alt="Nail Fest" style="display:block;margin:0 auto;width:110px;height:auto;border:0;">
-<div style="margin-top:4px;${serif(42, 900, TEAL_DEEP, "line-height:1;")}">${esc(frame.city)}</div>
+${cityHeading(frame.city, frame.cityLettering)}
 <div style="margin-top:8px;${sans(14, 700, INK, "line-height:1.45;")}">${esc(frame.dates)}${frame.venue ? `<br><span style="font-weight:500;color:${GREY};">${esc(frame.venue)}</span>` : ""}</div>
 </td></tr>
-${mail.band?.trim() ? `<tr><td align="center" style="padding:10px 16px;background:${TEAL};${sans(12.5, 800, TEAL_INK, "letter-spacing:0.14em;text-transform:uppercase;")}">${esc(mail.band.trim())}</td></tr>` : ""}
-${cards}
+${mail.band?.trim() ? band(esc(mail.band.trim())) : ""}
+${cards(message)}
 ${pdf}
 ${asistire}
 ${colega}
+${cards(rest)}
 <tr><td align="center" style="padding:24px 20px 26px;${sans(13, 400, GREY, "line-height:1.7;")}">
 ${frame.helpUrl ? `¿Dudas? <a href="${esc(frame.helpUrl)}" style="font-weight:700;color:${TEAL_DEEP};text-decoration:none;">Escríbenos por WhatsApp</a> · ` : ""}Síguenos en <a href="${esc(frame.instagram.url)}" style="font-weight:700;color:${TEAL_DEEP};text-decoration:none;">${esc(frame.instagram.handle)}</a>
 <img src="${esc(frame.logo)}" width="64" alt="Nail Fest" style="display:block;margin:10px auto 2px;width:64px;height:auto;border:0;">

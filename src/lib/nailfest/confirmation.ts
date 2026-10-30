@@ -10,6 +10,7 @@ import { issueQrToken } from "@/lib/ticket";
 import { asistireSampleUrl, asistireUrl } from "@/lib/imparables/asistire";
 import { googleCalendarUrl, type CalendarEvent } from "@/lib/imparables/confirmationEmail";
 import { defaultInvite, nailFestConfirmationEmail, type NailFestConfirmation, type NailFestTicket } from "./confirmationEmail";
+import { cityLettering } from "./cityLettering";
 
 // What Nail Fest's own confirmation email for its in-person events says
 // (lib/nailfest/confirmationEmail.ts, 2026-10-30), from the database: the
@@ -102,10 +103,12 @@ async function confirmationOf(
   page.searchParams.set("utm_campaign", "confirmacion");
   const shareText = (edits.shareText !== undefined ? edits.shareText : event.shareText)?.trim() || defaultNailFestShareText(event, tz);
   const digits = whatsapp?.displayPhoneNumber?.replace(/\D/g, "") ?? "";
+  const city = event.city?.trim() || publicEventName(event);
   return {
     firstName: sayName(her.firstName),
     eventName: publicEventName(event),
-    city: event.city?.trim() || publicEventName(event),
+    city,
+    cityLettering: cityLettering(base, city),
     dates: longDates(event, tz),
     year: formatDateInTz(event.startsAt, { year: "numeric" }, tz, "es"),
     days,
