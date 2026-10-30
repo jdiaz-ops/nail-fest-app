@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { EventFormat } from "@prisma/client";
 import RichTextEditor, { type RichTextEditorHandle } from "@/components/RichTextEditor";
@@ -22,6 +22,7 @@ type EditingBroadcast = {
   subject: string;
   bodyHtml: string;
   attachTicketPdf: boolean;
+  designBand: string | null;
   onlyCheckedIn: boolean;
   onlyNotCheckedIn: boolean;
   scheduleKind: ScheduleKind;
@@ -56,6 +57,7 @@ function minutesToOffset(totalMinutes: number): { value: number; unit: "minutos"
 export default function EventBroadcastComposer({
   eventId,
   eventFormat,
+  designOn = false,
   ticketTypes,
   allBuyers,
   initial,
@@ -67,6 +69,9 @@ export default function EventBroadcastComposer({
   // caller without it just never shows that button (same as before it
   // existed).
   eventFormat?: EventFormat;
+  // The event's emails go in Nail Fest's design (Event.broadcastDesign,
+  // 2026-10-30): a band to write, and how it looks, as it's written.
+  designOn?: boolean;
   // count = confirmed registrations; checkedIn = how many of them were
   // already scanned at the door (the ones not scanned yet are the rest).
   ticketTypes: { id: string; name: string; count: number; checkedIn: number }[];
@@ -78,7 +83,15 @@ export default function EventBroadcastComposer({
   // deliberately NOT copied — this is always a brand-new send the admin
   // configures fresh (a stale scheduled date from the original wouldn't
   // make sense to inherit silently), same as the plain "new" case.
-  initial?: { ticketTypeId: string | null; subject: string; bodyHtml: string; attachTicketPdf: boolean; onlyCheckedIn?: boolean; onlyNotCheckedIn?: boolean };
+  initial?: {
+    ticketTypeId: string | null;
+    subject: string;
+    bodyHtml: string;
+    attachTicketPdf: boolean;
+    designBand?: string | null;
+    onlyCheckedIn?: boolean;
+    onlyNotCheckedIn?: boolean;
+  };
   // Set when this composer opened from "Editar" on an existing QUEUED
   // broadcast (see the list's own "Editar" link, shown only for QUEUED
   // rows). Unlike `initial`, this ALSO pre-fills the existing schedule
@@ -95,6 +108,23 @@ export default function EventBroadcastComposer({
   const [subject, setSubject] = useState(editing?.subject ?? initial?.subject ?? "");
   const [bodyHtml, setBodyHtml] = useState(editing?.bodyHtml ?? initial?.bodyHtml ?? "");
   const [attachTicketPdf, setAttachTicketPdf] = useState(editing?.attachTicketPdf ?? initial?.attachTicketPdf ?? false);
+  const [designBand, setDesignBand] = useState(editing?.designBand ?? initial?.designBand ?? "");
+  // «Así se ve»: the email in the design, a moment after each change.
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+  useEffect(() => {
+    if (!designOn) return;
+    const timer = setTimeout(() => {
+      fetch(`/api/admin/events/${eventId}/broadcasts/preview`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subject, bodyHtml, band: designBand, attachTicketPdf }),
+      })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((body) => body?.html && setPreviewHtml(body.html))
+        .catch(() => {});
+    }, 900);
+    return () => clearTimeout(timer);
+  }, [designOn, eventId, subject, bodyHtml, designBand, attachTicketPdf]);
   const [checkIn, setCheckIn] = useState<CheckIn>(checkInFrom(editing ?? initial));
   const [scheduleKind, setScheduleKind] = useState<ScheduleKind>(editing?.scheduleKind ?? "IMMEDIATE");
   const [scheduledAtLocal, setScheduledAtLocal] = useState(
@@ -120,7 +150,7 @@ export default function EventBroadcastComposer({
     const res = await fetch(`/api/admin/events/${eventId}/broadcasts/test`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ subject, bodyHtml, to: testTo.split(",").map((s) => s.trim()).filter(Boolean) }),
+      body: JSON.stringify({ subject, bodyHtml, band: designBand, attachTicketPdf, to: testTo.split(",").map((s) => s.trim()).filter(Boolean) }),
     });
     const body = await res.json().catch(() => ({}));
     setTestSending(false);
@@ -140,6 +170,7 @@ export default function EventBroadcastComposer({
       subject,
       bodyHtml,
       attachTicketPdf,
+      designBand: designBand.trim() || null,
       onlyCheckedIn: checkIn === "checkedIn",
       onlyNotCheckedIn: checkIn === "notCheckedIn",
       scheduleKind,
@@ -206,6 +237,16 @@ export default function EventBroadcastComposer({
         <input value={subject} onChange={(e) => setSubject(e.target.value)} required />
       </div>
 
+      {designOn && (
+        <div className="field">
+          <label htmlFor="eb-band">Franja (opcional)</label>
+          <input id="eb-band" value={designBand} maxLength={60} onChange={(e) => setDesignBand(e.target.value)} placeholder="Falta 1 semana" />
+          <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>
+            La franja turquesa bajo el encabezado del diseño Nail Fest. Vacía, no sale.
+          </p>
+        </div>
+      )}
+
       <div className="field">
         <label>Mensaje</label>
         {eventFormat && eventFormat !== "IN_PERSON" && (
@@ -238,6 +279,25 @@ export default function EventBroadcastComposer({
         </div>
         <RichTextEditor ref={editorRef} value={bodyHtml} onChange={setBodyHtml} />
       </div>
+
+      {designOn && (
+        <div className="field">
+          <label>Así se ve, con el diseño Nail Fest</label>
+          <p style={{ fontSize: 12, color: "#5b5f6b", margin: "0 0 6px" }}>
+            Se actualiza mientras escribes. Las líneas que empiezan con emoji quedan alineadas, las cortas que terminan en «:» como subtítulos, los ⚠️ en un recuadro, y lo que va después de una línea horizontal, en su propia tarjeta.
+          </p>
+          {previewHtml ? (
+            <iframe
+              title="Así se ve el correo"
+              srcDoc={previewHtml}
+              sandbox=""
+              style={{ display: "block", width: "100%", height: 900, border: "1px solid #e3e1dc", borderRadius: 12, background: "#efede8" }}
+            />
+          ) : (
+            <p style={{ fontSize: 13, color: "#8a8478" }}>Armando la vista previa…</p>
+          )}
+        </div>
+      )}
 
       <div className="field">
         <label style={{ display: "flex", alignItems: "center", gap: 8 }}>

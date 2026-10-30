@@ -15,6 +15,7 @@ vi.mock("@/lib/email", () => ({ emailProvider: { sendTransactional } }));
 vi.mock("@/lib/confirmationSample", () => ({ sampleConfirmation }));
 vi.mock("@/lib/settings", () => ({ getOrgSettings }));
 vi.mock("@/lib/ticketPdf", () => ({ renderTicketPdfBuffer }));
+vi.mock("@/lib/eventDisplayName", () => ({ publicEventName: (e: { name: string }) => e.name }));
 
 import { POST } from "./route";
 

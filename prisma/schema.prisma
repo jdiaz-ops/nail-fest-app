@@ -283,6 +283,10 @@ model Event {
   // usual one with her «Asistiré» image and an invitation for a colleague
   // under it (components/nailfest/SignedUp.tsx). Null: the usual one.
   signupScreenDesign        String?
+  // Its emails (Correos del evento) in a design (2026-10-30): "NAIL_FEST" —
+  // Nail Fest's frame for an event at a place, the body as written, ordered
+  // (lib/nailfest/eventEmail.ts). Null: as always.
+  broadcastDesign           String?
   // A richer, structured alternative to `description` for an event that
   // wants a real sales-script landing (hero/story/value-stack table/
   // schedule/speakers/FAQ/etc. — see lib/salesPage/types.ts) instead of
@@ -959,6 +963,9 @@ model EmailBroadcast {
   // EventBroadcastComposer.tsx when they actually want recipients to get
   // their entrada attached again (e.g. a reminder broadcast).
   attachTicketPdf       Boolean               @default(false)
+  // The band under the header of its event's designed email (2026-10-30,
+  // Event.broadcastDesign): «Falta 1 semana». Null: no band.
+  designBand            String?
   // Event broadcasts only: send to the registrants who were scanned at the
   // door (Registration.checkedInCount > 0) instead of everyone CONFIRMED —
   // the "ask attendees for a review" send, see lib/reviews.ts.

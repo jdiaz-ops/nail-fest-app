@@ -42,6 +42,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       subject: data.subject,
       bodyHtml: sanitizeEventDescription(data.bodyHtml),
       attachTicketPdf: data.attachTicketPdf,
+      designBand: data.designBand?.trim() || null,
       onlyCheckedIn: data.onlyCheckedIn,
       onlyNotCheckedIn: data.onlyNotCheckedIn,
       scheduleKind: data.scheduleKind,

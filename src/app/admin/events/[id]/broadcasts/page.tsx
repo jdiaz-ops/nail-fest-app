@@ -9,6 +9,9 @@ import { getEmailBroadcastStats } from "@/lib/broadcasts";
 import { requirePageUser } from "@/lib/auth/guard";
 import ResumeBroadcastButton from "@/components/ResumeBroadcastButton";
 import { isBroadcastStuck } from "@/lib/broadcastProgress";
+import { hasNailFestAsistire } from "@/lib/nailfest/asistire";
+import { NAIL_FEST_DESIGN } from "@/lib/nailfest/confirmation";
+import BroadcastDesignSwitch from "./BroadcastDesignSwitch";
 
 export const dynamic = "force-dynamic";
 
@@ -67,6 +70,15 @@ export default async function EventBroadcastsPage({ params }: { params: { id: st
   if (!event) notFound();
 
   const stats = await Promise.all(broadcasts.map((b) => getEmailBroadcastStats(b.id)));
+  // Nail Fest's design for its emails (2026-10-30), for one of its events at a place: the switch, and each email in it.
+  const designable = hasNailFestAsistire(event);
+  const preview = (id: string) => `/api/admin/events/${event.id}/broadcasts/${id}/preview`;
+  const next = designable
+    ? broadcasts
+        .filter((b) => b.status === "QUEUED" && b.bodyHtml)
+        .map((b) => ({ b, at: resolveDueAt(b, event)?.getTime() ?? Infinity }))
+        .sort((x, y) => x.at - y.at)[0]?.b ?? null
+    : null;
 
   return (
     <div>
@@ -80,6 +92,8 @@ export default async function EventBroadcastsPage({ params }: { params: { id: st
         Correos solo para quien se inscribió a este evento — recordatorios, avisos de cambios, agradecimiento
         post-evento. Para correos generales a toda la base, ve a CRM → Broadcasts.
       </p>
+
+      {designable && <BroadcastDesignSwitch eventId={event.id} on={event.broadcastDesign === NAIL_FEST_DESIGN} nextPreview={next ? preview(next.id) : null} />}
 
       <div className="admin-table-wrap" style={{ border: "1px solid #e3e1dc", borderRadius: 10 }}>
         <table style={{ borderCollapse: "collapse", fontSize: 13 }}>
@@ -177,6 +191,11 @@ export default async function EventBroadcastsPage({ params }: { params: { id: st
                     <Link href={`/admin/events/${event.id}/broadcasts/new?duplicate=${b.id}`} style={{ fontSize: 13 }}>
                       Duplicar
                     </Link>
+                    {designable && b.bodyHtml && (
+                      <a href={preview(b.id)} target="_blank" rel="noreferrer" style={{ fontSize: 13 }}>
+                        Ver con el diseño ↗
+                      </a>
+                    )}
                   </td>
                 </tr>
               );

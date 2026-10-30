@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { requirePageUser } from "@/lib/auth/guard";
 import { eventBroadcastAudienceCounts } from "@/lib/broadcastRecipients";
 import EventBroadcastComposer from "../../../EventBroadcastComposer";
+import { usesNailFestEventEmail } from "@/lib/nailfest/eventEmailFrame";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +42,7 @@ export default async function NewEventBroadcastPage({
       <EventBroadcastComposer
         eventId={params.id}
         eventFormat={event.format}
+        designOn={usesNailFestEventEmail(event)}
         ticketTypes={ticketTypeCounts}
         allBuyers={counts.all}
         initial={
@@ -50,6 +52,7 @@ export default async function NewEventBroadcastPage({
                 subject: source.subject,
                 bodyHtml: source.bodyHtml ?? "",
                 attachTicketPdf: source.attachTicketPdf,
+                designBand: source.designBand,
                 onlyCheckedIn: source.onlyCheckedIn,
                 onlyNotCheckedIn: source.onlyNotCheckedIn,
               }

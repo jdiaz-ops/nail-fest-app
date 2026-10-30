@@ -46,32 +46,34 @@ export interface NailFestConfirmation {
   site: { url: string; host: string };
 }
 
-// The brand's colors (globals.css' --accent and EventRegistration's own).
-const BG = "#faf9f7";
-const PAGE = "#efede8";
-const LINE = "#e3e1dc";
-const INK = "#17181c";
-const GREY = "#5b5f6b";
-const TEAL = "#00beb5";
-const TEAL_DEEP = "#0f7d75";
-const TEAL_INK = "#0b2e2c";
-const MINT = "#e6f9f7";
-const MINT_LINE = "#b7e8e3";
-const MINT_TEXT = "#d6f1ee";
-const PEACH = "#ffc5a8";
-const PEACH_SOFT = "#fff1ea";
-const PINK = "#f6a5b8";
+// The brand's colors (globals.css' --accent and EventRegistration's own), and
+// the helpers its emails are written with — shared with the event's emails
+// (eventEmail.ts).
+export const BG = "#faf9f7";
+export const PAGE = "#efede8";
+export const LINE = "#e3e1dc";
+export const INK = "#17181c";
+export const GREY = "#5b5f6b";
+export const TEAL = "#00beb5";
+export const TEAL_DEEP = "#0f7d75";
+export const TEAL_INK = "#0b2e2c";
+export const MINT = "#e6f9f7";
+export const MINT_LINE = "#b7e8e3";
+export const MINT_TEXT = "#d6f1ee";
+export const PEACH = "#ffc5a8";
+export const PEACH_SOFT = "#fff1ea";
+export const PINK = "#f6a5b8";
 
-const SANS = "Inter, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
-const SERIF = "Fraunces, Georgia, 'Times New Roman', serif";
+export const SANS = "Inter, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+export const SERIF = "Fraunces, Georgia, 'Times New Roman', serif";
 
-const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-const table = (inner: string, style = "") =>
+export const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+export const table = (inner: string, style = "") =>
   `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;${style}">${inner}</table>`;
-const sans = (size: number, weight = 400, color = INK, extra = "") => `font-family:${SANS};font-size:${size}px;font-weight:${weight};color:${color};${extra}`;
-const serif = (size: number, weight = 900, color = INK, extra = "") => `font-family:${SERIF};font-size:${size}px;font-weight:${weight};color:${color};line-height:1.12;${extra}`;
+export const sans = (size: number, weight = 400, color = INK, extra = "") => `font-family:${SANS};font-size:${size}px;font-weight:${weight};color:${color};${extra}`;
+export const serif = (size: number, weight = 900, color = INK, extra = "") => `font-family:${SERIF};font-size:${size}px;font-weight:${weight};color:${color};line-height:1.12;${extra}`;
 const eyebrow = (text: string) => `<div style="${sans(11.5, 800, TEAL_DEEP, "letter-spacing:0.16em;text-transform:uppercase;")}">${esc(text)}</div>`;
-const button = (href: string, label: string, colors = `background:${TEAL};color:${TEAL_INK};`) =>
+export const button = (href: string, label: string, colors = `background:${TEAL};color:${TEAL_INK};`) =>
   `<a href="${esc(href)}" style="display:inline-block;padding:14px 26px;border-radius:999px;${colors}text-decoration:none;${sans(15.5, 800, "inherit")}">${label}</a>`;
 const outline = (href: string, label: string) =>
   `<a href="${esc(href)}" style="display:inline-block;margin:8px 6px 0 0;padding:8px 15px;border:1.5px solid ${INK};border-radius:999px;text-decoration:none;${sans(13.5, 800, INK)}">${label}</a>`;

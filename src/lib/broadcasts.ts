@@ -8,6 +8,8 @@ import { emailProvider } from "@/lib/email";
 import { broadcastEmail, broadcastEmailHtml } from "@/lib/email/templates";
 import { buildUnsubscribeUrl } from "@/lib/unsubscribe";
 import { renderTicketPdfBuffer } from "@/lib/ticketPdf";
+import { nailFestEventEmail } from "@/lib/nailfest/eventEmail";
+import { nailFestEventEmailFrame, usesNailFestEventEmail } from "@/lib/nailfest/eventEmailFrame";
 import { confirmationCodeFor } from "@/lib/ticket";
 import { getOrgSettings } from "@/lib/settings";
 import { publishChunkContinuation, scheduleEventBroadcastSend, scheduleAutoRetry, AUTO_RETRY_DELAYS_SECONDS, QSTASH_MAX_DELAY_MS, QSTASH_GRACE_MS, CHUNK_WATCHDOG_SECONDS, CHUNK_LOCK_SECONDS } from "@/lib/qstash";
@@ -85,6 +87,8 @@ export async function sendEventBroadcast(
   // ticket types even within "all buyers", so each PDF needs its own
   // ticketTypeName looked up by that recipient's own registration.
   const orgSettings = broadcast.attachTicketPdf ? await getOrgSettings() : null;
+  // Its event's design, when it chose one (Event.broadcastDesign, 2026-10-30): the event's part, once.
+  const frame = usesNailFestEventEmail(broadcast.event) ? await nailFestEventEmailFrame(broadcast.event) : null;
 
   let sent = 0;
   let skippedNoConsent = 0;
@@ -179,7 +183,6 @@ export async function sendEventBroadcast(
           // (lib/reviews.ts). Blank when the registration has no token,
           // same fallback as every other merge tag.
           const withReviewLink = personalizedBodyHtml.split(REVIEW_LINK_TAG).join(registration.qrToken ? reviewUrl(registration.qrToken) : "");
-          const content = broadcastEmailHtml({ subject: broadcast.subject, bodyHtml: withReviewLink });
           // Same "never let a PDF problem block the whole send" reasoning
           // as sendTicketEmail.ts — a recipient with no qrToken
           // (shouldn't happen for a CONFIRMED registration, but not
@@ -206,6 +209,9 @@ export async function sendEventBroadcast(
                   return null;
                 })
               : null;
+          const content = frame
+            ? nailFestEventEmail(frame, { subject: broadcast.subject, bodyHtml: withReviewLink, band: broadcast.designBand, pdfAttached: Boolean(pdfAttachment) })
+            : broadcastEmailHtml({ subject: broadcast.subject, bodyHtml: withReviewLink });
           try {
             const result = await emailProvider.sendTransactional({
               to: person.email,

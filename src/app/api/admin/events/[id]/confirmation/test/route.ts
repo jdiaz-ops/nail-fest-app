@@ -4,8 +4,7 @@ import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth/guard";
 import { emailProvider } from "@/lib/email";
 import { getOrgSettings } from "@/lib/settings";
-import { publicEventName } from "@/lib/eventDisplayName";
-import { renderTicketPdfBuffer } from "@/lib/ticketPdf";
+import { sampleTicketPdf } from "@/lib/ticketPdfSample";
 import { sampleConfirmation } from "@/lib/confirmationSample";
 
 export const dynamic = "force-dynamic";
@@ -47,25 +46,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const { html, subject, shareText } = parsed.data;
     const email = await sampleConfirmation(event, parsed.data.mode, { html, subject, ...(shareText !== undefined ? { shareText } : {}) });
     const orgSettings = await getOrgSettings();
-    const type = await db.ticketType.findFirst({ where: { eventId: event.id, status: "ON_SALE" }, orderBy: { order: "asc" }, select: { name: true } });
-    const pdf =
-      orgSettings.attachTicketPdf && event.format !== "VIRTUAL"
-        ? await renderTicketPdfBuffer({
-            firstName: "Laura",
-            lastName: "Gómez",
-            eventName: publicEventName(event),
-            venueName: event.venueName ?? undefined,
-            venueAddress: event.venueAddress ?? undefined,
-            startsAt: event.startsAt,
-            endsAt: event.endsAt ?? undefined,
-            scheduleDays: event.scheduleDays,
-            ticketTypeName: type?.name,
-            confirmationCode: "EJEMPLO1",
-            qrToken: "VISTA-PREVIA-NO-ES-UNA-ENTRADA-REAL",
-            timezone: orgSettings.timezone,
-            language: orgSettings.language,
-          })
-        : null;
+    const pdf = orgSettings.attachTicketPdf && event.format !== "VIRTUAL" ? await sampleTicketPdf(event) : null;
     for (const address of to) {
       await emailProvider.sendTransactional({
         to: address,
