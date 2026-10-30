@@ -93,6 +93,15 @@ export async function DELETE(req: NextRequest) {
   const id = searchParams.get("id");
   if (!id) return NextResponse.json({ error: "missing_id" }, { status: 400 });
 
+  // A sequence's segment stays (2026-10-30): say which one uses it instead.
+  const usedBy = await db.sequence.findFirst({ where: { segmentId: id }, select: { name: true } });
+  if (usedBy) {
+    return NextResponse.json(
+      { error: "in_use", message: `La secuencia «${usedBy.name}» usa este segmento. Cámbiale el segmento primero.` },
+      { status: 409 }
+    );
+  }
+
   // SegmentMetaSync cascades via the FK on delete? No — schema uses
   // onDelete: RESTRICT (Prisma default), so remove the link first.
   await db.segmentMetaSync.deleteMany({ where: { segmentId: id } });

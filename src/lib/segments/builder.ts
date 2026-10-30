@@ -142,6 +142,16 @@ function union(sets: Set<string>[]): Set<string> {
   return new Set(sets.flatMap((s) => [...s]));
 }
 
+/** Who is in the segment, by id only — for the sequences (lib/sequences/engine.ts), which only need to know who entered and who left. */
+export async function segmentPersonIds(rawFilter: SegmentFilter): Promise<string[]> {
+  const filter = normalizeFilter(rawFilter);
+  const includeSets = await Promise.all(filter.include.map(matchingPersonIds));
+  const included =
+    includeSets.length > 0 ? intersect(includeSets) : new Set((await db.person.findMany({ select: { id: true } })).map((p) => p.id));
+  const excluded = union(await Promise.all(filter.exclude.map(matchingPersonIds)));
+  return [...included].filter((id) => !excluded.has(id));
+}
+
 export async function resolveSegment(rawFilter: SegmentFilter): Promise<Person[]> {
   const filter = normalizeFilter(rawFilter);
 

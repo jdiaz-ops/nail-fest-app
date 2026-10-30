@@ -77,6 +77,7 @@ model Person {
   communityMembers      CommunityMember[]
   // What she answered in La Mesa's email (Mito o verdad, El termómetro).
   mesaVotes             MesaVote[]
+  sequenceEnrollments   SequenceEnrollment[]
 
   @@index([phone])
   @@index([city])
@@ -316,6 +317,7 @@ model Event {
   landingViews       LandingView[]
   infoPages          InfoPage[]
   discountCodes      DiscountCode[]
+  sequences          Sequence[]
 
   @@index([city])
   @@index([status])
@@ -843,6 +845,7 @@ model SegmentDefinition {
   broadcasts         EmailBroadcast[]
   whatsappBroadcasts WhatsAppBroadcast[]
   metaSync           SegmentMetaSync?
+  sequences          Sequence[]
 }
 
 enum SyncStatus {
@@ -1160,9 +1163,10 @@ model WhatsAppTemplate {
   createdAt        DateTime                   @default(now())
   updatedAt        DateTime                   @updatedAt
 
-  broadcasts  WhatsAppBroadcast[]
-  messages    WhatsAppMessage[]
-  automations WhatsAppAutomation[]
+  broadcasts    WhatsAppBroadcast[]
+  messages      WhatsAppMessage[]
+  automations   WhatsAppAutomation[]
+  sequenceSteps SequenceStep[]
 
   @@unique([name, language])
 }
@@ -2913,4 +2917,112 @@ model MesaSettings {
   id             String   @id
   firstEditionOn DateTime @db.Date
   updatedAt      DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Secuencias (2026-10-30)
+// ---------------------------------------------------------------------------
+
+// Automatic follow-ups for the people of a saved segment — the abandoned
+// carts first (lib/segments/abandonedCart.ts): a WhatsApp and emails, each
+// so long after she entered the segment, for as long as she's still in it.
+// Off until the team turns it on; see lib/sequences/engine.ts.
+model Sequence {
+  id        String            @id @default(cuid())
+  name      String
+  // Restrict: a segment a sequence uses can't be deleted from under it (the
+  // segments' DELETE says which one uses it).
+  segment   SegmentDefinition @relation(fields: [segmentId], references: [id])
+  segmentId String
+  // The event its links and its event tags are about; null: none.
+  event     Event?            @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  eventId   String?
+  enabled   Boolean           @default(false)
+  // When it was last turned on.
+  enabledAt DateTime?
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  steps       SequenceStep[]
+  enrollments SequenceEnrollment[]
+}
+
+enum SequenceChannel {
+  EMAIL
+  WHATSAPP
+}
+
+// What goes out, and how long after she entered the segment.
+model SequenceStep {
+  id              String            @id @default(cuid())
+  sequence        Sequence          @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  sequenceId      String
+  position        Int
+  delayMinutes    Int
+  channel         SequenceChannel
+  // EMAIL: its subject and body (the event emails' editor), and an optional
+  // button to the event's checkout or page.
+  subject         String?
+  bodyHtml        String?
+  buttonText      String?
+  buttonTarget    String?
+  // WHATSAPP: an approved template, its {{1}}, {{2}}… mapped to merge tags
+  // as in the Automatizaciones. SetNull: a template deleted in Meta leaves
+  // the step without one (skipped, and said so), not the template stuck.
+  template        WhatsAppTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  templateId      String?
+  variableMapping Json?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  sends SequenceSend[]
+
+  @@index([sequenceId, position])
+}
+
+// One person's way through one sequence: once, never again. Which steps are
+// behind her is in her sends. Out of the segment, nothing goes out to her
+// (`outSince`); a day out and it's over ("left" — for an abandoned cart, she
+// bought). Over too when every step is behind her ("done"), and from the
+// start for whoever was already in the segment when it was turned on, unless
+// the team chose to include them ("skipped").
+model SequenceEnrollment {
+  id          String    @id @default(cuid())
+  sequence    Sequence  @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  sequenceId  String
+  person      Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
+  personId    String
+  enteredAt   DateTime  @default(now())
+  outSince    DateTime?
+  endedAt     DateTime?
+  endedReason String?
+
+  sends SequenceSend[]
+
+  @@unique([sequenceId, personId])
+  @@index([sequenceId, endedAt])
+}
+
+enum SequenceSendStatus {
+  // Claimed, on its way (one send per step and person: never twice).
+  SENDING
+  SENT
+  SKIPPED
+  FAILED
+}
+
+// What each step did for each person: sent, skipped (and why — no
+// permission, no WhatsApp number…) or failed.
+model SequenceSend {
+  id           String             @id @default(cuid())
+  enrollment   SequenceEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  enrollmentId String
+  step         SequenceStep       @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  stepId       String
+  status       SequenceSendStatus
+  detail       String?
+  createdAt    DateTime           @default(now())
+
+  @@unique([enrollmentId, stepId])
+  @@index([stepId, status])
 }

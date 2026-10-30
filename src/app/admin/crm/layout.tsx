@@ -26,6 +26,7 @@ const NAV: { href: string; label: string; adminOnly?: boolean }[] = [
   { href: "/admin/crm/broadcasts", label: "Broadcasts", adminOnly: true },
   { href: "/admin/crm/whatsapp", label: "WhatsApp" },
   { href: "/admin/crm/segments", label: "Segmentos", adminOnly: true },
+  { href: "/admin/crm/secuencias", label: "Secuencias", adminOnly: true },
   // Supresiones / Etiquetar por lista / Higiene de la lista / Teléfonos y
   // WhatsApp existieron aquí — retiradas a pedido explícito. Ver el
   // historial de git si hace falta recuperar alguna.

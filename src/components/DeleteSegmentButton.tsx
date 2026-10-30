@@ -12,7 +12,14 @@ export default function DeleteSegmentButton({ id }: { id: string }) {
       return;
     }
     setBusy(true);
-    await fetch(`/api/admin/segments?id=${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/admin/segments?id=${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      // E.g. a sequence uses it (2026-10-30): the route says which.
+      const body = await res.json().catch(() => ({}));
+      alert(body.message ?? "No se pudo borrar el segmento.");
+      setBusy(false);
+      return;
+    }
     router.refresh();
   }
 
