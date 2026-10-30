@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Fraunces } from "next/font/google";
+import { fraunces900 as fraunces } from "@/fonts";
 import { getFirstEditionOn } from "@/lib/mesa/data";
 import { percentages } from "@/lib/mesa/email";
 import { MESA_SECTIONS } from "@/lib/mesa/sections";
@@ -16,7 +16,6 @@ import VoteSaver from "./VoteSaver";
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "La Mesa · Nail Fest", robots: { index: false, follow: false } };
 
-const fraunces = Fraunces({ subsets: ["latin"], weight: ["900"] });
 
 const INK = "#17181c";
 const BODY = "#33363d";

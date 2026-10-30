@@ -1,10 +1,10 @@
-import { Fraunces } from "next/font/google";
+import { fraunces800and900 } from "@/fonts";
 import type { SalesPageContent } from "@/lib/salesPage/types";
 
-// Same font call as EventRegistration.tsx/pago/page.tsx (next/font
-// dedupes identical calls) — the one display face used everywhere a page
+// Same face as EventRegistration.tsx/pago/page.tsx (the one in src/fonts)
+// — the one display face used everywhere a page
 // wants a "this is a moment" headline instead of the plain sans body copy.
-const fraunces = Fraunces({ subsets: ["latin"], weight: ["800", "900"] });
+const fraunces = fraunces800and900;
 
 // Replaces the plain "<h1>{event.name}</h1>" + venue line for an event
 // that has salesPageContent — see [eventSlug]/page.tsx's own branch. A

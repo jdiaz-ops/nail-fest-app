@@ -1,9 +1,8 @@
-import { Fraunces } from "next/font/google";
+import { fraunces900 as fraunces } from "@/fonts";
 import type { PublicReview } from "@/lib/reviews";
 import Stars from "./Stars";
 import ReviewPhotoThumb from "./ReviewPhotoThumb";
 
-const fraunces = Fraunces({ subsets: ["latin"], weight: ["900"] });
 
 /** "Karen M." → "KM", "Asistente" → "A". */
 export function reviewerInitials(name: string): string {

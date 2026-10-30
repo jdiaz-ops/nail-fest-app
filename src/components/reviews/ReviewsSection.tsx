@@ -1,4 +1,4 @@
-import { Fraunces } from "next/font/google";
+import { fraunces800and900 as fraunces } from "@/fonts";
 import { listPublicReviews, resolveReviewScope, reviewAggregate, type ReviewScope } from "@/lib/reviews";
 import { publicEventName } from "@/lib/eventDisplayName";
 import { viewerCanSeeSamples } from "@/lib/reviewsViewer";
@@ -7,7 +7,6 @@ import ScrollCarousel from "@/components/ScrollCarousel";
 import ReviewCard from "./ReviewCard";
 import ReviewsScore from "./ReviewsScore";
 
-const fraunces = Fraunces({ subsets: ["latin"], weight: ["800", "900"] });
 
 const MIN_REVIEWS_TO_SHOW = 3;
 

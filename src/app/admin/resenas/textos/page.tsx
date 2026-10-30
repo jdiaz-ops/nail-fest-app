@@ -1,12 +1,11 @@
 import Link from "next/link";
-import { Fraunces } from "next/font/google";
+import { fraunces900 as fraunces } from "@/fonts";
 import { db } from "@/lib/db";
 import { requirePageUser } from "@/lib/auth/guard";
 import { getReviewTextOverrides } from "@/lib/reviewPageTexts";
 import { previewReviewToken } from "@/lib/reviews";
 import ReviewTextsForm from "./ReviewTextsForm";
 
-const fraunces = Fraunces({ subsets: ["latin"], weight: ["900"] });
 
 export const dynamic = "force-dynamic";
 

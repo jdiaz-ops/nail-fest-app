@@ -1,12 +1,11 @@
 import Link from "next/link";
-import { Fraunces } from "next/font/google";
+import { fraunces900 as fraunces } from "@/fonts";
 import { db } from "@/lib/db";
 import { requirePageUser } from "@/lib/auth/guard";
 import DuplicatePageButton from "./DuplicatePageButton";
 
 export const dynamic = "force-dynamic";
 
-const fraunces = Fraunces({ subsets: ["latin"], weight: ["900"] });
 
 // Topic pages of each event (cronograma, expositores, el lugar…) at
 // /[eventSlug]/[slug] — see the InfoPage model.

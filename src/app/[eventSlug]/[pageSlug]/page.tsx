@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Fraunces } from "next/font/google";
+import { fraunces900 as fraunces } from "@/fonts";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
 import { getOrgSettings } from "@/lib/settings";
@@ -13,7 +13,6 @@ import { publicEventName } from "@/lib/eventDisplayName";
 
 export const dynamic = "force-dynamic";
 
-const fraunces = Fraunces({ subsets: ["latin"], weight: ["900"] });
 
 // Campaign parameters a visitor arrived with — carried onto the
 // "Quiero mi entrada" link so a registration that starts on a topic page

@@ -1,4 +1,4 @@
-import { Fraunces } from "next/font/google";
+import { fraunces600and900 } from "@/fonts";
 import { db } from "@/lib/db";
 import { getOrgSettings } from "@/lib/settings";
 import EventsTable from "./EventsTable";
@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 // Same slab-serif display heading as /admin/settings and /admin/crm — see
 // settings/layout.tsx's own comment on the reference screenshot review
 // this matches.
-const fraunces = Fraunces({ subsets: ["latin"], weight: ["600", "900"] });
+const fraunces = fraunces600and900;
 
 export default async function EventsPage() {
   const [events, aforo, orgSettings] = await Promise.all([

@@ -1,4 +1,4 @@
-import { Fraunces } from "next/font/google";
+import { fraunces800and900 } from "@/fonts";
 import { db } from "@/lib/db";
 import { getOrgSettings } from "@/lib/settings";
 import { fetchTransaction } from "@/lib/payments/wompi";
@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
 // (EventRegistration.tsx) — one display font for "this is a brand
 // moment" across both confirmation paths, not a plainer one just
 // because this page happens to be a server component.
-const fraunces = Fraunces({ subsets: ["latin"], weight: ["800", "900"] });
+const fraunces = fraunces800and900;
 
 const PREVIEW = new Map<string, ConfirmResult>([
   ["aprobado", "approved"],

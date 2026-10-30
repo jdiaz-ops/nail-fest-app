@@ -1,12 +1,11 @@
 import Link from "next/link";
-import { Fraunces } from "next/font/google";
+import { fraunces900 as fraunces } from "@/fonts";
 import { optimizedSrc, optimizedSrcSet } from "@/lib/optimizedImage";
 import { getOrgSettings } from "@/lib/settings";
 import { getNextEvent } from "@/lib/nextEvent";
 import { publicEventName } from "@/lib/eventDisplayName";
 import { formatHeroDate } from "@/lib/eventHeroDate";
 
-const fraunces = Fraunces({ subsets: ["latin"], weight: ["900"] });
 import ReviewsSection from "@/components/reviews/ReviewsSection";
 import ReviewsBadge from "@/components/reviews/ReviewsBadge";
 import CommunityHub from "@/components/community/CommunityHub";

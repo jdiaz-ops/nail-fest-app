@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Fraunces } from "next/font/google";
+import { fraunces900 as fraunces } from "@/fonts";
 import { db } from "@/lib/db";
 import { requirePageUser } from "@/lib/auth/guard";
 import { getOrgSettings } from "@/lib/settings";
@@ -8,7 +8,6 @@ import { publicEventName } from "@/lib/eventDisplayName";
 import { reviewsByEdition } from "@/lib/reviews";
 import ReviewModerationList, { type ModerationRow } from "@/components/reviews/ReviewModerationList";
 
-const fraunces = Fraunces({ subsets: ["latin"], weight: ["900"] });
 
 export const dynamic = "force-dynamic";
 

@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { Suspense, cache } from "react";
 import type { Metadata } from "next";
-import { Fraunces } from "next/font/google";
+import { fraunces900 } from "@/fonts";
 import { db } from "@/lib/db";
 import { probeImageDimensions } from "@/lib/imageDimensions";
 import { getOrderedProfessionOptions } from "@/lib/professions";
@@ -59,7 +59,7 @@ export async function generateMetadata({ params }: { params: { eventSlug: string
 // The brand's own display face for the hero's name and date numbers —
 // same one EventRegistration.tsx already loads on this page for the
 // confirmation screen, so no extra font request.
-const fraunces = Fraunces({ subsets: ["latin"], weight: ["900"] });
+const fraunces = fraunces900;
 
 export default async function EventLandingPage({
   params,

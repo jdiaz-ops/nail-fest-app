@@ -1,4 +1,4 @@
-import { Fraunces } from "next/font/google";
+import { fraunces900 } from "@/fonts";
 import ScrollCarousel from "@/components/ScrollCarousel";
 import GalleryGrid from "./GalleryGrid";
 import ReviewsSection from "@/components/reviews/ReviewsSection";
@@ -16,7 +16,7 @@ function initials(name: string): string {
 }
 
 // Section headings in the brand's display face, same as the event hero.
-const fraunces = Fraunces({ subsets: ["latin"], weight: ["900"] });
+const fraunces = fraunces900;
 
 // What the "venue" block needs from the event itself — passed in by
 // [eventSlug]/page.tsx so the block never stores a second copy of the

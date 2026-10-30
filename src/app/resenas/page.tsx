@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Fraunces } from "next/font/google";
+import { fraunces800and900 as fraunces } from "@/fonts";
 import { listPublicReviews, publicReviewCities, reviewAggregate } from "@/lib/reviews";
 import Stars from "@/components/reviews/Stars";
 import ReviewCard from "@/components/reviews/ReviewCard";
 import { viewerCanSeeSamples } from "@/lib/reviewsViewer";
 
-const fraunces = Fraunces({ subsets: ["latin"], weight: ["800", "900"] });
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Reseñas · Nail Fest", description: "Lo que dicen las que visitaron Nail Fest." };

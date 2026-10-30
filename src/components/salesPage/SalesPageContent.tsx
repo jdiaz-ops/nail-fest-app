@@ -1,7 +1,6 @@
-import { Fraunces } from "next/font/google";
+import { fraunces800and900 as fraunces } from "@/fonts";
 import type { SalesPageContent as SalesPageContentData, SalesPageSpeaker } from "@/lib/salesPage/types";
 
-const fraunces = Fraunces({ subsets: ["latin"], weight: ["800", "900"] });
 
 // Matches the one other place a price already renders in this app
 // (EventRegistration.tsx's ticket price: `$${t.price.toLocaleString("es-CO")}`)

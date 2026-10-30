@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Fraunces } from "next/font/google";
+import { fraunces800and900 } from "@/fonts";
 import RegistrationForm, { type QuestionView, type RegisterPayload } from "./RegistrationForm";
 import EventGalleryCarousel from "./EventGalleryCarousel";
 import { track, waitForFbpCookie, ensureFbcCookie } from "./tracking";
@@ -22,7 +22,7 @@ declare global {
 // (EventForm.tsx, the CRM/Settings section headers) — one display font for
 // "this is a brand moment" across the whole app, not a second one just for
 // this screen.
-const fraunces = Fraunces({ subsets: ["latin"], weight: ["800", "900"] });
+const fraunces = fraunces800and900;
 
 export interface PublicTicketTypeView {
   id: string;

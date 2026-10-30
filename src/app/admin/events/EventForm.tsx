@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Fraunces } from "next/font/google";
+import { fraunces600and900 as fraunces } from "@/fonts";
 import { zonedTimeToUtc } from "@/lib/dateFormat";
 import RichTextEditor from "@/components/RichTextEditor";
 import LandingBlocksEditor from "./LandingBlocksEditor";
@@ -11,7 +11,6 @@ import { compressImage } from "@/lib/imageCompression";
 import { uploadMany } from "@/lib/uploadMany";
 import { optimizedSrc } from "@/lib/optimizedImage";
 
-const fraunces = Fraunces({ subsets: ["latin"], weight: ["600", "900"] });
 
 type EventStatus = "DRAFT" | "PUBLISHED";
 type EventFormat = "IN_PERSON" | "VIRTUAL" | "HYBRID";

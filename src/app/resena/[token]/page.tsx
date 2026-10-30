@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Fraunces } from "next/font/google";
+import { fraunces800and900 as fraunces } from "@/fonts";
 import { getOrgSettings } from "@/lib/settings";
 import { formatDateInTz } from "@/lib/dateFormat";
 import { publicEventName } from "@/lib/eventDisplayName";
@@ -10,7 +10,6 @@ import ReviewForm from "./ReviewForm";
 import ReviewThanks from "./ReviewThanks";
 import ReviewHero from "./ReviewHero";
 
-const fraunces = Fraunces({ subsets: ["latin"], weight: ["800", "900"] });
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Tu reseña · Nail Fest", robots: { index: false, follow: false } };

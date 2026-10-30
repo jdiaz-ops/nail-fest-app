@@ -1,11 +1,10 @@
-import { Fraunces } from "next/font/google";
+import { fraunces600and900 as fraunces } from "@/fonts";
 import CrmNavLink from "./CrmNavLink";
 import { requirePageUser } from "@/lib/auth/guard";
 
 // Groups the contact-database-facing sections behind one top-level "CRM"
 // tab, same pattern as Configuración: a nested sidebar instead of four
 // separate top-nav tabs.
-const fraunces = Fraunces({ subsets: ["latin"], weight: ["600", "900"] });
 
 // "Inscritos" (una fila por inscripción, con su fuente de tráfico —
 // vivía en /admin/crm/registrations) se eliminó — duplicaba casi toda su

@@ -1,4 +1,4 @@
-import { Fraunces } from "next/font/google";
+import { fraunces600and900 as fraunces } from "@/fonts";
 import SettingsNavLink from "./SettingsNavLink";
 import { requirePageUser } from "@/lib/auth/guard";
 
@@ -8,7 +8,6 @@ import { requirePageUser } from "@/lib/auth/guard";
 // (per the reference screenshot review): the coral/salmon active state,
 // the slab-serif display heading, the emerald save buttons — scoped to
 // this settings section only, not a site-wide reskin.
-const fraunces = Fraunces({ subsets: ["latin"], weight: ["600", "900"] });
 
 const EDIT_NAV: { href: string; label: string }[] = [
   { href: "/admin/settings/basic", label: "Datos básicos" },
