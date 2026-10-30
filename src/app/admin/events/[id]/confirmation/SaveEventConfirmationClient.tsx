@@ -30,6 +30,7 @@ export default function SaveEventConfirmationClient({
       initialHtml={initialHtml}
       initialSubject={initialSubject}
       design={designAvailable ? { initial: initialDesign, previewUrl: `/api/admin/events/${eventId}/confirmation/preview` } : undefined}
+      testUrl={`/api/admin/events/${eventId}/confirmation/test`}
       onSave={handleSave}
     />
   );

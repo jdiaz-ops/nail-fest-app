@@ -8,6 +8,7 @@ import { INSTAGRAM_HANDLE, INSTAGRAM_URL } from "@/lib/brand";
 import { publicEventName } from "@/lib/eventDisplayName";
 import PostPaymentQuestions from "@/components/PostPaymentQuestions";
 import { asistireUrl } from "@/lib/imparables/asistire";
+import { getCurrentUser } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,12 @@ export const dynamic = "force-dynamic";
 // moment" across both confirmation paths, not a plainer one just
 // because this page happens to be a server component.
 const fraunces = Fraunces({ subsets: ["latin"], weight: ["800", "900"] });
+
+const PREVIEW = new Map<string, ConfirmResult>([
+  ["aprobado", "approved"],
+  ["pendiente", "pending"],
+  ["rechazado", "declined"],
+]);
 
 // Wompi's own redirect-url target (see lib/payments/wompi.ts's
 // buildCheckoutUrl — we pass this exact path + ?registrationId=, Wompi
@@ -35,12 +42,20 @@ export default async function PaymentReturnPage({
   searchParams,
 }: {
   params: { eventSlug: string };
-  searchParams: { registrationId?: string; id?: string; paypal?: string };
+  searchParams: { registrationId?: string; id?: string; paypal?: string; vista?: string };
 }) {
   const [event, orgSettings] = await Promise.all([db.event.findUnique({ where: { slug: params.eventSlug } }), getOrgSettings()]);
 
+  // The team's look at each answer (2026-10-30, «Después del pago» in the
+  // event's admin): ?vista=aprobado|pendiente|rechazado shows it with sample
+  // data to someone signed in — nothing is read from Wompi or PayPal, nothing saved.
+  const asked = PREVIEW.get(searchParams.vista ?? "");
+  const vista = asked && (await getCurrentUser()) ? asked : null;
+
   let result: ConfirmResult | "unknown" = "unknown";
-  if (searchParams.id) {
+  if (vista) {
+    result = vista;
+  } else if (searchParams.id) {
     // Read from Wompi's API here on the server (private key — the public
     // one, with a warning in the logs, until it's loaded), never on the
     // link's own word; and only a reference naming one of our payments
@@ -65,15 +80,18 @@ export default async function PaymentReturnPage({
   // checkout leaves for now (2026-10-29), unless it's answered already.
   const transactionId = searchParams.id ?? searchParams.paypal;
   const askLater =
-    result === "approved" && transactionId && searchParams.registrationId
+    vista === "approved" ||
+    (result === "approved" && transactionId && searchParams.registrationId
       ? await db.registration
           .findUnique({ where: { id: searchParams.registrationId }, select: { customFields: true } })
           .then((r) => !(r?.customFields as Record<string, unknown> | null)?.instagram)
-      : false;
+      : false);
 
   // Manicuristas Imparables, paid: the way to her «Asistiré» image (2026-10-30).
   const asistire =
-    result === "approved" && event?.theme === "IMPARABLES" && searchParams.registrationId
+    vista === "approved" && event?.theme === "IMPARABLES"
+      ? `/asistire/muestra/${event.slug}`
+      : result === "approved" && event?.theme === "IMPARABLES" && searchParams.registrationId
       ? await db.registration
           .findUnique({ where: { id: searchParams.registrationId }, select: { id: true, eventId: true, status: true } })
           .then((r) => (r && r.eventId === event.id && r.status === "CONFIRMED" ? asistireUrl(r.id) : null))
@@ -152,7 +170,7 @@ export default async function PaymentReturnPage({
       </h1>
       <p style={{ fontSize: 14.5, color: "#5b5f6b", margin: "0 0 24px" }}>{copy.body}</p>
 
-      {askLater && <PostPaymentQuestions registrationId={searchParams.registrationId!} transactionId={transactionId!} />}
+      {askLater && (vista ? <PostPaymentQuestions preview /> : <PostPaymentQuestions registrationId={searchParams.registrationId!} transactionId={transactionId!} />)}
 
       {asistire && (
         <a

@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import RichTextEditor, { type RichTextEditorHandle } from "@/components/RichTextEditor";
 import { CONFIRMATION_MERGE_TAGS } from "@/lib/confirmationTemplate";
+import TestSendBox from "./TestSendBox";
 
 // EVENTO_UBICACION_LINEA / EVENTO_ACCESO_VIRTUAL_BOTON / EVENTO_INSTRUCCION_ENTRADA
 // (see lib/confirmationTemplate.ts) each already resolve to the right
@@ -35,17 +36,21 @@ const SUBJECT_MERGE_TAGS = ["EVENTO_NOMBRE", "EVENTO_FECHA_RANGO", "EVENTO_FORMA
 // when nothing more specific overrides it. `design` (an event with a
 // designed email of its own — Manicuristas Imparables', 2026-10-29) adds a
 // third choice: that email, with its preview, and only its subject to edit.
+// `testUrl` (an event's, 2026-10-30) adds «Enviarme una prueba»: what's on
+// screen right now, saved or not, to the team's own inbox.
 export default function ConfirmationTemplateEditor({
   scope,
   initialHtml,
   initialSubject,
   design,
+  testUrl,
   onSave,
 }: {
   scope: "event" | "global";
   initialHtml: string | null;
   initialSubject: string | null;
   design?: { initial: boolean; previewUrl: string };
+  testUrl?: string;
   onSave: (html: string, subject: string, design: boolean) => Promise<{ ok: boolean }>;
 }) {
   const [useOverride, setUseOverride] = useState(scope === "global" ? true : initialHtml != null || initialSubject != null);
@@ -199,14 +204,23 @@ export default function ConfirmationTemplateEditor({
         </>
       )}
 
+      {testUrl && (
+        <TestSendBox
+          url={testUrl}
+          body={{ mode: useDesign ? "design" : useOverride ? "event" : "global", html, subject }}
+          note="Se envía lo que ves ahora, aunque no lo hayas guardado: con datos de ejemplo y «[Prueba]» al comienzo del asunto."
+        />
+      )}
+
       {message && <p style={{ fontSize: 13, color: "#0e6b4c", marginTop: 8 }}>{message}</p>}
 
+      {/* Buttons their own size (button.primary is full-width everywhere else). */}
       <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
-        <button className="primary" type="button" disabled={saving} onClick={handleSave} style={{ padding: "10px 24px" }}>
+        <button className="primary" type="button" disabled={saving} onClick={handleSave} style={{ width: "auto", padding: "10px 24px" }}>
           {saving ? "Guardando…" : "Guardar"}
         </button>
         {scope === "global" && (
-          <button className="secondary" type="button" disabled={saving} onClick={handleRevert} style={{ padding: "10px 18px" }}>
+          <button className="secondary" type="button" disabled={saving} onClick={handleRevert} style={{ width: "auto", padding: "10px 18px" }}>
             Revertir al diseño original
           </button>
         )}

@@ -20,7 +20,7 @@ export default function EventModuleShell({
   eventSlug,
   eventFormat,
   isAdmin,
-  hasStages,
+  imparables,
   children,
 }: {
   eventId: string;
@@ -39,8 +39,9 @@ export default function EventModuleShell({
   // the nav/buttons that would otherwise bounce a COORDINADOR straight
   // back out.
   isAdmin: boolean;
-  // Priced by stages (Manicuristas Imparables, 2026-10-29): shows «Etapas de precio».
-  hasStages: boolean;
+  // Manicuristas Imparables (EventTheme IMPARABLES): shows «Etapas de precio»
+  // (2026-10-29) and «Después del pago» (2026-10-30).
+  imparables: boolean;
   children: React.ReactNode;
 }) {
   const pathname = usePathname() ?? "";
@@ -68,9 +69,10 @@ export default function EventModuleShell({
             heading: "Configuración",
             items: [
               { href: `${base}/edit`, label: "Editar evento y entradas" },
-              ...(hasStages ? [{ href: `${base}/etapas`, label: "Etapas de precio" }] : []),
+              ...(imparables ? [{ href: `${base}/etapas`, label: "Etapas de precio" }] : []),
               { href: `${base}/descuentos`, label: "Códigos de descuento" },
               { href: `${base}/confirmation`, label: "Confirmación del evento" },
+              ...(imparables ? [{ href: `${base}/despues-del-pago`, label: "Después del pago" }] : []),
             ],
           },
         ]

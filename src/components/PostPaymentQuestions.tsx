@@ -4,14 +4,20 @@ import { useState } from "react";
 
 // On "¡Pago confirmado!" (/[eventSlug]/pago): the one question the one-page
 // checkout leaves for after paying (2026-10-29) — optional, saved with one
-// tap (see /api/register/extra).
-export default function PostPaymentQuestions({ registrationId, transactionId }: { registrationId: string; transactionId: string }) {
+// tap (see /api/register/extra). In the team's preview (2026-10-30) it
+// answers as if saved, saving nothing.
+export default function PostPaymentQuestions(props: { registrationId: string; transactionId: string } | { preview: true }) {
   const [instagram, setInstagram] = useState("");
   const [state, setState] = useState<"idle" | "saving" | "saved" | "error">("idle");
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
     if (!instagram.trim()) return;
+    if ("preview" in props) {
+      setState("saved");
+      return;
+    }
+    const { registrationId, transactionId } = props;
     setState("saving");
     try {
       const res = await fetch("/api/register/extra", {
