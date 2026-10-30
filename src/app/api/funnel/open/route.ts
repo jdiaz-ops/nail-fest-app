@@ -8,7 +8,8 @@ import { db } from "@/lib/db";
 // tracking.ts's own track() calls: no session id, no dedup, just "the
 // registration modal was opened one more time" — same raw-counter
 // reasoning as LinkPageLink.clickCount, not analytics-grade attribution.
-const bodySchema = z.object({ eventSlug: z.string().min(1) });
+// `version`: the checkout of a version of the page (/v/<slug>, 2026-10-30) — counted for it too.
+const bodySchema = z.object({ eventSlug: z.string().min(1), version: z.string().max(80).optional() });
 
 export async function POST(req: NextRequest) {
   const parsed = bodySchema.safeParse(await req.json().catch(() => null));
@@ -20,5 +21,10 @@ export async function POST(req: NextRequest) {
     .catch(() => {
       /* unknown slug, or a transient DB blip — never worth failing the visible page for */
     });
+  if (parsed.data.version) {
+    await db.landingVersion
+      .updateMany({ where: { slug: parsed.data.version.toLowerCase(), event: { slug: parsed.data.eventSlug } }, data: { checkoutOpenedCount: { increment: 1 } } })
+      .catch(() => {});
+  }
   return NextResponse.json({ ok: true });
 }

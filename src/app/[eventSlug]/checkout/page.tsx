@@ -1,16 +1,8 @@
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
-import { getOrgSettings } from "@/lib/settings";
-import { getOrderedProfessionOptions } from "@/lib/professions";
 import { publicEventName } from "@/lib/eventDisplayName";
-import { paypalCheckoutConfig } from "@/lib/payments/paypal";
-import { imparablesPageData } from "@/lib/imparables/page";
-import { checkoutOffer } from "@/lib/imparables/pricing";
-import { coverName, kindLine } from "@/lib/imparables/schedule";
-import MetaPixelScript from "@/components/MetaPixelScript";
-import ImpCheckout from "@/components/imparables/ImpCheckout";
-import { cinzel, manrope } from "@/components/imparables/fonts";
+import ImpCheckoutScreen from "@/components/imparables/ImpCheckoutScreen";
 
 export const dynamic = "force-dynamic";
 
@@ -38,32 +30,5 @@ export default async function CheckoutPage({ params }: { params: { eventSlug: st
   });
   if (!event || event.status === "DRAFT") notFound();
   if (event.theme !== "IMPARABLES") redirect(`/${event.slug}`);
-
-  const orgSettings = await getOrgSettings();
-  const now = new Date();
-  const data = await imparablesPageData(event, orgSettings.timezone, now);
-  const offer = await checkoutOffer(data.sales, orgSettings.timezone);
-  if (!offer) redirect(`/${event.slug}`);
-
-  const professions = await getOrderedProfessionOptions();
-  const words = coverName(publicEventName(event)).split(/\s+/);
-  const big = words.pop() ?? "";
-
-  return (
-    <main className={`imp ${cinzel.variable} ${manrope.variable}`}>
-      <MetaPixelScript pixelId={data.pixelId} />
-      <ImpCheckout
-        eventSlug={event.slug}
-        backHref={`/${event.slug}`}
-        name={{ pre: words.join(" "), big }}
-        dates={data.when.compact}
-        format={kindLine(event)}
-        ticket={offer.ticket}
-        // No discount code box for now (the team, 2026-10-29).
-        codes={false}
-        professions={professions}
-        paypal={offer.ticket.usdCents ? paypalCheckoutConfig() : null}
-      />
-    </main>
-  );
+  return <ImpCheckoutScreen event={event} version={null} />;
 }

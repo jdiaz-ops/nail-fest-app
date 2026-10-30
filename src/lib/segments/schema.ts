@@ -21,6 +21,7 @@ export const conditionSchema = z.union([
     purpose: z.enum(["LOGISTICS", "MARKETING", "ADVERTISING", "WHATSAPP"]),
     state: z.enum(["active", "inactive"]),
   }),
+  z.object({ field: z.literal("landingVersion"), versionIds: z.array(z.string()).min(1) }),
   z.object({
     field: z.literal("abandonedCart"),
     eventSlugs: z.array(z.string()).min(1),

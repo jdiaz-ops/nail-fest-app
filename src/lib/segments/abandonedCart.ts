@@ -126,3 +126,29 @@ export async function abandonedCartPersonIds(eventSlugs: string[], stages: CartS
   ]);
   return new Set(trulyAbandoned(carts, buyers, { now, stages, blocked: orgSettings.bannedEmails }));
 }
+
+/** An event's truly abandoned carts, counted by the version of the page each checkout was (null: the main page) —
+ * for «Versiones de la landing» (2026-10-30). */
+export async function abandonedByVersion(eventId: string, now = new Date()): Promise<Map<string | null, number>> {
+  const who = { select: { email: true, phone: true, firstName: true, lastName: true } } as const;
+  const [carts, buyers, orgSettings] = await Promise.all([
+    db.registration.findMany({
+      where: { eventId, status: { in: ["STARTED", "PENDING_PAYMENT"] } },
+      select: {
+        personId: true,
+        eventId: true,
+        status: true,
+        createdAt: true,
+        landingVersionId: true,
+        person: who,
+        payments: { select: { status: true, updatedAt: true }, orderBy: { createdAt: "desc" } },
+      },
+    }),
+    db.registration.findMany({ where: { eventId, status: "CONFIRMED" }, select: { eventId: true, person: who } }),
+    getOrgSettings(),
+  ]);
+  const abandoned = new Set(trulyAbandoned(carts, buyers, { now, stages: [], blocked: orgSettings.bannedEmails }));
+  const counts = new Map<string | null, number>();
+  for (const cart of carts) if (abandoned.has(cart.personId)) counts.set(cart.landingVersionId, (counts.get(cart.landingVersionId) ?? 0) + 1);
+  return counts;
+}

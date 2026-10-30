@@ -11,10 +11,11 @@ import { dollars, pesos, salesState, stageLine, type PriceStage, type SalesState
 export async function loadStages(eventId: string): Promise<StageTicketType[]> {
   const [types, paid] = await Promise.all([
     db.ticketType.findMany({ where: { eventId }, orderBy: { order: "asc" } }),
-    // Paid: confirmed with an approved payment. A pending purchase, or a ticket given away, takes no place in a stage.
+    // Paid: confirmed with an approved payment. A pending purchase, or a ticket given away, takes no place in a stage;
+    // nor one bought at a version's special price (lib/imparables/versions.ts, 2026-10-30).
     db.registration.groupBy({
       by: ["ticketTypeId"],
-      where: { eventId, status: "CONFIRMED", ticketTypeId: { not: null }, payments: { some: { status: "APPROVED" } } },
+      where: { eventId, status: "CONFIRMED", ticketTypeId: { not: null }, payments: { some: { status: "APPROVED", landingVersionId: null } } },
       _sum: { ticketCount: true },
     }),
   ]);
@@ -50,7 +51,7 @@ export async function closeStageIfFull(ticketTypeId: string | null, now: Date = 
   const type = await db.ticketType.findUnique({ where: { id: ticketTypeId }, select: { stageCap: true, stageSoldOutAt: true } });
   if (!type || type.stageCap === null || type.stageSoldOutAt) return;
   const paid = await db.registration.aggregate({
-    where: { ticketTypeId, status: "CONFIRMED", payments: { some: { status: "APPROVED" } } },
+    where: { ticketTypeId, status: "CONFIRMED", payments: { some: { status: "APPROVED", landingVersionId: null } } },
     _sum: { ticketCount: true },
   });
   if ((paid._sum.ticketCount ?? 0) >= type.stageCap) {

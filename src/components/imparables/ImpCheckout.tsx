@@ -88,6 +88,9 @@ export interface ImpCheckoutProps {
   professions: string[];
   /** PayPal's buttons (lib/payments/paypal.ts's paypalCheckoutConfig) — null without PayPal, or without a USD price. */
   paypal: { clientId: string } | null;
+  /** The version of the page it's the checkout of (/v/<slug>, lib/imparables/versions.ts): its link, and its special
+   * price's name and terms when the ticket is at it. */
+  version?: { slug: string; special: { label: string; note: string } | null } | null;
 }
 
 interface Applied {
@@ -104,9 +107,11 @@ interface Registered {
   paypal?: { paymentId: string };
 }
 
-export default function ImpCheckout({ eventSlug, backHref, name, dates, format, ticket: openedWith, codes, professions, paypal }: ImpCheckoutProps) {
+export default function ImpCheckout({ eventSlug, backHref, name, dates, format, ticket: openedWith, codes, professions, paypal, version = null }: ImpCheckoutProps) {
   // What's on sale: the stage the page opened with, until paying finds another one is (/api/register's price_changed).
   const [ticket, setTicket] = useState(openedWith);
+  // The version's special price, while the ticket is at it.
+  const [special, setSpecial] = useState(version?.special ?? null);
   const [form, setForm] = useState({ email: "", firstName: "", lastName: "", docNumber: "", company: "", city: "", phone: "", profession: "", website: "" });
   const [qty, setQty] = useState(Math.max(1, ticket.min));
   const [country, setCountry] = useState("CO");
@@ -138,8 +143,13 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
     opened.current = true;
     window.clarity?.("event", "abrir_registro");
     track("InitiateCheckout");
-    fetch("/api/funnel/open", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ eventSlug }), keepalive: true }).catch(() => {});
-  }, [eventSlug]);
+    fetch("/api/funnel/open", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ eventSlug, version: version?.slug }),
+      keepalive: true,
+    }).catch(() => {});
+  }, [eventSlug, version?.slug]);
 
   const docs = country === "CO" ? DOCS_CO : DOCS_ABROAD;
   const doc = docs.find((d) => d.value === docType) ?? docs[0]!;
@@ -236,6 +246,7 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
         utmSource,
         utmMedium,
         utmCampaign,
+        version: version?.slug,
       }),
     }).catch(() => {});
   }
@@ -307,6 +318,7 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
           currency: cur,
           shownUnitCents: cur === "USD" ? (ticket.usdCents ?? undefined) : ticket.price * 100,
           website: form.website,
+          version: version?.slug,
         }),
       });
     } catch {
@@ -323,6 +335,7 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
         const count = Math.min(Math.max(qty, next.min), next.max);
         const inUsd = cur === "USD" && next.usdCents !== null;
         setTicket(next);
+        setSpecial(body.special ? (version?.special ?? null) : null);
         setQty(count);
         if (cur === "USD" && !inUsd) setCurrency("COP");
         const hadCode = applied !== null;
@@ -492,6 +505,18 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
               +
             </button>
           </div>
+        </div>
+      )}
+      {special && ticket.fullPrice !== null && (
+        // A version's special price (2026-10-30): its name, the stage's own price struck beside it, and its terms.
+        <div className="imp-co-special">
+          <p className="imp-co-line">
+            <b>{special.label}</b>
+            <span>
+              <s>{money("COP", ticket.fullPrice * 100)}</s> {money("COP", ticket.price * 100)}
+            </span>
+          </p>
+          <p className="imp-co-special-note">{special.note}</p>
         </div>
       )}
       {codes && codeBox}

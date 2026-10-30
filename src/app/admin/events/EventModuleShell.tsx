@@ -70,6 +70,7 @@ export default function EventModuleShell({
             items: [
               { href: `${base}/edit`, label: "Editar evento y entradas" },
               ...(imparables ? [{ href: `${base}/etapas`, label: "Etapas de precio" }] : []),
+              ...(imparables ? [{ href: `${base}/versiones`, label: "Versiones de la landing" }] : []),
               { href: `${base}/descuentos`, label: "Códigos de descuento" },
               { href: `${base}/confirmation`, label: "Confirmación del evento" },
               ...(imparables ? [{ href: `${base}/despues-del-pago`, label: "Después del pago" }] : []),

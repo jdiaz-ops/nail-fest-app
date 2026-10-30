@@ -318,6 +318,7 @@ model Event {
   infoPages          InfoPage[]
   discountCodes      DiscountCode[]
   sequences          Sequence[]
+  landingVersions    LandingVersion[]
 
   @@index([city])
   @@index([status])
@@ -335,13 +336,17 @@ model Event {
 // anyone has identified themselves, same reasoning as Meta's own
 // PageView event.
 model LandingView {
-  id        String   @id @default(cuid())
-  eventId   String
-  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  country   String?
-  createdAt DateTime @default(now())
+  id               String          @id @default(cuid())
+  eventId          String
+  event            Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  country          String?
+  // The version of the page it was (/v/<slug>, 2026-10-30); null: the main one.
+  landingVersion   LandingVersion? @relation(fields: [landingVersionId], references: [id], onDelete: SetNull)
+  landingVersionId String?
+  createdAt        DateTime        @default(now())
 
   @@index([eventId, country])
+  @@index([landingVersionId])
 }
 
 // Our previous ticketing platform's own "ticket type" concept, kept even
@@ -541,6 +546,11 @@ model Registration {
   cancelledBy   AdminUser? @relation("RegistrationCancelledBy", fields: [cancelledById], references: [id], onDelete: SetNull)
   cancelledById String?
 
+  // The version of the event's page she came through to buy (/v/<slug>,
+  // 2026-10-30) — at its special price or not; null: the main page.
+  landingVersion   LandingVersion? @relation(fields: [landingVersionId], references: [id], onDelete: SetNull)
+  landingVersionId String?
+
   consents       Consent[]
   metaEvents     MetaEvent[]
   scans          ScanLog[]
@@ -550,6 +560,7 @@ model Registration {
 
   @@unique([personId, eventId])
   @@index([eventId, status])
+  @@index([landingVersionId])
 }
 
 enum PaymentProvider {
@@ -613,12 +624,18 @@ model Payment {
   // The price stage it was bought at (TicketType.stageSlug, 2026-10-29), as
   // it was when the payment was created; what it charged is amountInCents.
   stageSlug         String?
+  // Charged at a version's special price (2026-10-30): set only then. Such a
+  // purchase doesn't take a place in its stage's cap — it counts toward the
+  // version's own maximum instead (lib/imparables/versions.ts).
+  landingVersion    LandingVersion? @relation(fields: [landingVersionId], references: [id], onDelete: SetNull)
+  landingVersionId  String?
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
   @@index([registrationId])
   @@index([status])
   @@index([discountCodeId])
+  @@index([landingVersionId])
 }
 
 // A discount code for an event's checkout (/admin/events/[id]/descuentos,
@@ -3025,4 +3042,54 @@ model SequenceSend {
 
   @@unique([enrollmentId, stepId])
   @@index([stepId, status])
+}
+
+// ---------------------------------------------------------------------------
+// Versiones de la landing (2026-10-30)
+// ---------------------------------------------------------------------------
+
+// Another link to an event's page (nailfest.lat/v/<slug>): the same page,
+// checkout and registrations, with its own cover where it says so and,
+// optionally, a special price per stage that shows nowhere else — for an
+// ad testing another hero, or a flyer's QR at an in-person event. Only while
+// it's on and within its dates; otherwise its link goes to the main page, at
+// the normal price. See lib/imparables/versions.ts.
+model LandingVersion {
+  id       String    @id @default(cuid())
+  event    Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId  String
+  // Only the team sees it.
+  name     String
+  // nailfest.lat/v/<slug>
+  slug     String    @unique
+  // Off: paused, its link goes to the main page.
+  enabled  Boolean   @default(true)
+  startsAt DateTime?
+  endsAt   DateTime?
+
+  // Its cover, where it differs from the main page's (empty: the main one's).
+  title       String?
+  subtitle    String?
+  imageUrl    String?
+  buttonLabel String?
+
+  // Its special price per stage, in whole pesos: { "<ticketTypeId>": 80000 }.
+  // A stage not in it sells at its normal price here too.
+  specialPrices   Json?
+  // What the special price is called on the page and at the checkout («Precio Expo Belleza»).
+  priceLabel      String?
+  // How many tickets it sells at its special price; null: no maximum. Those
+  // never count in their stage's cap.
+  maxSpecialSales Int?
+
+  // Times its checkout was opened, like Event.checkoutOpenedCount.
+  checkoutOpenedCount Int      @default(0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  registrations Registration[]
+  payments      Payment[]
+  landingViews  LandingView[]
+
+  @@index([eventId])
 }

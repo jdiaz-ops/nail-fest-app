@@ -11,6 +11,7 @@ import { castOf } from "./blocks";
 import { getActiveStage, purchaseOf } from "./pricing";
 import { clock, coverName, eventWhen } from "./schedule";
 import { pesos, type SalesState } from "./stages";
+import { versionLive } from "./versions";
 import { googleCalendarUrl, imparablesConfirmationEmail, shareLine, type CalendarEvent, type ImparablesConfirmation } from "./confirmationEmail";
 
 // What Manicuristas Imparables' own confirmation email says
@@ -117,13 +118,17 @@ export async function imparablesConfirmationFor(
  * own data — her name, the steps' day and hour, the colleague's message, the
  * team's WhatsApp — her email, and her image's page. "muestra": the team's
  * preview, for Laura; a purchase not found (or another event's): no name, no
- * email, no image — and the image only once it's paid. */
+ * email, no image — and the image only once it's paid. `retry`: where trying
+ * again goes — the checkout of the version she came through while it shows
+ * (2026-10-30, lib/imparables/versions.ts), else the event's. */
 export async function imparablesAfterPayment(
   event: Event,
   her: { registrationId: string } | "muestra" | null
-): Promise<{ c: ImparablesConfirmation; email: string | null; asistire: string | null }> {
+): Promise<{ c: ImparablesConfirmation; email: string | null; asistire: string | null; retry: string }> {
   const registration =
-    her && her !== "muestra" ? await db.registration.findUnique({ where: { id: her.registrationId }, include: { person: true } }) : null;
+    her && her !== "muestra"
+      ? await db.registration.findUnique({ where: { id: her.registrationId }, include: { person: true, landingVersion: true } })
+      : null;
   const mine = registration?.eventId === event.id ? registration : null;
   const asistire = her === "muestra" ? asistireSampleUrl(event.id) : mine?.status === "CONFIRMED" ? asistireUrl(mine.id) : null;
   const c = await confirmationOf(
@@ -131,7 +136,9 @@ export async function imparablesAfterPayment(
     { firstName: her === "muestra" ? "Laura" : (mine?.person.firstName ?? null), code: "", purchase: null, asistire: asistire ?? "" },
     await getActiveStage(event)
   );
-  return { c, email: her === "muestra" ? "laura@correo.com" : (mine?.person.email ?? null), asistire };
+  const version = mine?.landingVersion;
+  const retry = version && versionLive(version, new Date()) ? `/v/${version.slug}/checkout` : `/${event.slug}/checkout`;
+  return { c, email: her === "muestra" ? "laura@correo.com" : (mine?.person.email ?? null), asistire, retry };
 }
 
 /** The design as a buyer at today's price would get it — «Laura», a sample code — for «Confirmación del evento»; with the editor's share message, unsaved, when given. */

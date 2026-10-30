@@ -25,11 +25,13 @@ beforeEach(() => {
 });
 
 describe("getActiveStage", () => {
-  it("counts only confirmed purchases with an approved payment: a pending one takes no place", async () => {
+  it("counts only confirmed purchases with an approved payment at the stage's price: a pending one takes no place, nor one at a version's special price", async () => {
     db.registration.groupBy.mockResolvedValue([{ ticketTypeId: "t_cre", _sum: { ticketCount: 199 } }]);
     const sales = await getActiveStage(EVENT, new Date("2027-02-01T10:00:00-05:00"));
     expect(db.registration.groupBy).toHaveBeenCalledWith(
-      expect.objectContaining({ where: expect.objectContaining({ eventId: "ev_1", status: "CONFIRMED", payments: { some: { status: "APPROVED" } } }) })
+      expect.objectContaining({
+        where: expect.objectContaining({ eventId: "ev_1", status: "CONFIRMED", payments: { some: { status: "APPROVED", landingVersionId: null } } }),
+      })
     );
     expect([sales.current?.slug, sales.remaining]).toEqual(["creyente", 1]);
   });

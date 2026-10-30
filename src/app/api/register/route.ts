@@ -9,6 +9,7 @@ import { buildCheckoutUrl, wompiReference, wompiWidgetParams } from "@/lib/payme
 import { DISCOUNT_ERROR_MESSAGES, resolveDiscount, type DiscountResult } from "@/lib/discounts";
 import { paypalConfigured } from "@/lib/payments/paypal";
 import { checkoutOffer, getActiveStage } from "@/lib/imparables/pricing";
+import { specialPriceFor, specialSold, versionLive, withVersionPrice, type VersionPrice } from "@/lib/imparables/versions";
 import { clientIpFromHeaders, userAgentFromHeaders } from "@/lib/request";
 import { splitName } from "@/lib/name";
 import { getOrgSettings } from "@/lib/settings";
@@ -97,6 +98,9 @@ const bodySchema = z.object({
   // What one ticket cost on the checkout's screen, in that currency's cents
   // (2026-10-29): a different price now comes back to be shown first.
   shownUnitCents: z.number().int().nonnegative().optional(),
+  // The version of the page she's buying through (/v/<slug>, 2026-10-30):
+  // its special price, when it still has one, is worked out again below.
+  version: z.string().max(80).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -234,6 +238,10 @@ export async function POST(req: NextRequest) {
   // closure's own comment on why the actual remaining-count check happens
   // there instead of right here.
   let ticketType: Awaited<ReturnType<typeof db.ticketType.findUnique>> = null;
+  // A version of the page (lib/imparables/versions.ts): the one she came
+  // through while it shows, and its special price when one applies.
+  let landingVersionId: string | null = null;
+  let special: VersionPrice | null = null;
   if (input.ticketTypeId) {
     // Only the type-existence/status/min-max checks happen here, outside
     // the transaction below — those never change based on a concurrent
@@ -260,11 +268,22 @@ export async function POST(req: NextRequest) {
     if (event.theme === "IMPARABLES") {
       const sales = await getActiveStage(event, now);
       if (!sales.current) return NextResponse.json({ error: "no_ticket_on_sale" }, { status: 400 });
-      // The same stage at another price (changed from the admin) is a change too.
-      const unitCents = input.currency === "USD" ? ticketType.priceUsdCents : ticketType.price * 100;
+      if (input.version) {
+        const version = await db.landingVersion.findUnique({ where: { slug: input.version.toLowerCase() } });
+        if (version && version.eventId === event.id && versionLive(version, now)) {
+          landingVersionId = version.id;
+          special = specialPriceFor(version, sales, await specialSold(version.id), input.ticketCount ?? 1);
+        }
+      }
+      // A special price is paid in pesos only.
+      if (special && input.currency === "USD") return NextResponse.json({ error: "usd_not_available" }, { status: 400 });
+      // The same stage at another price (changed from the admin) is a change too; so is a special price that no
+      // longer applies (the version ended, or reached its maximum).
+      const unitCents = input.currency === "USD" ? ticketType.priceUsdCents : (special?.price ?? ticketType.price) * 100;
       if (sales.current.id !== ticketType.id || (input.shownUnitCents !== undefined && input.shownUnitCents !== unitCents)) {
         const offer = await checkoutOffer(sales, orgSettings.timezone);
-        return NextResponse.json({ error: "price_changed", ticket: offer?.ticket, line: offer?.line ?? null }, { status: 409 });
+        const ticket = offer && special ? withVersionPrice(offer.ticket, special) : offer?.ticket;
+        return NextResponse.json({ error: "price_changed", ticket, line: offer?.line ?? null, special: Boolean(special) }, { status: 409 });
       }
     }
     if ((ticketType.hideUntil && now < ticketType.hideUntil) || (ticketType.hideAfter && now > ticketType.hideAfter)) {
@@ -292,13 +311,14 @@ export async function POST(req: NextRequest) {
   }
   // A paid ticket's subtotal in the payment's own cents: COP's whole pesos ×
   // 100 (Wompi's unit), or the USD price's cents.
-  const subtotalCents = ticketType ? (currency === "USD" ? (ticketType.priceUsdCents ?? 0) : ticketType.price * 100) * ticketCount : 0;
+  const subtotalCents = ticketType ? (currency === "USD" ? (ticketType.priceUsdCents ?? 0) : (special?.price ?? ticketType.price) * 100) * ticketCount : 0;
 
   // A discount code, worked out here on its own: what the checkout's box
   // showed was only a preview (/api/checkout/discount). Checked before
   // anything is written, so a code that no longer applies changes nothing.
   let discount: Extract<DiscountResult, { ok: true }> | null = null;
-  if (input.discountCode?.trim() && ticketType && ticketType.price > 0) {
+  // Not on top of a version's special price.
+  if (input.discountCode?.trim() && ticketType && ticketType.price > 0 && !special) {
     const result = await resolveDiscount({
       eventId: event.id,
       ticketTypeId: ticketType.id,
@@ -450,6 +470,8 @@ export async function POST(req: NextRequest) {
                 // lib/registrationWithdrawal.ts).
                 cancelledAt: null,
                 cancelledById: null,
+                // Through which version of the page she buys, if any (never rewritten on a resend of a purchase).
+                ...(wasAlreadyConfirmed ? {} : { landingVersionId }),
               },
             })
           : await tx.registration.create({
@@ -467,6 +489,7 @@ export async function POST(req: NextRequest) {
                 fbclid: input.attribution?.fbclid,
                 ttclid: input.attribution?.ttclid,
                 gclid: input.attribution?.gclid,
+                landingVersionId,
               },
             });
 
@@ -560,6 +583,8 @@ export async function POST(req: NextRequest) {
         discountCents: discount?.discountCents ?? 0,
         // The stage it's bought at, kept with what it charges (2026-10-29).
         stageSlug: ticketType?.stageSlug ?? null,
+        // At a version's special price: out of its stage's cap (lib/imparables/versions.ts).
+        landingVersionId: special ? landingVersionId : null,
       },
     });
     if (currency === "USD") {

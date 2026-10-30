@@ -12,8 +12,9 @@ import { cinzel, manrope } from "./fonts";
 // hello, what happens now (the email's steps, her email and WhatsApp in one),
 // her «Asistiré» image and the colleague to share it with. Still confirming:
 // that it takes a few minutes and where the confirmation will arrive. Turned
-// down: try again, straight to the checkout. The data is the confirmation's
-// own (lib/imparables/confirmation.ts's imparablesAfterPayment).
+// down: try again, straight to the checkout (her version's, when she came
+// through one). The data is the confirmation's own
+// (lib/imparables/confirmation.ts's imparablesAfterPayment).
 
 type Answer = ConfirmResult | "unknown";
 
@@ -47,7 +48,7 @@ export default function ImpPaymentResult({
 }: {
   event: Event;
   answer: Answer;
-  data: { c: ImparablesConfirmation; email: string | null; asistire: string | null };
+  data: { c: ImparablesConfirmation; email: string | null; asistire: string | null; retry: string };
 }) {
   const { c } = data;
   const words = coverName(publicEventName(event)).split(/\s+/);
@@ -177,7 +178,7 @@ export default function ImpPaymentResult({
                 <h1>{notPaid.title}</h1>
                 <p>{notPaid.body}</p>
                 {notPaid.retry && (
-                  <a className="imp-pago-btn" href={`/${event.slug}/checkout`}>
+                  <a className="imp-pago-btn" href={data.retry}>
                     Volver a intentarlo
                   </a>
                 )}

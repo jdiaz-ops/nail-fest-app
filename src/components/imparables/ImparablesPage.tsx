@@ -39,6 +39,16 @@ export interface ImparablesEvent {
   ctaNote: string | null;
 }
 
+/** A version of the page (/v/<slug>, lib/imparables/versions.ts): its own cover where it says so, and its special
+ * price for the stage on sale, when it has one. */
+export interface ImparablesVersion {
+  title: string | null;
+  subtitle: string | null;
+  imageUrl: string | null;
+  buttonLabel: string | null;
+  special: { price: number; normal: number; label: string; band: string; note: string } | null;
+}
+
 export interface ImparablesPreview {
   draft: boolean;
   /** The date the page is shown as of, when the team asked for one (?fecha=). */
@@ -93,6 +103,7 @@ export default function ImparablesPage({
   whatsappUrl,
   brandName,
   preview,
+  version = null,
 }: {
   event: ImparablesEvent;
   blocks: LandingBlock[];
@@ -104,6 +115,7 @@ export default function ImparablesPage({
   whatsappUrl: string | null;
   brandName: string;
   preview: ImparablesPreview | null;
+  version?: ImparablesVersion | null;
 }) {
   // The name is the cover's title; a date in it is left out (the dates are right below).
   const words = coverName(event.displayName).split(/\s+/);
@@ -129,7 +141,7 @@ export default function ImparablesPage({
   // The cover's button (and the closing's) says what the event's label says
   // («Reservar mi cupo», 2026-10-28); the price's and the bar's say the same
   // since then.
-  const heroLabel = event.registerButtonLabel?.trim() || "Quiero mi cupo";
+  const heroLabel = version?.buttonLabel?.trim() || event.registerButtonLabel?.trim() || "Quiero mi cupo";
   const buyLabel = "Reservar mi cupo";
   const { mode, current, next } = sales;
   const closing = twoLines(event.closingText?.trim() || `Nos vemos el ${when.short}.`);
@@ -138,6 +150,10 @@ export default function ImparablesPage({
   // Beside today's price, the full one struck — always the full price
   // (2026-10-29), unless today's is it.
   const struck = current && saving(current, sales.full) > 0 ? sales.full : null;
+  // A version's special price (2026-10-30): it, with the stage's own struck beside it, everywhere the price shows.
+  const special = mode === "sale" ? (version?.special ?? null) : null;
+  const shownPrice = special ? special.price : (current?.price ?? 0);
+  const struckPrice = special ? special.normal : (struck?.price ?? null);
   // The team's preview of another day runs its countdowns on that day's clock.
   const offsetMs = preview?.simulated ? now.getTime() - Date.now() : 0;
 
@@ -166,8 +182,8 @@ export default function ImparablesPage({
           <span className="imp-cta-dot"> ·</span>
         </span>
         <span className="imp-cta-p">
-          {struck && <s>{pesos(struck.price)}</s>}
-          <span>{pesos(current.price)}</span>
+          {struckPrice !== null && <s>{pesos(struckPrice)}</s>}
+          <span>{pesos(shownPrice)}</span>
         </span>
       </ImpButton>
     ) : mode === "waitlist" ? (
@@ -182,9 +198,10 @@ export default function ImparablesPage({
   // hasta el 18 de abril · luego $120.000»); with no cap, its line
   // (lib/imparables/stages.ts). No dollars on the page: only the checkout's
   // PayPal says them.
-  const pill = mode === "sale" ? stagePill(sales, now) : null;
-  const progress = mode === "sale" ? stageProgress(sales) : null;
-  const terms = mode === "sale" ? (progress ? stageTerms(sales, timezone) : stageLine(sales, timezone)) : null;
+  // At a version's special price, its terms instead: it takes no place in the stage's places.
+  const pill = mode === "sale" && !special ? stagePill(sales, now) : null;
+  const progress = mode === "sale" && !special ? stageProgress(sales) : null;
+  const terms = special ? special.note : mode === "sale" ? (progress ? stageTerms(sales, timezone) : stageLine(sales, timezone)) : null;
   const deal =
     mode === "sale" && current ? (
       <div className="imp-deal">
@@ -223,12 +240,17 @@ export default function ImparablesPage({
         </div>
       )}
 
+      {special && <p className="imp-v-band">{special.band}</p>}
+
       <section className="imp-hero">
         <div className="imp-rays" aria-hidden="true" />
         <div className="imp-hero-in">
           <Tiara />
           <ImpTitle pre={pre} big={big} />
-          {tagline && (
+          {version?.title && <h2 className="imp-v-title">{version.title}</h2>}
+          {version?.subtitle ? (
+            <p className="imp-tag">{version.subtitle}</p>
+          ) : tagline && (
             // Its last line only, right under the name (2026-10-28: no headline
             // above it any more). Sanitized before storage (lib/events.ts).
             <div className="imp-tag" dangerouslySetInnerHTML={{ __html: tagline }} />
@@ -238,16 +260,16 @@ export default function ImparablesPage({
             <span className="imp-pill-date">{pillDate}</span>
             {pillNote && <span className="imp-pill-note">{pillNote}</span>}
           </p>
-          {(cover || pillars) && (
+          {(cover || version?.imageUrl || pillars) && (
             // On a computer, the column beside the words (2026-10-29); on a
             // phone it changes nothing.
             <div className="imp-hero-pic">
-              {cover && (
-                // The group photo (2026-10-28: back from a strip of portraits).
-                // Who is in it goes only to those who can't see it.
+              {(version?.imageUrl || cover) && (
+                // The group photo (2026-10-28: back from a strip of portraits) —
+                // or a version's own. Who is in it goes only to those who can't see it.
                 <figure className="imp-group">
                   {/* eslint-disable-next-line @next/next/no-img-element -- admin-uploaded photo, arbitrary Blob URL */}
-                  <img src={cover.url} alt={cover.caption || [line.names, line.also].filter(Boolean).join(", ")} />
+                  <img src={version?.imageUrl || cover!.url} alt={version?.imageUrl ? "" : cover!.caption || [line.names, line.also].filter(Boolean).join(", ")} />
                 </figure>
               )}
               {/* «Mentalidad · Dinero · Marketing», under the group photo (2026-10-28). */}
@@ -337,11 +359,11 @@ export default function ImparablesPage({
           <div className="imp-sticky-in">
             <div className="imp-st-p">
               <p className="imp-st-amt">
-                <b>{pesos(current.price)}</b>
-                {struck && <s>{pesos(struck.price)}</s>}
+                <b>{pesos(shownPrice)}</b>
+                {struckPrice !== null && <s>{pesos(struckPrice)}</s>}
               </p>
               <span className="imp-st-name">
-                <span className="imp-st-stage">{current.name}</span>
+                <span className="imp-st-stage">{special ? special.label : current.name}</span>
                 {progress && (
                   <>
                     <ProgressBar progress={progress} className="imp-st-bar" />

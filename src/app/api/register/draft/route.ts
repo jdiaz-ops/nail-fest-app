@@ -36,6 +36,8 @@ const bodySchema = z.object({
   utmSource: z.string().optional(),
   utmMedium: z.string().optional(),
   utmCampaign: z.string().optional(),
+  // The version of the page the checkout is (/v/<slug>, 2026-10-30), for its count of abandoned carts.
+  version: z.string().max(80).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -112,6 +114,11 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const version = input.version
+      ? await db.landingVersion.findUnique({ where: { slug: input.version.toLowerCase() }, select: { id: true, eventId: true } })
+      : null;
+    const landingVersionId = version?.eventId === event.id ? version.id : undefined;
+
     if (existingRegistration) {
       await db.registration.update({
         where: { id: existingRegistration.id },
@@ -121,6 +128,7 @@ export async function POST(req: NextRequest) {
           utmSource: existingRegistration.utmSource ?? input.utmSource,
           utmMedium: existingRegistration.utmMedium ?? input.utmMedium,
           utmCampaign: existingRegistration.utmCampaign ?? input.utmCampaign,
+          landingVersionId: existingRegistration.landingVersionId ?? landingVersionId,
         },
       });
     } else {
@@ -134,6 +142,7 @@ export async function POST(req: NextRequest) {
           utmSource: input.utmSource,
           utmMedium: input.utmMedium,
           utmCampaign: input.utmCampaign,
+          landingVersionId: landingVersionId ?? null,
         },
       });
       // Exactly once per registration — a genuinely new STARTED row, never

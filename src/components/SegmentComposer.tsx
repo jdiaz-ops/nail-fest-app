@@ -19,6 +19,8 @@ export interface EditingSegment {
 
 interface Props {
   events: { slug: string; name: string }[];
+  /** The versions of the events' pages (/v/<slug>, 2026-10-30), as «Evento · Versión». */
+  versions?: { id: string; name: string }[];
   professionOptions: string[];
   cityOptions: string[];
   labelOptions: string[];
@@ -120,6 +122,7 @@ const emptyForm = {
   includeAttended: [] as string[],
   includeCart: [] as string[],
   includeCartStages: [] as string[],
+  includeVersion: [] as string[],
   includeCity: [] as string[],
   includeProfession: [] as string[],
   includeLabel: [] as string[],
@@ -136,7 +139,7 @@ const emptyForm = {
   excludeConsent: "",
 };
 
-export default function SegmentComposer({ events, professionOptions, cityOptions, labelOptions, editingSegment, onDone }: Props) {
+export default function SegmentComposer({ events, versions = [], professionOptions, cityOptions, labelOptions, editingSegment, onDone }: Props) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [includePeople, setIncludePeople] = useState<PickedPerson[]>([]);
@@ -145,6 +148,7 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
   const [includeAttended, setIncludeAttended] = useState<string[]>([]);
   const [includeCart, setIncludeCart] = useState<string[]>([]);
   const [includeCartStages, setIncludeCartStages] = useState<string[]>([]);
+  const [includeVersion, setIncludeVersion] = useState<string[]>([]);
   const [includeCity, setIncludeCity] = useState<string[]>([]);
   const [includeProfession, setIncludeProfession] = useState<string[]>([]);
   const [includeLabel, setIncludeLabel] = useState<string[]>([]);
@@ -176,6 +180,7 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
       setIncludeAttended(emptyForm.includeAttended);
       setIncludeCart(emptyForm.includeCart);
       setIncludeCartStages(emptyForm.includeCartStages);
+      setIncludeVersion(emptyForm.includeVersion);
       setIncludeCity(emptyForm.includeCity);
       setIncludeProfession(emptyForm.includeProfession);
       setIncludeLabel(emptyForm.includeLabel);
@@ -202,6 +207,7 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
     setIncludeAttended(extract(normalized.include, "attended", "eventSlugs"));
     setIncludeCart(extract(normalized.include, "abandonedCart", "eventSlugs"));
     setIncludeCartStages(extract(normalized.include, "abandonedCart", "stages"));
+    setIncludeVersion(extract(normalized.include, "landingVersion", "versionIds"));
     setIncludeCity(extract(normalized.include, "city", "cities"));
     setIncludeProfession(extract(normalized.include, "profession", "professions"));
     setIncludeLabel(extract(normalized.include, "label", "labels"));
@@ -260,6 +266,7 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
       includeEvent.length ? { field: "event", eventSlugs: includeEvent } : null,
       includeAttended.length ? { field: "attended", eventSlugs: includeAttended } : null,
       includeCart.length ? { field: "abandonedCart", eventSlugs: includeCart, stages: includeCartStages } : null,
+      includeVersion.length ? { field: "landingVersion", versionIds: includeVersion } : null,
       includeCity.length ? { field: "city", cities: includeCity } : null,
       includeProfession.length ? { field: "profession", professions: includeProfession } : null,
       includeLabel.length ? { field: "label", labels: includeLabel } : null,
@@ -286,6 +293,7 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
     includeAttended,
     includeCart,
     includeCartStages,
+    includeVersion,
     includeCity,
     includeProfession,
     includeLabel,
@@ -367,6 +375,7 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
         setIncludeAttended([]);
         setIncludeCart([]);
         setIncludeCartStages([]);
+        setIncludeVersion([]);
         setIncludeCity([]);
         setIncludeProfession([]);
         setIncludeLabel([]);
@@ -464,6 +473,12 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
                 cada noche y sale apenas paga.
               </p>
             </div>
+            {versions.length > 0 && (
+              <div className="field">
+                <label>Compró desde estas versiones de la landing</label>
+                <MultiCheckList options={versions.map((v) => ({ value: v.id, label: v.name }))} selected={includeVersion} onChange={setIncludeVersion} emptyLabel="" />
+              </div>
+            )}
             <div className="field">
               <label>Ciudad</label>
               <MultiCheckList options={cityCheckOptions} selected={includeCity} onChange={setIncludeCity} emptyLabel="Todavía no hay ciudades registradas." />

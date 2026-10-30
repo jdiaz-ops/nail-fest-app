@@ -41,12 +41,14 @@ const LOW_CONSENT_RATIO = 0.3;
 // just fetches data and hands it down.
 export default function SegmentsAdminClient({
   events,
+  versions = [],
   professionOptions,
   cityOptions,
   labelOptions,
   segments,
 }: {
   events: { slug: string; name: string }[];
+  versions?: { id: string; name: string }[];
   professionOptions: string[];
   cityOptions: string[];
   labelOptions: string[];
@@ -72,6 +74,7 @@ export default function SegmentsAdminClient({
       <div ref={composerRef}>
         <SegmentComposer
           events={events}
+          versions={versions}
           professionOptions={professionOptions}
           cityOptions={cityOptions}
           labelOptions={labelOptions}

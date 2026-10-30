@@ -130,6 +130,14 @@ async function matchingPersonIds(condition: SegmentCondition): Promise<Set<strin
     }
     case "abandonedCart":
       return abandonedCartPersonIds(condition.eventSlugs, condition.stages);
+    case "landingVersion": {
+      if (condition.versionIds.length === 0) return new Set();
+      const rows = await db.registration.findMany({
+        where: { status: "CONFIRMED", landingVersionId: { in: condition.versionIds } },
+        select: { personId: true },
+      });
+      return new Set(rows.map((r) => r.personId));
+    }
   }
 }
 

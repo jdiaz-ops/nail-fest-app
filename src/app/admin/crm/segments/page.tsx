@@ -19,7 +19,7 @@ export const maxDuration = 60;
 // here, not just hidden from CrmLayout's nav.
 export default async function SegmentsPage() {
   await requirePageUser(["ADMIN"]);
-  const [events, professionOptions, cityRows, labels, segmentRows] = await Promise.all([
+  const [events, professionOptions, cityRows, labels, segmentRows, versions] = await Promise.all([
     db.event.findMany({ orderBy: { startsAt: "asc" } }),
     getOrderedProfessionOptions(),
     // Real distinct city values already on file, not a free-text guess —
@@ -31,6 +31,8 @@ export default async function SegmentsPage() {
       orderBy: { createdAt: "desc" },
       include: { metaSync: true },
     }),
+    // The versions of the events' pages, for «Compró desde estas versiones» (2026-10-30).
+    db.landingVersion.findMany({ orderBy: { createdAt: "asc" }, include: { event: { select: { name: true } } } }),
   ]);
   const labelOptions = labels.map((l) => l.name);
   const cityOptions = cityRows
@@ -96,6 +98,7 @@ export default async function SegmentsPage() {
 
       <SegmentsAdminClient
         events={events}
+        versions={versions.map((v) => ({ id: v.id, name: `${v.event.name} · ${v.name}` }))}
         professionOptions={professionOptions}
         cityOptions={cityOptions}
         labelOptions={labelOptions}

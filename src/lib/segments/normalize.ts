@@ -53,7 +53,10 @@ export type SegmentCondition =
   // the checkout and hasn't bought, an hour on — never someone who paid,
   // not even under another email (lib/segments/abandonedCart.ts). `stages`
   // narrows it to where she stopped; empty = wherever.
-  | { field: "abandonedCart"; eventSlugs: string[]; stages: CartStage[] };
+  | { field: "abandonedCart"; eventSlugs: string[]; stages: CartStage[] }
+  // Bought through these versions of an event's page (/v/<slug>, 2026-10-30,
+  // lib/imparables/versions.ts): a confirmed registration that says so.
+  | { field: "landingVersion"; versionIds: string[] };
 
 /** Where an abandoned cart stopped — see lib/segments/abandonedCart.ts. */
 export type CartStage = "form" | "payment" | "declined";
@@ -105,6 +108,8 @@ function normalizeCondition(raw: any): SegmentCondition {
       const state: "active" | "inactive" = raw.state === "active" ? "active" : "inactive";
       return { field: "consent", purpose, state };
     }
+    case "landingVersion":
+      return { field: "landingVersion", versionIds: raw.versionIds ?? [] };
     case "abandonedCart": {
       const stages: CartStage[] = Array.isArray(raw.stages) ? raw.stages.filter((s: unknown) => CART_STAGES.some((c) => c.value === s)) : [];
       return { field: "abandonedCart", eventSlugs: raw.eventSlugs ?? [], stages };
