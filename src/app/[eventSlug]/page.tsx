@@ -37,7 +37,9 @@ const findEvent = cache((slug: string) => db.event.findUnique({ where: { slug } 
 // Manicuristas Imparables' page (EventTheme IMPARABLES) names itself in the
 // tab and in a shared link's preview; every other event keeps the site's.
 // The preview's picture says the date (one day since 2026-10-29: a new file,
-// so WhatsApp and Facebook don't keep showing the one with two days).
+// so WhatsApp and Facebook don't keep showing the one with two days), in the
+// page's bone and bronze since 2026-10-30 (again a new file, for the same
+// reason; it was navy blue).
 export async function generateMetadata({ params }: { params: { eventSlug: string } }): Promise<Metadata> {
   const event = await findEvent(params.eventSlug);
   if (!event || event.theme !== "IMPARABLES") return {};
@@ -48,7 +50,7 @@ export async function generateMetadata({ params }: { params: { eventSlug: string
     title: `${name} · Nail Fest`,
     description,
     ...(base ? { metadataBase: new URL(base) } : {}),
-    openGraph: { title: name, description, images: [{ url: "/imparables/og-27-junio.jpg", width: 1200, height: 630 }] },
+    openGraph: { title: name, description, images: [{ url: "/imparables/og-27-junio-hueso.jpg", width: 1200, height: 630 }] },
   };
 }
 
