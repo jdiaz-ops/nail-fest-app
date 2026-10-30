@@ -6,6 +6,7 @@ import RegistrationForm, { type QuestionView, type RegisterPayload } from "./Reg
 import EventGalleryCarousel from "./EventGalleryCarousel";
 import { track, waitForFbpCookie, ensureFbcCookie } from "./tracking";
 import { formatPhoneDisplay, INSTAGRAM_HANDLE, INSTAGRAM_URL } from "@/lib/brand";
+import NailFestSignedUp, { type NailFestSignupResult, type NailFestSignupScreen } from "./nailfest/SignedUp";
 
 declare global {
   interface Window {
@@ -86,6 +87,13 @@ interface Props {
   // everything else itself — Manicuristas Imparables' own page
   // (components/imparables/). Absent = the whole page body, as always.
   layout?: "page" | "modal";
+  // Nail Fest's own screen after signing up, for an event that switched it
+  // on (2026-10-30, components/nailfest/SignedUp.tsx) — the event's part;
+  // hers comes in /api/register's answer. Absent: the usual screen.
+  signupScreen?: NailFestSignupScreen;
+  // The team's look at that screen (?vista=inscrita on the event's page, from
+  // «Después de la inscripción»): open on it, with Laura's sample ticket.
+  signupPreview?: { result: NailFestSignupResult; firstName: string; email: string; phone: string };
 }
 
 // One combined checkout step (Shopify-style, per the admin's own call —
@@ -115,23 +123,28 @@ export default function EventRegistration({
   ctaNote,
   closingText,
   layout = "page",
+  signupScreen,
+  signupPreview,
 }: Props) {
   const hasTicketTypes = ticketTypes.length > 0;
-  const [open, setOpen] = useState(false);
-  const [step, setStep] = useState<Step>("checkout");
+  const [open, setOpen] = useState(Boolean(signupPreview));
+  const [step, setStep] = useState<Step>(signupPreview ? "resumen" : "checkout");
+  // Hers, for Nail Fest's screen after signing up (signupScreen above).
+  const [signup, setSignup] = useState<NailFestSignupResult | null>(signupPreview?.result ?? null);
+  const [submittedFirstName, setSubmittedFirstName] = useState<string | null>(signupPreview?.firstName ?? null);
   // The real email just submitted — shown back on the confirmation screen
   // so the person knows exactly where to look for their QR (and, if it's
   // wrong, that they typed it wrong). Cleared whenever the modal is
   // reopened for a fresh attempt (see openModal below).
-  const [submittedEmail, setSubmittedEmail] = useState<string | null>(null);
+  const [submittedEmail, setSubmittedEmail] = useState<string | null>(signupPreview?.email ?? null);
   // Same reasoning as submittedEmail — shown back so the person can spot
   // a typo'd number. whatsappTicketLinkSent is whether /api/register
   // actually attempted the WhatsApp send (see sendTicketLinkViaWhatsApp's
   // own comment) — the confirmation screen's WhatsApp pill only renders
   // when this is true, so it never claims something that didn't happen
   // (automation off, no WHATSAPP consent, or no phone).
-  const [submittedPhone, setSubmittedPhone] = useState<string | null>(null);
-  const [whatsappTicketLinkSent, setWhatsappTicketLinkSent] = useState(false);
+  const [submittedPhone, setSubmittedPhone] = useState<string | null>(signupPreview?.phone ?? null);
+  const [whatsappTicketLinkSent, setWhatsappTicketLinkSent] = useState(Boolean(signupPreview));
   // Only pre-select when there's exactly one type AND it actually has
   // stock — a single sold-out type must NOT default to a nonzero
   // quantity, or the submit button would wrongly enable with nothing
@@ -370,6 +383,8 @@ export default function EventRegistration({
     setSubmittedEmail(payload.email);
     setSubmittedPhone(payload.phone);
     setWhatsappTicketLinkSent(Boolean(body?.whatsappTicketLinkSent));
+    setSubmittedFirstName(payload.firstName ?? payload.fullName?.trim().split(/\s+/)[0] ?? null);
+    setSignup(body?.signup ?? null);
     setStep("resumen");
     window.clarity?.("event", "registro_exitoso");
 
@@ -618,7 +633,20 @@ export default function EventRegistration({
                 </>
               )}
 
-              {step === "resumen" && (
+              {step === "resumen" && signupScreen && signup && (
+                <NailFestSignedUp
+                  screen={signupScreen}
+                  result={signup}
+                  firstName={submittedFirstName}
+                  email={submittedEmail}
+                  phone={whatsappTicketLinkSent ? submittedPhone : null}
+                  displayFont={fraunces.className}
+                  inAppBrowser={inAppBrowser}
+                  onClose={closeModal}
+                />
+              )}
+
+              {step === "resumen" && !(signupScreen && signup) && (
                 <div style={{ position: "relative", textAlign: "center", padding: "8px 0 16px", overflow: "hidden" }}>
                   {/* A few brand-colored confetti dots, not a full animation —
                       the celebratory touch the plain "¡Listo!" was missing,

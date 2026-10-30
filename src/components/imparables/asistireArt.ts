@@ -190,7 +190,7 @@ export function drawAsistire(ctx: CanvasRenderingContext2D, layers: AsistireLaye
   ctx.drawImage(layers.over, 0, 0);
 }
 
-function blank(width: number, height: number): HTMLCanvasElement {
+export function blank(width: number, height: number): HTMLCanvasElement {
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
@@ -201,7 +201,7 @@ function corners(round: number, foot: number): [number, number, number, number] 
   return [round, round, foot, foot];
 }
 
-function roundedRect(p: CanvasRenderingContext2D | Path2D, x: number, y: number, w: number, h: number, [tl, tr, br, bl]: [number, number, number, number]) {
+export function roundedRect(p: CanvasRenderingContext2D | Path2D, x: number, y: number, w: number, h: number, [tl, tr, br, bl]: [number, number, number, number]) {
   p.moveTo(x + tl, y);
   p.lineTo(x + w - tr, y);
   p.arcTo(x + w, y, x + w, y + tr, tr);
@@ -221,7 +221,7 @@ function gold(ctx: CanvasRenderingContext2D, top: number, bottom: number): Canva
 }
 
 /** The alphabetic baseline that centers a line of the current font in a line box, as the page does. */
-function baseline(ctx: CanvasRenderingContext2D, top: number, height: number, size: number): number {
+export function baseline(ctx: CanvasRenderingContext2D, top: number, height: number, size: number): number {
   const m = ctx.measureText("ÁHg");
   const ascent = m.fontBoundingBoxAscent || size * 0.9;
   const descent = m.fontBoundingBoxDescent || size * 0.25;
@@ -229,7 +229,7 @@ function baseline(ctx: CanvasRenderingContext2D, top: number, height: number, si
 }
 
 /** Text with room between its letters, centered on cx; returns how wide it is (drawing nothing when asked only that). */
-function spaced(ctx: CanvasRenderingContext2D, text: string, cx: number, y: number, spacing: number, draw = true): number {
+export function spaced(ctx: CanvasRenderingContext2D, text: string, cx: number, y: number, spacing: number, draw = true): number {
   const letters = Array.from(text);
   const widths = letters.map((ch) => ctx.measureText(ch).width);
   const width = widths.reduce((a, b) => a + b, 0) + spacing * (letters.length - 1);
@@ -245,7 +245,7 @@ function spaced(ctx: CanvasRenderingContext2D, text: string, cx: number, y: numb
 }
 
 /** The font at its size, or smaller if the text wouldn't fit the width. */
-function fitted(ctx: CanvasRenderingContext2D, weight: number, size: number, family: string, text: string, max: number): number {
+export function fitted(ctx: CanvasRenderingContext2D, weight: number, size: number, family: string, text: string, max: number): number {
   ctx.font = `${weight} ${size}px ${family}`;
   const width = ctx.measureText(text).width;
   if (width <= max) return size;

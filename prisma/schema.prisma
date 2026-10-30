@@ -265,13 +265,25 @@ model Event {
   confirmationEmailSubject  String?
   // A designed confirmation instead of the body above (2026-10-29):
   // "IMPARABLES" — Manicuristas Imparables' own email, in the congress's
-  // colors (lib/imparables/confirmationEmail.ts). The subject still comes
-  // from confirmationEmailSubject's chain. Null: the body's chain as usual.
+  // colors (lib/imparables/confirmationEmail.ts); "NAIL_FEST" — Nail Fest's
+  // own for an event at a place (2026-10-30, lib/nailfest/confirmationEmail.ts).
+  // The subject still comes from confirmationEmailSubject's chain. Null: the
+  // body's chain as usual.
   confirmationEmailDesign   String?
   // What the designed confirmation's «Compartir por WhatsApp» writes
   // (2026-10-30, «Confirmación del evento»); the link to the event's page
   // goes after it. Null: «Mira este congreso para manicuristas: …».
   shareText                 String?
+  // «Antes de ir» in Nail Fest's own in-person confirmation email
+  // (2026-10-30, lib/nailfest/confirmation.ts), one line each. Empty: three
+  // general ones (having the ticket at hand, coming and going, WhatsApp).
+  confirmationTips          String[]    @default([])
+  // The screen right after signing up (2026-10-30, «Después de la
+  // inscripción»): "NAIL_FEST" — Nail Fest's own for an event at a place,
+  // with her ticket's QR right there, the days and place, «Asistiré» and an
+  // invitation for a colleague (components/nailfest/SignedUp.tsx). Null: the
+  // usual one.
+  signupScreenDesign        String?
   // A richer, structured alternative to `description` for an event that
   // wants a real sales-script landing (hero/story/value-stack table/
   // schedule/speakers/FAQ/etc. — see lib/salesPage/types.ts) instead of

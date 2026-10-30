@@ -9,6 +9,7 @@ import { confirmationCodeFor, ticketHolderName, ticketsFor } from "@/lib/ticket"
 import { publicEventName } from "@/lib/eventDisplayName";
 import { purchaseNote } from "@/lib/imparables/pricing";
 import { imparablesConfirmationFor } from "@/lib/imparables/confirmation";
+import { nailFestConfirmationFor } from "@/lib/nailfest/confirmation";
 
 // Shared by /api/register (first send + resend-on-resubmit), /api/resend-
 // ticket (the self-serve "I lost my email" flow), and /api/admin/
@@ -114,7 +115,23 @@ export async function sendTicketEmail(params: {
           return null;
         })
       : null;
-    const { text, html } = designed ?? (customTemplate
+    // Nail Fest's own design for its in-person events (2026-10-30), when its
+    // event chose it — her ticket, or each of her order's.
+    const nailFest =
+      !designed && params.registration
+        ? await nailFestConfirmationFor(params.registration.id, {
+            firstName: params.person.firstName,
+            tickets: tickets
+              ? tickets.map((t) => ({ qrImageUrl: t.qrImageUrl, holder: t.holderName, label: t.label, code: t.confirmationCode }))
+              : [{ qrImageUrl, holder, label: ticketType?.name ?? "Entrada general", code: confirmationCode }],
+            people: ticketCount,
+            pdfAttached: orgSettings.attachTicketPdf && format !== "VIRTUAL",
+          }).catch((err) => {
+            console.error("sendTicketEmail: Nail Fest's confirmation failed, using the template", err);
+            return null;
+          })
+        : null;
+    const { text, html } = designed ?? nailFest ?? (customTemplate
       ? renderConfirmationFromTemplate(customTemplate, {
           firstName: params.person.firstName ?? "",
           lastName: params.person.lastName ?? undefined,

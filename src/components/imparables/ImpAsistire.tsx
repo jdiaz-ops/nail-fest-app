@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ChangeEvent, type CSSProperties, type KeyboardEvent, type PointerEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties, type KeyboardEvent, type PointerEvent, type ReactNode } from "react";
 import {
   asistireLayers,
   clampPlacement,
@@ -16,18 +16,52 @@ import {
   type AsistireTexts,
   type Placement,
 } from "./asistireArt";
+import * as nailFest from "../nailfest/asistireArt";
 
 // «Asistiré» (2026-10-30), as in the boceto the team approved: her photo in,
 // her image out — a story or a publication to share, and the link to book.
 // Three steps on one page: she uploads her photo, adjusts it (dragging,
 // pinching or with the slider) and shares or downloads the image. All of it
 // happens in her browser (asistireArt.ts): her photo isn't sent anywhere.
+// The same steps make Nail Fest's image for its events at a place
+// (design="NAIL_FEST", 2026-10-30; ../nailfest/asistireArt.ts).
 
-interface Props {
-  texts: AsistireTexts;
+type Props = {
   fonts: AsistireFonts;
   /** The short link to paste in a story's link sticker: https://nailfest.lat/imparables */
   linkHref: string;
+} & ({ design?: "IMPARABLES"; texts: AsistireTexts } | { design: "NAIL_FEST"; texts: nailFest.NailFestAsistireTexts });
+
+/** What draws the image: its sizes, where her photo goes, and the drawing. */
+interface Art {
+  size: (format: AsistireFormat) => { width: number; height: number };
+  photoBox: (format: AsistireFormat) => { x: number; y: number; w: number; h: number };
+  layers: (format: AsistireFormat, logo: HTMLImageElement | null) => AsistireLayers;
+  draw: (ctx: CanvasRenderingContext2D, layers: AsistireLayers, photo: HTMLCanvasElement | null, placement: Placement) => void;
+  /** The faces it's drawn with, to load first. */
+  faces: string[];
+}
+
+function artOf(props: Props): Art {
+  const { fonts } = props;
+  if (props.design === "NAIL_FEST") {
+    const texts = props.texts;
+    return {
+      size: (format) => nailFest.LAYOUTS[format],
+      photoBox: nailFest.photoBox,
+      layers: (format, logo) => nailFest.asistireLayers(format, texts, fonts, logo),
+      draw: (ctx, layers, photo, placement) => nailFest.drawAsistire(ctx, layers, photo, placement, fonts),
+      faces: [`900 90px ${fonts.display}`, `700 45px ${fonts.body}`, `600 39px ${fonts.body}`, `800 36px ${fonts.body}`, `400 33px ${fonts.body}`],
+    };
+  }
+  const texts = props.texts;
+  return {
+    size: (format) => LAYOUTS[format],
+    photoBox,
+    layers: (format, logo) => asistireLayers(format, texts, fonts, logo),
+    draw: (ctx, layers, photo, placement) => drawAsistire(ctx, layers, photo, placement, fonts),
+    faces: [`800 48px ${fonts.display}`, `900 98px ${fonts.display}`, `600 32px ${fonts.body}`, `800 32px ${fonts.body}`],
+  };
 }
 
 type Step = "subir" | "ajustar" | "lista";
@@ -57,7 +91,9 @@ async function readPhoto(file: File): Promise<HTMLCanvasElement> {
   }
 }
 
-export default function ImpAsistire({ texts, fonts, linkHref }: Props) {
+export default function ImpAsistire(props: Props) {
+  const { design, texts, fonts, linkHref } = props;
+  const art = useMemo(() => artOf({ design, texts, fonts, linkHref } as Props), [design, texts, fonts, linkHref]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const layersRef = useRef<AsistireLayers | null>(null);
   const logoRef = useRef<HTMLImageElement | null>(null);
@@ -78,8 +114,7 @@ export default function ImpAsistire({ texts, fonts, linkHref }: Props) {
     let gone = false;
     const logo = new Image();
     logo.src = "/logo.png";
-    const faces = [`800 48px ${fonts.display}`, `900 98px ${fonts.display}`, `600 32px ${fonts.body}`, `800 32px ${fonts.body}`];
-    Promise.allSettled([...faces.map((face) => document.fonts.load(face)), logo.decode()]).then(() => {
+    Promise.allSettled([...art.faces.map((face) => document.fonts.load(face)), logo.decode()]).then(() => {
       if (gone) return;
       logoRef.current = logo.naturalWidth ? logo : null;
       setReady(true);
@@ -87,14 +122,14 @@ export default function ImpAsistire({ texts, fonts, linkHref }: Props) {
     return () => {
       gone = true;
     };
-  }, [fonts]);
+  }, [art]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!ready || !canvas) return;
-    if (layersRef.current?.format !== format) layersRef.current = asistireLayers(format, texts, fonts, logoRef.current);
-    drawAsistire(canvas.getContext("2d")!, layersRef.current, photo, placement, fonts);
-  }, [ready, format, photo, placement, texts, fonts, step]);
+    if (layersRef.current?.format !== format) layersRef.current = art.layers(format, logoRef.current);
+    art.draw(canvas.getContext("2d")!, layersRef.current, photo, placement);
+  }, [ready, format, photo, placement, art, step]);
 
   // On a computer, the wheel zooms her photo (a listener that may stop the page from scrolling).
   useEffect(() => {
@@ -102,12 +137,12 @@ export default function ImpAsistire({ texts, fonts, linkHref }: Props) {
     if (!canvas || step !== "ajustar" || !photo) return;
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
-      setPlacement((p) => clampPlacement(photoBox(format), photo, { ...p, zoom: p.zoom * Math.exp(-e.deltaY / 500) }));
+      setPlacement((p) => clampPlacement(art.photoBox(format), photo, { ...p, zoom: p.zoom * Math.exp(-e.deltaY / 500) }));
       setMoved(true);
     };
     canvas.addEventListener("wheel", onWheel, { passive: false });
     return () => canvas.removeEventListener("wheel", onWheel);
-  }, [step, photo, format]);
+  }, [step, photo, format, art]);
 
   useEffect(() => () => void (result && URL.revokeObjectURL(result.url)), [result]);
 
@@ -121,7 +156,7 @@ export default function ImpAsistire({ texts, fonts, linkHref }: Props) {
     try {
       const picture = await readPhoto(file);
       setPhoto(picture);
-      setPlacement(clampPlacement(photoBox(format), picture, FIRST_PLACEMENT));
+      setPlacement(clampPlacement(art.photoBox(format), picture, FIRST_PLACEMENT));
       setMoved(false);
       setStep("ajustar");
     } catch {
@@ -136,7 +171,7 @@ export default function ImpAsistire({ texts, fonts, linkHref }: Props) {
     const canvas = canvasRef.current;
     if (!canvas || !photo) return;
     const k = canvas.width / canvas.getBoundingClientRect().width;
-    const box = photoBox(format);
+    const box = art.photoBox(format);
     setPlacement((p) => {
       const r = photoRect(box, photo, p);
       return clampPlacement(box, photo, { ...p, u: p.u - (dx * k) / r.w, v: p.v - (dy * k) / r.h });
@@ -144,7 +179,7 @@ export default function ImpAsistire({ texts, fonts, linkHref }: Props) {
   }
 
   function zoomTo(zoom: number) {
-    if (photo) setPlacement((p) => clampPlacement(photoBox(format), photo, { ...p, zoom }));
+    if (photo) setPlacement((p) => clampPlacement(art.photoBox(format), photo, { ...p, zoom }));
   }
 
   function onPointerDown(e: PointerEvent<HTMLCanvasElement>) {
@@ -165,7 +200,7 @@ export default function ImpAsistire({ texts, fonts, linkHref }: Props) {
       if (other) {
         const was = Math.hypot(before.x - other.x, before.y - other.y);
         const is = Math.hypot(e.clientX - other.x, e.clientY - other.y);
-        if (was > 0) setPlacement((p) => clampPlacement(photoBox(format), photo, { ...p, zoom: (p.zoom * is) / was }));
+        if (was > 0) setPlacement((p) => clampPlacement(art.photoBox(format), photo, { ...p, zoom: (p.zoom * is) / was }));
       }
     }
     all.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -191,7 +226,7 @@ export default function ImpAsistire({ texts, fonts, linkHref }: Props) {
 
   function pickFormat(next: AsistireFormat) {
     setFormat(next);
-    if (photo) setPlacement((p) => clampPlacement(photoBox(next), photo, p));
+    if (photo) setPlacement((p) => clampPlacement(art.photoBox(next), photo, p));
   }
 
   async function finish() {
@@ -231,7 +266,7 @@ export default function ImpAsistire({ texts, fonts, linkHref }: Props) {
     }
   }
 
-  const L = LAYOUTS[format];
+  const L = art.size(format);
   const shape = `imp-as-vista${format === "publicacion" ? " is-post" : ""}`;
   const zoomShare = `${((placement.zoom - 1) / (MAX_ZOOM - 1)) * 100}%`;
 
@@ -354,7 +389,12 @@ export default function ImpAsistire({ texts, fonts, linkHref }: Props) {
           <div className="imp-as-link">
             <strong>Pon el enlace en tu historia</strong>
             <div className="imp-as-copy">
-              <input readOnly value={texts.link} aria-label="Enlace para reservar" onFocus={(e) => e.currentTarget.select()} />
+              <input
+                readOnly
+                value={texts.link}
+                aria-label={props.design === "NAIL_FEST" ? "Enlace para inscribirse" : "Enlace para reservar"}
+                onFocus={(e) => e.currentTarget.select()}
+              />
               <button type="button" onClick={copy}>
                 {copied ? "¡Copiado!" : "Copiar"}
               </button>

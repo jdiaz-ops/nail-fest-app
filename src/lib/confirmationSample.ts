@@ -5,11 +5,13 @@ import { renderConfirmationFromTemplate, renderSubjectFromTemplate } from "@/lib
 import { confirmationEmail } from "@/lib/email/templates";
 import { issueQrToken } from "@/lib/ticket";
 import { imparablesConfirmationPreview } from "@/lib/imparables/confirmation";
+import { NAIL_FEST_DESIGN, nailFestConfirmationPreview } from "@/lib/nailfest/confirmation";
 
 // An event's confirmation email with sample data (2026-10-30): what a buyer
 // would get, for «Confirmación del evento»'s «Enviar prueba» and «Después
-// del pago»'s preview. The same choice sendTicketEmail makes — the
-// congress's design, the event's own template, the account's, or the
+// del pago»'s preview. The same choice sendTicketEmail makes — the event's
+// design (the congress's, or Nail Fest's for an event at a place, by its
+// theme), the event's own template, the account's, or the
 // original design — but from the mode asked for, and from what the editor
 // has right now when it says so, saved or not. Laura, a sample code and a
 // sample ticket (its QR opens nothing): no one's real data.
@@ -18,13 +20,14 @@ export type ConfirmationMode = "design" | "event" | "global";
 
 /** Which of them this event sends today. */
 export function savedConfirmationMode(event: Pick<Event, "confirmationEmailDesign" | "confirmationEmailHtml">): ConfirmationMode {
-  return event.confirmationEmailDesign === "IMPARABLES" ? "design" : event.confirmationEmailHtml != null ? "event" : "global";
+  const designed = event.confirmationEmailDesign === "IMPARABLES" || event.confirmationEmailDesign === NAIL_FEST_DESIGN;
+  return designed ? "design" : event.confirmationEmailHtml != null ? "event" : "global";
 }
 
 export async function sampleConfirmation(
   event: Event,
   mode: ConfirmationMode,
-  unsaved: { html?: string | null; subject?: string | null; shareText?: string | null } = {}
+  unsaved: { html?: string | null; subject?: string | null; shareText?: string | null; tips?: string[] } = {}
 ): Promise<{ subject: string; text: string; html: string }> {
   const orgSettings = await getOrgSettings();
   const format = event.format ?? "IN_PERSON";
@@ -43,7 +46,11 @@ export async function sampleConfirmation(
   );
 
   if (mode === "design") {
-    const designed = await imparablesConfirmationPreview(event.id, unsaved.shareText !== undefined ? { shareText: unsaved.shareText } : {});
+    const edits = unsaved.shareText !== undefined ? { shareText: unsaved.shareText } : {};
+    const designed =
+      event.theme === "IMPARABLES"
+        ? await imparablesConfirmationPreview(event.id, edits)
+        : await nailFestConfirmationPreview(event.id, { ...edits, ...(unsaved.tips !== undefined ? { tips: unsaved.tips } : {}) });
     if (designed) return { subject, ...designed };
   }
 

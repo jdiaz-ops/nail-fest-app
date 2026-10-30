@@ -40,7 +40,8 @@ export default function EventModuleShell({
   // back out.
   isAdmin: boolean;
   // Manicuristas Imparables (EventTheme IMPARABLES): shows «Etapas de precio»
-  // (2026-10-29) and «Después del pago» (2026-10-30).
+  // (2026-10-29) and «Después del pago» (2026-10-30); any other event at a
+  // place, «Después de la inscripción» (2026-10-30).
   imparables: boolean;
   children: React.ReactNode;
 }) {
@@ -74,6 +75,7 @@ export default function EventModuleShell({
               { href: `${base}/descuentos`, label: "Códigos de descuento" },
               { href: `${base}/confirmation`, label: "Confirmación del evento" },
               ...(imparables ? [{ href: `${base}/despues-del-pago`, label: "Después del pago" }] : []),
+              ...(!imparables && eventFormat !== "VIRTUAL" ? [{ href: `${base}/despues-de-la-inscripcion`, label: "Después de la inscripción" }] : []),
             ],
           },
         ]

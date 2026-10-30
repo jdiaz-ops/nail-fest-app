@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import RichTextEditor, { type RichTextEditorHandle } from "@/components/RichTextEditor";
 import { CONFIRMATION_MERGE_TAGS } from "@/lib/confirmationTemplate";
 import TestSendBox from "./TestSendBox";
@@ -34,11 +34,36 @@ const SUBJECT_MERGE_TAGS = ["EVENTO_NOMBRE", "EVENTO_FECHA_RANGO", "EVENTO_FORMA
 // specific radio the reference screenshots showed; `scope="global"`
 // has no such toggle — the account-wide template just always applies
 // when nothing more specific overrides it. `design` (an event with a
-// designed email of its own — Manicuristas Imparables', 2026-10-29) adds a
-// third choice: that email, with its preview, and only its subject — and,
-// since 2026-10-30, its «Compartir por WhatsApp» message — to edit.
+// designed email of its own — Manicuristas Imparables', 2026-10-29; Nail
+// Fest's for an event at a place, 2026-10-30) adds a third choice: that
+// email, with its preview, and only its subject — and, since 2026-10-30, its
+// «Compartir por WhatsApp» message, and Nail Fest's «Antes de ir» — to edit.
 // `testUrl` (an event's, 2026-10-30) adds «Enviarme una prueba»: what's on
 // screen right now, saved or not, to the team's own inbox.
+export type EventDesign = {
+  kind: "IMPARABLES" | "NAIL_FEST";
+  initial: boolean;
+  previewUrl: string;
+  shareText: string;
+  /** Nail Fest's «Antes de ir», the event's own or the default ones. */
+  tips?: string[];
+};
+
+const DESIGN_COPY = {
+  IMPARABLES: {
+    label: "Diseño del congreso",
+    note: "(El correo de Manicuristas Imparables, con los colores del evento: se llena solo con los datos de cada compra)",
+    sample: "Vista previa con datos de ejemplo (Laura, el precio de hoy, un código de muestra). No se envía a nadie.",
+  },
+  NAIL_FEST: {
+    label: "Diseño Nail Fest presencial",
+    note: "(El correo de Nail Fest para el evento: su entrada con el código QR, los días y el lugar con «Cómo llegar». Se llena solo con los datos de cada inscripción)",
+    sample: "Vista previa con datos de ejemplo (Laura, una entrada de muestra). No se envía a nadie.",
+  },
+} as const;
+
+const MAX_TIPS = 5;
+
 export default function ConfirmationTemplateEditor({
   scope,
   initialHtml,
@@ -50,15 +75,24 @@ export default function ConfirmationTemplateEditor({
   scope: "event" | "global";
   initialHtml: string | null;
   initialSubject: string | null;
-  design?: { initial: boolean; previewUrl: string; shareText: string };
+  design?: EventDesign;
   testUrl?: string;
-  onSave: (html: string, subject: string, design: boolean, shareText?: string) => Promise<{ ok: boolean }>;
+  onSave: (html: string, subject: string, design: boolean, extras?: { shareText?: string; tips?: string[] }) => Promise<{ ok: boolean }>;
 }) {
   const [useOverride, setUseOverride] = useState(scope === "global" ? true : initialHtml != null || initialSubject != null);
   const [useDesign, setUseDesign] = useState(Boolean(design?.initial));
   const [html, setHtml] = useState(initialHtml ?? STARTER_HTML);
   const [subject, setSubject] = useState(initialSubject ?? STARTER_SUBJECT);
   const [shareText, setShareText] = useState(design?.shareText ?? "");
+  const [tips, setTips] = useState<string[]>(design?.tips ?? []);
+  // The preview follows «Antes de ir» as it's typed, a moment after.
+  const [previewTips, setPreviewTips] = useState(tips);
+  useEffect(() => {
+    const t = setTimeout(() => setPreviewTips(tips), 700);
+    return () => clearTimeout(t);
+  }, [tips]);
+  const withTips = design?.kind === "NAIL_FEST";
+  const ownTips = tips.map((t) => t.trim()).filter(Boolean);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const editorRef = useRef<RichTextEditorHandle>(null);
@@ -76,7 +110,10 @@ export default function ConfirmationTemplateEditor({
     setMessage(null);
     const result = useDesign
       ? // The designed email keeps whatever body the event had, for coming back to it.
-        await onSave(html === STARTER_HTML && initialHtml == null ? "" : html, subject || STARTER_SUBJECT, true, shareText)
+        await onSave(html === STARTER_HTML && initialHtml == null ? "" : html, subject || STARTER_SUBJECT, true, {
+          shareText,
+          ...(withTips ? { tips: ownTips } : {}),
+        })
       : await onSave(useOverride ? html || STARTER_HTML : "", useOverride ? subject || STARTER_SUBJECT : "", false);
     setSaving(false);
     setMessage(result.ok ? "Guardado." : "No se pudo guardar.");
@@ -136,11 +173,9 @@ export default function ConfirmationTemplateEditor({
             <label style={{ display: "flex", alignItems: "flex-start", gap: 8, marginTop: 8, fontWeight: 400 }}>
               <input type="radio" checked={useDesign} onChange={() => setUseDesign(true)} style={{ marginTop: 3 }} />
               <span>
-                <strong>Diseño del congreso</strong>
+                <strong>{DESIGN_COPY[design.kind].label}</strong>
                 <br />
-                <span style={{ fontSize: 12, color: "#5b5f6b" }}>
-                  (El correo de Manicuristas Imparables, con los colores del evento: se llena solo con los datos de cada compra)
-                </span>
+                <span style={{ fontSize: 12, color: "#5b5f6b" }}>{DESIGN_COPY[design.kind].note}</span>
               </span>
             </label>
           )}
@@ -157,14 +192,54 @@ export default function ConfirmationTemplateEditor({
             <label htmlFor="confirmationShareText">Mensaje al compartir por WhatsApp</label>
             <textarea id="confirmationShareText" rows={3} maxLength={500} value={shareText} onChange={(e) => setShareText(e.target.value)} />
             <span style={{ fontSize: 12, color: "#5b5f6b" }}>
-              Lo que queda escrito cuando alguien toca «Compartir por WhatsApp» en el correo. El enlace a la página va solo, al final.
+              {withTips
+                ? "Lo que queda escrito cuando alguien toca «Compartir por WhatsApp» en «¿Vas con una colega?». El enlace a la inscripción va solo, al final."
+                : "Lo que queda escrito cuando alguien toca «Compartir por WhatsApp» en el correo. El enlace a la página va solo, al final."}
             </span>
           </div>
-          <p style={{ fontSize: 12, color: "#5b5f6b", marginBottom: 8 }}>
-            Vista previa con datos de ejemplo (Laura, el precio de hoy, un código de muestra). No se envía a nadie.
-          </p>
+          {withTips && (
+            <div className="field" style={{ marginBottom: 16, maxWidth: 660 }}>
+              <label htmlFor="confirmationTip0">Antes de ir</label>
+              <div style={{ display: "grid", gap: 6 }}>
+                {tips.map((tip, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ width: 18, fontSize: 13, fontWeight: 700, color: "#5b5f6b", textAlign: "right" }}>{i + 1}</span>
+                    <input
+                      id={`confirmationTip${i}`}
+                      type="text"
+                      maxLength={200}
+                      value={tip}
+                      onChange={(e) => setTips((all) => all.map((t, j) => (j === i ? e.target.value : t)))}
+                      style={{ flex: 1 }}
+                    />
+                    <button
+                      type="button"
+                      aria-label={`Quitar el punto ${i + 1}`}
+                      onClick={() => setTips((all) => all.filter((_, j) => j !== i))}
+                      style={{ border: "1px solid #e3e1dc", background: "#fff", borderRadius: 8, padding: "6px 10px", cursor: "pointer", fontSize: 13 }}
+                    >
+                      Quitar
+                    </button>
+                  </div>
+                ))}
+              </div>
+              {tips.length < MAX_TIPS && (
+                <button
+                  type="button"
+                  onClick={() => setTips((all) => [...all, ""])}
+                  style={{ alignSelf: "flex-start", marginTop: 8, border: "1px dashed #c9c6bf", background: "#fff", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 13 }}
+                >
+                  + Agregar un punto
+                </button>
+              )}
+              <span style={{ fontSize: 12, color: "#5b5f6b" }}>
+                Lo que conviene saber antes de llegar, en frases cortas. Sin ninguno, van los de siempre (tener la entrada a mano, entrar y salir con el mismo código, las novedades por WhatsApp).
+              </span>
+            </div>
+          )}
+          <p style={{ fontSize: 12, color: "#5b5f6b", marginBottom: 8 }}>{DESIGN_COPY[design.kind].sample}</p>
           <iframe
-            src={design.previewUrl}
+            src={withTips ? `${design.previewUrl}?antes=${encodeURIComponent(JSON.stringify(previewTips.map((t) => t.trim()).filter(Boolean)))}` : design.previewUrl}
             title="Vista previa del correo"
             style={{ display: "block", width: "100%", maxWidth: 660, height: 1100, border: "1px solid #e3e1dc", borderRadius: 12, background: "#fff" }}
           />
@@ -216,7 +291,12 @@ export default function ConfirmationTemplateEditor({
       {testUrl && (
         <TestSendBox
           url={testUrl}
-          body={{ mode: useDesign ? "design" : useOverride ? "event" : "global", html, subject, ...(useDesign ? { shareText } : {}) }}
+          body={{
+            mode: useDesign ? "design" : useOverride ? "event" : "global",
+            html,
+            subject,
+            ...(useDesign ? { shareText, ...(withTips ? { tips: ownTips } : {}) } : {}),
+          }}
           note="Se envía lo que ves ahora, aunque no lo hayas guardado: con datos de ejemplo y «[Prueba]» al comienzo del asunto."
         />
       )}

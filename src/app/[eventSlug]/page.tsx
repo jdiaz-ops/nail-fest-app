@@ -28,6 +28,8 @@ import { zonedTimeToUtc } from "@/lib/dateFormat";
 import ImparablesPage from "@/components/imparables/ImparablesPage";
 import { imparablesPageData } from "@/lib/imparables/page";
 import { asistireShortTarget, SHORT_PATH } from "@/lib/imparables/asistire";
+import { hasNailFestAsistire } from "@/lib/nailfest/asistire";
+import { nailFestSignupSample, nailFestSignupScreen, showsNailFestSignup } from "@/lib/nailfest/signup";
 
 export const dynamic = "force-dynamic";
 
@@ -64,7 +66,7 @@ export default async function EventLandingPage({
   searchParams,
 }: {
   params: { eventSlug: string };
-  searchParams: { fecha?: string | string[] };
+  searchParams: { fecha?: string | string[]; vista?: string | string[] };
 }) {
   const event = await findEvent(params.eventSlug);
   if (!event) {
@@ -78,7 +80,10 @@ export default async function EventLandingPage({
   // with a band that says so; on Imparables' page they can also see it as of
   // another day (?fecha=2027-03-15: the waiting list, each price stage).
   const fecha = typeof searchParams.fecha === "string" && /^\d{4}-\d{2}-\d{2}$/.test(searchParams.fecha) ? searchParams.fecha : null;
-  const staff = event.status === "DRAFT" || (event.theme === "IMPARABLES" && fecha) ? await getCurrentUser() : null;
+  // …and, from «Después de la inscripción», Nail Fest's screen after signing
+  // up (?vista=inscrita, 2026-10-30), switched on or not, with a sample ticket.
+  const signupLook = searchParams.vista === "inscrita" && hasNailFestAsistire(event);
+  const staff = event.status === "DRAFT" || (event.theme === "IMPARABLES" && fecha) || signupLook ? await getCurrentUser() : null;
 
   // Draft events (/admin/events) aren't live yet — same gate as our
   // previous ticketing platform's own Draft status. A plain 404 here would be confusing for an
@@ -132,6 +137,10 @@ export default async function EventLandingPage({
     );
   }
 
+  const signupPreview =
+    signupLook && staff
+      ? { result: await nailFestSignupSample(event), firstName: "Laura", email: "laura@correo.com", phone: "+573001234567" }
+      : undefined;
   const [professionOptions, metaConnection, orgSettings, checkoutQuestions, ticketTypes, imageDimensions] = await Promise.all([
     getOrderedProfessionOptions(),
     db.metaConnection.findFirst({ orderBy: { createdAt: "desc" }, select: { pixelId: true } }),
@@ -147,10 +156,12 @@ export default async function EventLandingPage({
     // external lookup. Never let a hiccup here break the actual page —
     // this is a nice-to-have stat, not something a visitor should ever
     // see fail as a 500. Not counted for the team's own look at a draft.
-    draftPreview
+    draftPreview || signupPreview
       ? Promise.resolve(null)
       : db.landingView.create({ data: { eventId: event.id, country: headers().get("x-vercel-ip-country") } }).catch(() => null),
   ]);
+  // Nail Fest's own screen after signing up, when the event switched it on.
+  const signupScreen = showsNailFestSignup(event) || signupPreview ? await nailFestSignupScreen(event, orgSettings.timezone) : undefined;
   const questions: QuestionView[] = checkoutQuestions.map((q) => ({
     key: q.key,
     label: q.label,
@@ -214,7 +225,7 @@ export default async function EventLandingPage({
     // on desktop instead of the same narrow mobile column just centered
     // on a wide screen.
     <main className="event-page">
-      <MetaPixelScript pixelId={metaConnection?.pixelId ?? null} />
+      <MetaPixelScript pixelId={signupPreview ? null : (metaConnection?.pixelId ?? null)} />
       {draftPreview && <p className="event-draft-band">Vista previa: este evento está en borrador y solo lo ve el equipo.</p>}
 
       {event.imageUrl && imageDimensions && (
@@ -337,6 +348,8 @@ export default async function EventLandingPage({
           galleryTitle={event.galleryTitle}
           ctaNote={event.ctaNote}
           closingText={event.closingText || `Nos vemos el ${heroDate.days} ${heroDate.month} en ${event.city}.`}
+          signupScreen={signupScreen}
+          signupPreview={signupPreview}
         />
       </Suspense>
     </main>

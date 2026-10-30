@@ -5,6 +5,7 @@ import type { RegistrationStatus } from "@prisma/client";
 import { pushNewRegistrantToEventAudiences } from "@/lib/meta/audiences";
 import { recordConsents } from "@/lib/consent";
 import { finalizeConfirmedRegistration } from "@/lib/registrationConfirmation";
+import { nailFestSignupResult, showsNailFestSignup } from "@/lib/nailfest/signup";
 import { buildCheckoutUrl, wompiReference, wompiWidgetParams } from "@/lib/payments/wompi";
 import { DISCOUNT_ERROR_MESSAGES, resolveDiscount, type DiscountResult } from "@/lib/discounts";
 import { paypalConfigured } from "@/lib/payments/paypal";
@@ -613,7 +614,7 @@ export async function POST(req: NextRequest) {
   // deliberately NOT surfaced here — see that function's own comment on
   // why the personal join link isn't handed out at registration time at
   // all, on any channel.
-  const { whatsappTicketLinkSent } = await finalizeConfirmedRegistration({
+  const { whatsappTicketLinkSent, qrToken } = await finalizeConfirmedRegistration({
     person,
     event,
     registration,
@@ -625,5 +626,14 @@ export async function POST(req: NextRequest) {
     clientUserAgent: userAgentFromHeaders(),
   });
 
-  return NextResponse.json({ ok: true, registrationId: registration.id, resent: isResend, whatsappTicketLinkSent });
+  // Nail Fest's own screen after signing up, for an event that switched it
+  // on (2026-10-30, lib/nailfest/signup.ts): her ticket's QR right there.
+  const signup = showsNailFestSignup(event)
+    ? await nailFestSignupResult(registration, person, qrToken, !wasAlreadyConfirmed).catch((err) => {
+        console.error("register: Nail Fest's screen after signing up", err);
+        return undefined;
+      })
+    : undefined;
+
+  return NextResponse.json({ ok: true, registrationId: registration.id, resent: isResend, whatsappTicketLinkSent, ...(signup ? { signup } : {}) });
 }

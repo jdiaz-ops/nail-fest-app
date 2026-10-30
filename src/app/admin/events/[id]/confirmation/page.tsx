@@ -3,6 +3,8 @@ import { db } from "@/lib/db";
 import { requirePageUser } from "@/lib/auth/guard";
 import { getOrgSettings } from "@/lib/settings";
 import { defaultShareText } from "@/lib/imparables/confirmation";
+import { NAIL_FEST_DESIGN, defaultNailFestShareText, eventDays } from "@/lib/nailfest/confirmation";
+import { defaultTips } from "@/lib/nailfest/confirmationEmail";
 import SaveEventConfirmationClient from "./SaveEventConfirmationClient";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +18,10 @@ export default async function EventConfirmationPage({ params }: { params: { id: 
   await requirePageUser(["ADMIN"]);
   const [event, orgSettings] = await Promise.all([db.event.findUnique({ where: { id: params.id } }), getOrgSettings()]);
   if (!event) notFound();
+  const tz = orgSettings.timezone;
+  // The event's own designed email: Manicuristas Imparables' for its events
+  // (2026-10-29), Nail Fest's for one at a place (2026-10-30).
+  const design = event.theme === "IMPARABLES" ? "IMPARABLES" : event.format !== "VIRTUAL" ? NAIL_FEST_DESIGN : null;
 
   return (
     <div>
@@ -27,10 +33,18 @@ export default async function EventConfirmationPage({ params }: { params: { id: 
         eventId={event.id}
         initialHtml={event.confirmationEmailHtml}
         initialSubject={event.confirmationEmailSubject}
-        // Manicuristas Imparables' own designed email, for its events (2026-10-29).
-        designAvailable={event.theme === "IMPARABLES"}
-        initialDesign={event.confirmationEmailDesign === "IMPARABLES"}
-        initialShareText={event.shareText ?? defaultShareText(event, orgSettings.timezone)}
+        design={
+          design === "IMPARABLES"
+            ? { kind: design, initial: event.confirmationEmailDesign === design, shareText: event.shareText ?? defaultShareText(event, tz) }
+            : design === NAIL_FEST_DESIGN
+              ? {
+                  kind: design,
+                  initial: event.confirmationEmailDesign === design,
+                  shareText: event.shareText ?? defaultNailFestShareText(event, tz),
+                  tips: event.confirmationTips.length ? event.confirmationTips : defaultTips(eventDays(event, tz).length > 1),
+                }
+              : null
+        }
       />
     </div>
   );

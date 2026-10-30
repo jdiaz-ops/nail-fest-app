@@ -1,8 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { getOrgSettings, imparablesConfirmationPreview } = vi.hoisted(() => ({ getOrgSettings: vi.fn(), imparablesConfirmationPreview: vi.fn() }));
+const { getOrgSettings, imparablesConfirmationPreview, nailFestConfirmationPreview } = vi.hoisted(() => ({
+  getOrgSettings: vi.fn(),
+  imparablesConfirmationPreview: vi.fn(),
+  nailFestConfirmationPreview: vi.fn(),
+}));
 vi.mock("@/lib/settings", () => ({ getOrgSettings }));
 vi.mock("@/lib/imparables/confirmation", () => ({ imparablesConfirmationPreview }));
+vi.mock("@/lib/nailfest/confirmation", () => ({ NAIL_FEST_DESIGN: "NAIL_FEST", nailFestConfirmationPreview }));
 
 import type { Event } from "@prisma/client";
 import { sampleConfirmation, savedConfirmationMode } from "./confirmationSample";
@@ -11,6 +16,7 @@ const EVENT = {
   id: "ev_1",
   name: "Manicuristas Imparables 2027",
   publicName: null,
+  theme: "IMPARABLES",
   format: "VIRTUAL",
   city: "Bogotá",
   venueName: null,
@@ -29,6 +35,7 @@ beforeEach(() => {
   process.env.APP_BASE_URL = "https://nailfest.lat";
   getOrgSettings.mockReset().mockResolvedValue({ name: "Nail Fest", timezone: "America/Bogota", language: "es", confirmationEmailHtml: null, confirmationEmailSubject: null });
   imparablesConfirmationPreview.mockReset().mockResolvedValue({ html: "<p>diseño</p>", text: "diseño" });
+  nailFestConfirmationPreview.mockReset().mockResolvedValue({ html: "<p>nail fest</p>", text: "nail fest" });
 });
 
 describe("the confirmation a buyer would get, with sample data", () => {
@@ -36,6 +43,15 @@ describe("the confirmation a buyer would get, with sample data", () => {
     expect(savedConfirmationMode({ confirmationEmailDesign: "IMPARABLES", confirmationEmailHtml: "<p>x</p>" })).toBe("design");
     expect(savedConfirmationMode({ confirmationEmailDesign: null, confirmationEmailHtml: "<p>x</p>" })).toBe("event");
     expect(savedConfirmationMode({ confirmationEmailDesign: null, confirmationEmailHtml: null })).toBe("global");
+    expect(savedConfirmationMode({ confirmationEmailDesign: "NAIL_FEST", confirmationEmailHtml: null })).toBe("design");
+  });
+
+  it("Nail Fest's design for one of its events at a place, with the editor's «Antes de ir» and message", async () => {
+    const cucuta = { ...EVENT, name: "Nail Fest Cúcuta", theme: "NAIL_FEST", format: "IN_PERSON" } as Event;
+    const email = await sampleConfirmation(cucuta, "design", { shareText: "¡Vamos!", tips: ["Llega temprano"] });
+    expect(email.html).toBe("<p>nail fest</p>");
+    expect(nailFestConfirmationPreview).toHaveBeenCalledWith("ev_1", { shareText: "¡Vamos!", tips: ["Llega temprano"] });
+    expect(imparablesConfirmationPreview).not.toHaveBeenCalled();
   });
 
   it("the congress's design, under the event's own subject", async () => {
