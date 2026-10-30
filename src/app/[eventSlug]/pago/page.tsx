@@ -7,7 +7,7 @@ import { confirmRegistrationPayment, settlePayment, type ConfirmResult } from "@
 import { INSTAGRAM_HANDLE, INSTAGRAM_URL } from "@/lib/brand";
 import { publicEventName } from "@/lib/eventDisplayName";
 import PostPaymentQuestions from "@/components/PostPaymentQuestions";
-import { asistireUrl } from "@/lib/imparables/asistire";
+import { asistireSampleUrl, asistireUrl } from "@/lib/imparables/asistire";
 import { getCurrentUser } from "@/lib/auth/session";
 
 export const dynamic = "force-dynamic";
@@ -90,7 +90,7 @@ export default async function PaymentReturnPage({
   // Manicuristas Imparables, paid: the way to her «Asistiré» image (2026-10-30).
   const asistire =
     vista === "approved" && event?.theme === "IMPARABLES"
-      ? `/asistire/muestra/${event.slug}`
+      ? asistireSampleUrl(event.id)
       : result === "approved" && event?.theme === "IMPARABLES" && searchParams.registrationId
       ? await db.registration
           .findUnique({ where: { id: searchParams.registrationId }, select: { id: true, eventId: true, status: true } })

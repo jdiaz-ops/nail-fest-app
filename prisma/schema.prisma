@@ -267,6 +267,10 @@ model Event {
   // colors (lib/imparables/confirmationEmail.ts). The subject still comes
   // from confirmationEmailSubject's chain. Null: the body's chain as usual.
   confirmationEmailDesign   String?
+  // What the designed confirmation's «Compartir por WhatsApp» writes
+  // (2026-10-30, «Confirmación del evento»); the link to the event's page
+  // goes after it. Null: «Mira este congreso para manicuristas: …».
+  shareText                 String?
   // A richer, structured alternative to `description` for an event that
   // wants a real sales-script landing (hero/story/value-stack table/
   // schedule/speakers/FAQ/etc. — see lib/salesPage/types.ts) instead of

@@ -42,6 +42,21 @@ export function asistireUrl(registrationId: string): string {
   return `${baseUrl()}/asistire/${asistireToken(registrationId)}`;
 }
 
+// The team's sample of an event's page (2026-10-30): the same image maker,
+// with no purchase behind it — for the confirmation's test emails, its
+// preview and «Después del pago». Signed like hers, so it opens on any
+// phone without signing in, and only from a link we made.
+const SAMPLE = "muestra-";
+
+export function asistireSampleUrl(eventId: string): string {
+  return `${baseUrl()}/asistire/${asistireToken(`${SAMPLE}${eventId}`)}`;
+}
+
+/** The event a sample link is for; null for a buyer's own link. */
+export function asistireSampleEventId(id: string): string | null {
+  return id.startsWith(SAMPLE) ? id.slice(SAMPLE.length) : null;
+}
+
 /** Where the short link's visits say they came from. */
 export const ASISTIRE_UTM = { utm_source: "asistire", utm_medium: "referido", utm_campaign: "imagen" } as const;
 

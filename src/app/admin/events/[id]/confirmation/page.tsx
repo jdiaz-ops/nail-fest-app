@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requirePageUser } from "@/lib/auth/guard";
+import { getOrgSettings } from "@/lib/settings";
+import { defaultShareText } from "@/lib/imparables/confirmation";
 import SaveEventConfirmationClient from "./SaveEventConfirmationClient";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +14,7 @@ export const dynamic = "force-dynamic";
 // ADMIN-only — see EventModuleShell's own comment.
 export default async function EventConfirmationPage({ params }: { params: { id: string } }) {
   await requirePageUser(["ADMIN"]);
-  const event = await db.event.findUnique({ where: { id: params.id } });
+  const [event, orgSettings] = await Promise.all([db.event.findUnique({ where: { id: params.id } }), getOrgSettings()]);
   if (!event) notFound();
 
   return (
@@ -28,6 +30,7 @@ export default async function EventConfirmationPage({ params }: { params: { id: 
         // Manicuristas Imparables' own designed email, for its events (2026-10-29).
         designAvailable={event.theme === "IMPARABLES"}
         initialDesign={event.confirmationEmailDesign === "IMPARABLES"}
+        initialShareText={event.shareText ?? defaultShareText(event, orgSettings.timezone)}
       />
     </div>
   );

@@ -24,7 +24,7 @@ export function savedConfirmationMode(event: Pick<Event, "confirmationEmailDesig
 export async function sampleConfirmation(
   event: Event,
   mode: ConfirmationMode,
-  unsaved: { html?: string | null; subject?: string | null } = {}
+  unsaved: { html?: string | null; subject?: string | null; shareText?: string | null } = {}
 ): Promise<{ subject: string; text: string; html: string }> {
   const orgSettings = await getOrgSettings();
   const format = event.format ?? "IN_PERSON";
@@ -43,7 +43,7 @@ export async function sampleConfirmation(
   );
 
   if (mode === "design") {
-    const designed = await imparablesConfirmationPreview(event.id);
+    const designed = await imparablesConfirmationPreview(event.id, unsaved.shareText !== undefined ? { shareText: unsaved.shareText } : {});
     if (designed) return { subject, ...designed };
   }
 

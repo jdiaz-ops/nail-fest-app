@@ -41,6 +41,12 @@ describe("the confirmation a buyer would get, with sample data", () => {
   it("the congress's design, under the event's own subject", async () => {
     const email = await sampleConfirmation(EVENT, "design");
     expect(email).toEqual({ subject: "¡Tu cupo está confirmado! Nos vemos en Manicuristas Imparables 2027", html: "<p>diseño</p>", text: "diseño" });
+    expect(imparablesConfirmationPreview).toHaveBeenCalledWith("ev_1", {});
+  });
+
+  it("with the editor's WhatsApp message, unsaved, when it sends one", async () => {
+    await sampleConfirmation(EVENT, "design", { shareText: "¡Vente conmigo!" });
+    expect(imparablesConfirmationPreview).toHaveBeenCalledWith("ev_1", { shareText: "¡Vente conmigo!" });
   });
 
   it("the editor's template as it is now, unsaved — with the subject typed in, and a sample ticket for an event at a place", async () => {

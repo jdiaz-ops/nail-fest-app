@@ -11,11 +11,13 @@ import { sanitizeEventDescription } from "@/lib/sanitizeHtml";
 // confirmationEmailSubject follows the exact same "" = clear convention.
 // confirmationEmailDesign: "IMPARABLES" picks Manicuristas Imparables' own
 // designed email (2026-10-29), null goes back to the body above; omitted,
-// it stays as it is.
+// it stays as it is. shareText is that email's «Compartir por WhatsApp»
+// message (2026-10-30), "" back to the default; omitted, as it is.
 const bodySchema = z.object({
   confirmationEmailHtml: z.string(),
   confirmationEmailSubject: z.string().optional(),
   confirmationEmailDesign: z.enum(["IMPARABLES"]).nullable().optional(),
+  shareText: z.string().max(500).optional(),
 });
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
@@ -30,6 +32,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const html = parsed.data.confirmationEmailHtml;
   const subject = parsed.data.confirmationEmailSubject;
   const design = parsed.data.confirmationEmailDesign;
+  const shareText = parsed.data.shareText;
   try {
     await db.event.update({
       where: { id: params.id },
@@ -37,6 +40,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         confirmationEmailHtml: html ? sanitizeEventDescription(html) : null,
         ...(subject !== undefined ? { confirmationEmailSubject: subject || null } : {}),
         ...(design !== undefined ? { confirmationEmailDesign: design } : {}),
+        ...(shareText !== undefined ? { shareText: shareText.trim() || null } : {}),
       },
     });
   } catch {

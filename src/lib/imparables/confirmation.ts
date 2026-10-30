@@ -6,7 +6,7 @@ import { utcToZonedInputValue } from "@/lib/dateFormat";
 import { parseLandingBlocks } from "@/lib/landingBlocks/types";
 import { sayName } from "@/lib/mesa/email";
 import { ZOOM_ACCESS_REMINDER_MINUTES_BEFORE } from "@/lib/zoomAccessReminder";
-import { asistireUrl } from "./asistire";
+import { asistireSampleUrl, asistireUrl } from "./asistire";
 import { castOf } from "./blocks";
 import { getActiveStage, purchaseOf } from "./pricing";
 import { clock, coverName, eventWhen } from "./schedule";
@@ -37,10 +37,16 @@ export function calendarEventOf(event: Pick<Event, "id" | "slug" | "name" | "pub
   };
 }
 
+/** «Compartir por WhatsApp»'s message when the event has none of its own: «Mira este congreso para manicuristas: Manicuristas Imparables, 27 de junio, 100% en vivo.» */
+export function defaultShareText(event: Event, timezone: string): string {
+  return `Mira este congreso para manicuristas: ${coverName(publicEventName(event))}, ${eventWhen(event, timezone).short}, 100% en vivo.`;
+}
+
 async function confirmationOf(
   event: Event,
   her: { firstName: string | null; code: string; purchase: { stage: string; paid: string } | null; asistire: string },
-  sales: SalesState
+  sales: SalesState,
+  shareText: string | null = event.shareText
 ): Promise<ImparablesConfirmation> {
   const [orgSettings, whatsapp] = await Promise.all([
     getOrgSettings(),
@@ -74,7 +80,8 @@ async function confirmationOf(
     calendar: { google: googleCalendarUrl(calendar), ics: `${base}/${event.slug}/calendario` },
     share: {
       line: shareLine(sales.current ? pesos(sales.current.price) : null, sales.current && sales.next ? pesos(sales.next.price) : null),
-      url: `https://wa.me/?text=${encodeURIComponent(`Mira este congreso para manicuristas: ${name}, ${when.short}, 100% en vivo. ${page.toString()}`)}`,
+      // The event's own message («Confirmación del evento»), else the default; the page's link after it.
+      url: `https://wa.me/?text=${encodeURIComponent(`${shareText?.trim() || defaultShareText(event, tz)} ${page.toString()}`)}`,
     },
     asistire: { url: her.asistire, image: `${base}/imparables/asistire-muestra.jpg` },
     helpUrl: digits.length >= 8 ? `https://wa.me/${digits}` : null,
@@ -107,8 +114,8 @@ export async function imparablesConfirmationFor(
   return imparablesConfirmationEmail(data);
 }
 
-/** The design as a buyer at today's price would get it — «Laura», a sample code — for «Confirmación del evento». */
-export async function imparablesConfirmationPreview(eventId: string): Promise<{ html: string; text: string } | null> {
+/** The design as a buyer at today's price would get it — «Laura», a sample code — for «Confirmación del evento»; with the editor's share message, unsaved, when given. */
+export async function imparablesConfirmationPreview(eventId: string, unsaved: { shareText?: string | null } = {}): Promise<{ html: string; text: string } | null> {
   const event = await db.event.findUnique({ where: { id: eventId } });
   if (!event) return null;
   const sales = await getActiveStage(event);
@@ -116,9 +123,10 @@ export async function imparablesConfirmationPreview(eventId: string): Promise<{ 
   return imparablesConfirmationEmail(
     await confirmationOf(
       event,
-      // No purchase behind the sample: its «Crear mi imagen» goes to the event's page.
-      { firstName: "Laura", code: "EJEMPLO1", purchase: stage ? { stage: stage.name, paid: pesos(stage.price) } : null, asistire: `${baseUrl()}/${event.slug}` },
-      sales
+      // No purchase behind the sample: its «Crear mi imagen» opens the team's sample of the image maker.
+      { firstName: "Laura", code: "EJEMPLO1", purchase: stage ? { stage: stage.name, paid: pesos(stage.price) } : null, asistire: asistireSampleUrl(event.id) },
+      sales,
+      unsaved.shareText !== undefined ? unsaved.shareText : event.shareText
     )
   );
 }

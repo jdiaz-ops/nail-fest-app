@@ -14,6 +14,7 @@ const bodySchema = z.object({
   /** The editor's, unsaved. */
   html: z.string().max(200_000).optional(),
   subject: z.string().max(300).optional(),
+  shareText: z.string().max(500).optional(),
 });
 
 // «Enviar prueba» (2026-10-30): an event's confirmation email right now, to
@@ -38,7 +39,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (!event) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
   try {
-    const email = await sampleConfirmation(event, parsed.data.mode, { html: parsed.data.html, subject: parsed.data.subject });
+    const { html, subject, shareText } = parsed.data;
+    const email = await sampleConfirmation(event, parsed.data.mode, { html, subject, ...(shareText !== undefined ? { shareText } : {}) });
     for (const address of to) {
       await emailProvider.sendTransactional({ to: address, subject: `[Prueba] ${email.subject}`, text: email.text, html: email.html });
     }

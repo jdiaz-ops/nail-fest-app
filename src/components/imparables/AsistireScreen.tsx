@@ -9,8 +9,7 @@ import { cinzel, manrope } from "./fonts";
 // «Asistiré»'s page (2026-10-30), in the checkout's chrome: the image maker
 // (ImpAsistire.tsx) for someone whose purchase is confirmed, or, while her
 // payment is still being confirmed, a note to come back. Shown by her own
-// link (app/asistire/[token]) and by the team's preview of it
-// (app/asistire/muestra/[eventSlug]).
+// link and by the team's sample link (app/asistire/[token]).
 export default async function AsistireScreen({ event, waiting = false }: { event: Event; waiting?: boolean }) {
   const words = coverName(publicEventName(event)).split(/\s+/);
   const big = words.pop() ?? "";

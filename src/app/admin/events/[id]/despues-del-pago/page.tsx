@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requirePageUser } from "@/lib/auth/guard";
 import { savedConfirmationMode } from "@/lib/confirmationSample";
+import { asistireSampleUrl } from "@/lib/imparables/asistire";
 import TestSendBox from "../../TestSendBox";
 
 export const dynamic = "force-dynamic";
@@ -18,8 +19,8 @@ const SENT_NOW = {
 // confirms, or when the bank says no), her confirmation email (and a test of
 // it to the team's inbox), and Manicuristas Imparables' «Asistiré» image to
 // try with any photo. Each tab is the real page in the team's preview
-// (?vista= on /pago, /asistire/muestra): sample data, nothing saved or sent
-// to anyone. ADMIN-only, like the rest of Configuración.
+// (?vista= on /pago, the image's sample link): sample data, nothing saved or
+// sent to anyone. ADMIN-only, like the rest of Configuración.
 export default async function AfterPaymentPage({ params, searchParams }: { params: { id: string }; searchParams: { vista?: string } }) {
   await requirePageUser(["ADMIN"]);
   const event = await db.event.findUnique({ where: { id: params.id } });
@@ -39,7 +40,7 @@ export default async function AfterPaymentPage({ params, searchParams }: { param
           {
             id: "imagen",
             label: "Imagen «Asistiré»",
-            src: `/asistire/muestra/${event.slug}`,
+            src: asistireSampleUrl(event.id),
             note: "Se abre desde la página de pago y desde el correo. Pruébala con cualquier foto: no se guarda nada.",
           },
         ]

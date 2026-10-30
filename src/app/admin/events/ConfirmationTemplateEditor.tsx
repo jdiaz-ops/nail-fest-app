@@ -35,7 +35,8 @@ const SUBJECT_MERGE_TAGS = ["EVENTO_NOMBRE", "EVENTO_FECHA_RANGO", "EVENTO_FORMA
 // has no such toggle — the account-wide template just always applies
 // when nothing more specific overrides it. `design` (an event with a
 // designed email of its own — Manicuristas Imparables', 2026-10-29) adds a
-// third choice: that email, with its preview, and only its subject to edit.
+// third choice: that email, with its preview, and only its subject — and,
+// since 2026-10-30, its «Compartir por WhatsApp» message — to edit.
 // `testUrl` (an event's, 2026-10-30) adds «Enviarme una prueba»: what's on
 // screen right now, saved or not, to the team's own inbox.
 export default function ConfirmationTemplateEditor({
@@ -49,14 +50,15 @@ export default function ConfirmationTemplateEditor({
   scope: "event" | "global";
   initialHtml: string | null;
   initialSubject: string | null;
-  design?: { initial: boolean; previewUrl: string };
+  design?: { initial: boolean; previewUrl: string; shareText: string };
   testUrl?: string;
-  onSave: (html: string, subject: string, design: boolean) => Promise<{ ok: boolean }>;
+  onSave: (html: string, subject: string, design: boolean, shareText?: string) => Promise<{ ok: boolean }>;
 }) {
   const [useOverride, setUseOverride] = useState(scope === "global" ? true : initialHtml != null || initialSubject != null);
   const [useDesign, setUseDesign] = useState(Boolean(design?.initial));
   const [html, setHtml] = useState(initialHtml ?? STARTER_HTML);
   const [subject, setSubject] = useState(initialSubject ?? STARTER_SUBJECT);
+  const [shareText, setShareText] = useState(design?.shareText ?? "");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const editorRef = useRef<RichTextEditorHandle>(null);
@@ -74,7 +76,7 @@ export default function ConfirmationTemplateEditor({
     setMessage(null);
     const result = useDesign
       ? // The designed email keeps whatever body the event had, for coming back to it.
-        await onSave(html === STARTER_HTML && initialHtml == null ? "" : html, subject || STARTER_SUBJECT, true)
+        await onSave(html === STARTER_HTML && initialHtml == null ? "" : html, subject || STARTER_SUBJECT, true, shareText)
       : await onSave(useOverride ? html || STARTER_HTML : "", useOverride ? subject || STARTER_SUBJECT : "", false);
     setSaving(false);
     setMessage(result.ok ? "Guardado." : "No se pudo guardar.");
@@ -151,6 +153,13 @@ export default function ConfirmationTemplateEditor({
             <label htmlFor="confirmationSubjectDesign">Asunto del correo</label>
             <input id="confirmationSubjectDesign" type="text" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder={STARTER_SUBJECT} />
           </div>
+          <div className="field" style={{ marginBottom: 16, maxWidth: 660 }}>
+            <label htmlFor="confirmationShareText">Mensaje al compartir por WhatsApp</label>
+            <textarea id="confirmationShareText" rows={3} maxLength={500} value={shareText} onChange={(e) => setShareText(e.target.value)} />
+            <span style={{ fontSize: 12, color: "#5b5f6b" }}>
+              Lo que queda escrito cuando alguien toca «Compartir por WhatsApp» en el correo. El enlace a la página va solo, al final.
+            </span>
+          </div>
           <p style={{ fontSize: 12, color: "#5b5f6b", marginBottom: 8 }}>
             Vista previa con datos de ejemplo (Laura, el precio de hoy, un código de muestra). No se envía a nadie.
           </p>
@@ -207,7 +216,7 @@ export default function ConfirmationTemplateEditor({
       {testUrl && (
         <TestSendBox
           url={testUrl}
-          body={{ mode: useDesign ? "design" : useOverride ? "event" : "global", html, subject }}
+          body={{ mode: useDesign ? "design" : useOverride ? "event" : "global", html, subject, ...(useDesign ? { shareText } : {}) }}
           note="Se envía lo que ves ahora, aunque no lo hayas guardado: con datos de ejemplo y «[Prueba]» al comienzo del asunto."
         />
       )}

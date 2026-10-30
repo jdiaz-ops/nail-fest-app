@@ -3,7 +3,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const db = vi.hoisted(() => ({ event: { findFirst: vi.fn() } }));
 vi.mock("@/lib/db", () => ({ db }));
 
-import { ASISTIRE_UTM, asistireRegistrationId, asistireShortLink, asistireShortTarget, asistireToken, asistireUrl } from "./asistire";
+import {
+  ASISTIRE_UTM,
+  asistireRegistrationId,
+  asistireSampleEventId,
+  asistireSampleUrl,
+  asistireShortLink,
+  asistireShortTarget,
+  asistireToken,
+  asistireUrl,
+} from "./asistire";
 
 beforeEach(() => {
   process.env.APP_SECRET_KEY = "test-secret";
@@ -29,6 +38,15 @@ describe("her «Asistiré» link", () => {
 
   it("is a page of the site", () => {
     expect(asistireUrl("cmreg123")).toMatch(/^https:\/\/nailfest\.lat\/asistire\/cmreg123\.[\w-]+$/);
+  });
+
+  it("the team's sample opens its event's page, signed too; a buyer's link is never a sample", () => {
+    const token = asistireSampleUrl("ev_1").split("/asistire/")[1]!;
+    const id = asistireRegistrationId(token);
+    expect(id).toBe("muestra-ev_1");
+    expect(asistireSampleEventId(id!)).toBe("ev_1");
+    expect(asistireSampleEventId("cmreg123")).toBeNull();
+    expect(asistireRegistrationId(token.replace("ev_1", "ev_2"))).toBeNull();
   });
 });
 
