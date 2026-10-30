@@ -7,6 +7,7 @@ import { confirmRegistrationPayment, settlePayment, type ConfirmResult } from "@
 import { INSTAGRAM_HANDLE, INSTAGRAM_URL } from "@/lib/brand";
 import { publicEventName } from "@/lib/eventDisplayName";
 import PostPaymentQuestions from "@/components/PostPaymentQuestions";
+import { asistireUrl } from "@/lib/imparables/asistire";
 
 export const dynamic = "force-dynamic";
 
@@ -69,6 +70,14 @@ export default async function PaymentReturnPage({
           .findUnique({ where: { id: searchParams.registrationId }, select: { customFields: true } })
           .then((r) => !(r?.customFields as Record<string, unknown> | null)?.instagram)
       : false;
+
+  // Manicuristas Imparables, paid: the way to her «Asistiré» image (2026-10-30).
+  const asistire =
+    result === "approved" && event?.theme === "IMPARABLES" && searchParams.registrationId
+      ? await db.registration
+          .findUnique({ where: { id: searchParams.registrationId }, select: { id: true, eventId: true, status: true } })
+          .then((r) => (r && r.eventId === event.id && r.status === "CONFIRMED" ? asistireUrl(r.id) : null))
+      : null;
 
   const brandName = orgSettings.name;
   const eventName = event ? publicEventName(event) : "tu evento";
@@ -144,6 +153,32 @@ export default async function PaymentReturnPage({
       <p style={{ fontSize: 14.5, color: "#5b5f6b", margin: "0 0 24px" }}>{copy.body}</p>
 
       {askLater && <PostPaymentQuestions registrationId={searchParams.registrationId!} transactionId={transactionId!} />}
+
+      {asistire && (
+        <a
+          href={asistire}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            marginBottom: 14,
+            padding: "14px 16px",
+            borderRadius: 16,
+            background: "#3b2418",
+            color: "#f5f0e8",
+            textAlign: "left",
+            textDecoration: "none",
+          }}
+        >
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ display: "block", fontSize: 15, fontWeight: 800 }}>Crea tu imagen «¡Asistiré!»</span>
+            <span style={{ display: "block", marginTop: 2, fontSize: 12.5, color: "#e6dacb" }}>Sube tu foto y cuéntale a todos que vas.</span>
+          </span>
+          <span style={{ flex: "0 0 auto", padding: "8px 14px", borderRadius: 999, background: "#c9a46a", color: "#141414", fontSize: 12.5, fontWeight: 800 }}>
+            Crear
+          </span>
+        </a>
+      )}
 
       {result === "approved" && (
         <div

@@ -1,8 +1,8 @@
 // Manicuristas Imparables' own confirmation email (2026-10-29), as in the
 // approved boceto: the congress's header and «Cupo confirmado», the hello,
 // her ticket (when, where, what she paid, her code, her calendar), what
-// happens now in five steps, who's waiting for her, a colleague to share it
-// with, and help. Modules like La Mesa's (lib/mesa/email.ts), in the page's
+// happens now in five steps, who's waiting for her, her «Asistiré» image to
+// share (2026-10-30), a colleague to share it with, and help. Modules like La Mesa's (lib/mesa/email.ts), in the page's
 // bone, chocolate and gold; tables and inline styles, so it reads the same
 // in Gmail, Outlook and the phone's mail app. The header is an image
 // (public/imparables/correo-cabecera.png) so its type looks the same
@@ -33,6 +33,8 @@ export interface ImparablesConfirmation {
   calendar: { google: string; ics: string };
   /** «Hoy está a $90.000 y luego sube a $120.000: compartirle esto es un buen regalo.», and WhatsApp's share link. */
   share: { line: string; url: string };
+  /** Her page to make her «Asistiré» image (lib/imparables/asistire.ts), and a picture of the empty template. */
+  asistire: { url: string; image: string } | null;
   /** The team's WhatsApp, when there's one. */
   helpUrl: string | null;
   speakers: { name: string; photoUrl: string }[];
@@ -180,6 +182,16 @@ ${table(`<tr>${faces.join("")}</tr>`)}
 </td></tr>`
     : ""
 }
+${
+  c.asistire
+    ? `<tr><td class="px" align="center" style="padding:28px 32px 30px;">
+<div style="${serif(21, 800, INK, "line-height:1.25;")}">¡Cuéntale a todos que vas!</div>
+<div style="margin:10px auto 16px;max-width:420px;${sans(15, 400, WARM, "line-height:1.55;")}">Sube una foto tuya y te armamos tu imagen «Asistiré» para historias y publicaciones.</div>
+<a href="${esc(c.asistire.url)}" style="display:block;text-decoration:none;"><img src="${esc(c.asistire.image)}" width="150" alt="Tu imagen «¡Asistiré!»" style="display:block;margin:0 auto 16px;width:150px;height:auto;border:0;border-radius:12px;"></a>
+<a href="${esc(c.asistire.url)}" style="display:inline-block;padding:14px 24px;border-radius:14px;background:${GOLD};text-decoration:none;${sans(15.5, 800, INK)}">Crear mi imagen</a>
+</td></tr>`
+    : ""
+}
 <tr><td class="px" align="center" style="padding:28px 32px 30px;background:${CHOCOLATE};">
 <div style="${serif(21, 800, CREAM, "line-height:1.25;")}">¿Conoces a una colega que lo necesita?</div>
 <div style="margin:10px auto 18px;max-width:420px;${sans(15, 400, CREAM_SOFT, "line-height:1.55;")}">${esc(c.share.line)}</div>
@@ -216,6 +228,7 @@ Recibes este correo porque compraste tu entrada a ${esc(c.eventName)}.
     ].join("\n"),
     ["¿QUÉ PASA AHORA?", ...steps.map(([title, body], i) => `${i + 1}. ${title}${title.endsWith(".") ? "" : "."} ${body}`)].join("\n"),
     ...(cast ? [`QUIÉNES TE ESPERAN\n${cast}: ${c.speakers.map((p) => p.name).join(", ")}.`] : []),
+    ...(c.asistire ? [`¡CUÉNTALE A TODOS QUE VAS!\nSube una foto tuya y te armamos tu imagen «Asistiré» para historias y publicaciones: ${c.asistire.url}`] : []),
     `¿CONOCES A UNA COLEGA QUE LO NECESITA?\n${c.share.line}\n${c.share.url}`,
     ...(c.helpUrl ? [`¿Dudas? Escríbenos por WhatsApp: ${c.helpUrl}`] : []),
     `Organiza Nail Fest · ${c.site.host}\nRecibes este correo porque compraste tu entrada a ${c.eventName}.`,

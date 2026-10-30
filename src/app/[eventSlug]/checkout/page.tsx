@@ -7,7 +7,7 @@ import { publicEventName } from "@/lib/eventDisplayName";
 import { paypalCheckoutConfig } from "@/lib/payments/paypal";
 import { imparablesPageData } from "@/lib/imparables/page";
 import { checkoutOffer } from "@/lib/imparables/pricing";
-import { coverName } from "@/lib/imparables/schedule";
+import { coverName, kindLine } from "@/lib/imparables/schedule";
 import MetaPixelScript from "@/components/MetaPixelScript";
 import ImpCheckout from "@/components/imparables/ImpCheckout";
 import { cinzel, manrope } from "@/components/imparables/fonts";
@@ -57,7 +57,7 @@ export default async function CheckoutPage({ params }: { params: { eventSlug: st
         backHref={`/${event.slug}`}
         name={{ pre: words.join(" "), big }}
         dates={data.when.compact}
-        format={event.format === "VIRTUAL" ? "Congreso virtual · 100% en vivo" : event.format === "HYBRID" ? "Presencial y virtual" : (event.city ?? "")}
+        format={kindLine(event)}
         ticket={offer.ticket}
         // No discount code box for now (the team, 2026-10-29).
         codes={false}

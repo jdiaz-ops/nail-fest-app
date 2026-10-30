@@ -57,6 +57,11 @@ export function coverName(name: string): string {
   return base || name.trim();
 }
 
+/** What the congress is, in a line, as its checkout says it: «Congreso virtual · 100% en vivo», «Presencial y virtual», or its city. */
+export function kindLine(event: { format: string; city: string | null }): string {
+  return event.format === "VIRTUAL" ? "Congreso virtual · 100% en vivo" : event.format === "HYBRID" ? "Presencial y virtual" : (event.city ?? "");
+}
+
 export interface EventWhen {
   /** "Domingo 27 de junio de 2027" (two days: "Domingo 27 y lunes 28 de junio de 2027") */
   dates: string;

@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { Suspense, cache } from "react";
 import type { Metadata } from "next";
@@ -27,6 +27,7 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { zonedTimeToUtc } from "@/lib/dateFormat";
 import ImparablesPage from "@/components/imparables/ImparablesPage";
 import { imparablesPageData } from "@/lib/imparables/page";
+import { asistireShortTarget, SHORT_PATH } from "@/lib/imparables/asistire";
 
 export const dynamic = "force-dynamic";
 
@@ -64,7 +65,12 @@ export default async function EventLandingPage({
   searchParams: { fecha?: string | string[] };
 }) {
   const event = await findEvent(params.eventSlug);
-  if (!event) notFound();
+  if (!event) {
+    // nailfest.lat/imparables, the «Asistiré» images' short link (2026-10-30):
+    // to the congress's page, as long as no event has that name.
+    if (params.eventSlug === SHORT_PATH) redirect(await asistireShortTarget());
+    notFound();
+  }
 
   // The team (anyone signed in to the admin) sees a draft as it will look,
   // with a band that says so; on Imparables' page they can also see it as of

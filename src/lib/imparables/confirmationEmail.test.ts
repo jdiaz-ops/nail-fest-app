@@ -25,6 +25,7 @@ const base = (over: Partial<ImparablesConfirmation> = {}): ImparablesConfirmatio
   code: "7KQ2M9XA",
   calendar: { google: googleCalendarUrl(CALENDAR), ics: "https://nailfest.lat/manicuristas-imparables-2027/calendario" },
   share: { line: shareLine("$90.000", "$120.000"), url: "https://wa.me/?text=hola" },
+  asistire: { url: "https://nailfest.lat/asistire/reg_1.firma", image: "https://nailfest.lat/imparables/asistire-muestra.jpg" },
   helpUrl: "https://wa.me/573001234567",
   speakers: ["Jimena", "Paula", "Cristina", "Alejandro", "Karen", "Fabi", "Juan", "Oskar"].map((name) => ({ name, photoUrl: `https://nailfest.lat/imparables/${name}.jpg` })),
   panel: true,
@@ -64,12 +65,21 @@ describe("Manicuristas Imparables' confirmation email", () => {
     expect(html).toContain("Escríbenos por WhatsApp");
   });
 
-  it("does without what it doesn't have: her name, a purchase, the speakers, the team's WhatsApp", () => {
-    const { html } = imparablesConfirmationEmail(base({ firstName: "", purchase: null, speakers: [], helpUrl: null }));
+  it("invites her to make her «Asistiré» image, with her own link", () => {
+    const { html, text } = imparablesConfirmationEmail(base());
+    expect(html).toContain("¡Cuéntale a todos que vas!");
+    expect(html.match(/href="https:\/\/nailfest\.lat\/asistire\/reg_1\.firma"/g)).toHaveLength(2);
+    expect(html).toContain("Crear mi imagen");
+    expect(text).toContain("imagen «Asistiré» para historias y publicaciones: https://nailfest.lat/asistire/reg_1.firma");
+  });
+
+  it("does without what it doesn't have: her name, a purchase, the speakers, the team's WhatsApp, her image's page", () => {
+    const { html } = imparablesConfirmationEmail(base({ firstName: "", purchase: null, speakers: [], helpUrl: null, asistire: null }));
     expect(html).toContain("¡Lo lograste!");
     expect(html).not.toContain("Tu compra");
     expect(html).not.toContain("Quiénes te esperan");
     expect(html).not.toContain("Escríbenos por WhatsApp");
+    expect(html).not.toContain("Crear mi imagen");
   });
 
   it("escapes what comes from people", () => {

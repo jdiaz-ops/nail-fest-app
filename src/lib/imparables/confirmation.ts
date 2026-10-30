@@ -6,6 +6,7 @@ import { utcToZonedInputValue } from "@/lib/dateFormat";
 import { parseLandingBlocks } from "@/lib/landingBlocks/types";
 import { sayName } from "@/lib/mesa/email";
 import { ZOOM_ACCESS_REMINDER_MINUTES_BEFORE } from "@/lib/zoomAccessReminder";
+import { asistireUrl } from "./asistire";
 import { castOf } from "./blocks";
 import { getActiveStage, purchaseOf } from "./pricing";
 import { clock, coverName, eventWhen } from "./schedule";
@@ -38,7 +39,7 @@ export function calendarEventOf(event: Pick<Event, "id" | "slug" | "name" | "pub
 
 async function confirmationOf(
   event: Event,
-  her: { firstName: string | null; code: string; purchase: { stage: string; paid: string } | null },
+  her: { firstName: string | null; code: string; purchase: { stage: string; paid: string } | null; asistire: string },
   sales: SalesState
 ): Promise<ImparablesConfirmation> {
   const [orgSettings, whatsapp] = await Promise.all([
@@ -75,6 +76,7 @@ async function confirmationOf(
       line: shareLine(sales.current ? pesos(sales.current.price) : null, sales.current && sales.next ? pesos(sales.next.price) : null),
       url: `https://wa.me/?text=${encodeURIComponent(`Mira este congreso para manicuristas: ${name}, ${when.short}, 100% en vivo. ${page.toString()}`)}`,
     },
+    asistire: { url: her.asistire, image: `${base}/imparables/asistire-muestra.jpg` },
     helpUrl: digits.length >= 8 ? `https://wa.me/${digits}` : null,
     speakers: speakers.filter((p) => p.photoUrl).map((p) => ({ name: p.name.trim().split(/\s+/)[0]!, photoUrl: absolute(p.photoUrl) })),
     panel: panels > 0,
@@ -94,7 +96,12 @@ export async function imparablesConfirmationFor(
   const sales = purchase?.sales ?? (await getActiveStage(registration.event));
   const data = await confirmationOf(
     registration.event,
-    { firstName: her.firstName, code: her.code, purchase: purchase ? { stage: purchase.stage.name, paid: purchase.paid } : null },
+    {
+      firstName: her.firstName,
+      code: her.code,
+      purchase: purchase ? { stage: purchase.stage.name, paid: purchase.paid } : null,
+      asistire: asistireUrl(registrationId),
+    },
     sales
   );
   return imparablesConfirmationEmail(data);
@@ -107,6 +114,11 @@ export async function imparablesConfirmationPreview(eventId: string): Promise<{ 
   const sales = await getActiveStage(event);
   const stage = sales.current ?? sales.active;
   return imparablesConfirmationEmail(
-    await confirmationOf(event, { firstName: "Laura", code: "EJEMPLO1", purchase: stage ? { stage: stage.name, paid: pesos(stage.price) } : null }, sales)
+    await confirmationOf(
+      event,
+      // No purchase behind the sample: its «Crear mi imagen» goes to the event's page.
+      { firstName: "Laura", code: "EJEMPLO1", purchase: stage ? { stage: stage.name, paid: pesos(stage.price) } : null, asistire: `${baseUrl()}/${event.slug}` },
+      sales
+    )
   );
 }

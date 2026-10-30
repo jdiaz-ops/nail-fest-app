@@ -6436,6 +6436,293 @@ select.imp-co-in {
   }
 }
 
+/* «Asistiré» (/asistire/<her link>, 2026-10-30): her photo in, her image out,
+   in the checkout's chrome, as the team's boceto — the image drawn by
+   components/imparables/asistireArt.ts. */
+.imp-as {
+  display: grid;
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 22px 18px 48px;
+}
+.imp-as .imp-co-h1 {
+  text-wrap: balance;
+}
+.imp-as-sub {
+  margin: 8px 0 0;
+  font-size: 15.5px;
+  line-height: 1.45;
+  color: var(--imp-texto-2);
+}
+.imp-as-vista {
+  position: relative;
+  justify-self: center;
+  width: min(56vw, 250px);
+  margin-top: 18px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--imp-hueso-profundo);
+  box-shadow: 0 14px 30px rgba(94, 66, 34, 0.25);
+}
+.imp-as-vista.is-post {
+  width: min(68vw, 300px);
+}
+.imp-as-vista canvas,
+.imp-as-vista img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+/* While she adjusts it, the photo follows her finger, not the page. */
+.imp-as-vista.is-live canvas {
+  cursor: grab;
+  touch-action: none;
+}
+.imp-as-vista.is-live canvas:active {
+  cursor: grabbing;
+}
+.imp-as-mano {
+  position: absolute;
+  left: 50%;
+  top: 53%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(20, 20, 20, 0.72);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.imp-as-mano svg {
+  width: 16px;
+  height: 16px;
+}
+.imp-as .imp-co-btn {
+  margin-top: 18px;
+  text-decoration: none;
+}
+.imp-as .imp-co-btn svg,
+.imp-as-btn2 svg {
+  width: 21px;
+  height: 21px;
+}
+/* «Subir mi foto» and «Cambiar foto» are the file pickers themselves, unseen over them. */
+.imp-as-file,
+.imp-as-otra {
+  position: relative;
+}
+.imp-as-file input,
+.imp-as-otra input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+.imp-as-file:focus-within,
+.imp-as-otra:focus-within {
+  outline: 2px solid var(--imp-resalte);
+  outline-offset: 3px;
+}
+.imp-as-file.is-busy {
+  opacity: 0.7;
+  cursor: wait;
+}
+.imp-as-nota {
+  margin: 12px 0 0;
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: center;
+  text-wrap: balance;
+  color: var(--imp-texto-3);
+}
+.imp-as-nota svg {
+  width: 14px;
+  height: 14px;
+  margin-right: 5px;
+  vertical-align: -2px;
+}
+.imp-as-zoom {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
+}
+.imp-as-zoom > span {
+  width: 58px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--imp-texto-2);
+}
+.imp-as-zoom button {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--imp-chocolate);
+  font: inherit;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+.imp-as-zoom input {
+  flex: 1;
+  min-width: 0;
+  height: 26px;
+  margin: 0;
+  background: transparent;
+  -webkit-appearance: none;
+  appearance: none;
+  cursor: pointer;
+}
+.imp-as-zoom input::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--imp-oro) var(--p), var(--imp-borde-claro) var(--p));
+}
+.imp-as-zoom input::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--imp-oro) var(--p), var(--imp-borde-claro) var(--p));
+}
+.imp-as-zoom input::-webkit-slider-thumb {
+  width: 24px;
+  height: 24px;
+  margin-top: -9px;
+  border: 2px solid var(--imp-oro);
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  -webkit-appearance: none;
+  appearance: none;
+}
+.imp-as-zoom input::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--imp-oro);
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+.imp-as-seg {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin-top: 16px;
+  padding: 4px;
+  border: 1px solid var(--imp-borde-claro);
+  border-radius: 999px;
+  background: var(--imp-hueso-tarjeta);
+}
+.imp-as-seg button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 44px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--imp-chocolate);
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 800;
+  line-height: 1.15;
+  cursor: pointer;
+}
+.imp-as-seg small {
+  font-size: 11px;
+  font-weight: 700;
+  opacity: 0.7;
+}
+.imp-as-seg .is-on {
+  background: var(--imp-chocolate);
+  color: var(--imp-crema);
+}
+.imp-as-otra {
+  justify-self: center;
+  margin-top: 14px;
+}
+.imp-as-btn2 {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 16px 20px;
+  border: 1.5px solid var(--imp-chocolate);
+  border-radius: 14px;
+  color: var(--imp-chocolate) !important;
+  font-size: 17px;
+  font-weight: 800;
+  text-decoration: none;
+}
+.imp-as-link {
+  margin-top: 16px;
+  padding: 14px 14px 13px;
+  border: 1px solid var(--imp-bronce);
+  border-radius: 16px;
+  background: var(--imp-destacado);
+}
+.imp-as-link strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 800;
+}
+.imp-as-copy {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.imp-as-copy input {
+  flex: 1;
+  min-width: 0;
+  height: 46px;
+  padding: 0 12px;
+  border: 1px solid var(--imp-borde-claro);
+  border-radius: 12px;
+  background: var(--imp-hueso-tarjeta);
+  color: var(--imp-chocolate);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+}
+.imp-as-copy button {
+  flex: none;
+  height: 46px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--imp-chocolate);
+  color: var(--imp-crema);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.imp-as-link p {
+  margin: 9px 0 0;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--imp-texto-2);
+}
+.imp-as-err {
+  margin: 14px 0 0;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+  color: #a3251f;
+}
+
 @media (min-width: 900px) {
   .imp-hero {
     padding: 22px 40px 56px;
