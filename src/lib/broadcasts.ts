@@ -216,7 +216,6 @@ export async function sendEventBroadcast(
                 subject: broadcast.subject,
                 bodyHtml: withReviewLink,
                 band: broadcast.designBand,
-                pdfAttached: Boolean(pdfAttachment),
                 asistire: asistireFor(registration.id),
                 banner,
               })

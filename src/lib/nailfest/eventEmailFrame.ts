@@ -80,7 +80,7 @@ export function asistireFor(registrationId: string): string | null {
  * preview, the list's «Ver con el diseño» and its test emails. */
 export async function nailFestEventEmailSample(
   event: Event,
-  mail: { subject: string; bodyHtml: string; band: string | null; attachTicketPdf: boolean }
+  mail: { subject: string; bodyHtml: string; band: string | null }
 ): Promise<{ subject: string; text: string; html: string }> {
   const frame = await nailFestEventEmailFrame(event);
   const body = sanitizeEventDescription(
@@ -94,7 +94,6 @@ export async function nailFestEventEmailSample(
     subject: mail.subject,
     bodyHtml: body,
     band: mail.band,
-    pdfAttached: mail.attachTicketPdf,
     asistire: asistireSampleUrl(event.id),
     banner: await bannerOf(body),
   });

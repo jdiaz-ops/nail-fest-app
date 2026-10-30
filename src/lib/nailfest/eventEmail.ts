@@ -1,5 +1,5 @@
 import { htmlToPlainText } from "@/lib/email/templates";
-import { BG, FONTS, GREY, INK, LINE, MINT, MINT_LINE, MINT_TEXT, PAGE, PEACH, PEACH_SOFT, PINK, TEAL_DEEP, TEAL_INK, band, button, cityHeading, display, esc, sans, table } from "./confirmationEmail";
+import { BG, FONTS, GREY, INK, LINE, MINT, MINT_LINE, MINT_TEXT, PAGE, PEACH_SOFT, PINK, TEAL_DEEP, TEAL_INK, band, button, cityHeading, display, esc, sans, table } from "./confirmationEmail";
 import type { CityLettering } from "./cityLettering";
 
 // Nail Fest's design for an event's emails (Correos del evento, 2026-10-30,
@@ -49,8 +49,6 @@ export interface NailFestEventEmailContent {
   bodyHtml: string;
   /** The band under the header; none when empty. */
   band: string | null;
-  /** Whether her ticket's PDF goes with it. */
-  pdfAttached: boolean;
   /** Her page to make her «Asistiré» image; no card without one. */
   asistire: string | null;
   /** The email's banner to leave out (eventEmailFrame.ts's bannerOf): the src of the wide image it opens with. */
@@ -334,17 +332,11 @@ export function nailFestEventEmail(frame: NailFestEventEmailFrame, mail: NailFes
           : card(s.parts.join(""), "background:#ffffff;")
       )
       .join("");
-  // Its message, then her ticket, her «Asistiré» and the colleague; its doubts (its first titled card) and what follows,
-  // after them.
+  // Its message, then her «Asistiré» and the colleague; its doubts (its first titled card) and what follows, after them.
+  // No note on her PDF, which goes all the same when the email attaches it (the team, 2026-10-30).
   const doubts = sections.findIndex((s) => s.title);
   const message = doubts < 0 ? sections : sections.slice(0, doubts);
   const rest = doubts < 0 ? [] : sections.slice(doubts);
-  const pdf = mail.pdfAttached
-    ? `<tr><td style="padding:14px 12px 0;">${table(
-        `<tr><td width="52" style="width:52px;padding:14px 0 14px 16px;"><div style="width:40px;height:40px;border-radius:10px;background:${PEACH};text-align:center;${sans(12, 900, INK, "line-height:40px;")}">PDF</div></td><td style="padding:14px 16px 14px 12px;"><div style="${sans(14.5, 700, "#ffffff")}">Tu entrada va adjunta</div><div style="${sans(12.5, 400, "#cfd2d8")}">Muéstrala en la puerta, en el celular o impresa.</div></td></tr>`,
-        `background:${INK};border-radius:16px;`
-      )}</td></tr>`
-    : "";
   const asistire = mail.asistire
     ? card(
         `<div style="text-align:center;">
@@ -393,7 +385,6 @@ ${cityHeading(frame.city, frame.cityLettering)}
 </td></tr>
 ${mail.band?.trim() ? band(esc(mail.band.trim())) : ""}
 ${cards(message)}
-${pdf}
 ${asistire}
 ${colega}
 ${cards(rest)}
@@ -412,7 +403,6 @@ Donde se reúne el mundo de las uñas<br>
 
   const text = [
     htmlToPlainText(mail.bodyHtml),
-    ...(mail.pdfAttached ? ["Tu entrada va adjunta en PDF: muéstrala en la puerta, en el celular o impresa."] : []),
     ...(mail.asistire ? [`¡CUÉNTALE A TODOS QUE VAS!\nSube una foto tuya y te armamos tu imagen «Asistiré»: ${mail.asistire}`] : []),
     `¿VAS CON UNA COLEGA?\nCompártele el enlace para que se inscriba: ${frame.share.url}`,
     ...(frame.helpUrl ? [`¿Dudas? Escríbenos por WhatsApp: ${frame.helpUrl}`] : []),

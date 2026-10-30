@@ -18,7 +18,6 @@ export async function GET(_req: Request, { params }: { params: { id: string; bro
     subject: broadcast.subject,
     bodyHtml: broadcast.bodyHtml,
     band: broadcast.designBand,
-    attachTicketPdf: broadcast.attachTicketPdf,
   });
   return new NextResponse(email.html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } });
 }

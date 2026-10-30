@@ -34,7 +34,7 @@ const FRAME: NailFestEventEmailFrame = {
   site: { url: "https://nailfest.lat", host: "nailfest.lat" },
 };
 const BANNER = "https://blob.example/banner.jpg";
-const mail = { subject: "¡Falta 1 semana!", bodyHtml: BODY, band: "Falta 1 semana", pdfAttached: true, asistire: "https://nailfest.lat/asistire/r1.sig", banner: BANNER };
+const mail = { subject: "¡Falta 1 semana!", bodyHtml: BODY, band: "Falta 1 semana", asistire: "https://nailfest.lat/asistire/r1.sig", banner: BANNER };
 
 describe("the body's blocks", () => {
   it("are its top-level elements, nested ones inside", () => {
@@ -89,25 +89,24 @@ describe("the body, ordered", () => {
 });
 
 describe("the email", () => {
-  it("in the event's frame, with its band, the PDF's note, her «Asistiré», a colleague and the footer", () => {
+  it("in the event's frame, with its band, her «Asistiré», a colleague and the footer — no note on the PDF", () => {
     const { subject, html, text } = nailFestEventEmail(FRAME, mail);
     expect(subject).toBe("¡Falta 1 semana!");
     expect(html).toContain(">Cúcuta</div>");
     expect(html).toContain("Sábado 7 y domingo 8 de noviembre");
     expect(html).toContain("Falta 1 semana</td>");
-    expect(html).toContain("Tu entrada va adjunta");
+    expect(html).not.toContain("Tu entrada va adjunta");
     expect(html).toContain("Escríbenos por WhatsApp");
     expect(html).toContain('href="https://nailfest.lat/asistire/r1.sig"');
     expect(html).toContain("¿Vas con una colega?");
     expect(html).toContain('href="https://wa.me/?text=hola"');
-    expect(text).toContain("Tu entrada va adjunta en PDF");
+    expect(text).not.toContain("Tu entrada va adjunta");
   });
 
-  it("its message, her ticket, her «Asistiré» and the colleague, then its doubts", () => {
+  it("its message, her «Asistiré» and the colleague, then its doubts", () => {
     const { html } = nailFestEventEmail(FRAME, mail);
     const at = (s: string) => html.indexOf(s);
-    expect(at("Equipo Nail Fest")).toBeLessThan(at("Tu entrada va adjunta"));
-    expect(at("Tu entrada va adjunta")).toBeLessThan(at("¡Cuéntale a todos que vas!"));
+    expect(at("Equipo Nail Fest")).toBeLessThan(at("¡Cuéntale a todos que vas!"));
     expect(at("¡Cuéntale a todos que vas!")).toBeLessThan(at("¿Vas con una colega?"));
     expect(at("¿Vas con una colega?")).toBeLessThan(at("Resolvemos tus dudas"));
     expect(at("Ver el cronograma")).toBeLessThan(at("Síguenos en"));
@@ -132,10 +131,9 @@ describe("the email", () => {
     expect(html).not.toMatch(/margin:[^;"]*-\d/);
   });
 
-  it("no band nor PDF note when there's none", () => {
-    const { html } = nailFestEventEmail({ ...FRAME, helpUrl: null }, { ...mail, bodyHtml: "<p>Hola</p>", band: " ", pdfAttached: false, asistire: null });
+  it("no band when there's none, nor «Asistiré» without her link", () => {
+    const { html } = nailFestEventEmail({ ...FRAME, helpUrl: null }, { ...mail, bodyHtml: "<p>Hola</p>", band: " ", asistire: null });
     expect(html).not.toContain("font-family:Dosis");
-    expect(html).not.toContain("Tu entrada va adjunta");
     expect(html).not.toContain("Escríbenos por WhatsApp");
     expect(html).not.toContain("Crear mi imagen");
   });

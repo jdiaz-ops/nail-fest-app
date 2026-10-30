@@ -36,7 +36,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   let html: string;
   let text = subject;
   if (event && usesNailFestEventEmail(event)) {
-    const email = await nailFestEventEmailSample(event, { subject, bodyHtml, band: band ?? null, attachTicketPdf: Boolean(attachTicketPdf) });
+    const email = await nailFestEventEmailSample(event, { subject, bodyHtml, band: band ?? null });
     html = email.html;
     text = email.text;
   } else {

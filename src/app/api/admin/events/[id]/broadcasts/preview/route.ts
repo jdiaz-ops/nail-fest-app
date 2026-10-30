@@ -11,7 +11,6 @@ const bodySchema = z.object({
   subject: z.string().max(300),
   bodyHtml: z.string().max(200_000),
   band: z.string().max(60).nullable().optional(),
-  attachTicketPdf: z.boolean().optional(),
 });
 
 // The composer's «Así se ve» (2026-10-30): what it has right now, saved or
@@ -24,7 +23,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (!parsed.success) return NextResponse.json({ error: "invalid_body" }, { status: 400 });
   const event = await db.event.findUnique({ where: { id: params.id } });
   if (!event || !hasNailFestAsistire(event)) return NextResponse.json({ error: "not_found" }, { status: 404 });
-  const { subject, bodyHtml, band, attachTicketPdf } = parsed.data;
-  const email = await nailFestEventEmailSample(event, { subject, bodyHtml, band: band ?? null, attachTicketPdf: Boolean(attachTicketPdf) });
+  const { subject, bodyHtml, band } = parsed.data;
+  const email = await nailFestEventEmailSample(event, { subject, bodyHtml, band: band ?? null });
   return NextResponse.json({ html: email.html });
 }
