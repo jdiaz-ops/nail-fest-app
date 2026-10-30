@@ -20,6 +20,7 @@ export async function GET(_req: Request, { params }: { params: { id: string; bro
     band: broadcast.designBand,
     asistire: broadcast.designAsistire,
     colega: broadcast.designColega,
+    pdf: broadcast.attachTicketPdf,
   });
   return new NextResponse(email.html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } });
 }

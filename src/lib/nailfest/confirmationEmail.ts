@@ -123,6 +123,30 @@ export const button = (href: string, label: string, colors = `background:${TEAL}
 const outline = (href: string, label: string) =>
   `<a href="${esc(href)}" style="display:inline-block;margin:8px 6px 0 0;padding:8px 15px;border:1.5px solid ${INK};border-radius:999px;text-decoration:none;${sans(13.5, 800, INK)}">${label}</a>`;
 
+/** One ticket as the confirmation shows it — its QR big, her name, what kind (and for how many, when given), her code —
+ * also where an event's email asks for it (eventEmail.ts' «{{BOLETA}}»). */
+export function ticketCard(t: NailFestTicket, eventName: string, o: { people: string | null; pdfAttached: boolean }): string {
+  return table(
+    `<tr><td style="padding:12px 18px;background:${INK};border-radius:16px 16px 0 0;">${table(
+      `<tr><td style="${sans(11.5, 800, PEACH, "letter-spacing:0.16em;text-transform:uppercase;")}">Tu entrada</td><td align="right" style="${sans(13, 700, "#ffffff")}">${esc(eventName)}</td></tr>`
+    )}</td></tr>
+<tr><td align="center" style="padding:22px 18px 16px;">
+<img src="${esc(t.qrImageUrl)}" width="200" height="200" alt="Código QR de tu entrada" style="display:block;margin:0 auto;width:200px;height:200px;border:0;">
+<div style="margin-top:14px;${sans(19, 800)}">${esc(t.holder)}</div>
+<div style="margin-top:10px;">
+<span style="display:inline-block;margin:0 3px;padding:4px 11px;border-radius:999px;background:${MINT};border:1px solid ${MINT_LINE};${sans(12.5, 700, TEAL_INK)}">${esc(t.label)}</span>${
+      o.people
+        ? `<span style="display:inline-block;margin:0 3px;padding:4px 11px;border-radius:999px;background:${PEACH_SOFT};border:1px solid #ffd9c6;${sans(12.5, 700, "#7a3d1d")}">${esc(o.people)}</span>`
+        : ""
+    }
+</div>
+<div style="margin-top:10px;${sans(12, 400, GREY, "letter-spacing:0.14em;")}">CÓDIGO ${esc(t.code)}</div>
+</td></tr>
+<tr><td align="center" style="padding:12px 18px;border-top:2px dashed ${LINE};${sans(13.5, 400, GREY)}">Muéstrala en tu celular o impresa${o.pdfAttached ? "<br>También va en PDF adjunto" : ""}</td></tr>`,
+    `border:2px solid ${INK};border-radius:18px;background:#ffffff;`
+  );
+}
+
 /** The event's message for the colleague when it has none of its own. */
 export function defaultInvite(eventName: string, dates: string): string {
   const when = `${dates.charAt(0).toLowerCase()}${dates.slice(1)}`;
@@ -139,26 +163,7 @@ export function nailFestConfirmationEmail(c: NailFestConfirmation): { html: stri
   const preheader = `Tu entrada para ${c.eventName}: ${c.dates.charAt(0).toLowerCase()}${c.dates.slice(1)}.`;
   const people = `${c.people} ${c.people === 1 ? "persona" : "personas"}`;
 
-  const ticket = (t: NailFestTicket, showPeople: boolean) =>
-    table(
-      `<tr><td style="padding:12px 18px;background:${INK};border-radius:16px 16px 0 0;">${table(
-        `<tr><td style="${sans(11.5, 800, PEACH, "letter-spacing:0.16em;text-transform:uppercase;")}">Tu entrada</td><td align="right" style="${sans(13, 700, "#ffffff")}">${esc(c.eventName)}</td></tr>`
-      )}</td></tr>
-<tr><td align="center" style="padding:22px 18px 16px;">
-<img src="${esc(t.qrImageUrl)}" width="200" height="200" alt="Código QR de tu entrada" style="display:block;margin:0 auto;width:200px;height:200px;border:0;">
-<div style="margin-top:14px;${sans(19, 800)}">${esc(t.holder)}</div>
-<div style="margin-top:10px;">
-<span style="display:inline-block;margin:0 3px;padding:4px 11px;border-radius:999px;background:${MINT};border:1px solid ${MINT_LINE};${sans(12.5, 700, TEAL_INK)}">${esc(t.label)}</span>${
-        showPeople
-          ? `<span style="display:inline-block;margin:0 3px;padding:4px 11px;border-radius:999px;background:${PEACH_SOFT};border:1px solid #ffd9c6;${sans(12.5, 700, "#7a3d1d")}">${people}</span>`
-          : ""
-      }
-</div>
-<div style="margin-top:10px;${sans(12, 400, GREY, "letter-spacing:0.14em;")}">CÓDIGO ${esc(t.code)}</div>
-</td></tr>
-<tr><td align="center" style="padding:12px 18px;border-top:2px dashed ${LINE};${sans(13.5, 400, GREY)}">Muéstrala en tu celular o impresa${c.pdfAttached ? " · También va en PDF adjunto" : ""}</td></tr>`,
-      `border:2px solid ${INK};border-radius:18px;background:#ffffff;`
-    );
+  const ticket = (t: NailFestTicket, showPeople: boolean) => ticketCard(t, c.eventName, { people: showPeople ? people : null, pdfAttached: c.pdfAttached });
 
   const dayRows = c.days
     .map(

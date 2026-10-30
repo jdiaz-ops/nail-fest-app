@@ -10,6 +10,7 @@ import { asistireSampleUrl, asistireUrl } from "@/lib/imparables/asistire";
 import { defaultNailFestShareText, NAIL_FEST_DESIGN } from "./confirmation";
 import { hasNailFestAsistire } from "./asistire";
 import { eventHeadingOf } from "./titleLettering";
+import { sampleTickets, TICKET_TAG } from "./eventTickets";
 import { nailFestEventEmail, topBlocks, type NailFestEventEmailFrame } from "./eventEmail";
 
 // The event's part of Nail Fest's design for its emails (2026-10-30,
@@ -73,11 +74,11 @@ export function asistireFor(registrationId: string): string | null {
   }
 }
 
-/** One of its emails in the design with sample data — its personal links as examples —, for the composer's
- * preview, the list's «Ver con el diseño» and its test emails. */
+/** One of its emails in the design with sample data — its personal links and Laura's ticket as examples —, for the
+ * composer's preview, the list's «Ver con el diseño» and its test emails. */
 export async function nailFestEventEmailSample(
   event: Event,
-  mail: { subject: string; bodyHtml: string; band: string | null; asistire?: boolean; colega?: boolean }
+  mail: { subject: string; bodyHtml: string; band: string | null; asistire?: boolean; colega?: boolean; pdf?: boolean }
 ): Promise<{ subject: string; text: string; html: string }> {
   const frame = await nailFestEventEmailFrame(event);
   const body = sanitizeEventDescription(
@@ -87,12 +88,16 @@ export async function nailFestEventEmailSample(
       .split(REVIEW_LINK_TAG)
       .join(`${baseUrl()}/resena/ejemplo`)
   );
+  const type = body.includes(TICKET_TAG)
+    ? await db.ticketType.findFirst({ where: { eventId: event.id, status: "ON_SALE" }, orderBy: { order: "asc" }, select: { name: true } })
+    : null;
   return nailFestEventEmail(frame, {
     subject: mail.subject,
     bodyHtml: body,
     band: mail.band,
     asistire: mail.asistire === false ? null : asistireSampleUrl(event.id),
     colega: mail.colega !== false,
+    tickets: sampleTickets(baseUrl(), type?.name ?? null, Boolean(mail.pdf)),
     banner: await bannerOf(body),
   });
 }

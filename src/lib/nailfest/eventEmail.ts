@@ -1,4 +1,5 @@
 import { htmlToPlainText } from "@/lib/email/templates";
+import { isolateTicketTag, TICKET_TAG, ticketCards, ticketLines, type OrderTickets } from "./eventTickets";
 import { BG, FONTS, GREY, INK, LINE, MINT, MINT_LINE, MINT_TEXT, PAGE, PEACH_SOFT, PINK, TEAL_DEEP, TEAL_INK, band, button, display, esc, eventHeading, sans, table, type EventHeading } from "./confirmationEmail";
 
 // Nail Fest's design for an event's emails (Correos del evento, 2026-10-30,
@@ -48,6 +49,8 @@ export interface NailFestEventEmailContent {
   asistire: string | null;
   /** Whether it invites a colleague (EmailBroadcast.designColega). */
   colega: boolean;
+  /** Her tickets, for where it says «{{BOLETA}}» (eventTickets.ts); none, nothing there. */
+  tickets?: OrderTickets | null;
   /** The email's banner to leave out (eventEmailFrame.ts's bannerOf): the src of the wide image it opens with. */
   banner: string | null;
 }
@@ -209,7 +212,7 @@ function isBanner(b: Block, banner: string | null): boolean {
 }
 
 /** Its body, ordered, in cards: what comes after each horizontal line is a card of its own. */
-export function designedSections(bodyHtml: string, banner: string | null = null): Section[] {
+export function designedSections(bodyHtml: string, banner: string | null = null, tickets: string | null = null): Section[] {
   const sections: Section[] = [{ title: null, parts: [] }];
   // What the last line was (a row lets the next plain lines line up with it), and how many rows its card has.
   const last = { kind: "other" as Kind, rows: 0 };
@@ -260,6 +263,11 @@ export function designedSections(bodyHtml: string, banner: string | null = null)
     const words = textOf(inner);
     if (!words) {
       if (/<img\b/i.test(inner)) push(`<div style="margin:4px 0 16px;">${inline(inner)}</div>`);
+      continue;
+    }
+    // «{{BOLETA}}» on its line (eventTickets.ts' isolateTicketTag): her tickets' cards.
+    if (words === TICKET_TAG) {
+      if (tickets) push(tickets);
       continue;
     }
     // A section's first line, short and ending in «:», titles its card.
@@ -319,8 +327,9 @@ const card = (inner: string, look: string, padding = "22px 20px 12px") =>
   `<tr><td style="padding:14px 12px 0;">${table(`<tr><td style="padding:${padding};">${inner}</td></tr>`, `${look}border-radius:18px;`)}</td></tr>`;
 
 export function nailFestEventEmail(frame: NailFestEventEmailFrame, mail: NailFestEventEmailContent): { subject: string; text: string; html: string } {
-  const sections = designedSections(mail.bodyHtml, mail.banner);
-  const preheader = textOf(mail.bodyHtml).slice(0, 110);
+  const tickets = mail.tickets?.list.length ? mail.tickets : null;
+  const sections = designedSections(isolateTicketTag(mail.bodyHtml), mail.banner, tickets ? ticketCards(tickets, frame.eventName) : null);
+  const preheader = textOf(mail.bodyHtml.split(TICKET_TAG).join("")).slice(0, 110);
   const cards = (list: Section[]) =>
     list
       .map((s) =>
@@ -396,10 +405,10 @@ Donde se reúne el mundo de las uñas<br>
   `background:${PAGE};`
 )}
 </body>
-</html>`;
+</html>`.split(TICKET_TAG).join("");
 
   const text = [
-    htmlToPlainText(mail.bodyHtml),
+    htmlToPlainText(mail.bodyHtml).split(TICKET_TAG).join(tickets ? ticketLines(tickets) : ""),
     ...(mail.asistire ? [`¡CUÉNTALE A TODOS QUE VAS!\nSube una foto tuya y te armamos tu imagen «Asistiré»: ${mail.asistire}`] : []),
     ...(mail.colega ? [`¿VAS CON UNA COLEGA?\nCompártele el enlace para que se inscriba: ${frame.share.url}`] : []),
     ...(frame.helpUrl ? [`¿Dudas? Escríbenos por WhatsApp: ${frame.helpUrl}`] : []),

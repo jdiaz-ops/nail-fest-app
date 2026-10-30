@@ -5,6 +5,8 @@ import { emailProvider } from "@/lib/email";
 import { sanitizeEventDescription } from "@/lib/sanitizeHtml";
 import { requireUser } from "@/lib/auth/guard";
 import { nailFestEventEmailSample, usesNailFestEventEmail } from "@/lib/nailfest/eventEmailFrame";
+import { sampleTickets, ticketCards, withTickets } from "@/lib/nailfest/eventTickets";
+import { publicEventName } from "@/lib/eventDisplayName";
 import { PDF_ATTACHMENT_NAME, sampleTicketPdf } from "@/lib/ticketPdfSample";
 
 // "Send test email" — our previous ticketing platform's own field in the broadcast composer.
@@ -38,7 +40,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   let html: string;
   let text = subject;
   if (event && usesNailFestEventEmail(event)) {
-    const email = await nailFestEventEmailSample(event, { subject, bodyHtml, band: band ?? null, asistire, colega });
+    const email = await nailFestEventEmailSample(event, { subject, bodyHtml, band: band ?? null, asistire, colega, pdf: Boolean(attachTicketPdf) });
     html = email.html;
     text = email.text;
   } else {
@@ -48,7 +50,11 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     // sendEventBroadcast substitutes for real, see that function's own
     // comment.
     const previewBodyHtml = bodyHtml.split("{{ZOOM_LINK}}").join("https://zoom.us/j/000000000 (ejemplo)");
-    const safeHtml = sanitizeEventDescription(previewBodyHtml);
+    // «{{BOLETA}}»: Laura's ticket in its place, as the real send puts each person's.
+    const safeHtml = withTickets(
+      sanitizeEventDescription(previewBodyHtml),
+      ticketCards(sampleTickets((process.env.APP_BASE_URL || "").replace(/\/+$/, ""), null, Boolean(attachTicketPdf)), event ? publicEventName(event) : "Tu evento")
+    );
     html = `<div style="font-family: -apple-system, Segoe UI, Roboto, sans-serif; max-width: 560px; margin: 0 auto; color:#1a1a1a;">
     <p style="background:#fdf1e6; color:#8a5a1f; padding:8px 12px; border-radius:6px; font-size:13px;">Este es un correo de PRUEBA — no se envió a ningún inscrito real.</p>
     ${safeHtml}

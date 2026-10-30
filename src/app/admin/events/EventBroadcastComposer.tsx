@@ -124,14 +124,14 @@ export default function EventBroadcastComposer({
       fetch(`/api/admin/events/${eventId}/broadcasts/preview`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subject, bodyHtml, band: designBand, asistire: designAsistire, colega: designColega }),
+        body: JSON.stringify({ subject, bodyHtml, band: designBand, asistire: designAsistire, colega: designColega, pdf: attachTicketPdf }),
       })
         .then((res) => (res.ok ? res.json() : null))
         .then((body) => body?.html && setPreviewHtml(body.html))
         .catch(() => {});
     }, 900);
     return () => clearTimeout(timer);
-  }, [designOn, eventId, subject, bodyHtml, designBand, designAsistire, designColega]);
+  }, [designOn, eventId, subject, bodyHtml, designBand, designAsistire, designColega, attachTicketPdf]);
   const [checkIn, setCheckIn] = useState<CheckIn>(checkInFrom(editing ?? initial));
   const [scheduleKind, setScheduleKind] = useState<ScheduleKind>(editing?.scheduleKind ?? "IMMEDIATE");
   const [scheduledAtLocal, setScheduledAtLocal] = useState(
@@ -297,15 +297,27 @@ export default function EventBroadcastComposer({
           </div>
         )}
         <div style={{ marginBottom: 6 }}>
-          <button
-            type="button"
-            onClick={() => editorRef.current?.insertAtCursor("{{LINK_RESENA}} ")}
-            style={{ fontSize: 12, padding: "4px 10px", borderRadius: 999, border: "1px solid #e3e1dc", background: "#fff", cursor: "pointer" }}
-          >
-            + Insertar enlace de reseña
-          </button>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            <button
+              type="button"
+              onClick={() => editorRef.current?.insertAtCursor("{{LINK_RESENA}} ")}
+              style={{ fontSize: 12, padding: "4px 10px", borderRadius: 999, border: "1px solid #e3e1dc", background: "#fff", cursor: "pointer" }}
+            >
+              + Insertar enlace de reseña
+            </button>
+            <button
+              type="button"
+              onClick={() => editorRef.current?.insertAtCursor("{{BOLETA}}")}
+              style={{ fontSize: 12, padding: "4px 10px", borderRadius: 999, border: "1px solid #e3e1dc", background: "#fff", cursor: "pointer" }}
+            >
+              + Insertar boleta
+            </button>
+          </div>
           <p style={{ fontSize: 11, color: "#8a8478", margin: "4px 0 0" }}>
             Cada destinataria recibe su propio enlace para calificar el evento (solo abre para quien fue escaneada en puerta). Combínalo con «Solo quienes ya hicieron check-in».
+          </p>
+          <p style={{ fontSize: 11, color: "#8a8478", margin: "2px 0 0" }}>
+            {"{{BOLETA}}"}: en ese lugar, cada persona ve su boleta con su código QR, y la de su acompañante si tiene. Ponla en una línea sola.
           </p>
         </div>
         <RichTextEditor ref={editorRef} value={bodyHtml} onChange={setBodyHtml} />

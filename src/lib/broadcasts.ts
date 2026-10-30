@@ -10,6 +10,7 @@ import { buildUnsubscribeUrl } from "@/lib/unsubscribe";
 import { renderTicketPdfBuffer } from "@/lib/ticketPdf";
 import { nailFestEventEmail } from "@/lib/nailfest/eventEmail";
 import { asistireFor, bannerOf, nailFestEventEmailFrame, usesNailFestEventEmail } from "@/lib/nailfest/eventEmailFrame";
+import { orderTickets, TICKET_TAG, ticketCards, withTickets } from "@/lib/nailfest/eventTickets";
 import { confirmationCodeFor } from "@/lib/ticket";
 import { getOrgSettings } from "@/lib/settings";
 import { publishChunkContinuation, scheduleEventBroadcastSend, scheduleAutoRetry, AUTO_RETRY_DELAYS_SECONDS, QSTASH_MAX_DELAY_MS, QSTASH_GRACE_MS, CHUNK_WATCHDOG_SECONDS, CHUNK_LOCK_SECONDS } from "@/lib/qstash";
@@ -211,6 +212,20 @@ export async function sendEventBroadcast(
                   return null;
                 })
               : null;
+          // «{{BOLETA}}» (lib/nailfest/eventTickets.ts): her ticket, and her companions', where the email says.
+          const holder = [person.firstName, person.lastName].filter(Boolean).join(" ").trim() || person.email;
+          const tickets = withReviewLink.includes(TICKET_TAG)
+            ? {
+                list: orderTickets(
+                  (process.env.APP_BASE_URL || "").replace(/\/+$/, ""),
+                  registration,
+                  holder,
+                  registration.ticketTypeId ? (ticketTypeNames.get(registration.ticketTypeId) ?? null) : null
+                ),
+                people: registration.ticketCount ?? 1,
+                pdfAttached: Boolean(pdfAttachment),
+              }
+            : null;
           const content = frame
             ? nailFestEventEmail(frame, {
                 subject: broadcast.subject,
@@ -218,9 +233,13 @@ export async function sendEventBroadcast(
                 band: broadcast.designBand,
                 asistire: broadcast.designAsistire ? asistireFor(registration.id) : null,
                 colega: broadcast.designColega,
+                tickets,
                 banner,
               })
-            : broadcastEmailHtml({ subject: broadcast.subject, bodyHtml: withReviewLink });
+            : broadcastEmailHtml({
+                subject: broadcast.subject,
+                bodyHtml: withTickets(withReviewLink, tickets?.list.length ? ticketCards(tickets, publicEventName(broadcast.event!)) : ""),
+              });
           try {
             const result = await emailProvider.sendTransactional({
               to: person.email,

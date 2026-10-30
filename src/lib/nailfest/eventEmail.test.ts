@@ -130,6 +130,25 @@ describe("the email", () => {
     expect(lettered).toContain(">de noviembre</div>");
   });
 
+  it("her tickets where it says «{{BOLETA}}», in words in its text; nothing there without them", () => {
+    const tickets = {
+      list: [{ qrImageUrl: "https://nailfest.lat/api/ticket-qr/tok", holder: "Laura Gómez", label: "General", code: "ABCD1234" }],
+      people: 1,
+      pdfAttached: false,
+    };
+    const body = "<p>(Tu boleta)</p><p>{{BOLETA}}</p><p>📣 Estamos a solo horas de abrir las puertas.</p>";
+    const { html, text } = nailFestEventEmail(FRAME, { ...mail, bodyHtml: body, tickets });
+    expect(html).toContain('src="https://nailfest.lat/api/ticket-qr/tok"');
+    // (the first «Estamos…» is the preheader's)
+    expect(html.indexOf("Código QR de tu entrada")).toBeLessThan(html.lastIndexOf("Estamos a solo horas"));
+    expect(html).not.toContain("{{BOLETA}}");
+    expect(text).toContain("Código: ABCD1234");
+    expect(text).not.toContain("{{BOLETA}}");
+    const none = nailFestEventEmail(FRAME, { ...mail, bodyHtml: body, tickets: null });
+    expect(none.html).not.toContain("Código QR de tu entrada");
+    expect(none.html).not.toContain("{{BOLETA}}");
+  });
+
   it("nothing Gmail drops: no positioning, no negative margins", () => {
     const { html } = nailFestEventEmail(FRAME, mail);
     expect(html).not.toMatch(/position\s*:/);
