@@ -112,6 +112,28 @@ export async function imparablesConfirmationFor(
   return imparablesConfirmationEmail(data);
 }
 
+/** What the payment's page shows a buyer of Manicuristas Imparables
+ * (2026-10-30, components/imparables/ImpPaymentResult.tsx): her confirmation's
+ * own data — her name, the steps' day and hour, the colleague's message, the
+ * team's WhatsApp — her email, and her image's page. "muestra": the team's
+ * preview, for Laura; a purchase not found (or another event's): no name, no
+ * email, no image — and the image only once it's paid. */
+export async function imparablesAfterPayment(
+  event: Event,
+  her: { registrationId: string } | "muestra" | null
+): Promise<{ c: ImparablesConfirmation; email: string | null; asistire: string | null }> {
+  const registration =
+    her && her !== "muestra" ? await db.registration.findUnique({ where: { id: her.registrationId }, include: { person: true } }) : null;
+  const mine = registration?.eventId === event.id ? registration : null;
+  const asistire = her === "muestra" ? asistireSampleUrl(event.id) : mine?.status === "CONFIRMED" ? asistireUrl(mine.id) : null;
+  const c = await confirmationOf(
+    event,
+    { firstName: her === "muestra" ? "Laura" : (mine?.person.firstName ?? null), code: "", purchase: null, asistire: asistire ?? "" },
+    await getActiveStage(event)
+  );
+  return { c, email: her === "muestra" ? "laura@correo.com" : (mine?.person.email ?? null), asistire };
+}
+
 /** The design as a buyer at today's price would get it — «Laura», a sample code — for «Confirmación del evento»; with the editor's share message, unsaved, when given. */
 export async function imparablesConfirmationPreview(eventId: string, unsaved: { shareText?: string | null } = {}): Promise<{ html: string; text: string } | null> {
   const event = await db.event.findUnique({ where: { id: eventId } });

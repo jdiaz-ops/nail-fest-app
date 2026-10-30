@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { googleCalendarUrl, icsCalendar, imparablesConfirmationEmail, shareLine, type ImparablesConfirmation } from "./confirmationEmail";
+import { googleCalendarUrl, icsCalendar, imparablesConfirmationEmail, nextSteps, shareLine, type ImparablesConfirmation } from "./confirmationEmail";
 
 const CALENDAR = {
   uid: "ev_1@nailfest.lat",
@@ -110,5 +110,13 @@ describe("her calendar", () => {
     expect(unfolded).toContain("DESCRIPTION:Congreso virtual 100% en vivo por Zoom. Tu enlace personal te llega por correo y WhatsApp 30 minutos antes de empezar.\\nhttps://nailfest.lat/manicuristas-imparables-2027");
     for (const line of ics.split("\r\n")) expect(Buffer.byteLength(line, "utf8")).toBeLessThanOrEqual(75);
     expect(unfolded).toContain("LOCATION:Zoom (tu enlace te llega por correo y WhatsApp)");
+  });
+});
+
+describe("what happens now, on the payment's page", () => {
+  it("the email's steps with her email and her WhatsApp in one", () => {
+    const steps = nextSteps({ day: "27 de junio", linkMinutesBefore: 15, start: "8:00 a. m.", zone: "hora Colombia" }, true);
+    expect(steps.map(([title]) => title)).toEqual(["Revisa tu correo y tu WhatsApp", "El 27 de junio, 15 minutos antes", "Conéctate a las 8:00 a. m.", "30 días de repetición"]);
+    expect(nextSteps({ day: "27 de junio", linkMinutesBefore: 15, start: null, zone: "hora Colombia" })).toHaveLength(5);
   });
 });

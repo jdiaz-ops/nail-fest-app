@@ -6717,6 +6717,309 @@ select.imp-co-in {
   color: #a3251f;
 }
 
+/* The payment's answer for Manicuristas Imparables (/<event>/pago,
+   2026-10-30, the team's boceto): the confirmation email's header, a band in
+   the answer's color — gold paid, cream confirming, terracotta turned down —
+   and what comes next. ImpPaymentResult.tsx. */
+.imp.imp-pago {
+  background: var(--imp-hueso);
+  color: var(--imp-negro);
+}
+.imp-pago-cab {
+  position: relative;
+  overflow: hidden;
+  padding: 30px 20px 26px;
+  text-align: center;
+  background: radial-gradient(85% 90% at 50% -6%, rgba(233, 207, 152, 0.3) 0%, rgba(201, 164, 106, 0.1) 38%, transparent 66%), var(--imp-chocolate);
+}
+.imp-pago-rayos {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 1400px;
+  height: 700px;
+  transform: translateX(-50%);
+  pointer-events: none;
+  background: repeating-conic-gradient(from 0deg at 50% 0%, rgba(233, 207, 152, 0.085) 0deg 1.7deg, transparent 1.7deg 5.2deg);
+  -webkit-mask-image: radial-gradient(55% 60% at 50% 0%, #000 0%, rgba(0, 0, 0, 0.5) 50%, transparent 82%);
+  mask-image: radial-gradient(55% 60% at 50% 0%, #000 0%, rgba(0, 0, 0, 0.5) 50%, transparent 82%);
+}
+/* Over the rays, which stay behind, out of the flow. */
+.imp-pago-cab > :not(.imp-pago-rayos) {
+  position: relative;
+}
+.imp-pago-cab .imp-tiara {
+  width: 150px;
+  height: 41px;
+  margin: 0 auto 6px;
+  color: var(--imp-oro-claro);
+}
+.imp-pago-name {
+  margin: 0;
+}
+.imp-pago-name span {
+  display: block;
+  font-family: var(--imp-display), Georgia, serif;
+  font-weight: 700;
+  font-size: 17px;
+  line-height: 1;
+  letter-spacing: 0.26em;
+  text-indent: 0.26em;
+  color: var(--imp-crema);
+}
+.imp-pago-name b {
+  display: block;
+  margin-top: 6px;
+  font-family: var(--imp-display), Georgia, serif;
+  font-weight: 900;
+  font-size: clamp(46px, 13vw, 66px);
+  line-height: 1.02;
+  background: linear-gradient(180deg, #f0d9a6 0%, #d8b77a 38%, #c9a46a 62%, #a8844e 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.imp-pago-fecha {
+  margin: 14px 0 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--imp-crema-suave);
+}
+.imp-pago-franja {
+  margin: 0;
+  padding: 10px 20px;
+  text-align: center;
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  background: var(--imp-oro);
+  color: var(--imp-negro);
+}
+.imp-pago-franja.is-wait {
+  background: var(--imp-estrella);
+  color: var(--imp-bronce-oscuro);
+}
+.imp-pago-franja.is-no {
+  background: #8f3b2b;
+  color: var(--imp-crema);
+}
+.imp-pago-col {
+  max-width: 600px;
+  margin: 0 auto;
+}
+.imp-pago-hola {
+  padding: 30px 22px 6px;
+}
+.imp-pago-hola h1,
+.imp-pago-estado h1 {
+  margin: 0;
+  font-family: var(--imp-display), Georgia, serif;
+  font-weight: 900;
+  font-size: 30px;
+  line-height: 1.12;
+  text-wrap: balance;
+}
+.imp-pago-hola p {
+  margin: 12px 0 0;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--imp-gris-calido);
+}
+.imp-pago-hola b {
+  color: var(--imp-negro);
+}
+.imp-pago-pasos {
+  padding: 26px 22px 10px;
+}
+.imp-pago-pasos h2,
+.imp-pago-asis h2,
+.imp-pago-colega h2 {
+  margin: 0;
+  font-family: var(--imp-display), Georgia, serif;
+  font-weight: 800;
+  font-size: 22px;
+  line-height: 1.25;
+}
+.imp-pago-pasos ol {
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.imp-pago-pasos li {
+  display: flex;
+  gap: 14px;
+  padding: 12px 0;
+}
+/* Its numbers shaped like a nail, as in the email. */
+.imp-pago-una {
+  flex: none;
+  width: 26px;
+  height: 32px;
+  border-radius: 13px 13px 7px 7px;
+  background: var(--imp-oro);
+  text-align: center;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 32px;
+  color: var(--imp-negro);
+}
+.imp-pago-pasos strong {
+  display: block;
+  font-size: 16px;
+  font-weight: 800;
+}
+.imp-pago-pasos li div span {
+  display: block;
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--imp-gris-calido);
+}
+.imp-pago-asis {
+  margin-top: 18px;
+  padding: 28px 22px 32px;
+  text-align: center;
+}
+.imp-pago-asis h2,
+.imp-pago-colega h2 {
+  font-size: 21px;
+}
+.imp-pago-asis p,
+.imp-pago-colega p {
+  max-width: 420px;
+  margin: 10px auto 16px;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--imp-gris-calido);
+}
+.imp-pago-asis img {
+  display: block;
+  width: 150px;
+  height: auto;
+  margin: 0 auto 16px;
+  border-radius: 12px;
+  box-shadow: 0 12px 26px rgba(94, 66, 34, 0.22);
+}
+.imp-pago-btn {
+  display: inline-block;
+  padding: 14px 24px;
+  border-radius: 14px;
+  background: var(--imp-oro);
+  color: var(--imp-negro) !important;
+  font-size: 15.5px;
+  font-weight: 800;
+  text-decoration: none;
+  box-shadow: 0 12px 22px -12px rgba(94, 66, 34, 0.7);
+}
+.imp-pago-colega {
+  padding: 28px 22px 36px;
+  text-align: center;
+  background: var(--imp-chocolate);
+  color: var(--imp-crema);
+}
+.imp-pago-colega p {
+  margin-bottom: 18px;
+  color: var(--imp-crema-suave);
+}
+.imp-pago-estado {
+  padding: 34px 22px 44px;
+  text-align: center;
+}
+.imp-pago-estado h1 {
+  font-size: 27px;
+  line-height: 1.15;
+}
+.imp-pago-estado p {
+  max-width: 440px;
+  margin: 12px auto 0;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--imp-gris-calido);
+  text-wrap: pretty;
+}
+.imp-pago-ico {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 18px;
+  border-radius: 50%;
+}
+.imp-pago-ico svg {
+  width: 30px;
+  height: 30px;
+}
+.imp-pago-ico.is-wait {
+  background: var(--imp-estrella);
+  color: var(--imp-bronce-oscuro);
+}
+.imp-pago-ico.is-no {
+  background: #f3dcd5;
+  color: #8f3b2b;
+}
+.imp-pago-correo {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 22px;
+  padding: 12px 14px;
+  border: 1px solid var(--imp-borde-claro);
+  border-radius: 14px;
+  background: var(--imp-hueso-tarjeta);
+  text-align: left;
+  font-size: 14px;
+  color: var(--imp-gris-calido);
+}
+.imp-pago-correo svg {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  color: var(--imp-bronce);
+}
+.imp-pago-correo b {
+  overflow-wrap: anywhere;
+  color: var(--imp-negro);
+}
+.imp-pago-estado .imp-pago-btn {
+  margin-top: 22px;
+}
+.imp-pago-mas {
+  margin-top: 14px;
+  font-size: 14px;
+}
+.imp-pago-mas a {
+  font-weight: 800;
+  color: var(--imp-bronce-oscuro);
+}
+@media (min-width: 900px) {
+  .imp-pago-cab {
+    padding: 44px 20px 34px;
+  }
+  .imp-pago-cab .imp-tiara {
+    width: 190px;
+    height: 52px;
+  }
+  .imp-pago-name span {
+    font-size: 22px;
+  }
+  .imp-pago-name b {
+    font-size: 88px;
+  }
+  .imp-pago-fecha {
+    font-size: 16px;
+  }
+  .imp-pago-col {
+    max-width: 640px;
+  }
+  .imp-pago-hola {
+    padding-top: 40px;
+  }
+  .imp-pago-hola h1 {
+    font-size: 36px;
+  }
+}
+
 @media (min-width: 900px) {
   .imp-hero {
     padding: 22px 40px 56px;
