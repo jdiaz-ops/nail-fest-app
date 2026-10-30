@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { normalizeFilter, type SegmentFilter } from "@/lib/segments/normalize";
+import { CART_STAGES, normalizeFilter, type SegmentFilter } from "@/lib/segments/normalize";
 import { COUNTRY_CODES } from "@/lib/countryCodes";
 import { WORLD_COUNTRIES } from "@/lib/worldCountries";
 import SegmentPersonPicker, { pendingPerson, type PickedPerson } from "./SegmentPersonPicker";
@@ -118,6 +118,8 @@ const emptyForm = {
   excludePeople: [] as PickedPerson[],
   includeEvent: [] as string[],
   includeAttended: [] as string[],
+  includeCart: [] as string[],
+  includeCartStages: [] as string[],
   includeCity: [] as string[],
   includeProfession: [] as string[],
   includeLabel: [] as string[],
@@ -141,6 +143,8 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
   const [excludePeople, setExcludePeople] = useState<PickedPerson[]>([]);
   const [includeEvent, setIncludeEvent] = useState<string[]>([]);
   const [includeAttended, setIncludeAttended] = useState<string[]>([]);
+  const [includeCart, setIncludeCart] = useState<string[]>([]);
+  const [includeCartStages, setIncludeCartStages] = useState<string[]>([]);
   const [includeCity, setIncludeCity] = useState<string[]>([]);
   const [includeProfession, setIncludeProfession] = useState<string[]>([]);
   const [includeLabel, setIncludeLabel] = useState<string[]>([]);
@@ -170,6 +174,8 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
       setExcludePeople(emptyForm.excludePeople);
       setIncludeEvent(emptyForm.includeEvent);
       setIncludeAttended(emptyForm.includeAttended);
+      setIncludeCart(emptyForm.includeCart);
+      setIncludeCartStages(emptyForm.includeCartStages);
       setIncludeCity(emptyForm.includeCity);
       setIncludeProfession(emptyForm.includeProfession);
       setIncludeLabel(emptyForm.includeLabel);
@@ -194,6 +200,8 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
     setExcludePeople(excludePersonIds.map(pendingPerson));
     setIncludeEvent(extract(normalized.include, "event", "eventSlugs"));
     setIncludeAttended(extract(normalized.include, "attended", "eventSlugs"));
+    setIncludeCart(extract(normalized.include, "abandonedCart", "eventSlugs"));
+    setIncludeCartStages(extract(normalized.include, "abandonedCart", "stages"));
     setIncludeCity(extract(normalized.include, "city", "cities"));
     setIncludeProfession(extract(normalized.include, "profession", "professions"));
     setIncludeLabel(extract(normalized.include, "label", "labels"));
@@ -251,6 +259,7 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
       includePeople.length ? { field: "person", personIds: includePeople.map((p) => p.id) } : null,
       includeEvent.length ? { field: "event", eventSlugs: includeEvent } : null,
       includeAttended.length ? { field: "attended", eventSlugs: includeAttended } : null,
+      includeCart.length ? { field: "abandonedCart", eventSlugs: includeCart, stages: includeCartStages } : null,
       includeCity.length ? { field: "city", cities: includeCity } : null,
       includeProfession.length ? { field: "profession", professions: includeProfession } : null,
       includeLabel.length ? { field: "label", labels: includeLabel } : null,
@@ -275,6 +284,8 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
     excludePeople,
     includeEvent,
     includeAttended,
+    includeCart,
+    includeCartStages,
     includeCity,
     includeProfession,
     includeLabel,
@@ -354,6 +365,8 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
         setExcludePeople([]);
         setIncludeEvent([]);
         setIncludeAttended([]);
+        setIncludeCart([]);
+        setIncludeCartStages([]);
         setIncludeCity([]);
         setIncludeProfession([]);
         setIncludeLabel([]);
@@ -434,6 +447,22 @@ export default function SegmentComposer({ events, professionOptions, cityOptions
             <div className="field">
               <label>Asistió (check-in real) a estos eventos</label>
               <MultiCheckList options={eventOptions} selected={includeAttended} onChange={setIncludeAttended} emptyLabel="No hay eventos todavía." />
+            </div>
+            {/* Truly abandoned carts (2026-10-30, lib/segments/abandonedCart.ts). */}
+            <div className="field">
+              <label>Carrito abandonado en estos eventos</label>
+              <MultiCheckList options={eventOptions} selected={includeCart} onChange={setIncludeCart} emptyLabel="No hay eventos todavía." />
+              {includeCart.length > 0 && (
+                <div style={{ marginTop: 8 }}>
+                  <div style={{ fontSize: 12, color: "#5b5f6b", marginBottom: 4 }}>Dónde se quedó (sin marcar: en cualquier parte)</div>
+                  <MultiCheckList options={CART_STAGES} selected={includeCartStages} onChange={setIncludeCartStages} emptyLabel="" />
+                </div>
+              )}
+              <p style={{ fontSize: 12, color: "#5b5f6b", margin: "6px 0 0" }}>
+                Escribió su correo en el checkout y lleva más de una hora sin comprar. Sale sola si paga, también si pagó con otro
+                correo: el mismo WhatsApp, el mismo nombre y apellido, o su correo mal escrito. En Meta entra con la sincronización de
+                cada noche y sale apenas paga.
+              </p>
             </div>
             <div className="field">
               <label>Ciudad</label>

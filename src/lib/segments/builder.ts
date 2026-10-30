@@ -30,6 +30,7 @@ import { Prisma, type Person } from "@prisma/client";
 // "@/lib/segments/builder"` import keeps working unchanged.
 import type { SegmentCondition, SegmentFilter } from "./normalize";
 import { normalizeFilter } from "./normalize";
+import { abandonedCartPersonIds } from "./abandonedCart";
 export type { SegmentCondition, SegmentFilter } from "./normalize";
 export { normalizeFilter } from "./normalize";
 
@@ -127,6 +128,8 @@ async function matchingPersonIds(condition: SegmentCondition): Promise<Set<strin
       });
       return new Set(matches.map((r) => r.personId));
     }
+    case "abandonedCart":
+      return abandonedCartPersonIds(condition.eventSlugs, condition.stages);
   }
 }
 

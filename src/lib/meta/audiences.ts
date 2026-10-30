@@ -539,6 +539,35 @@ export async function syncAllSegmentAudiences(): Promise<{ synced: number; faile
 }
 
 /**
+ * The other way around, the moment someone buys (2026-10-30): out of every
+ * synced segment that counts this event's abandoned carts — on their own
+ * event, not several — right away instead of at the nightly sync, so she
+ * doesn't keep seeing the «you left your cart» ads after paying. Anyone
+ * else the purchase takes out (her same cart under a mistyped email) leaves
+ * at that sync. Never throws: called as a registration is confirmed.
+ */
+export async function removeBuyerFromAbandonedCartAudiences(
+  eventSlug: string,
+  person: { email: string; phone: string | null }
+): Promise<void> {
+  try {
+    const links = await db.segmentMetaSync.findMany({
+      where: { status: "OK", metaAudienceId: { not: null } },
+      include: { segment: true },
+    });
+    for (const link of links) {
+      const filter = normalizeFilter(link.segment.filter as unknown as SegmentFilter);
+      const countsHerCart = filter.include.some(
+        (c) => c.field === "abandonedCart" && c.eventSlugs.length === 1 && c.eventSlugs[0] === eventSlug
+      );
+      if (countsHerCart && link.metaAudienceId) await removePeopleFromAudience(link.metaAudienceId, [person]);
+    }
+  } catch (err) {
+    console.error("removeBuyerFromAbandonedCartAudiences failed (non-fatal)", err);
+  }
+}
+
+/**
  * Cheap, near-real-time counterpart to syncSegmentAudience(): pushes ONE
  * newly-registered person to every segment's Meta audience that simply
  * means "registered to this event" — no full resync (re-uploading a

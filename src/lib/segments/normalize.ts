@@ -48,7 +48,21 @@ export type SegmentCondition =
   // details later never drops them from a segment. OR'd like every other
   // multi-value condition: on its own in `include`, the segment is
   // exactly these people; in `exclude`, it takes them out of a bigger one.
-  | { field: "person"; personIds: string[] };
+  | { field: "person"; personIds: string[] }
+  // Truly abandoned carts at these events (2026-10-30): gave her email at
+  // the checkout and hasn't bought, an hour on — never someone who paid,
+  // not even under another email (lib/segments/abandonedCart.ts). `stages`
+  // narrows it to where she stopped; empty = wherever.
+  | { field: "abandonedCart"; eventSlugs: string[]; stages: CartStage[] };
+
+/** Where an abandoned cart stopped — see lib/segments/abandonedCart.ts. */
+export type CartStage = "form" | "payment" | "declined";
+
+export const CART_STAGES: { value: CartStage; label: string }[] = [
+  { value: "form", label: "Dejó el formulario sin tocar «Pagar»" },
+  { value: "payment", label: "Fue a pagar y no terminó" },
+  { value: "declined", label: "Le rechazaron el pago" },
+];
 
 export interface SegmentFilter {
   include: SegmentCondition[];
@@ -90,6 +104,10 @@ function normalizeCondition(raw: any): SegmentCondition {
       const purpose: ConsentPurpose = validPurposes.includes(raw.purpose) ? raw.purpose : "MARKETING";
       const state: "active" | "inactive" = raw.state === "active" ? "active" : "inactive";
       return { field: "consent", purpose, state };
+    }
+    case "abandonedCart": {
+      const stages: CartStage[] = Array.isArray(raw.stages) ? raw.stages.filter((s: unknown) => CART_STAGES.some((c) => c.value === s)) : [];
+      return { field: "abandonedCart", eventSlugs: raw.eventSlugs ?? [], stages };
     }
     default:
       throw new Error(`Unknown segment condition field: ${raw?.field}`);

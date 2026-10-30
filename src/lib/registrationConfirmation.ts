@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 import { db } from "@/lib/db";
 import { queueMetaEvent } from "@/lib/meta/capi";
+import { removeBuyerFromAbandonedCartAudiences } from "@/lib/meta/audiences";
 import { hasActiveConsent } from "@/lib/consent";
 import { issueQrToken } from "@/lib/ticket";
 import { sendTicketEmail } from "@/lib/sendTicketEmail";
@@ -125,6 +126,9 @@ export async function finalizeConfirmedRegistration(params: {
       registrationId: registration.id,
     });
   }
+
+  // Bought: no longer an abandoned cart in Meta's audiences (lib/segments/abandonedCart.ts).
+  if (!wasAlreadyConfirmed) await removeBuyerFromAbandonedCartAudiences(event.slug, person);
 
   return { whatsappTicketLinkSent, qrToken, zoomJoinUrl };
 }

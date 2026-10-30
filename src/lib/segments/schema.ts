@@ -21,6 +21,11 @@ export const conditionSchema = z.union([
     purpose: z.enum(["LOGISTICS", "MARKETING", "ADVERTISING", "WHATSAPP"]),
     state: z.enum(["active", "inactive"]),
   }),
+  z.object({
+    field: z.literal("abandonedCart"),
+    eventSlugs: z.array(z.string()).min(1),
+    stages: z.array(z.enum(["form", "payment", "declined"])).default([]),
+  }),
 ]);
 
 export const filterSchema = z.object({
