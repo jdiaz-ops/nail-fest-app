@@ -19,8 +19,7 @@ const base = (over: Partial<ImparablesConfirmation> = {}): ImparablesConfirmatio
   zone: "hora Colombia",
   day: "27 de junio",
   start: "8:00 a. m.",
-  linkMinutesBefore: 30,
-  oneDay: true,
+  linkMinutesBefore: 15,
   purchase: { stage: "Etapa Creyente", paid: "$90.000" },
   code: "7KQ2M9XA",
   calendar: { google: googleCalendarUrl(CALENDAR), ics: "https://nailfest.lat/manicuristas-imparables-2027/calendario" },
@@ -28,7 +27,6 @@ const base = (over: Partial<ImparablesConfirmation> = {}): ImparablesConfirmatio
   asistire: { url: "https://nailfest.lat/asistire/reg_1.firma", image: "https://nailfest.lat/imparables/asistire-muestra.jpg" },
   helpUrl: "https://wa.me/573001234567",
   speakers: ["Jimena", "Paula", "Cristina", "Alejandro", "Karen", "Fabi", "Juan", "Oskar"].map((name) => ({ name, photoUrl: `https://nailfest.lat/imparables/${name}.jpg` })),
-  panel: true,
   images: { header: "https://nailfest.lat/imparables/correo-cabecera.png", logo: "https://nailfest.lat/logo.png" },
   site: { url: "https://nailfest.lat", host: "nailfest.lat" },
   ...over,
@@ -50,16 +48,18 @@ describe("Manicuristas Imparables' confirmation email", () => {
 
   it("tells what happens now in five steps, with the day and the hour", () => {
     const { html, text } = imparablesConfirmationEmail(base());
-    for (const step of ["Guarda este correo", "Te escribimos por WhatsApp", "El 27 de junio, 30 minutos antes", "Conéctate a las 8:00 a. m.", "30 días de repetición"]) {
+    for (const step of ["Guarda este correo", "Te escribimos por WhatsApp", "El 27 de junio, 15 minutos antes", "Conéctate a las 8:00 a. m.", "30 días de repetición"]) {
       expect(html).toContain(step);
     }
+    expect(html).toContain("Si te pierdes algo, las grabaciones estarán disponibles durante 30 días.");
     expect(html).toContain("Hora Colombia: si estás en otro país, ajusta la hora.");
     expect(text).toContain("4. Conéctate a las 8:00 a. m. Hora Colombia:");
   });
 
-  it("shows who's waiting, four to a row, and the colleague to share it with", () => {
-    const { html } = imparablesConfirmationEmail(base());
-    expect(html).toContain("8 conferencistas y un panel, en un solo día");
+  it("shows who's waiting, four to a row — their faces, without counting them — and the colleague to share it with", () => {
+    const { html, text } = imparablesConfirmationEmail(base());
+    expect(html).not.toContain("conferencistas");
+    expect(text).toContain("QUIÉNES TE ESPERAN\nJimena, Paula, Cristina, Alejandro, Karen, Fabi, Juan, Oskar.");
     expect(html.match(/imparables\/(Jimena|Paula|Cristina|Alejandro|Karen|Fabi|Juan|Oskar)\.jpg/g)).toHaveLength(8);
     expect(html).toContain("Hoy está a $90.000 y luego sube a $120.000: compartirle esto es un buen regalo.");
     expect(html).toContain("Escríbenos por WhatsApp");

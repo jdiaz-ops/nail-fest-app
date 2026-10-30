@@ -26,7 +26,6 @@ export interface ImparablesConfirmation {
   start: string | null;
   /** How long before the start her Zoom link arrives. */
   linkMinutesBefore: number;
-  oneDay: boolean;
   /** What she bought: «Etapa Creyente», «$90.000». */
   purchase: { stage: string; paid: string } | null;
   code: string;
@@ -38,7 +37,6 @@ export interface ImparablesConfirmation {
   /** The team's WhatsApp, when there's one. */
   helpUrl: string | null;
   speakers: { name: string; photoUrl: string }[];
-  panel: boolean;
   images: { header: string; logo: string };
   site: { url: string; host: string };
 }
@@ -91,11 +89,8 @@ export function imparablesConfirmationEmail(c: ImparablesConfirmation): { html: 
       c.start ? `Conéctate a las ${c.start}` : "Conéctate a tiempo",
       `${c.zone.charAt(0).toUpperCase()}${c.zone.slice(1)}: si estás en otro país, ajusta la hora. Ten libreta a mano.`,
     ],
-    ["30 días de repetición", `Si te pierdes algo, las grabaciones quedan en ${c.site.host} con tu cuenta.`],
+    ["30 días de repetición", "Si te pierdes algo, las grabaciones estarán disponibles durante 30 días."],
   ];
-  const cast = c.speakers.length
-    ? `${c.speakers.length} conferencistas${c.panel ? " y un panel" : ""}${c.oneDay ? ", en un solo día" : ""}`
-    : "";
   const preheader = `Tu cupo para ${c.eventName} está confirmado. Esto es lo que sigue.`;
 
   const row = (label: string, value: string, sub: string | null, last = false) =>
@@ -177,7 +172,7 @@ ${
   c.speakers.length
     ? `<tr><td class="px" style="padding:24px 32px 26px;background:${STAR};">
 ${eyebrow("Quiénes te esperan")}
-<div style="margin:6px 0 14px;${serif(20, 800)}">${esc(cast)}</div>
+<div style="height:12px;line-height:12px;font-size:0;">&nbsp;</div>
 ${table(`<tr>${faces.join("")}</tr>`)}
 </td></tr>`
     : ""
@@ -227,7 +222,7 @@ Recibes este correo porque compraste tu entrada a ${esc(c.eventName)}.
       `iPhone u Outlook: ${c.calendar.ics}`,
     ].join("\n"),
     ["¿QUÉ PASA AHORA?", ...steps.map(([title, body], i) => `${i + 1}. ${title}${title.endsWith(".") ? "" : "."} ${body}`)].join("\n"),
-    ...(cast ? [`QUIÉNES TE ESPERAN\n${cast}: ${c.speakers.map((p) => p.name).join(", ")}.`] : []),
+    ...(c.speakers.length ? [`QUIÉNES TE ESPERAN\n${c.speakers.map((p) => p.name).join(", ")}.`] : []),
     ...(c.asistire ? [`¡CUÉNTALE A TODOS QUE VAS!\nSube una foto tuya y te armamos tu imagen «Asistiré» para historias y publicaciones: ${c.asistire.url}`] : []),
     `¿CONOCES A UNA COLEGA QUE LO NECESITA?\n${c.share.line}\n${c.share.url}`,
     ...(c.helpUrl ? [`¿Dudas? Escríbenos por WhatsApp: ${c.helpUrl}`] : []),

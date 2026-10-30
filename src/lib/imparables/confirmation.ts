@@ -61,7 +61,7 @@ async function confirmationOf(
   page.searchParams.set("utm_source", "whatsapp");
   page.searchParams.set("utm_medium", "referido");
   page.searchParams.set("utm_campaign", "confirmacion");
-  const { speakers, panels } = castOf(parseLandingBlocks(event.landingBlocks).filter((b) => !b.hidden));
+  const { speakers } = castOf(parseLandingBlocks(event.landingBlocks).filter((b) => !b.hidden));
   const absolute = (url: string) => (/^https?:\/\//.test(url) ? url : `${base}${url.startsWith("/") ? "" : "/"}${url}`);
   const digits = whatsapp?.displayPhoneNumber?.replace(/\D/g, "") ?? "";
   const calendar = calendarEventOf(event);
@@ -74,7 +74,6 @@ async function confirmationOf(
     day: when.short,
     start: Number.isFinite(hh) && Number.isFinite(mm) ? clock(hh!, mm!) : null,
     linkMinutesBefore: ZOOM_ACCESS_REMINDER_MINUTES_BEFORE,
-    oneDay: when.days.length <= 1,
     purchase: her.purchase,
     code: her.code,
     calendar: { google: googleCalendarUrl(calendar), ics: `${base}/${event.slug}/calendario` },
@@ -86,7 +85,6 @@ async function confirmationOf(
     asistire: { url: her.asistire, image: `${base}/imparables/asistire-muestra.jpg` },
     helpUrl: digits.length >= 8 ? `https://wa.me/${digits}` : null,
     speakers: speakers.filter((p) => p.photoUrl).map((p) => ({ name: p.name.trim().split(/\s+/)[0]!, photoUrl: absolute(p.photoUrl) })),
-    panel: panels > 0,
     images: { header: `${base}/imparables/correo-cabecera.png`, logo: `${base}/logo.png` },
     site: { url: base, host: new URL(base).host.replace(/^www\./, "") },
   };
