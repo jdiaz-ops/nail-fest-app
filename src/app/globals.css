@@ -4256,8 +4256,7 @@ body:has(.imp) {
   .imp-hero .imp-cta:has(.imp-cta-p) {
     margin-top: 28px;
   }
-  .imp-hero .imp-deal,
-  .imp-close .imp-deal {
+  .imp-hero .imp-deal {
     margin-top: 32px;
   }
 }
@@ -5632,11 +5631,6 @@ body:has(.imp) {
 }
 .imp-close .imp-rays {
   top: 34px;
-}
-.imp-close-3 {
-  margin-top: 14px;
-  font-size: 15px;
-  color: var(--imp-texto-2);
 }
 .imp-foot {
   position: relative;

@@ -109,7 +109,6 @@ export default function ImparablesPage({
   const words = coverName(event.displayName).split(/\s+/);
   const big = words.pop() ?? event.displayName;
   const pre = words.join(" ");
-  const liveNote = event.format === "IN_PERSON" ? "" : "100% en vivo, desde tu celular";
   // The pill right before the group photo (2026-10-28): when, big — written
   // the way the team writes it there, «27 de junio 2027» (2026-10-29: no «de»
   // before the year only) — and under it, smaller, what it is. No hours, no
@@ -176,7 +175,7 @@ export default function ImparablesPage({
         Quiero estar en la lista de espera
       </ImpButton>
     ) : null;
-  // Under the button, the same on the cover and the closing (2026-10-29):
+  // Under the cover's button (2026-10-29; the closing's until 2026-10-30):
   // for a week after the stage before closed, a pill saying so; then, for a
   // stage with a cap, its places left over a bar of how full it is — from its
   // first ticket — and under it its terms («hasta completar los 200 cupos o
@@ -303,15 +302,11 @@ export default function ImparablesPage({
         <div className="imp-rays" aria-hidden="true" />
         <div className="imp-hero-in">
           {/* The arc, «Nadie nace imparable. Se hace.» as the page's last word
-              (2026-10-29), then the button, the line under it and the day. */}
+              (2026-10-29), then the button — and nothing under it since
+              2026-10-30: its stage's bar and the day stay on the cover. */}
           <Tiara />
           {closingLine}
           {cta}
-          {deal}
-          <div className="imp-close-3">
-            {when.named}
-            {liveNote ? ` · ${liveNote}` : ""}
-          </div>
         </div>
       </section>
 
