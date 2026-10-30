@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/db", () => ({ db: {} }));
 
 import { eventDays, inPersonCalendarEvent, longDates, mapsUrl } from "./confirmation";
-import { defaultInvite, defaultTips, nailFestConfirmationEmail, type NailFestConfirmation } from "./confirmationEmail";
+import { defaultInvite, nailFestConfirmationEmail, type NailFestConfirmation } from "./confirmationEmail";
 
 const TZ = "America/Bogota";
 const at = (iso: string) => new Date(iso);
@@ -82,12 +82,11 @@ describe("the email", () => {
       ["Sábado 7", "10:00 a. m. a 7:00 p. m."],
       ["Domingo 8", "10:00 a. m. a 5:00 p. m."],
     ],
-    venue: { name: "Salón Ventura", address: "Av. 0 #11-20", mapsUrl: "https://www.google.com/maps/search/?api=1&query=Sal%C3%B3n" },
+    venue: { name: "Salón Ventura", address: "Av. 0 #11-20" },
     tickets: [{ qrImageUrl: "https://nailfest.lat/api/ticket-qr/abc.def", holder: "Laura Gómez", label: "Entrada general", code: "ABCD1234" }],
     people: 1,
     pdfAttached: false,
     calendar: { google: "https://calendar.google.com/calendar/render?action=TEMPLATE", ics: "https://nailfest.lat/cucuta/calendario" },
-    tips: ["Lleva <tu> lima & esmaltes"],
     asistire: null,
     share: { url: "https://wa.me/?text=hola" },
     helpUrl: "https://wa.me/573001234567",
@@ -96,13 +95,15 @@ describe("the email", () => {
     site: { url: "https://nailfest.lat", host: "nailfest.lat" },
   };
 
-  it("carries her ticket, the place and the event's own «Antes de ir», escaped", () => {
-    const { html, text } = nailFestConfirmationEmail(c);
+  it("carries her ticket and the place — no map button nor «Antes de ir» (the team, 2026-10-30)", () => {
+    const { html, text } = nailFestConfirmationEmail({ ...c, venue: { name: "Salón <Ventura> & Co", address: "Av. 0 #11-20" } });
     expect(html).toContain("¡Te esperamos, Laura!");
     expect(html).toContain('src="https://nailfest.lat/api/ticket-qr/abc.def"');
     expect(html).toContain("ABCD1234");
-    expect(html).toContain("Cómo llegar");
-    expect(html).toContain("Lleva &lt;tu&gt; lima &amp; esmaltes");
+    expect(html).toContain("Salón &lt;Ventura&gt; &amp; Co");
+    expect(html).toContain("Google Calendar");
+    expect(html).not.toContain("Cómo llegar");
+    expect(html).not.toContain("Antes de ir");
     expect(html).toContain("https://wa.me/?text=hola");
     expect(html).not.toContain("Crear mi imagen");
     expect(text).toContain("ABCD1234");
@@ -121,8 +122,4 @@ describe("the email", () => {
     expect(defaultInvite("Nail Fest Cúcuta", "Del viernes 6 al domingo 8 de noviembre")).toContain("Es del viernes 6 al domingo 8 de noviembre y");
   });
 
-  it("has general tips for one day and for several", () => {
-    expect(defaultTips(false)[1]).not.toContain("todos los días");
-    expect(defaultTips(true)[1]).toContain("todos los días");
-  });
 });

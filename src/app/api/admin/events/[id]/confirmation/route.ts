@@ -13,14 +13,12 @@ import { sanitizeEventDescription } from "@/lib/sanitizeHtml";
 // designed email (2026-10-29), null goes back to the body above; omitted,
 // it stays as it is. shareText is that email's «Compartir por WhatsApp»
 // message (2026-10-30), "" back to the default; omitted, as it is.
-// "NAIL_FEST" is Nail Fest's own for an event at a place (2026-10-30), with
-// its «Antes de ir» (confirmationTips: [] back to the default ones).
+// "NAIL_FEST" is Nail Fest's own for an event at a place (2026-10-30).
 const bodySchema = z.object({
   confirmationEmailHtml: z.string(),
   confirmationEmailSubject: z.string().optional(),
   confirmationEmailDesign: z.enum(["IMPARABLES", "NAIL_FEST"]).nullable().optional(),
   shareText: z.string().max(500).optional(),
-  confirmationTips: z.array(z.string().max(200)).max(5).optional(),
 });
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
@@ -36,7 +34,6 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const subject = parsed.data.confirmationEmailSubject;
   const design = parsed.data.confirmationEmailDesign;
   const shareText = parsed.data.shareText;
-  const tips = parsed.data.confirmationTips?.map((t) => t.trim()).filter(Boolean);
   try {
     await db.event.update({
       where: { id: params.id },
@@ -45,7 +42,6 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         ...(subject !== undefined ? { confirmationEmailSubject: subject || null } : {}),
         ...(design !== undefined ? { confirmationEmailDesign: design } : {}),
         ...(shareText !== undefined ? { shareText: shareText.trim() || null } : {}),
-        ...(tips !== undefined ? { confirmationTips: tips } : {}),
       },
     });
   } catch {

@@ -274,9 +274,9 @@ model Event {
   // (2026-10-30, «Confirmación del evento»); the link to the event's page
   // goes after it. Null: «Mira este congreso para manicuristas: …».
   shareText                 String?
-  // «Antes de ir» in Nail Fest's own in-person confirmation email
-  // (2026-10-30, lib/nailfest/confirmation.ts), one line each. Empty: three
-  // general ones (having the ticket at hand, coming and going, WhatsApp).
+  // «Antes de ir» lines for Nail Fest's own in-person confirmation email
+  // (2026-10-30). Not shown any more: the team took the section out of the
+  // email the same day.
   confirmationTips          String[]    @default([])
   // The screen right after signing up (2026-10-30, «Después de la
   // inscripción»): "NAIL_FEST" — Nail Fest's own for an event at a place,

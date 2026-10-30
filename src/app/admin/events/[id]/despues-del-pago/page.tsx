@@ -103,7 +103,7 @@ export default async function AfterPaymentPage({ params, searchParams }: { param
           <TestSendBox
             url={`/api/admin/events/${event.id}/confirmation/test`}
             body={{ mode }}
-            note={`Con datos de ejemplo y «[Prueba]» al comienzo del asunto.${sendsPdf ? " Sin la entrada en PDF que lleva el correo real." : ""}`}
+            note={`Con datos de ejemplo y «[Prueba]» al comienzo del asunto.${sendsPdf ? " Lleva la entrada en PDF, de muestra, como el real." : ""}`}
           />
           <iframe
             src={active.src}

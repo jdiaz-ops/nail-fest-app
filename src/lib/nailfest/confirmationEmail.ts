@@ -2,8 +2,8 @@
 // first for Cúcuta), as in the approved boceto: the brand's header with the
 // city, «Entrada confirmada», the hello, her ticket — its QR big, her name,
 // what kind and for how many, her code — when (each day with its hours) and
-// where (with the map and her calendar), what to know before going (the
-// event's own lines), her «Asistiré» image, a colleague to invite, and help.
+// where (with her calendar), her «Asistiré» image, a colleague to invite, and
+// help. No map button nor «Antes de ir» since the team's look at it (same day).
 // The brand's off-white, teal and peach; tables and inline styles, so it
 // reads the same in Gmail, Outlook and the phone's mail app. Chosen per event
 // in «Confirmación del evento» (Event.confirmationEmailDesign "NAIL_FEST");
@@ -28,15 +28,13 @@ export interface NailFestConfirmation {
   year: string;
   /** Each day with its hours: [«Sábado 7», «10:00 a. m. a 6:00 p. m.»]. */
   days: [string, string][];
-  venue: { name: string | null; address: string | null; mapsUrl: string | null };
+  venue: { name: string | null; address: string | null };
   /** Her ticket — or, for an order of several, each one. */
   tickets: NailFestTicket[];
   /** «1 persona», «2 personas» — what her order lets in. */
   people: number;
   pdfAttached: boolean;
   calendar: { google: string; ics: string };
-  /** «Antes de ir»: the event's own lines. */
-  tips: string[];
   /** Her page to make her «Asistiré» image, and a picture of the empty template. */
   asistire: { url: string; image: string } | null;
   /** WhatsApp's share link with the event's message. */
@@ -85,15 +83,6 @@ export function defaultInvite(eventName: string, dates: string): string {
   return `¡Vamos juntas a ${eventName}! Es ${when.startsWith("del ") ? "" : "el "}${when} y la entrada es gratis. Inscríbete aquí:`;
 }
 
-/** «Antes de ir» when the event has none of its own. */
-export function defaultTips(manyDays: boolean): string[] {
-  return [
-    "Ten tu entrada a mano: este correo o una captura del código.",
-    manyDays ? "Puedes entrar y salir las veces que quieras, todos los días, con el mismo código." : "Puedes entrar y salir las veces que quieras con el mismo código.",
-    "Al WhatsApp que registraste te llegan la agenda y las novedades del evento.",
-  ];
-}
-
 export function nailFestConfirmationEmail(c: NailFestConfirmation): { html: string; text: string } {
   const hello = c.firstName ? `¡Te esperamos, ${c.firstName}!` : "¡Te esperamos!";
   const manyDays = c.days.length > 1;
@@ -133,7 +122,7 @@ export function nailFestConfirmationEmail(c: NailFestConfirmation): { html: stri
   const venueRow = c.venue.name || c.venue.address
     ? `<tr><td valign="top" width="120" style="width:120px;padding:13px 16px;${sans(12.5, 700, GREY)}">Lugar</td><td style="padding:13px 16px;${sans(15, 700)}">${esc(c.venue.name ?? c.venue.address ?? "")}${
         c.venue.name && c.venue.address ? `<br><span style="${sans(13.5, 400, GREY)}">${esc(c.venue.address)}</span>` : ""
-      }<br>${c.venue.mapsUrl ? outline(c.venue.mapsUrl, "Cómo llegar") : ""}${outline(c.calendar.google, "Google Calendar")}${outline(c.calendar.ics, "iPhone · Outlook")}</td></tr>`
+      }<br>${outline(c.calendar.google, "Google Calendar")}${outline(c.calendar.ics, "iPhone · Outlook")}</td></tr>`
     : `<tr><td colspan="2" style="padding:13px 16px;">${outline(c.calendar.google, "Google Calendar")}${outline(c.calendar.ics, "iPhone · Outlook")}</td></tr>`;
 
   const confetti = [
@@ -184,22 +173,6 @@ ${eyebrow("Cuándo y dónde")}
 ${table(dayRows + venueRow, `border:1px solid ${LINE};border-radius:14px;`)}
 </td></tr>
 ${
-  c.tips.length
-    ? `<tr><td class="px" style="padding:30px 34px 0;">
-${eyebrow("Antes de ir")}
-<div style="height:6px;line-height:6px;font-size:0;">&nbsp;</div>
-${table(
-  c.tips
-    .map(
-      (tip, i) =>
-        `<tr><td width="40" valign="top" style="width:40px;padding:8px 0;"><div style="width:28px;height:28px;border-radius:50%;background:${MINT};text-align:center;${sans(13, 800, TEAL_DEEP, "line-height:28px;")}">${i + 1}</div></td><td style="padding:8px 0;${sans(15, 400, INK, "line-height:1.5;")}">${esc(tip)}</td></tr>`
-    )
-    .join("")
-)}
-</td></tr>`
-    : ""
-}
-${
   c.asistire
     ? `<tr><td class="px" style="padding:30px 34px 0;">${table(
         `<tr><td align="center" style="padding:24px 22px;">
@@ -237,8 +210,7 @@ Donde se reúne el mundo de las uñas<br>
     hello.toUpperCase(),
     intro.replace(/<[^>]+>/g, ""),
     ...c.tickets.map((t) => [`TU ENTRADA`, `${t.holder} · ${t.label}`, `Código: ${t.code}`, `Tu código QR: ${t.qrImageUrl}`].join("\n")),
-    ["CUÁNDO Y DÓNDE", ...c.days.map(([d, h]) => `${d}: ${h}`), ...(c.venue.name || c.venue.address ? [`Lugar: ${[c.venue.name, c.venue.address].filter(Boolean).join(", ")}`] : []), ...(c.venue.mapsUrl ? [`Cómo llegar: ${c.venue.mapsUrl}`] : []), `Agrégalo a tu calendario: ${c.calendar.google}`].join("\n"),
-    ...(c.tips.length ? [["ANTES DE IR", ...c.tips.map((t, i) => `${i + 1}. ${t}`)].join("\n")] : []),
+    ["CUÁNDO Y DÓNDE", ...c.days.map(([d, h]) => `${d}: ${h}`), ...(c.venue.name || c.venue.address ? [`Lugar: ${[c.venue.name, c.venue.address].filter(Boolean).join(", ")}`] : []), `Agrégalo a tu calendario: ${c.calendar.google}`].join("\n"),
     ...(c.asistire ? [`¡CUÉNTALE A TODOS QUE VAS!\nSube una foto tuya y te armamos tu imagen «Asistiré»: ${c.asistire.url}`] : []),
     `¿VAS CON UNA COLEGA?\nLa entrada es gratis: compártele el enlace para que se inscriba.\n${c.share.url}`,
     ...(c.helpUrl ? [`¿Dudas? Escríbenos por WhatsApp: ${c.helpUrl}`] : []),

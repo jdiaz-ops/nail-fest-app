@@ -13,7 +13,7 @@ export default function SaveEventConfirmationClient({
   initialSubject: string | null;
   design: Omit<EventDesign, "previewUrl"> | null;
 }) {
-  async function handleSave(html: string, subject: string, useDesign: boolean, extras: { shareText?: string; tips?: string[] } = {}): Promise<{ ok: boolean }> {
+  async function handleSave(html: string, subject: string, useDesign: boolean, extras: { shareText?: string } = {}): Promise<{ ok: boolean }> {
     const res = await fetch(`/api/admin/events/${eventId}/confirmation`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -22,7 +22,6 @@ export default function SaveEventConfirmationClient({
         confirmationEmailSubject: subject,
         confirmationEmailDesign: useDesign && design ? design.kind : null,
         ...(extras.shareText !== undefined ? { shareText: extras.shareText } : {}),
-        ...(extras.tips !== undefined ? { confirmationTips: extras.tips } : {}),
       }),
     });
     return { ok: res.ok };

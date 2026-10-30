@@ -3,8 +3,8 @@ import { db } from "@/lib/db";
 import { requirePageUser } from "@/lib/auth/guard";
 import { getOrgSettings } from "@/lib/settings";
 import { defaultShareText } from "@/lib/imparables/confirmation";
-import { NAIL_FEST_DESIGN, defaultNailFestShareText, eventDays } from "@/lib/nailfest/confirmation";
-import { defaultTips } from "@/lib/nailfest/confirmationEmail";
+import { NAIL_FEST_DESIGN, defaultNailFestShareText } from "@/lib/nailfest/confirmation";
+import AttachPdfForm from "../../../settings/confirmation/AttachPdfForm";
 import SaveEventConfirmationClient from "./SaveEventConfirmationClient";
 
 export const dynamic = "force-dynamic";
@@ -37,15 +37,13 @@ export default async function EventConfirmationPage({ params }: { params: { id: 
           design === "IMPARABLES"
             ? { kind: design, initial: event.confirmationEmailDesign === design, shareText: event.shareText ?? defaultShareText(event, tz) }
             : design === NAIL_FEST_DESIGN
-              ? {
-                  kind: design,
-                  initial: event.confirmationEmailDesign === design,
-                  shareText: event.shareText ?? defaultNailFestShareText(event, tz),
-                  tips: event.confirmationTips.length ? event.confirmationTips : defaultTips(eventDays(event, tz).length > 1),
-                }
+              ? { kind: design, initial: event.confirmationEmailDesign === design, shareText: event.shareText ?? defaultNailFestShareText(event, tz) }
               : null
         }
       />
+      {/* The ticket's PDF goes with every event's confirmation (account-wide, OrgSettings.attachTicketPdf): here too,
+          since 2026-10-30, so it's found where the email is. */}
+      {event.format !== "VIRTUAL" && <AttachPdfForm initialEnabled={orgSettings.attachTicketPdf} allEvents />}
     </div>
   );
 }

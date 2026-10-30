@@ -46,11 +46,11 @@ describe("the confirmation a buyer would get, with sample data", () => {
     expect(savedConfirmationMode({ confirmationEmailDesign: "NAIL_FEST", confirmationEmailHtml: null })).toBe("design");
   });
 
-  it("Nail Fest's design for one of its events at a place, with the editor's «Antes de ir» and message", async () => {
+  it("Nail Fest's design for one of its events at a place, with the editor's message", async () => {
     const cucuta = { ...EVENT, name: "Nail Fest Cúcuta", theme: "NAIL_FEST", format: "IN_PERSON" } as Event;
-    const email = await sampleConfirmation(cucuta, "design", { shareText: "¡Vamos!", tips: ["Llega temprano"] });
+    const email = await sampleConfirmation(cucuta, "design", { shareText: "¡Vamos!" });
     expect(email.html).toBe("<p>nail fest</p>");
-    expect(nailFestConfirmationPreview).toHaveBeenCalledWith("ev_1", { shareText: "¡Vamos!", tips: ["Llega temprano"] });
+    expect(nailFestConfirmationPreview).toHaveBeenCalledWith("ev_1", { shareText: "¡Vamos!" });
     expect(imparablesConfirmationPreview).not.toHaveBeenCalled();
   });
 

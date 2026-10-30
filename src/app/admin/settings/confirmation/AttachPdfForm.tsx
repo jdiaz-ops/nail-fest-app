@@ -7,7 +7,7 @@ import { postSettings, cardStyle, saveButtonStyle } from "../shared";
 // checkbox — one account-wide on/off (see OrgSettings.attachTicketPdf's schema comment),
 // separate mini-form from the rich-text template editor above it, same
 // pattern as SelfServeForm.tsx.
-export default function AttachPdfForm({ initialEnabled }: { initialEnabled: boolean }) {
+export default function AttachPdfForm({ initialEnabled, allEvents = false }: { initialEnabled: boolean; allEvents?: boolean }) {
   const [enabled, setEnabled] = useState(initialEnabled);
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
 
@@ -28,6 +28,11 @@ export default function AttachPdfForm({ initialEnabled }: { initialEnabled: bool
         <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
         <span>Adjuntar la entrada como PDF</span>
       </label>
+      {allEvents && (
+        <p style={{ margin: "0 0 8px", fontSize: 13, color: "#5b5f6b" }}>
+          Aplica al correo de confirmación de todos los eventos presenciales (también está en Configuración → Confirmación de correo).
+        </p>
+      )}
       <p style={{ margin: "0 0 16px", fontSize: 13, color: "#8a8478" }}>
         Un PDF de una sola página con el evento, el asistente y el código QR — más fácil de imprimir, guardar o
         compartir que solo la imagen del QR.

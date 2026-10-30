@@ -9,12 +9,12 @@ import { sayName } from "@/lib/mesa/email";
 import { issueQrToken } from "@/lib/ticket";
 import { asistireSampleUrl, asistireUrl } from "@/lib/imparables/asistire";
 import { googleCalendarUrl, type CalendarEvent } from "@/lib/imparables/confirmationEmail";
-import { defaultInvite, defaultTips, nailFestConfirmationEmail, type NailFestConfirmation, type NailFestTicket } from "./confirmationEmail";
+import { defaultInvite, nailFestConfirmationEmail, type NailFestConfirmation, type NailFestTicket } from "./confirmationEmail";
 
 // What Nail Fest's own confirmation email for its in-person events says
 // (lib/nailfest/confirmationEmail.ts, 2026-10-30), from the database: the
-// event's days and place, her ticket(s), the event's «Antes de ir» and its
-// message for a colleague, her «Asistiré» link, the team's WhatsApp. Used by
+// event's days and place, her ticket(s), the event's message for a colleague,
+// her «Asistiré» link, the team's WhatsApp. Used by
 // sendTicketEmail when the event chose this design in «Confirmación del
 // evento» (Event.confirmationEmailDesign), and for that page's preview.
 
@@ -66,7 +66,7 @@ export function longDates(event: When, tz: string): string {
   return cap(span === 1 ? `${wd(first)} ${dm(first)} y ${wd(last)} ${dm(last)}` : `del ${wd(first)} ${dm(first)} al ${wd(last)} ${dm(last)}`);
 }
 
-/** Google Maps for the place, when it has an address or a name. */
+/** Google Maps for the place, when it has an address or a name (the screen after signing up's «Cómo llegar»). */
 export function mapsUrl(event: Pick<Event, "venueName" | "venueAddress" | "city">): string | null {
   const place = [event.venueName, event.venueAddress, event.city].filter((s) => s?.trim()).join(", ");
   if (!event.venueName?.trim() && !event.venueAddress?.trim()) return null;
@@ -94,7 +94,7 @@ export function defaultNailFestShareText(event: Event, timezone: string): string
 async function confirmationOf(
   event: Event,
   her: { firstName: string | null; tickets: NailFestTicket[]; people: number; asistire: string | null; pdfAttached: boolean },
-  edits: { shareText?: string | null; tips?: string[] } = {}
+  edits: { shareText?: string | null } = {}
 ): Promise<NailFestConfirmation> {
   const [orgSettings, whatsapp] = await Promise.all([
     getOrgSettings(),
@@ -108,7 +108,6 @@ async function confirmationOf(
   page.searchParams.set("utm_medium", "referido");
   page.searchParams.set("utm_campaign", "confirmacion");
   const shareText = (edits.shareText !== undefined ? edits.shareText : event.shareText)?.trim() || defaultNailFestShareText(event, tz);
-  const ownTips = (edits.tips ?? event.confirmationTips).map((t) => t.trim()).filter(Boolean);
   const digits = whatsapp?.displayPhoneNumber?.replace(/\D/g, "") ?? "";
   return {
     firstName: sayName(her.firstName),
@@ -117,12 +116,11 @@ async function confirmationOf(
     dates: longDates(event, tz),
     year: formatDateInTz(event.startsAt, { year: "numeric" }, tz, "es"),
     days,
-    venue: { name: event.venueName?.trim() || null, address: event.venueAddress?.trim() || null, mapsUrl: mapsUrl(event) },
+    venue: { name: event.venueName?.trim() || null, address: event.venueAddress?.trim() || null },
     tickets: her.tickets,
     people: her.people,
     pdfAttached: her.pdfAttached,
     calendar: { google: googleCalendarUrl(inPersonCalendarEvent(event)), ics: `${base}/${event.slug}/calendario` },
-    tips: ownTips.length ? ownTips : defaultTips(days.length > 1),
     asistire: her.asistire ? { url: her.asistire, image: `${base}/nailfest/asistire-muestra.jpg` } : null,
     share: { url: `https://wa.me/?text=${encodeURIComponent(`${shareText} ${page.toString()}`)}` },
     helpUrl: digits.length >= 8 ? `https://wa.me/${digits}` : null,
@@ -144,10 +142,10 @@ export async function nailFestConfirmationFor(
 }
 
 /** The design as Laura would get it — a sample ticket, the sample «Asistiré» — for «Confirmación del evento» and «Después de la inscripción»;
- * with the editor's message and «Antes de ir», unsaved, when given. */
+ * with the editor's message, unsaved, when given. */
 export async function nailFestConfirmationPreview(
   eventId: string,
-  edits: { shareText?: string | null; tips?: string[] } = {}
+  edits: { shareText?: string | null } = {}
 ): Promise<{ html: string; text: string } | null> {
   const event = await db.event.findUnique({ where: { id: eventId } });
   if (!event) return null;

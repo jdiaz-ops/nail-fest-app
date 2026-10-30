@@ -3,6 +3,9 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth/guard";
 import { emailProvider } from "@/lib/email";
+import { getOrgSettings } from "@/lib/settings";
+import { publicEventName } from "@/lib/eventDisplayName";
+import { renderTicketPdfBuffer } from "@/lib/ticketPdf";
 import { sampleConfirmation } from "@/lib/confirmationSample";
 
 export const dynamic = "force-dynamic";
@@ -15,14 +18,14 @@ const bodySchema = z.object({
   html: z.string().max(200_000).optional(),
   subject: z.string().max(300).optional(),
   shareText: z.string().max(500).optional(),
-  /** Nail Fest's «Antes de ir», unsaved. */
-  tips: z.array(z.string().max(200)).max(5).optional(),
 });
 
 // «Enviar prueba» (2026-10-30): an event's confirmation email right now, to
 // the team's own addresses, with sample data and «[Prueba]» before its
 // subject — what «Confirmación del evento» shows, saved or not (see
-// lib/confirmationSample.ts). Nothing scheduled, no one else's inbox.
+// lib/confirmationSample.ts). Nothing scheduled, no one else's inbox. With
+// the ticket's PDF when the real one goes with it (an event at a place, and
+// «Adjuntar la entrada como PDF» on) — Laura's, its QR opening nothing.
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const auth = await requireUser(["ADMIN"]);
   if ("response" in auth) return auth.response;
@@ -41,15 +44,36 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (!event) return NextResponse.json({ error: "not_found" }, { status: 404 });
 
   try {
-    const { html, subject, shareText, tips } = parsed.data;
-    const email = await sampleConfirmation(event, parsed.data.mode, {
-      html,
-      subject,
-      ...(shareText !== undefined ? { shareText } : {}),
-      ...(tips !== undefined ? { tips } : {}),
-    });
+    const { html, subject, shareText } = parsed.data;
+    const email = await sampleConfirmation(event, parsed.data.mode, { html, subject, ...(shareText !== undefined ? { shareText } : {}) });
+    const orgSettings = await getOrgSettings();
+    const type = await db.ticketType.findFirst({ where: { eventId: event.id, status: "ON_SALE" }, orderBy: { order: "asc" }, select: { name: true } });
+    const pdf =
+      orgSettings.attachTicketPdf && event.format !== "VIRTUAL"
+        ? await renderTicketPdfBuffer({
+            firstName: "Laura",
+            lastName: "Gómez",
+            eventName: publicEventName(event),
+            venueName: event.venueName ?? undefined,
+            venueAddress: event.venueAddress ?? undefined,
+            startsAt: event.startsAt,
+            endsAt: event.endsAt ?? undefined,
+            scheduleDays: event.scheduleDays,
+            ticketTypeName: type?.name,
+            confirmationCode: "EJEMPLO1",
+            qrToken: "VISTA-PREVIA-NO-ES-UNA-ENTRADA-REAL",
+            timezone: orgSettings.timezone,
+            language: orgSettings.language,
+          })
+        : null;
     for (const address of to) {
-      await emailProvider.sendTransactional({ to: address, subject: `[Prueba] ${email.subject}`, text: email.text, html: email.html });
+      await emailProvider.sendTransactional({
+        to: address,
+        subject: `[Prueba] ${email.subject}`,
+        text: email.text,
+        html: email.html,
+        attachments: pdf ? [{ filename: "entrada-nailfest.pdf", content: pdf, contentType: "application/pdf" }] : undefined,
+      });
     }
     return NextResponse.json({ ok: true, sent: to });
   } catch (error) {
