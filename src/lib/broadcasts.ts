@@ -9,7 +9,7 @@ import { broadcastEmail, broadcastEmailHtml } from "@/lib/email/templates";
 import { buildUnsubscribeUrl } from "@/lib/unsubscribe";
 import { renderTicketPdfBuffer } from "@/lib/ticketPdf";
 import { nailFestEventEmail } from "@/lib/nailfest/eventEmail";
-import { nailFestEventEmailFrame, usesNailFestEventEmail } from "@/lib/nailfest/eventEmailFrame";
+import { asistireFor, bannerOf, nailFestEventEmailFrame, usesNailFestEventEmail } from "@/lib/nailfest/eventEmailFrame";
 import { confirmationCodeFor } from "@/lib/ticket";
 import { getOrgSettings } from "@/lib/settings";
 import { publishChunkContinuation, scheduleEventBroadcastSend, scheduleAutoRetry, AUTO_RETRY_DELAYS_SECONDS, QSTASH_MAX_DELAY_MS, QSTASH_GRACE_MS, CHUNK_WATCHDOG_SECONDS, CHUNK_LOCK_SECONDS } from "@/lib/qstash";
@@ -87,8 +87,10 @@ export async function sendEventBroadcast(
   // ticket types even within "all buyers", so each PDF needs its own
   // ticketTypeName looked up by that recipient's own registration.
   const orgSettings = broadcast.attachTicketPdf ? await getOrgSettings() : null;
-  // Its event's design, when it chose one (Event.broadcastDesign, 2026-10-30): the event's part, once.
+  // Its event's design, when it chose one (Event.broadcastDesign, 2026-10-30): the event's part and the email's banner
+  // to leave out, once.
   const frame = usesNailFestEventEmail(broadcast.event) ? await nailFestEventEmailFrame(broadcast.event) : null;
+  const banner = frame ? await bannerOf(broadcast.bodyHtml) : null;
 
   let sent = 0;
   let skippedNoConsent = 0;
@@ -210,7 +212,14 @@ export async function sendEventBroadcast(
                 })
               : null;
           const content = frame
-            ? nailFestEventEmail(frame, { subject: broadcast.subject, bodyHtml: withReviewLink, band: broadcast.designBand, pdfAttached: Boolean(pdfAttachment) })
+            ? nailFestEventEmail(frame, {
+                subject: broadcast.subject,
+                bodyHtml: withReviewLink,
+                band: broadcast.designBand,
+                pdfAttached: Boolean(pdfAttachment),
+                asistire: asistireFor(registration.id),
+                banner,
+              })
             : broadcastEmailHtml({ subject: broadcast.subject, bodyHtml: withReviewLink });
           try {
             const result = await emailProvider.sendTransactional({

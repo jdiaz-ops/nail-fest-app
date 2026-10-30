@@ -5,7 +5,8 @@
 // where (with her calendar), her «Asistiré» image, a colleague to invite, and
 // help. No map button nor «Antes de ir» since the team's look at it (same day).
 // The brand's off-white, teal and peach; tables and inline styles, so it
-// reads the same in Gmail, Outlook and the phone's mail app. Chosen per event
+// reads the same in Gmail, Outlook and the phone's mail app (no confetti in
+// its header since the team's test: Gmail can't position it). Chosen per event
 // in «Confirmación del evento» (Event.confirmationEmailDesign "NAIL_FEST");
 // filled by lib/nailfest/confirmation.ts. Nothing here touches the database.
 
@@ -127,15 +128,6 @@ export function nailFestConfirmationEmail(c: NailFestConfirmation): { html: stri
       }<br>${outline(c.calendar.google, "Google Calendar")}${outline(c.calendar.ics, "iPhone · Outlook")}</td></tr>`
     : `<tr><td colspan="2" style="padding:13px 16px;">${outline(c.calendar.google, "Google Calendar")}${outline(c.calendar.ics, "iPhone · Outlook")}</td></tr>`;
 
-  const confetti = [
-    ["7%", "14%", 9, 9, TEAL, "50%", 0],
-    ["15%", "62%", 8, 14, PEACH, "2px", 18],
-    ["86%", "20%", 8, 8, PINK, "50%", 0],
-    ["92%", "58%", 7, 13, TEAL, "2px", -22],
-  ]
-    .map(([l, t, w, h, bg, r, rot]) => `<span style="position:absolute;left:${l};top:${t};width:${w}px;height:${h}px;background:${bg};border-radius:${r};transform:rotate(${rot}deg);"></span>`)
-    .join("");
-
   const preheaderFill = "&#847;&zwnj;&nbsp;".repeat(60);
   const html = `<!doctype html>
 <html lang="es">
@@ -157,11 +149,10 @@ a{color:inherit;}
 ${table(
   `<tr><td align="center" style="padding:20px 10px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background:#ffffff;border-radius:20px;overflow:hidden;border-collapse:separate;">
-<tr><td align="center" style="position:relative;padding:30px 24px 26px;background:${BG};">
-${confetti}
+<tr><td align="center" style="padding:30px 24px 26px;background:${BG};">
 <img src="${esc(c.images.logo)}" width="150" alt="Nail Fest" style="display:block;margin:0 auto;width:150px;height:auto;border:0;">
 <div style="margin-top:6px;${serif(54, 900, TEAL_DEEP, "line-height:1;")}">${esc(c.city)}</div>
-<div style="margin-top:10px;${sans(15, 700)}">${esc(c.dates)} <span style="font-weight:500;color:${GREY};">· ${esc(c.year)}</span></div>
+<div style="margin-top:10px;${sans(15, 700)}">${esc(c.dates)}&nbsp;<span style="font-weight:500;color:${GREY};">·&nbsp;${esc(c.year)}</span></div>
 </td></tr>
 <tr><td align="center" style="padding:11px 20px;background:${TEAL};${sans(13, 800, TEAL_INK, "letter-spacing:0.16em;")}">&#10003;&nbsp; ENTRADA CONFIRMADA</td></tr>
 <tr><td class="px" style="padding:28px 34px 4px;">

@@ -108,8 +108,6 @@ export default function ImpAsistire(props: Props) {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{ url: string; file: File; canShare: boolean; both?: Record<AsistireFormat, File> } | null>(null);
   const [copied, setCopied] = useState(false);
-  // Nail Fest's: which of its two buttons just copied its words (the link, or the publication's text).
-  const [copiedFor, setCopiedFor] = useState<AsistireFormat | null>(null);
 
   // The faces and the logo first: the image is drawn with them.
   useEffect(() => {
@@ -272,10 +270,7 @@ export default function ImpAsistire(props: Props) {
     const file = result?.both?.[kind];
     if (!file) return;
     const words = kind === "publicacion" && props.design === "NAIL_FEST" ? props.texts.caption : linkHref;
-    navigator.clipboard
-      ?.writeText(words)
-      .then(() => setCopiedFor(kind))
-      .catch(() => setCopiedFor(null));
+    navigator.clipboard?.writeText(words).catch(() => {});
     navigator.share({ files: [file] }).catch((err) => {
       if (err instanceof DOMException && err.name === "AbortError") return;
       setError("No se pudo abrir «Compartir». Descarga la imagen y súbela desde tu galería.");
@@ -417,20 +412,10 @@ export default function ImpAsistire(props: Props) {
             <Instagram />
             Subir a mi historia
           </button>
-          <p className="imp-as-tip" aria-live="polite">
-            {copiedFor === "historia"
-              ? "¡Enlace copiado! En Instagram toca el sticker «Enlace» y pégalo."
-              : "Al tocarlo copiamos el enlace: en Instagram toca el sticker «Enlace» y pégalo."}
-          </p>
           <button type="button" className="imp-as-btn2" onClick={() => shareTo("publicacion")}>
             <Instagram />
             Publicar en mi feed
           </button>
-          <p className="imp-as-tip" aria-live="polite">
-            {copiedFor === "publicacion"
-              ? "¡Texto copiado! Pégalo en la descripción: ya lleva @nailfest_co."
-              : "Copiamos un texto con @nailfest_co para que lo pegues en la descripción."}
-          </p>
           <a className="imp-as-down" href={result.url} download={result.file.name}>
             <Download />
             Descargar imagen

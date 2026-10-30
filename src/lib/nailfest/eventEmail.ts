@@ -1,19 +1,24 @@
 import { htmlToPlainText } from "@/lib/email/templates";
-import { BG, GREY, INK, LINE, MINT, MINT_LINE, PAGE, PEACH, PEACH_SOFT, PINK, TEAL, TEAL_DEEP, TEAL_INK, button, esc, sans, serif, table } from "./confirmationEmail";
+import { BG, GREY, INK, LINE, MINT, MINT_LINE, MINT_TEXT, PAGE, PEACH, PEACH_SOFT, PINK, TEAL, TEAL_DEEP, TEAL_INK, button, esc, sans, serif, table } from "./confirmationEmail";
 
 // Nail Fest's design for an event's emails (Correos del evento, 2026-10-30,
 // the team's boceto), chosen per event (Event.broadcastDesign "NAIL_FEST"):
 // each email as it was written — its subject, body, links and images — in the
 // event's frame: the logo, the city big, its days and place, an optional band
-// («Falta 1 semana», EmailBroadcast.designBand), and a footer with help and
-// Instagram. Its body is ordered on the way: a line that starts with an emoji
-// becomes a row with the emoji in its own column (a line right under one
-// lines up with its words), a short line ending in «:» a subtitle, a ⚠️ line a
-// box, an image full width with round corners, a link alone on its line a
-// button — and what comes after a horizontal line, its own card (mint, titled
-// by its first line when that's a subtitle, like «Resolvemos tus dudas:»).
-// Tables and inline styles, as the confirmation email. Nothing here touches
-// the database: lib/nailfest/eventEmailFrame.ts brings the event's part.
+// («Falta 1 semana», EmailBroadcast.designBand), her «Asistiré» image, a
+// colleague to invite, and a footer with help and Instagram. The email's own
+// banner, the wide image it opens with, gives way to the frame's header (the
+// team: it said the same twice). Its body is ordered on the way: a line that
+// starts with an emoji becomes a row with the emoji in its own column (lines
+// right under it line up with its words), a short line ending in «:» a
+// subtitle, a ⚠️ line a box, an image full width with round corners, a link
+// alone on its line a button — and what comes after a horizontal line, its own
+// card (mint, titled by its first line when that's a subtitle, like
+// «Resolvemos tus dudas:»). Lines written in one paragraph (Shift+Enter) are
+// read as the lines they are. Tables, inline styles and no positioning: Gmail
+// drops <style> for accounts that aren't Google's, and position and negative
+// margins everywhere (the team's test, 2026-10-30). Nothing here touches the
+// database: lib/nailfest/eventEmailFrame.ts brings the event's part.
 
 export interface NailFestEventEmailFrame {
   eventName: string;
@@ -22,10 +27,14 @@ export interface NailFestEventEmailFrame {
   /** «Sábado 7 y domingo 8 de noviembre» */
   dates: string;
   venue: string | null;
+  /** WhatsApp with the event's invitation written, for «¿Vas con una colega?». */
+  share: { url: string; free: boolean };
   /** The team's WhatsApp, when there's one. */
   helpUrl: string | null;
   instagram: { handle: string; url: string };
   logo: string;
+  /** The «Asistiré» template, empty, for her card. */
+  asistireImage: string;
   site: { url: string; host: string };
 }
 
@@ -37,6 +46,10 @@ export interface NailFestEventEmailContent {
   band: string | null;
   /** Whether her ticket's PDF goes with it. */
   pdfAttached: boolean;
+  /** Her page to make her «Asistiré» image; no card without one. */
+  asistire: string | null;
+  /** The email's banner to leave out (eventEmailFrame.ts's bannerOf): the src of the wide image it opens with. */
+  banner: string | null;
 }
 
 const VOID = new Set(["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"]);
@@ -103,6 +116,7 @@ const EMOJI = new RegExp(
   "u"
 );
 const WARNING = /^(?:⚠|🚨|❗|‼|⛔)/u;
+const DASH = /^[—–-]{1,3}$/;
 
 /** The emoji a paragraph starts with (tags before it aside), and the paragraph without it. */
 export function leadingEmoji(inner: string): { emoji: string; rest: string } | null {
@@ -121,6 +135,42 @@ export function leadingEmoji(inner: string): { emoji: string; rest: string } | n
   return { emoji: m[1]!, rest: inner.slice(0, i) + inner.slice(i + m[0].length) };
 }
 
+/** Pieces of one paragraph, each closing the tags it leaves open and opening again the ones it starts inside. */
+function balanced(pieces: string[]): string[] {
+  let carry: { name: string; tag: string }[] = [];
+  return pieces.map((piece) => {
+    const html = carry.map((t) => t.tag).join("") + piece;
+    const stack: { name: string; tag: string }[] = [];
+    for (const m of html.matchAll(/<(\/?)(strong|em|b|i|u|s|span|a)\b[^>]*>/gi)) {
+      const name = m[2]!.toLowerCase();
+      if (!m[1]) stack.push({ name, tag: m[0] });
+      else {
+        const at = stack.map((t) => t.name).lastIndexOf(name);
+        if (at >= 0) stack.splice(at, 1);
+      }
+    }
+    carry = stack;
+    return html + [...stack].reverse().map((t) => `</${t.name}>`).join("");
+  });
+}
+
+/** A paragraph's lines (Shift+Enter) as the paragraphs they are: one starts at a blank line, at a line that starts with
+ * an emoji, and after a line that's only a dash. */
+export function paragraphLines(inner: string): string[] {
+  const groups: string[][] = [[]];
+  for (const line of inner.split(/<br\s*\/?>/i)) {
+    const current = groups[groups.length - 1]!;
+    if (!textOf(line)) {
+      if (current.length) groups.push([]);
+      continue;
+    }
+    const after = current.length > 0 && (leadingEmoji(line) !== null || DASH.test(textOf(current[current.length - 1]!)));
+    if (after) groups.push([line]);
+    else current.push(line);
+  }
+  return balanced(groups.filter((g) => g.length).map((g) => g.join("<br>")));
+}
+
 const attr = (attrs: string, name: string) => new RegExp(`\\b${name}\\s*=\\s*"([^"]*)"`, "i").exec(attrs)?.[1] ?? null;
 const align = (attrs: string) => /text-align:\s*(center|right|justify)/i.exec(attr(attrs, "style") ?? "")?.[1] ?? null;
 
@@ -133,31 +183,47 @@ function inline(html: string): string {
     .replace(/<img\b([^>]*?)\/?>/g, (_, attrs: string) => `<img${attrs.replace(/\sstyle="[^"]*"/i, "")} style="display:block;width:100%;max-width:100%;height:auto;border:0;border-radius:14px;">`);
 }
 
-const P = (size: number, extra = "") => `margin:0 0 12px;${sans(size, 400, "#2b2d33", `line-height:1.6;${extra}`)}`;
+const TEXT = "#2b2d33";
 
-function row(emoji: string, words: string, extra = ""): string {
+/** Two columns: the emoji (or nothing, for the lines under it) and its words. */
+function row(emoji: string, words: string, size: number, extra = ""): string {
   return table(
-    `<tr><td width="30" valign="top" style="width:30px;padding:0;font-size:17px;line-height:1.5;">${emoji}</td><td valign="top" style="padding:0;${sans(15.5, 400, "#2b2d33", "line-height:1.55;")}">${inline(words)}</td></tr>`,
+    `<tr><td width="28" valign="top" style="width:28px;padding:0;font-size:${size + 1}px;line-height:1.45;">${emoji || "&nbsp;"}</td><td valign="top" style="padding:0;${sans(size, 400, TEXT, "line-height:1.55;")}">${inline(words)}</td></tr>`,
     `margin:0 0 10px;${extra}`
   );
 }
 
-type Kind = "row" | "warn" | "cont" | "other";
+type Kind = "row" | "warn" | "other";
 
 interface Section {
   title: string | null;
   parts: string[];
 }
 
+/** Whether a block is the image the body opens with, the one to leave out. */
+function isBanner(b: Block, banner: string | null): boolean {
+  if (!banner) return false;
+  const html = b.tag === "img" ? b.outer : b.inner;
+  if (!/^(figure|img|p)$/.test(b.tag) || textOf(html.replace(/<figcaption[\s\S]*?<\/figcaption>/i, ""))) return false;
+  return attr(/<img\b([^>]*)>/i.exec(html)?.[1] ?? "", "src") === banner;
+}
+
 /** Its body, ordered, in cards: what comes after each horizontal line is a card of its own. */
-export function designedSections(bodyHtml: string): Section[] {
+export function designedSections(bodyHtml: string, banner: string | null = null): Section[] {
   const sections: Section[] = [{ title: null, parts: [] }];
-  // What the last line was (a row lets the next plain line line up with it), and how many rows its card has.
+  // What the last line was (a row lets the next plain lines line up with it), and how many rows its card has.
   const last = { kind: "other" as Kind, rows: 0 };
-  const blocks = topBlocks(bodyHtml);
+  // A paragraph's lines become blocks of their own.
+  const blocks = topBlocks(bodyHtml).flatMap((b) =>
+    b.tag === "p" ? paragraphLines(b.inner).map((inner) => ({ ...b, inner, outer: `<p${b.attrs}>${inner}</p>` })) : [b]
+  );
+  const first = blocks.findIndex((b) => b.tag !== "p" || textOf(b.inner) || /<img\b/i.test(b.inner));
   for (let i = 0; i < blocks.length; i++) {
     const b = blocks[i]!;
+    if (i === first && isBanner(b, banner)) continue;
     const section = sections[sections.length - 1]!;
+    const faq = Boolean(section.title);
+    const size = faq ? 14.5 : 15;
     const push = (html: string, kind: Kind = "other") => {
       section.parts.push(html);
       last.kind = kind;
@@ -176,17 +242,17 @@ export function designedSections(bodyHtml: string): Section[] {
       continue;
     }
     if (/^h[123]$/.test(b.tag)) {
-      const size = b.tag === "h1" ? 27 : b.tag === "h2" ? 22 : 18;
-      push(`<div style="margin:18px 0 10px;${serif(size, 900, INK, `line-height:1.18;${align(b.attrs) ? `text-align:${align(b.attrs)};` : ""}`)}">${inline(b.inner)}</div>`);
+      const heading = b.tag === "h1" ? 25 : b.tag === "h2" ? 21 : 18;
+      push(`<div style="margin:16px 0 10px;${serif(heading, 900, INK, `line-height:1.18;${align(b.attrs) ? `text-align:${align(b.attrs)};` : ""}`)}">${inline(b.inner)}</div>`);
       continue;
     }
     if (b.tag === "ul" || b.tag === "ol") {
       const items = b.inner.replace(/<li\b[^>]*>/g, `<li style="margin:0 0 6px;">`);
-      push(`<${b.tag} style="margin:0 0 12px;padding-left:22px;${sans(16, 400, "#2b2d33", "line-height:1.6;")}">${inline(items)}</${b.tag}>`);
+      push(`<${b.tag} style="margin:0 0 12px;padding-left:22px;${sans(size, 400, TEXT, "line-height:1.6;")}">${inline(items)}</${b.tag}>`);
       continue;
     }
     if (b.tag === "blockquote") {
-      push(`<div style="margin:0 0 14px;padding:4px 0 4px 14px;border-left:3px solid ${PINK};${sans(15.5, 400, GREY, "line-height:1.6;font-style:italic;")}">${inline(b.inner)}</div>`);
+      push(`<div style="margin:0 0 14px;padding:4px 0 4px 14px;border-left:3px solid ${PINK};${sans(size, 400, GREY, "line-height:1.6;font-style:italic;")}">${inline(b.inner)}</div>`);
       continue;
     }
     // A paragraph — or anything else at the top, read as one.
@@ -201,8 +267,8 @@ export function designedSections(bodyHtml: string): Section[] {
       section.title = words.replace(/:$/, "");
       continue;
     }
-    if (/^[—–-]{1,3}$/.test(words)) {
-      push(`<div style="height:1px;line-height:1px;font-size:0;background:${LINE};margin:18px 0;">&nbsp;</div>`);
+    if (DASH.test(words)) {
+      push(`<div style="height:1px;line-height:1px;font-size:0;background:${LINE};margin:16px 0;">&nbsp;</div>`);
       continue;
     }
     const lead = leadingEmoji(inner);
@@ -212,19 +278,19 @@ export function designedSections(bodyHtml: string): Section[] {
         const next = blocks[i + 1];
         const nextWords = next?.tag === "p" ? textOf(next.inner) : "";
         const takesNext = textOf(lead.rest).length <= 40 && textOf(lead.rest).endsWith(":") && nextWords && !leadingEmoji(next!.inner) && !nextWords.endsWith(":");
-        const more = takesNext ? `<p style="${P(15, "margin:-4px 0 12px 30px;")}">${inline(next!.inner)}</p>` : "";
+        const more = takesNext ? row("", next!.inner, size) : "";
         if (takesNext) i++;
-        push(table(`<tr><td style="padding:12px 14px 2px;">${row(lead.emoji, lead.rest)}${more}</td></tr>`, `margin:6px 0 14px;background:${PEACH_SOFT};border:1px solid #ffd9c6;border-radius:14px;`), "warn");
+        push(table(`<tr><td style="padding:12px 14px 2px;">${row(lead.emoji, lead.rest, size)}${more}</td></tr>`, `margin:6px 0 14px;background:${PEACH_SOFT};border:1px solid #ffd9c6;border-radius:14px;`), "warn");
       } else {
         // In a titled card, its rows apart by a thin line — questions and their answers.
-        const apart = section.title && last.rows > 0 ? `border-top:1px solid ${MINT_LINE};padding-top:12px;` : "";
-        push(row(lead.emoji, lead.rest, apart), "row");
+        const apart = faq && last.rows > 0 ? `border-top:1px solid ${MINT_LINE};padding-top:12px;` : "";
+        push(row(lead.emoji, lead.rest, size, apart), "row");
         last.rows++;
       }
       continue;
     }
     if (words.length <= 70 && words.endsWith(":")) {
-      push(`<div style="margin:20px 0 8px;${sans(11.5, 800, TEAL_DEEP, "letter-spacing:0.18em;text-transform:uppercase;")}">${esc(words.replace(/:$/, ""))}</div>`);
+      push(`<div style="margin:18px 0 8px;${sans(11, 800, TEAL_DEEP, "letter-spacing:0.12em;text-transform:uppercase;line-height:1.4;")}">${esc(words.replace(/:$/, ""))}</div>`);
       continue;
     }
     // A link alone on its line: a button.
@@ -237,35 +303,57 @@ export function designedSections(bodyHtml: string): Section[] {
       }
     }
     // Right under a row, its words line up with the row's.
-    if (last.kind === "row" || last.kind === "cont") {
-      push(`<p style="${P(15, "margin:-4px 0 12px 30px;")}">${inline(inner)}</p>`, "cont");
+    if (last.kind === "row") {
+      push(row("", inner, faq ? 14 : size), "row");
       continue;
     }
     const a = align(b.attrs);
-    push(`<p style="${P(16, a ? `text-align:${a};` : "")}">${inline(inner)}</p>`);
+    push(`<p style="margin:0 0 12px;${sans(size, 400, TEXT, `line-height:1.6;${a ? `text-align:${a};` : ""}`)}">${inline(inner)}</p>`);
   }
   return sections.filter((s) => s.parts.length || s.title);
 }
 
+/** A card on the page, 12px from its sides. */
+const card = (inner: string, look: string, padding = "22px 20px 12px") =>
+  `<tr><td style="padding:14px 12px 0;">${table(`<tr><td style="padding:${padding};">${inner}</td></tr>`, `${look}border-radius:18px;`)}</td></tr>`;
+
 export function nailFestEventEmail(frame: NailFestEventEmailFrame, mail: NailFestEventEmailContent): { subject: string; text: string; html: string } {
-  const sections = designedSections(mail.bodyHtml);
+  const sections = designedSections(mail.bodyHtml, mail.banner);
   const preheader = textOf(mail.bodyHtml).slice(0, 110);
   const cards = sections
-    .map((s, i) => {
-      const titled = Boolean(s.title);
-      const inner = `${titled ? `<div style="margin:0 0 12px;${serif(21, 900, INK, "line-height:1.2;")}">${esc(s.title!)}</div>` : ""}${s.parts.join("")}`;
-      const look = titled ? `background:${MINT};border:1px solid ${MINT_LINE};` : "background:#ffffff;";
-      return `<tr><td class="px" style="padding:${i ? 16 : 18}px 18px 0;">${table(`<tr><td class="card" style="padding:${titled ? "22px 24px 14px" : "26px 28px 14px"};">${inner}</td></tr>`, `${look}border-radius:18px;`)}</td></tr>`;
-    })
+    .map((s) =>
+      s.title
+        ? card(`<div style="margin:0 0 12px;${serif(20, 900, INK, "line-height:1.2;")}">${esc(s.title)}</div>${s.parts.join("")}`, `background:${MINT};border:1px solid ${MINT_LINE};`, "20px 18px 10px")
+        : card(s.parts.join(""), "background:#ffffff;")
+    )
     .join("");
-  const confetti = [
-    ["8%", "18%", 10, 10, TEAL, "50%", 0],
-    ["88%", "14%", 8, 8, PINK, "50%", 0],
-    ["14%", "70%", 6, 11, PEACH, "2px", 18],
-    ["84%", "66%", 6, 11, TEAL, "2px", -20],
-  ]
-    .map(([l, t, w, h, c, r, deg]) => `<div style="position:absolute;left:${l};top:${t};width:${w}px;height:${h}px;background:${c};border-radius:${r};transform:rotate(${deg}deg);"></div>`)
-    .join("");
+  const pdf = mail.pdfAttached
+    ? `<tr><td style="padding:14px 12px 0;">${table(
+        `<tr><td width="52" style="width:52px;padding:14px 0 14px 16px;"><div style="width:40px;height:40px;border-radius:10px;background:${PEACH};text-align:center;${sans(12, 900, INK, "line-height:40px;")}">PDF</div></td><td style="padding:14px 16px 14px 12px;"><div style="${sans(14.5, 700, "#ffffff")}">Tu entrada va adjunta</div><div style="${sans(12.5, 400, "#cfd2d8")}">Muéstrala en la puerta, en el celular o impresa.</div></td></tr>`,
+        `background:${INK};border-radius:16px;`
+      )}</td></tr>`
+    : "";
+  const asistire = mail.asistire
+    ? card(
+        `<div style="text-align:center;">
+<div style="${serif(21, 900, INK, "line-height:1.2;")}">¡Cuéntale a todos que vas!</div>
+<div style="margin:8px auto 14px;max-width:400px;${sans(14.5, 400, GREY, "line-height:1.55;")}">Sube una foto tuya y te armamos tu imagen «Asistiré» para historias y publicaciones.</div>
+<a href="${esc(mail.asistire)}" style="display:block;text-decoration:none;"><img src="${esc(frame.asistireImage)}" width="120" alt="Tu imagen «¡Asistiré!»" style="display:block;margin:0 auto 14px;width:120px;height:auto;border:0;border-radius:12px;"></a>
+${button(mail.asistire, "Crear mi imagen")}
+</div>`,
+        `background:${PEACH_SOFT};`,
+        "22px 18px 22px"
+      )
+    : "";
+  const colega = card(
+    `<div style="text-align:center;">
+<div style="${serif(21, 900, "#ffffff", "line-height:1.2;")}">¿Vas con una colega?</div>
+<div style="margin:8px auto 14px;max-width:400px;${sans(14.5, 400, MINT_TEXT, "line-height:1.55;")}">${frame.share.free ? "La entrada es gratis: compártele el enlace para que se inscriba y tenga la suya." : "Compártele el enlace para que se inscriba y tenga la suya."}</div>
+${button(frame.share.url, "Compartir por WhatsApp", `background:#ffffff;color:${TEAL_INK};`)}
+</div>`,
+    `background:${TEAL_DEEP};`,
+    "22px 18px 22px"
+  );
 
   const html = `<!doctype html>
 <html lang="es">
@@ -279,31 +367,24 @@ export function nailFestEventEmail(frame: NailFestEventEmailFrame, mail: NailFes
 <style>
 body{margin:0;padding:0;background:${PAGE};-webkit-text-size-adjust:100%;}
 a{color:inherit;}
-@media (max-width:620px){.px{padding-left:12px!important;padding-right:12px!important;}.card{padding-left:20px!important;padding-right:20px!important;}}
 </style>
 </head>
 <body style="margin:0;padding:0;background:${PAGE};">
 <div style="display:none;max-height:0;max-width:0;overflow:hidden;opacity:0;mso-hide:all;font-size:1px;line-height:1px;color:${PAGE};">${esc(preheader)}</div>
 ${table(
-  `<tr><td align="center" style="padding:20px 10px;">
+  `<tr><td align="center" style="padding:16px 6px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background:${BG};border-radius:20px;overflow:hidden;border-collapse:separate;">
-<tr><td align="center" style="position:relative;padding:28px 24px 22px;background:${BG};">
-${confetti}
-<img src="${esc(frame.logo)}" width="120" alt="Nail Fest" style="display:block;margin:0 auto;width:120px;height:auto;border:0;">
-<div style="margin-top:4px;${serif(46, 900, TEAL_DEEP, "line-height:1;")}">${esc(frame.city)}</div>
-<div style="margin-top:8px;${sans(14, 700)}">${esc(frame.dates)}${frame.venue ? ` <span style="font-weight:500;color:${GREY};">· ${esc(frame.venue)}</span>` : ""}</div>
+<tr><td align="center" style="padding:24px 18px 20px;background:${BG};">
+<img src="${esc(frame.logo)}" width="110" alt="Nail Fest" style="display:block;margin:0 auto;width:110px;height:auto;border:0;">
+<div style="margin-top:4px;${serif(42, 900, TEAL_DEEP, "line-height:1;")}">${esc(frame.city)}</div>
+<div style="margin-top:8px;${sans(14, 700, INK, "line-height:1.45;")}">${esc(frame.dates)}${frame.venue ? `<br><span style="font-weight:500;color:${GREY};">${esc(frame.venue)}</span>` : ""}</div>
 </td></tr>
-${mail.band?.trim() ? `<tr><td align="center" style="padding:10px 20px;background:${TEAL};${sans(12.5, 800, TEAL_INK, "letter-spacing:0.16em;text-transform:uppercase;")}">${esc(mail.band.trim())}</td></tr>` : ""}
+${mail.band?.trim() ? `<tr><td align="center" style="padding:10px 16px;background:${TEAL};${sans(12.5, 800, TEAL_INK, "letter-spacing:0.14em;text-transform:uppercase;")}">${esc(mail.band.trim())}</td></tr>` : ""}
 ${cards}
-${
-  mail.pdfAttached
-    ? `<tr><td class="px" style="padding:16px 18px 0;">${table(
-        `<tr><td width="52" style="width:52px;padding:14px 0 14px 16px;"><div style="width:40px;height:40px;border-radius:10px;background:${PEACH};text-align:center;${sans(12, 900, INK, "line-height:40px;")}">PDF</div></td><td style="padding:14px 16px 14px 12px;"><div style="${sans(14.5, 700, "#ffffff")}">Tu entrada va adjunta</div><div style="${sans(12.5, 400, "#cfd2d8")}">Muéstrala en la puerta, en el celular o impresa.</div></td></tr>`,
-        `background:${INK};border-radius:16px;`
-      )}</td></tr>`
-    : ""
-}
-<tr><td class="px" align="center" style="padding:26px 30px 28px;${sans(13, 400, GREY, "line-height:1.7;")}">
+${pdf}
+${asistire}
+${colega}
+<tr><td align="center" style="padding:24px 20px 26px;${sans(13, 400, GREY, "line-height:1.7;")}">
 ${frame.helpUrl ? `¿Dudas? <a href="${esc(frame.helpUrl)}" style="font-weight:700;color:${TEAL_DEEP};text-decoration:none;">Escríbenos por WhatsApp</a> · ` : ""}Síguenos en <a href="${esc(frame.instagram.url)}" style="font-weight:700;color:${TEAL_DEEP};text-decoration:none;">${esc(frame.instagram.handle)}</a>
 <img src="${esc(frame.logo)}" width="64" alt="Nail Fest" style="display:block;margin:10px auto 2px;width:64px;height:auto;border:0;">
 Donde se reúne el mundo de las uñas<br>
@@ -319,6 +400,8 @@ Donde se reúne el mundo de las uñas<br>
   const text = [
     htmlToPlainText(mail.bodyHtml),
     ...(mail.pdfAttached ? ["Tu entrada va adjunta en PDF: muéstrala en la puerta, en el celular o impresa."] : []),
+    ...(mail.asistire ? [`¡CUÉNTALE A TODOS QUE VAS!\nSube una foto tuya y te armamos tu imagen «Asistiré»: ${mail.asistire}`] : []),
+    `¿VAS CON UNA COLEGA?\nCompártele el enlace para que se inscriba: ${frame.share.url}`,
     ...(frame.helpUrl ? [`¿Dudas? Escríbenos por WhatsApp: ${frame.helpUrl}`] : []),
     `Síguenos en ${frame.instagram.handle} · ${frame.site.host}\nRecibes este correo porque te inscribiste a ${frame.eventName}.`,
   ].join("\n\n");

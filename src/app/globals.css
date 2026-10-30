@@ -6767,14 +6767,6 @@ body:has(.imp.nf) {
 .imp.nf .imp-as-vista {
   box-shadow: 0 14px 30px rgba(15, 125, 117, 0.2);
 }
-/* Its two buttons to share (2026-10-30): what each one copies, under it. */
-.imp-as-tip {
-  margin: 6px 2px 0;
-  font-size: 13px;
-  line-height: 1.4;
-  text-align: center;
-  color: var(--imp-texto-3);
-}
 .imp-as-down {
   display: inline-flex;
   justify-self: center;

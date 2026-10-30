@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { designedSections, leadingEmoji, nailFestEventEmail, topBlocks, type NailFestEventEmailFrame } from "./eventEmail";
+import { designedSections, leadingEmoji, nailFestEventEmail, paragraphLines, topBlocks, type NailFestEventEmailFrame } from "./eventEmail";
 
 // Tomorrow's email for Nail Fest Cúcuta, as the editor stores it (2026-10-30).
 const BODY = [
@@ -17,6 +17,7 @@ const BODY = [
   `<p>✅ <strong>No necesitas llevar materiales.</strong></p>`,
   `<p>Es una feria comercial y todas las demostraciones son gratuitas.</p>`,
   `<p>✅ <strong>Parqueadero disponible.</strong><br>Sí (con costo).</p>`,
+  `<p>Somos comunidad, gracias por ayudarnos. 💜<br><br>✅ <strong>Niños pueden ingresar sin boleta.</strong><br>Pero habrá mucho público.</p>`,
   `<p><a href="https://nailfest.lat/cucuta?utm_source=email" target="_blank" rel="noopener noreferrer">Ver el cronograma</a></p>`,
 ].join("");
 
@@ -25,11 +26,15 @@ const FRAME: NailFestEventEmailFrame = {
   city: "Cúcuta",
   dates: "Sábado 7 y domingo 8 de noviembre",
   venue: "Hotel Casino Internacional",
+  share: { url: "https://wa.me/?text=hola", free: true },
   helpUrl: "https://wa.me/573001234567",
   instagram: { handle: "@nailfest_co", url: "https://www.instagram.com/nailfest_co" },
   logo: "https://nailfest.lat/logo.png",
+  asistireImage: "https://nailfest.lat/nailfest/asistire-muestra.jpg",
   site: { url: "https://nailfest.lat", host: "nailfest.lat" },
 };
+const BANNER = "https://blob.example/banner.jpg";
+const mail = { subject: "¡Falta 1 semana!", bodyHtml: BODY, band: "Falta 1 semana", pdfAttached: true, asistire: "https://nailfest.lat/asistire/r1.sig", banner: BANNER };
 
 describe("the body's blocks", () => {
   it("are its top-level elements, nested ones inside", () => {
@@ -44,10 +49,16 @@ describe("the body's blocks", () => {
     expect(leadingEmoji("1 semana")).toBeNull();
     expect(leadingEmoji("¡Hola!")).toBeNull();
   });
+
+  it("a paragraph's lines (Shift+Enter) as the paragraphs they are, each with its own tags closed", () => {
+    expect(paragraphLines("Somos comunidad. 💜<br><br>✅ <strong>Niños</strong><br>Pero")).toEqual(["Somos comunidad. 💜", "✅ <strong>Niños</strong><br>Pero"]);
+    expect(paragraphLines("—<br><strong>Equipo Nail Fest</strong>")).toEqual(["—", "<strong>Equipo Nail Fest</strong>"]);
+    expect(paragraphLines("<strong>uno<br>✅ dos</strong>")).toEqual(["<strong>uno</strong>", "<strong>✅ dos</strong>"]);
+  });
 });
 
 describe("the body, ordered", () => {
-  const sections = designedSections(BODY);
+  const sections = designedSections(BODY, BANNER);
 
   it("two cards: the message, and what comes after the line, titled by its first line", () => {
     expect(sections).toHaveLength(2);
@@ -58,36 +69,50 @@ describe("the body, ordered", () => {
   it("emoji lines as rows, a short line ending in «:» as a subtitle, the warning in a box with the line under it", () => {
     const main = sections[0]!.parts.join("");
     expect(main).toContain(">🛍️</td>");
-    expect(main).toMatch(/text-transform:uppercase;">Prepárate para disfrutar de<\/div>/);
+    expect(main).toMatch(/text-transform:uppercase;[^"]*">Prepárate para disfrutar de<\/div>/);
     expect(main).toMatch(/background:#fff1ea[^"]*"><tr><td[^>]*><table[\s\S]*⚠️[\s\S]*Para ingresar/);
-    expect(main).toContain('src="https://blob.example/banner.jpg"');
-    expect(main).toContain("border-radius:14px");
+    expect(main).not.toContain("banner.jpg");
   });
 
-  it("answers line up with their question; a lone link is a button", () => {
+  it("keeps an image it opens with that isn't the banner", () => {
+    expect(designedSections(BODY, null)[0]!.parts.join("")).toContain('src="https://blob.example/banner.jpg"');
+  });
+
+  it("answers line up with their question, lines in one paragraph apart; a lone link is a button", () => {
     const faq = sections[1]!.parts.join("");
-    expect(faq).toMatch(/margin:-4px 0 12px 30px;[^"]*">Es una feria comercial/);
+    expect(faq).toMatch(/&nbsp;<\/td><td[^>]*>Es una feria comercial/);
+    expect(faq).toMatch(/>✅<\/td><td[^>]*><strong[^>]*>Niños pueden ingresar sin boleta\.<\/strong><br>Pero habrá mucho público\./);
     expect(faq).toContain("border-top:1px solid #b7e8e3");
     expect(faq).toMatch(/<a href="https:\/\/nailfest\.lat\/cucuta\?utm_source=email"[^>]*>Ver el cronograma<\/a>/);
   });
 });
 
 describe("the email", () => {
-  it("in the event's frame, with its band, the PDF's note and the footer", () => {
-    const { subject, html, text } = nailFestEventEmail(FRAME, { subject: "¡Falta 1 semana!", bodyHtml: BODY, band: "Falta 1 semana", pdfAttached: true });
+  it("in the event's frame, with its band, the PDF's note, her «Asistiré», a colleague and the footer", () => {
+    const { subject, html, text } = nailFestEventEmail(FRAME, mail);
     expect(subject).toBe("¡Falta 1 semana!");
     expect(html).toContain(">Cúcuta</div>");
     expect(html).toContain("Sábado 7 y domingo 8 de noviembre");
     expect(html).toContain("Falta 1 semana</td>");
     expect(html).toContain("Tu entrada va adjunta");
     expect(html).toContain("Escríbenos por WhatsApp");
+    expect(html).toContain('href="https://nailfest.lat/asistire/r1.sig"');
+    expect(html).toContain("¿Vas con una colega?");
+    expect(html).toContain('href="https://wa.me/?text=hola"');
     expect(text).toContain("Tu entrada va adjunta en PDF");
   });
 
+  it("nothing Gmail drops: no positioning, no negative margins", () => {
+    const { html } = nailFestEventEmail(FRAME, mail);
+    expect(html).not.toMatch(/position\s*:/);
+    expect(html).not.toMatch(/margin:[^;"]*-\d/);
+  });
+
   it("no band nor PDF note when there's none", () => {
-    const { html } = nailFestEventEmail({ ...FRAME, helpUrl: null }, { subject: "Hola", bodyHtml: "<p>Hola</p>", band: " ", pdfAttached: false });
+    const { html } = nailFestEventEmail({ ...FRAME, helpUrl: null }, { ...mail, bodyHtml: "<p>Hola</p>", band: " ", pdfAttached: false, asistire: null });
     expect(html).not.toContain("letter-spacing:0.16em;text-transform:uppercase;\">");
     expect(html).not.toContain("Tu entrada va adjunta");
     expect(html).not.toContain("Escríbenos por WhatsApp");
+    expect(html).not.toContain("Crear mi imagen");
   });
 });
