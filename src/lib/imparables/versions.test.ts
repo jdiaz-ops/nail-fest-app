@@ -7,8 +7,6 @@ process.env.APP_BASE_URL = "https://nailfest.lat";
 import { filterSchema } from "@/lib/segments/schema";
 import {
   slugifyVersion,
-  specialBand,
-  specialNote,
   specialPriceFor,
   specialPricesOf,
   validVersionSlug,
@@ -68,12 +66,6 @@ describe("its special price", () => {
     expect(withVersionPrice(ticket, specialPriceFor(version, sales, 0)!)).toEqual({ ...ticket, price: 80_000, fullPrice: 150_000, usdCents: null, fullUsdCents: null });
   });
 
-  it("says until when", () => {
-    const p = specialPriceFor(version, sales, 0)!;
-    expect(specialBand(p, "America/Bogota")).toBe("Precio Expo Belleza · hasta el lunes 16 de noviembre");
-    expect(specialNote(p, "America/Bogota")).toBe("Solo con este enlace y hasta el lunes 16 de noviembre.");
-    expect(specialNote({ ...p, endsAt: null }, "America/Bogota")).toBe("Solo con este enlace.");
-  });
 });
 
 describe("its link", () => {

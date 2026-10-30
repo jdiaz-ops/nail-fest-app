@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { getOrgSettings } from "@/lib/settings";
 import { publicEventName } from "@/lib/eventDisplayName";
 import { imparablesPageData } from "@/lib/imparables/page";
-import { liveVersion, specialBand, specialPriceFor, specialSold } from "@/lib/imparables/versions";
+import { liveVersion, specialPriceFor, specialSold } from "@/lib/imparables/versions";
 import ImparablesPage from "@/components/imparables/ImparablesPage";
 
 export const dynamic = "force-dynamic";
@@ -80,7 +80,6 @@ export default async function VersionPage({ params, searchParams }: { params: { 
               price: special.price,
               struck: special.struck,
               label: special.label,
-              band: specialBand(special, orgSettings.timezone),
               endsAt: special.endsAt?.toISOString() ?? null,
             }
           : null,

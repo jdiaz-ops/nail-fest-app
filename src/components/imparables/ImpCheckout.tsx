@@ -89,8 +89,8 @@ export interface ImpCheckoutProps {
   /** PayPal's buttons (lib/payments/paypal.ts's paypalCheckoutConfig) — null without PayPal, or without a USD price. */
   paypal: { clientId: string } | null;
   /** The version of the page it's the checkout of (/v/<slug>, lib/imparables/versions.ts): its link, and its special
-   * price's name and terms when the ticket is at it. */
-  version?: { slug: string; special: { label: string; note: string } | null } | null;
+   * price's name when the ticket is at it. */
+  version?: { slug: string; special: { label: string } | null } | null;
 }
 
 interface Applied {
@@ -508,7 +508,7 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
         </div>
       )}
       {special && ticket.fullPrice !== null && (
-        // A version's special price (2026-10-30): its name, the stage's own price struck beside it, and its terms.
+        // A version's special price (2026-10-30): its name, with the full price struck beside it.
         <div className="imp-co-special">
           <p className="imp-co-line">
             <b>{special.label}</b>
@@ -516,7 +516,6 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
               <s>{money("COP", ticket.fullPrice * 100)}</s> {money("COP", ticket.price * 100)}
             </span>
           </p>
-          <p className="imp-co-special-note">{special.note}</p>
         </div>
       )}
       {codes && codeBox}

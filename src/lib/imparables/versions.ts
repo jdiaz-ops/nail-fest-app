@@ -1,6 +1,5 @@
 import type { LandingVersion } from "@prisma/client";
 import { db } from "@/lib/db";
-import { formatDateInTz } from "@/lib/dateFormat";
 import type { CheckoutTicket } from "./pricing";
 import type { SalesState } from "./stages";
 
@@ -86,19 +85,6 @@ export async function liveVersion(slug: string, now: Date = new Date()) {
   const version = await db.landingVersion.findUnique({ where: { slug: slug.toLowerCase() }, include: { event: true } });
   if (!version) return { version: null, event: null } as const;
   return { version: versionLive(version, now) ? version : null, event: version.event } as const;
-}
-
-/** «lunes 16 de noviembre» (Intl writes «lunes, 16 de noviembre»). */
-const endDay = (endsAt: Date, timezone: string) => formatDateInTz(endsAt, { weekday: "long", day: "numeric", month: "long" }, timezone, "es").replace(",", "");
-
-/** The band over its cover: «Precio Expo Belleza · hasta el domingo 16 de noviembre». */
-export function specialBand(p: VersionPrice, timezone: string): string {
-  return p.endsAt ? `${p.label} · hasta el ${endDay(p.endsAt, timezone)}` : p.label;
-}
-
-/** At the checkout: «Solo con este enlace y hasta el domingo 16 de noviembre.» (the page counts down to it instead, 2026-10-30). */
-export function specialNote(p: VersionPrice, timezone: string): string {
-  return p.endsAt ? `Solo con este enlace y hasta el ${endDay(p.endsAt, timezone)}.` : "Solo con este enlace.";
 }
 
 /** A link that's a version's: lowercase letters, digits and dashes, 2 to 60 of them. */

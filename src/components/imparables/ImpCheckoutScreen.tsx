@@ -7,7 +7,7 @@ import { paypalCheckoutConfig } from "@/lib/payments/paypal";
 import { imparablesPageData } from "@/lib/imparables/page";
 import { checkoutOffer } from "@/lib/imparables/pricing";
 import { coverName, kindLine } from "@/lib/imparables/schedule";
-import { specialNote, specialPriceFor, specialSold, withVersionPrice } from "@/lib/imparables/versions";
+import { specialPriceFor, specialSold, withVersionPrice } from "@/lib/imparables/versions";
 import MetaPixelScript from "@/components/MetaPixelScript";
 import ImpCheckout from "./ImpCheckout";
 import { cinzel, manrope } from "./fonts";
@@ -45,7 +45,7 @@ export default async function ImpCheckoutScreen({ event, version }: { event: Eve
         codes={false}
         professions={professions}
         paypal={ticket.usdCents ? paypalCheckoutConfig() : null}
-        version={version ? { slug: version.slug, special: special ? { label: special.label, note: specialNote(special, orgSettings.timezone) } : null } : null}
+        version={version ? { slug: version.slug, special: special ? { label: special.label } : null } : null}
       />
     </main>
   );
