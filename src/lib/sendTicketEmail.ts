@@ -212,6 +212,7 @@ export async function sendTicketEmail(params: {
           eventName: publicEventName(params.event),
           venueName: params.event.venueName ?? undefined,
           venueAddress: params.event.venueAddress ?? undefined,
+          city: params.event.city || undefined,
           startsAt: params.event.startsAt,
           endsAt: params.event.endsAt ?? undefined,
           scheduleDays: params.event.scheduleDays,

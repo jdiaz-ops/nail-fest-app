@@ -16,6 +16,7 @@ export async function sampleTicketPdf(event: Event): Promise<Buffer> {
     eventName: publicEventName(event),
     venueName: event.venueName ?? undefined,
     venueAddress: event.venueAddress ?? undefined,
+    city: event.city || undefined,
     startsAt: event.startsAt,
     endsAt: event.endsAt ?? undefined,
     scheduleDays: event.scheduleDays,

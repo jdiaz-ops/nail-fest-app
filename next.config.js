@@ -47,12 +47,14 @@ const nextConfig = {
     // resolution mismatch, include the WHOLE package — small library,
     // and the one glob that's actually correct regardless of which
     // entry point or lazily-`imports`-mapped file ends up used.
-    // Plus Fraunces Black, which app/api/correo/titulo draws the event's name
-    // and days with in Nail Fest's emails (2026-10-30): read from disk, so it
-    // ships with that route.
+    // Plus the faces read from disk (2026-10-30): Fraunces Black, which
+    // app/api/correo/titulo draws the event's name and days with in Nail
+    // Fest's emails, and the ticket PDF's faces and logo (lib/ticketPdf.ts) —
+    // a PDF is drawn wherever a ticket is sent, the payment's page included,
+    // so they ship with every route.
     outputFileTracingIncludes: {
       "/api/**": ["./node_modules/pdfkit/**/*"],
-      "/api/correo/**": ["./src/lib/nailfest/fonts/*"],
+      "/**": ["./src/lib/nailfest/fonts/*", "./src/lib/ticketPdfAssets/*"],
     },
   },
   // Keep "[" and "]" out of the client chunk file names. Next names each

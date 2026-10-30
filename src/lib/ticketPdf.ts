@@ -1,29 +1,36 @@
+import { readFileSync } from "fs";
+import path from "path";
 import PDFDocument from "pdfkit";
 import { db } from "@/lib/db";
 import { getOrgSettings } from "@/lib/settings";
-import { formatEventScheduleLines } from "@/lib/eventSchedule";
+import { formatDateInTz } from "@/lib/dateFormat";
+import { formatHeroDate } from "@/lib/eventHeroDate";
+import { parseScheduleDays } from "@/lib/eventSchedule";
 import { confirmationCodeFor, renderQrPngBuffer, ticketHolderName, ticketsFor, verifyQrToken } from "@/lib/ticket";
 import { publicEventName } from "@/lib/eventDisplayName";
 
-// One self-contained, printable ticket — same fields and the same teal
-// accent as the inline "Tu entrada" voucher block in the email
-// (confirmationTemplate.ts's renderVoucherHtml), just as a PDF instead of
-// an HTML table, so someone can save/print it or show it from a PDF
-// viewer at the door without needing the email itself. Attached to every
-// confirmation send (sendTicketEmail.ts) in place of the old bare
-// QR-only PNG — a lone QR with no event/attendee info printed on it is
-// useless once separated from the email it came in.
+// One self-contained, printable ticket — attached to every confirmation
+// send (sendTicketEmail.ts), to event emails that carry it (broadcasts.ts)
+// and sent by WhatsApp (/api/ticket-pdf/[token]), so someone can save or
+// print it, or show it at the door without the email. Since 2026-10-30 the
+// team's boceto 3: the ticket as a festival one — the event's teal with its
+// logo, «Nail Fest Cúcuta», the big «7 y 8», where, her name and what kind;
+// beside it the white stub with its QR, its code and whom it lets in —, then
+// when and where, and the peach line on showing the QR. No cutting marks
+// and no banner (the team). Two tickets of an order share a page (hers and
+// her companion's), two per page beyond. In the event page's faces (Fraunces
+// Black, Inter); Helvetica if they can't be read, never no ticket.
 export interface TicketPdfData {
   firstName: string;
   lastName?: string;
   eventName: string;
   venueName?: string;
   venueAddress?: string;
+  /** «Cúcuta», after the place on the ticket. */
+  city?: string;
   startsAt: Date;
   endsAt?: Date;
-  /** Event.scheduleDays — see lib/eventSchedule.ts. Shows one "Fecha"
-   * line per real day instead of a single combined range once an admin
-   * configures it. */
+  /** Event.scheduleDays — see lib/eventSchedule.ts: each day with its hours under «Cuándo». */
   scheduleDays?: unknown;
   ticketTypeName?: string;
   ticketCount?: number;
@@ -33,16 +40,11 @@ export interface TicketPdfData {
   language: string;
 }
 
-const TEAL = "#00beb5";
-const TEAL_DARK_TEXT = "#0b2e2c";
-const INK = "#1a1a1a";
-const MUTED = "#5b5f6b";
-
 // One page per ticket of the order: `qrToken` is ticket 1 (the one stored
 // on the registration), and for a multi-ticket order the rest are derived
 // from it — every caller gets the full set of QRs without passing them in.
 // A token that doesn't verify (the admin's fixed-sample preview) just
-// renders its one page.
+// renders its one ticket.
 function pagesFor(data: TicketPdfData): { qrToken: string; confirmationCode: string; ticketNumber: number }[] {
   const count = data.ticketCount ?? 1;
   const { valid, registrationId } = verifyQrToken(data.qrToken);
@@ -54,102 +56,296 @@ function pagesFor(data: TicketPdfData): { qrToken: string; confirmationCode: str
   );
 }
 
+const PAGE_BG = "#faf9f7";
+const TEAL_DEEP = "#0f7d75";
+const MINT_TEXT = "#cdebe8";
+const PEACH = "#ffc5a8";
+const PEACH_SOFT = "#fff1ea";
+const PINK = "#f6a5b8";
+const CREAM = "#fff8e0";
+const INK = "#17181c";
+const GREY = "#5b5f6b";
+const LINE = "#e3e1dc";
+
+// A4 in points, the boceto's px × 0.75.
+const PAGE_W = 595.28;
+const PAGE_H = 841.89;
+const MX = 39;
+const CW = PAGE_W - 2 * MX;
+const STUB_W = 187.5;
+
+// Its faces and its logo, read once (they ship with every function: next.config.js' outputFileTracingIncludes).
+type Assets = { display: Buffer; regular: Buffer; bold: Buffer; heavy: Buffer; logo: Buffer };
+let assets: Assets | null | undefined;
+function loadAssets(): Assets | null {
+  if (assets !== undefined) return assets;
+  try {
+    const dir = path.join(process.cwd(), "src/lib/ticketPdfAssets");
+    assets = {
+      display: readFileSync(path.join(process.cwd(), "src/lib/nailfest/fonts/Fraunces-Black.ttf")),
+      regular: readFileSync(path.join(dir, "Inter-Regular.ttf")),
+      bold: readFileSync(path.join(dir, "Inter-Bold.ttf")),
+      heavy: readFileSync(path.join(dir, "Inter-ExtraBold.ttf")),
+      logo: readFileSync(path.join(dir, "logo.png")),
+    };
+  } catch (err) {
+    console.error("ticketPdf: its faces couldn't be read — Helvetica instead", err);
+    assets = null;
+  }
+  return assets;
+}
+
+const cap = (w: string) => w.charAt(0).toUpperCase() + w.slice(1);
+
+/** «Cuándo»: each day with its hours — «Sábado 7 de noviembre», «10:00 a. m. a 6:00 p. m.». */
+function whenLines(data: TicketPdfData): [string, string][] {
+  const tz = data.timezone;
+  const day = (d: Date) => cap(formatDateInTz(d, { weekday: "long", day: "numeric", month: "long" }, tz, data.language).replace(",", ""));
+  const clock = (d: Date) => formatDateInTz(d, { hour: "numeric", minute: "2-digit" }, tz, data.language);
+  const days = parseScheduleDays(data.scheduleDays).sort((a, b) => new Date(a.opensAt).getTime() - new Date(b.opensAt).getTime());
+  if (days.length) return days.map((d) => [day(new Date(d.opensAt)), `${clock(new Date(d.opensAt))} a ${clock(new Date(d.closesAt))}`]);
+  const end = data.endsAt ?? null;
+  if (!end || day(end) === day(data.startsAt)) return [[day(data.startsAt), end ? `${clock(data.startsAt)} a ${clock(end)}` : `Desde las ${clock(data.startsAt)}`]];
+  return [
+    [day(data.startsAt), `Desde las ${clock(data.startsAt)}`],
+    [day(end), `Hasta las ${clock(end)}`],
+  ];
+}
+
 export async function renderTicketPdfBuffer(data: TicketPdfData): Promise<Buffer> {
   const pages = pagesFor(data);
   const qrPngs = await Promise.all(pages.map((p) => renderQrPngBuffer(p.qrToken)));
   const attendeeName = [data.firstName, data.lastName].filter(Boolean).join(" ").trim() || "—";
-  // One line per real day when Event.scheduleDays is set, joined with a
-  // real newline — PDFKit's .text() wraps on "\n" natively, and row()
-  // below already measures height via heightOfString on whatever string
-  // it's given, so a multi-line value just makes that row taller.
-  // Otherwise the same single combined range as before. See
-  // eventSchedule.ts's own comment on why.
-  const rangeWhen = formatEventScheduleLines(
-    { startsAt: data.startsAt, endsAt: data.endsAt ?? null, scheduleDays: data.scheduleDays },
-    data.timezone,
-    data.language
-  ).join("\n");
-  // "Entrada general · 2 de 2" on each page of a multi-ticket order — each
-  // page is ONE ticket, so the old "· x2" would read as "this QR is good
-  // for two", which it no longer is.
-  const ticketTypeLine = (ticketNumber: number) =>
-    pages.length > 1 ? `${data.ticketTypeName ?? "Entrada"} · ${ticketNumber} de ${pages.length}` : data.ticketTypeName;
+  const hero = formatHeroDate(data.startsAt, data.endsAt ?? null, data.timezone, data.language);
+  const year = formatDateInTz(data.startsAt, { year: "numeric" }, data.timezone, data.language);
+  const when = whenLines(data);
+  const place = data.venueName || data.venueAddress || "";
+  const placeLine = [place, data.city].filter(Boolean).join(" · ");
+  const several = pages.length > 1;
+  const allDays = when.length === 2 ? "los dos días" : when.length > 2 ? "todos los días" : "";
+  const show = several
+    ? [
+        "Cada persona presenta su propio código QR en la entrada",
+        `, impreso o en el celular.${allDays ? ` Sirven ${allDays}: pueden entrar y salir.` : ""}`,
+      ]
+    : ["Presenta el código QR en la entrada", `, impreso o en tu celular.${allDays ? ` Sirve ${allDays}: puedes entrar y salir.` : ""}`];
+  const found = loadAssets();
 
   return new Promise((resolve, reject) => {
-    const doc = new PDFDocument({ size: "A4", margin: 50 });
+    const doc = new PDFDocument({ size: "A4", margin: 0, autoFirstPage: false });
     const chunks: Buffer[] = [];
     doc.on("data", (chunk) => chunks.push(chunk));
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
 
-    function drawTicketPage(ticketNumber: number, confirmationCode: string, qrPng: Buffer) {
-      const pageWidth = doc.page.width;
-      const headerTextWidth = pageWidth - 100;
-      const tagline = "Donde se reúne el mundo de las uñas";
+    const F = found
+      ? { display: "display", regular: "regular", bold: "bold", heavy: "heavy" }
+      : { display: "Helvetica-Bold", regular: "Helvetica", bold: "Helvetica-Bold", heavy: "Helvetica-Bold" };
+    if (found) {
+      doc.registerFont("display", found.display);
+      doc.registerFont("regular", found.regular);
+      doc.registerFont("bold", found.bold);
+      doc.registerFont("heavy", found.heavy);
+    }
+    // Where a line's baseline falls under its top, for setting two faces on one baseline.
+    const ascent = (font: string, size: number) => {
+      doc.font(font).fontSize(size);
+      return ((doc as unknown as { _font: { ascender: number } })._font.ascender / 1000) * size;
+    };
+    // A line set by its baseline.
+    const onBaseline = (text: string, font: string, size: number, color: string, x: number, baseline: number, o: PDFKit.Mixins.TextOptions = {}) => {
+      const top = baseline - ascent(font, size);
+      doc.font(font).fontSize(size).fillColor(color).text(text, x, top, { lineBreak: false, ...o });
+    };
 
-      // Header band — measure text heights first (font/fontSize calls only
-      // set state, nothing renders until .text()) so the teal band itself
-      // can be drawn BEHIND the text at the right height, however many
-      // lines the event name wraps to.
-      const labelY = 24;
-      const titleY = labelY + 18;
-      doc.font("Helvetica-Bold").fontSize(20);
-      const titleHeight = doc.heightOfString(data.eventName, { width: headerTextWidth });
-      const taglineY = titleY + titleHeight + 6;
-      doc.font("Helvetica").fontSize(11);
-      const taglineHeight = doc.heightOfString(tagline, { width: headerTextWidth });
-      const bandHeight = taglineY + taglineHeight + 20;
+    function ticket(x: number, y: number, h: number, index: number, compact: boolean) {
+      const page = pages[index]!;
+      const mainW = CW - STUB_W;
+      const seam = x + mainW;
+      doc.save();
+      doc.roundedRect(x, y, CW, h, 15).clip();
+      doc.rect(x, y, mainW, h).fill(TEAL_DEEP);
+      doc.rect(seam, y, STUB_W, h).fill("#ffffff");
+      doc.restore();
+      doc.save();
+      doc.moveTo(seam + 1, y + 14).lineTo(seam + 1, y + h - 14).lineWidth(2).dash(5, { space: 4 }).strokeColor(LINE).stroke();
+      doc.restore();
+      doc.circle(seam, y, 11.25).fill(PAGE_BG);
+      doc.circle(seam, y + h, 11.25).fill(PAGE_BG);
 
-      doc.rect(0, 0, pageWidth, bandHeight).fill(TEAL);
-      doc.fillColor(TEAL_DARK_TEXT).font("Helvetica-Bold").fontSize(10).text("TU ENTRADA", 50, labelY, { characterSpacing: 1 });
-      doc.fontSize(20).text(data.eventName, 50, titleY, { width: headerTextWidth });
-      doc.font("Helvetica").fontSize(11).text(tagline, 50, taglineY, { width: headerTextWidth });
+      // The teal part.
+      const padX = compact ? 21 : 22.5;
+      const padY = compact ? 16.5 : 19.5;
+      const ix = x + padX;
+      const iw = mainW - 2 * padX;
+      let cy = y + padY;
+      const logoW = compact ? 69 : 78;
+      const logoH = found ? (logoW - 15) * (209 / 260) + 9 : 0;
+      if (found) {
+        doc.roundedRect(ix, cy, logoW, logoH, 10.5).fill(CREAM);
+        doc.image(found.logo, ix + 7.5, cy + 4.5, { width: logoW - 15 });
+      }
+      const label = several ? `ENTRADA ${page.ticketNumber} DE ${pages.length}` : "TU ENTRADA";
+      doc.font(F.heavy).fontSize(9);
+      const labelW = doc.widthOfString(label, { characterSpacing: 1.6 });
+      onBaseline(label, F.heavy, 9, PEACH, ix + iw - labelW, cy + (found ? logoH / 2 : 0) + 3.2, { characterSpacing: 1.6 });
+      cy += (found ? logoH : 10) + (compact ? 9 : 13.5);
 
-      // Event details.
-      let y = bandHeight + 33;
-      const labelX = 50;
-      const valueX = 150;
-      const valueWidth = pageWidth - valueX - 50;
+      let nameSize = compact ? 24.75 : 28.5;
+      doc.font(F.display).fontSize(nameSize);
+      const nameW = doc.widthOfString(data.eventName);
+      if (nameW > iw) nameSize *= iw / nameW;
+      onBaseline(data.eventName, F.display, nameSize, "#ffffff", ix, cy + nameSize * 0.82);
+      cy += nameSize * 1.06;
 
-      function row(label: string, value: string) {
-        doc.fillColor(INK).font("Helvetica-Bold").fontSize(11).text(label, labelX, y, { width: 90 });
-        const height = doc.font("Helvetica").fontSize(11).heightOfString(value, { width: valueWidth });
-        doc.text(value, valueX, y, { width: valueWidth });
-        y += Math.max(20, height + 6);
+      const daysSize = compact ? 30 : 34.5;
+      const monthSize = compact ? 11.5 : 12.75;
+      const baseline = cy + daysSize * 0.8;
+      onBaseline(hero.days, F.display, daysSize, PEACH, ix, baseline);
+      doc.font(F.display).fontSize(daysSize);
+      const daysW = doc.widthOfString(hero.days);
+      onBaseline(`${hero.month} · ${year}`, F.bold, monthSize, "#ffffff", ix + daysW + 7.5, baseline, { width: iw - daysW - 7.5, ellipsis: true });
+      cy = baseline + daysSize * 0.2 + 3;
+      if (placeLine) {
+        doc.font(F.regular).fontSize(10.5).fillColor(MINT_TEXT).text(placeLine, ix, cy, { width: iw, lineBreak: false, ellipsis: true });
+        cy += 10.5 * 1.25;
       }
 
-      row("Fecha", rangeWhen);
-      if (data.venueName || data.venueAddress) {
-        row("Lugar", [data.venueName, data.venueAddress].filter(Boolean).join(" — "));
+      // Who and what kind, on the bottom; the line over them.
+      const bottom = y + h - padY;
+      const typeName = data.ticketTypeName ?? "Entrada";
+      let typeSize = compact ? 12 : 12.75;
+      doc.font(F.bold).fontSize(typeSize);
+      const typeW = Math.min(doc.widthOfString(typeName), iw * 0.42);
+      if (doc.widthOfString(typeName) > typeW) typeSize *= typeW / doc.widthOfString(typeName);
+      const holder = ticketHolderName(attendeeName, page.ticketNumber);
+      const holderW = iw - typeW - 12;
+      let holderSize = compact ? 14.25 : 15.75;
+      doc.font(F.bold).fontSize(holderSize);
+      let holderH = doc.heightOfString(holder, { width: holderW, lineGap: -1.5 });
+      const room = bottom - cy - 9.75 * 1.3 - 14;
+      if (holderH > room) {
+        holderSize = Math.max(11, holderSize * 0.86);
+        doc.fontSize(holderSize);
+        holderH = doc.heightOfString(holder, { width: holderW, lineGap: -1.5 });
       }
-      row("Asistente", ticketHolderName(attendeeName, ticketNumber));
-      const typeLine = ticketTypeLine(ticketNumber);
-      if (typeLine) row("Entrada", typeLine);
+      const holderTop = bottom - holderH;
+      doc.font(F.bold).fontSize(holderSize).fillColor("#ffffff").text(holder, ix, holderTop, { width: holderW, lineGap: -1.5 });
+      doc.font(F.regular).fontSize(9.75).fillColor(MINT_TEXT).text("Asistente", ix, holderTop - 9.75 * 1.3, { lineBreak: false });
+      const typeTop = bottom - typeSize * 1.2;
+      doc.font(F.bold).fontSize(typeSize).fillColor("#ffffff").text(typeName, ix + iw - typeW, typeTop, { width: typeW, align: "right", lineBreak: false });
+      doc.font(F.regular).fontSize(9.75).fillColor(MINT_TEXT).text("Entrada", ix + iw - typeW, typeTop - 9.75 * 1.3, { width: typeW, align: "right", lineBreak: false });
+      const rule = Math.min(holderTop, typeTop) - 9.75 * 1.3 - 8;
+      doc.save();
+      doc.moveTo(ix, rule).lineTo(ix + iw, rule).lineWidth(0.75).strokeOpacity(0.25).strokeColor("#ffffff").stroke();
+      doc.restore();
 
-      // Instruction — bigger, above the QR (was a small line below it).
-      const instruction = "Presenta este código QR (impreso o digital) en la entrada del evento.";
-      doc.fillColor(INK).font("Helvetica-Bold").fontSize(13);
-      const instructionHeight = doc.heightOfString(instruction, { align: "center", width: pageWidth - 150 });
-      const instructionY = y + 20;
-      doc.text(instruction, 75, instructionY, { align: "center", width: pageWidth - 150 });
-
-      // QR block, centered.
-      const qrSize = 220;
-      const qrX = (pageWidth - qrSize) / 2;
-      const qrY = instructionY + instructionHeight + 20;
-      doc.image(qrPng, qrX, qrY, { width: qrSize, height: qrSize });
-
-      doc
-        .fillColor(MUTED)
-        .font("Helvetica-Bold")
-        .fontSize(10)
-        .text(`CÓDIGO ${confirmationCode}`, 0, qrY + qrSize + 14, { align: "center", width: pageWidth });
+      // The stub: its QR, its code, whom it lets in.
+      const qr = compact ? 127.5 : 142.5;
+      // centered in the stub: the QR, its code (9.4 × 1.2) and the pill (16.5), apart by 7.5 and 6
+      const qy = y + (h - (qr + 7.5 + 9.4 * 1.2 + 6 + 16.5)) / 2;
+      doc.image(qrPngs[index]!, seam + (STUB_W - qr) / 2, qy, { width: qr, height: qr });
+      const codeY = qy + qr + 7.5;
+      doc.font(F.bold).fontSize(9.4).fillColor(GREY).text(`CÓDIGO ${page.confirmationCode}`, seam, codeY, { width: STUB_W, align: "center", characterSpacing: 1.3, lineBreak: false });
+      const admits = several ? 1 : Math.max(1, data.ticketCount ?? 1);
+      const pill = admits === 1 ? "ADMITE 1 PERSONA" : `ADMITE ${admits} PERSONAS`;
+      doc.font(F.heavy).fontSize(9.4);
+      const pillW = doc.widthOfString(pill, { characterSpacing: 0.6 }) + 18;
+      const pillH = 16.5;
+      const pillX = seam + (STUB_W - pillW) / 2;
+      const pillY = codeY + 9.4 * 1.2 + 6;
+      doc.roundedRect(pillX, pillY, pillW, pillH, pillH / 2).fill(PINK);
+      onBaseline(pill, F.heavy, 9.4, "#ffffff", pillX + 9, pillY + pillH / 2 + 9.4 * 0.36, { characterSpacing: 0.6 });
     }
 
-    pages.forEach((page, index) => {
-      if (index > 0) doc.addPage();
-      drawTicketPage(page.ticketNumber, page.confirmationCode, qrPngs[index]!);
-    });
+    // «Cuándo» and «Dónde», side by side, as tall as the taller.
+    function boxes(y: number, compact: boolean): number {
+      const gap = 13.5;
+      const w = (CW - gap) / 2;
+      const pad = compact ? 12 : 15;
+      const padX = compact ? 15 : 16.5;
+      const tw = w - 2 * padX;
+      const eyebrow = 9 * 1.3;
+      const measure = (rows: [string, string | null][]) =>
+        rows.reduce((sum, [title, sub]) => {
+          doc.font(F.bold).fontSize(12);
+          const t = doc.heightOfString(title, { width: tw }) + 6;
+          doc.font(F.regular).fontSize(10.5);
+          return sum + t + (sub ? doc.heightOfString(sub, { width: tw }) + 1.5 : 0);
+        }, 0);
+      const whereRows: [string, string | null][] = place
+        ? [[place, [data.venueName ? data.venueAddress : null, data.city].filter(Boolean).join(", ") || null]]
+        : [[data.city || "Por anunciar", null]];
+      const h = 2 * pad + eyebrow + Math.max(measure(when), measure(whereRows));
+      const box = (x: number, title: string, rows: [string, string | null][]) => {
+        doc.roundedRect(x, y, w, h, 13.5).fillAndStroke("#ffffff", LINE);
+        doc.lineWidth(0.75);
+        doc.font(F.heavy).fontSize(9).fillColor(TEAL_DEEP).text(title, x + padX, y + pad, { characterSpacing: 1.45, lineBreak: false });
+        let cy = y + pad + eyebrow;
+        for (const [t, sub] of rows) {
+          cy += 6;
+          doc.font(F.bold).fontSize(12).fillColor(INK).text(t, x + padX, cy, { width: tw });
+          cy += doc.heightOfString(t, { width: tw });
+          if (sub) {
+            cy += 1.5;
+            doc.font(F.regular).fontSize(10.5).fillColor(GREY).text(sub, x + padX, cy, { width: tw });
+            cy += doc.heightOfString(sub, { width: tw });
+          }
+        }
+      };
+      doc.lineWidth(0.75);
+      box(MX, "CUÁNDO", when);
+      box(MX + w + gap, "DÓNDE", whereRows);
+      return y + h;
+    }
+
+    // The peach line on showing the QR.
+    function showLine(y: number, compact: boolean): number {
+      const padX = compact ? 15 : 16.5;
+      const pad = compact ? 10.5 : 13.5;
+      const tw = CW - 2 * padX;
+      doc.font(F.bold).fontSize(11.25);
+      const h = doc.heightOfString(show.join(""), { width: tw, lineGap: 2 }) + 2 * pad;
+      doc.roundedRect(MX, y, CW, h, 13.5).fill(PEACH_SOFT);
+      doc.font(F.bold).fontSize(11.25).fillColor(INK).text(show[0]!, MX + padX, y + pad, { width: tw, lineGap: 2, continued: true });
+      doc.font(F.regular).fillColor(INK).text(show[1]!, { width: tw, lineGap: 2 });
+      return y + h;
+    }
+
+    function footer() {
+      const parts: [string, string, string][] = [
+        ["Donde se reúne el mundo de las uñas · ", F.regular, GREY],
+        ["@nailfest_co", F.bold, TEAL_DEEP],
+        [" · nailfest.lat", F.regular, GREY],
+      ];
+      const widths = parts.map(([t, f]) => {
+        doc.font(f).fontSize(9.75);
+        return doc.widthOfString(t);
+      });
+      let x = (PAGE_W - widths.reduce((a, b) => a + b, 0)) / 2;
+      parts.forEach(([t, f, c], i) => {
+        doc.font(f).fontSize(9.75).fillColor(c).text(t, x, PAGE_H - 42, { lineBreak: false });
+        x += widths[i]!;
+      });
+    }
+
+    // Up to two tickets a page.
+    for (let first = 0; first < pages.length; first += 2) {
+      const onPage = pages.length - first >= 2 ? 2 : 1;
+      const compact = several;
+      doc.addPage({ size: "A4", margin: 0 });
+      doc.rect(0, 0, PAGE_W, PAGE_H).fill(PAGE_BG);
+      const h = compact ? 229.5 : 247.5;
+      let y = compact ? 30 : 39;
+      for (let i = 0; i < onPage; i++) {
+        ticket(MX, y, h, first + i, compact);
+        y += h + 16.5;
+      }
+      y += (compact ? 18 : 25.5) - 16.5;
+      y = boxes(y, compact);
+      showLine(y + (compact ? 12 : 13.5), compact);
+      footer();
+    }
     doc.end();
   });
 }
@@ -179,6 +375,7 @@ export async function buildTicketPdfDataForRegistration(registrationId: string):
     eventName: publicEventName(registration.event),
     venueName: registration.event.venueName ?? undefined,
     venueAddress: registration.event.venueAddress ?? undefined,
+    city: registration.event.city || undefined,
     startsAt: registration.event.startsAt,
     endsAt: registration.event.endsAt ?? undefined,
     scheduleDays: registration.event.scheduleDays,

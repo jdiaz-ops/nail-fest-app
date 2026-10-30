@@ -199,6 +199,7 @@ export async function sendEventBroadcast(
                   eventName: publicEventName(broadcast.event!),
                   venueName: broadcast.event!.venueName ?? undefined,
                   venueAddress: broadcast.event!.venueAddress ?? undefined,
+                  city: broadcast.event!.city || undefined,
                   startsAt: broadcast.event!.startsAt,
                   endsAt: broadcast.event!.endsAt ?? undefined,
                   ticketTypeName: registration.ticketTypeId ? ticketTypeNames.get(registration.ticketTypeId) : undefined,

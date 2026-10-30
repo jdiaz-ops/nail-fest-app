@@ -19,14 +19,17 @@ export async function GET() {
   const orgSettings = await getOrgSettings();
   const sampleStart = new Date();
   sampleStart.setDate(sampleStart.getDate() + 30);
-  const sampleEnd = new Date(sampleStart);
+  // 10 a. m. to 6 p. m. in Bogotá, a day's hours, not one instant.
+  sampleStart.setUTCHours(15, 0, 0, 0);
+  const sampleEnd = new Date(sampleStart.getTime() + 8 * 60 * 60 * 1000);
 
   const pdf = await renderTicketPdfBuffer({
     firstName: "Ana María",
     lastName: "Rodríguez",
     eventName: "Nail Fest Bogotá 2026",
     venueName: "Centro de Convenciones Ágora",
-    venueAddress: "Cra. 40 #22C-67, Bogotá",
+    venueAddress: "Cra. 40 #22C-67",
+    city: "Bogotá",
     startsAt: sampleStart,
     endsAt: sampleEnd,
     ticketTypeName: "Entrada general",
