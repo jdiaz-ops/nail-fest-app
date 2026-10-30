@@ -66,13 +66,6 @@ export function longDates(event: When, tz: string): string {
   return cap(span === 1 ? `${wd(first)} ${dm(first)} y ${wd(last)} ${dm(last)}` : `del ${wd(first)} ${dm(first)} al ${wd(last)} ${dm(last)}`);
 }
 
-/** Google Maps for the place, when it has an address or a name (the screen after signing up's «Cómo llegar»). */
-export function mapsUrl(event: Pick<Event, "venueName" | "venueAddress" | "city">): string | null {
-  const place = [event.venueName, event.venueAddress, event.city].filter((s) => s?.trim()).join(", ");
-  if (!event.venueName?.trim() && !event.venueAddress?.trim()) return null;
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place)}`;
-}
-
 /** The event in a calendar, at its place: from its start to its end. */
 export function inPersonCalendarEvent(event: Pick<Event, "id" | "slug" | "name" | "publicName" | "startsAt" | "endsAt" | "venueName" | "venueAddress" | "city">): CalendarEvent {
   return {

@@ -614,7 +614,7 @@ export async function POST(req: NextRequest) {
   // deliberately NOT surfaced here — see that function's own comment on
   // why the personal join link isn't handed out at registration time at
   // all, on any channel.
-  const { whatsappTicketLinkSent, qrToken } = await finalizeConfirmedRegistration({
+  const { whatsappTicketLinkSent } = await finalizeConfirmedRegistration({
     person,
     event,
     registration,
@@ -627,13 +627,8 @@ export async function POST(req: NextRequest) {
   });
 
   // Nail Fest's own screen after signing up, for an event that switched it
-  // on (2026-10-30, lib/nailfest/signup.ts): her ticket's QR right there.
-  const signup = showsNailFestSignup(event)
-    ? await nailFestSignupResult(registration, person, qrToken, !wasAlreadyConfirmed).catch((err) => {
-        console.error("register: Nail Fest's screen after signing up", err);
-        return undefined;
-      })
-    : undefined;
+  // on (2026-10-30, lib/nailfest/signup.ts): her «Asistiré» link.
+  const signup = showsNailFestSignup(event) ? nailFestSignupResult(registration.id) : undefined;
 
   return NextResponse.json({ ok: true, registrationId: registration.id, resent: isResend, whatsappTicketLinkSent, ...(signup ? { signup } : {}) });
 }

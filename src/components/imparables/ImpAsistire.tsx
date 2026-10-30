@@ -106,8 +106,10 @@ export default function ImpAsistire(props: Props) {
   const [moved, setMoved] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<{ url: string; file: File; canShare: boolean } | null>(null);
+  const [result, setResult] = useState<{ url: string; file: File; canShare: boolean; both?: Record<AsistireFormat, File> } | null>(null);
   const [copied, setCopied] = useState(false);
+  // Nail Fest's: which of its two buttons just copied its words (the link, or the publication's text).
+  const [copiedFor, setCopiedFor] = useState<AsistireFormat | null>(null);
 
   // The faces and the logo first: the image is drawn with them.
   useEffect(() => {
@@ -240,10 +242,44 @@ export default function ImpAsistire(props: Props) {
       return;
     }
     const file = new File([blob], `asistire-${format}.jpg`, { type: "image/jpeg" });
+    // Nail Fest's (2026-10-30): both sizes, ready before her tap — the story for «Subir a mi historia», the
+    // publication for «Publicar en mi feed» — whichever she was looking at.
+    const both = design === "NAIL_FEST" ? await bothSizes(format, file) : undefined;
     setError(null);
-    setResult({ url: URL.createObjectURL(blob), file, canShare: !!navigator.canShare?.({ files: [file] }) });
+    setResult({ url: URL.createObjectURL(blob), file, canShare: !!navigator.canShare?.({ files: [file] }), both });
     setStep("lista");
     window.scrollTo({ top: 0 });
+  }
+
+  /** Her image in both sizes: the one on screen, and the other drawn now with her photo where she left it. */
+  async function bothSizes(shown: AsistireFormat, file: File): Promise<Record<AsistireFormat, File> | undefined> {
+    const other: AsistireFormat = shown === "historia" ? "publicacion" : "historia";
+    const size = art.size(other);
+    const canvas = document.createElement("canvas");
+    canvas.width = size.width;
+    canvas.height = size.height;
+    const where = photo ? clampPlacement(art.photoBox(other), photo, placement) : placement;
+    art.draw(canvas.getContext("2d")!, art.layers(other, logoRef.current), photo, where);
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.92));
+    if (!blob) return undefined;
+    const second = new File([blob], `asistire-${other}.jpg`, { type: "image/jpeg" });
+    return shown === "historia" ? { historia: file, publicacion: second } : { historia: second, publicacion: file };
+  }
+
+  /** «Subir a mi historia» and «Publicar en mi feed»: the link (or the publication's words, with @nailfest_co)
+   * copied, and «Compartir» opened with that size — in the same tap, which the share sheet needs. */
+  function shareTo(kind: AsistireFormat) {
+    const file = result?.both?.[kind];
+    if (!file) return;
+    const words = kind === "publicacion" && props.design === "NAIL_FEST" ? props.texts.caption : linkHref;
+    navigator.clipboard
+      ?.writeText(words)
+      .then(() => setCopiedFor(kind))
+      .catch(() => setCopiedFor(null));
+    navigator.share({ files: [file] }).catch((err) => {
+      if (err instanceof DOMException && err.name === "AbortError") return;
+      setError("No se pudo abrir «Compartir». Descarga la imagen y súbela desde tu galería.");
+    });
   }
 
   async function share() {
@@ -374,7 +410,38 @@ export default function ImpAsistire(props: Props) {
         </>
       )}
 
-      {step === "lista" && result && (
+      {step === "lista" && result?.canShare && result.both && (
+        // Nail Fest's (2026-10-30): straight to her story or her feed, with what to paste already copied.
+        <>
+          <button type="button" className="imp-co-btn" onClick={() => shareTo("historia")}>
+            <Instagram />
+            Subir a mi historia
+          </button>
+          <p className="imp-as-tip" aria-live="polite">
+            {copiedFor === "historia"
+              ? "¡Enlace copiado! En Instagram toca el sticker «Enlace» y pégalo."
+              : "Al tocarlo copiamos el enlace: en Instagram toca el sticker «Enlace» y pégalo."}
+          </p>
+          <button type="button" className="imp-as-btn2" onClick={() => shareTo("publicacion")}>
+            <Instagram />
+            Publicar en mi feed
+          </button>
+          <p className="imp-as-tip" aria-live="polite">
+            {copiedFor === "publicacion"
+              ? "¡Texto copiado! Pégalo en la descripción: ya lleva @nailfest_co."
+              : "Copiamos un texto con @nailfest_co para que lo pegues en la descripción."}
+          </p>
+          <a className="imp-as-down" href={result.url} download={result.file.name}>
+            <Download />
+            Descargar imagen
+          </a>
+          <button type="button" className="imp-co-switch imp-as-otra" onClick={() => setStep("ajustar")}>
+            Volver a ajustar
+          </button>
+        </>
+      )}
+
+      {step === "lista" && result && !(result.canShare && result.both) && (
         <>
           {result.canShare && (
             <button type="button" className="imp-co-btn" onClick={share}>
@@ -447,6 +514,16 @@ function Share() {
     <Icon>
       <path d="M12 3v12M7 8l5-5 5 5" />
       <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" />
+    </Icon>
+  );
+}
+
+function Instagram() {
+  return (
+    <Icon>
+      <rect x="3" y="3" width="18" height="18" rx="5" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="17.3" cy="6.7" r="0.9" fill="currentColor" stroke="none" />
     </Icon>
   );
 }

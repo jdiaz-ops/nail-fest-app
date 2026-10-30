@@ -33,7 +33,7 @@ export default async function AfterSignupPage({ params, searchParams }: { params
       id: "inscrita",
       label: "Inscripción confirmada",
       src: `/${event.slug}?vista=inscrita`,
-      note: "Lo que ve apenas termina de inscribirse: su entrada con el código QR, para tomarle captura.",
+      note: "Lo que ve apenas termina de inscribirse: dónde le llega su entrada, Instagram, su imagen «Asistiré» y el enlace para invitar a una colega.",
     },
     {
       id: "correo",

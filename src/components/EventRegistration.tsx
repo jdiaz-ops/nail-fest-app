@@ -92,8 +92,8 @@ interface Props {
   // hers comes in /api/register's answer. Absent: the usual screen.
   signupScreen?: NailFestSignupScreen;
   // The team's look at that screen (?vista=inscrita on the event's page, from
-  // «Después de la inscripción»): open on it, with Laura's sample ticket.
-  signupPreview?: { result: NailFestSignupResult; firstName: string; email: string; phone: string };
+  // «Después de la inscripción»): open on it, with Laura's sample «Asistiré».
+  signupPreview?: { result: NailFestSignupResult; email: string; phone: string };
 }
 
 // One combined checkout step (Shopify-style, per the admin's own call —
@@ -131,7 +131,6 @@ export default function EventRegistration({
   const [step, setStep] = useState<Step>(signupPreview ? "resumen" : "checkout");
   // Hers, for Nail Fest's screen after signing up (signupScreen above).
   const [signup, setSignup] = useState<NailFestSignupResult | null>(signupPreview?.result ?? null);
-  const [submittedFirstName, setSubmittedFirstName] = useState<string | null>(signupPreview?.firstName ?? null);
   // The real email just submitted — shown back on the confirmation screen
   // so the person knows exactly where to look for their QR (and, if it's
   // wrong, that they typed it wrong). Cleared whenever the modal is
@@ -383,7 +382,6 @@ export default function EventRegistration({
     setSubmittedEmail(payload.email);
     setSubmittedPhone(payload.phone);
     setWhatsappTicketLinkSent(Boolean(body?.whatsappTicketLinkSent));
-    setSubmittedFirstName(payload.firstName ?? payload.fullName?.trim().split(/\s+/)[0] ?? null);
     setSignup(body?.signup ?? null);
     setStep("resumen");
     window.clarity?.("event", "registro_exitoso");
@@ -637,9 +635,9 @@ export default function EventRegistration({
                 <NailFestSignedUp
                   screen={signupScreen}
                   result={signup}
-                  firstName={submittedFirstName}
-                  email={submittedEmail}
-                  phone={whatsappTicketLinkSent ? submittedPhone : null}
+                  brandName={brandName}
+                  eventCity={eventCity}
+                  whatsapp={whatsappTicketLinkSent && Boolean(submittedPhone)}
                   displayFont={fraunces.className}
                   inAppBrowser={inAppBrowser}
                   onClose={closeModal}

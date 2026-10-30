@@ -1,6 +1,7 @@
 import type { Event } from "@prisma/client";
 import { db } from "@/lib/db";
 import { publicEventName } from "@/lib/eventDisplayName";
+import { INSTAGRAM_HANDLE } from "@/lib/brand";
 import { ASISTIRE_UTM } from "@/lib/imparables/asistire";
 import type { NailFestAsistireTexts } from "@/components/nailfest/asistireArt";
 import { longDates } from "./confirmation";
@@ -26,13 +27,25 @@ export async function nailFestAsistire(event: Event, timezone: string): Promise<
   const paid = await db.ticketType.count({ where: { eventId: event.id, status: "ON_SALE", price: { gt: 0 } } });
   const href = new URL(`${base}/${event.slug}`);
   for (const [key, value] of Object.entries(ASISTIRE_UTM)) href.searchParams.set(key, value);
+  const accent = city ?? publicEventName(event).replace(/^nail\s*fest\s*/i, "").trim();
+  const date = longDates(event, timezone);
+  const link = `${new URL(base).host.replace(/^www\./, "")}/${event.slug}`;
+  const venue = event.venueName?.trim();
+  // «#NailFestCucuta»: the city without its accents or spaces.
+  const tag = `#NailFest${accent.normalize("NFD").replace(/[^A-Za-z0-9]/g, "")}`;
   return {
     texts: {
-      name: ["Nail Fest", city ?? publicEventName(event).replace(/^nail\s*fest\s*/i, "").trim()],
-      date: longDates(event, timezone),
-      place: [event.venueName?.trim(), city].filter(Boolean).join(" · "),
+      name: ["Nail Fest", accent],
+      date,
+      place: [venue, city].filter(Boolean).join(" · "),
       invite: paid ? "Consigue tu entrada en " : "Inscríbete gratis en ",
-      link: `${new URL(base).host.replace(/^www\./, "")}/${event.slug}`,
+      link,
+      caption: [
+        `¡Voy a ${["Nail Fest", accent].filter(Boolean).join(" ")}! 💅`,
+        `${date}${venue ? ` en ${venue}` : ""}.`,
+        `${paid ? "Consigue tu entrada" : "Inscríbete gratis"}: ${link}`,
+        `${INSTAGRAM_HANDLE} ${tag}`,
+      ].join("\n"),
     },
     linkHref: href.toString(),
   };

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/db", () => ({ db: {} }));
 
-import { eventDays, inPersonCalendarEvent, longDates, mapsUrl } from "./confirmation";
+import { eventDays, inPersonCalendarEvent, longDates } from "./confirmation";
 import { defaultInvite, nailFestConfirmationEmail, type NailFestConfirmation } from "./confirmationEmail";
 
 const TZ = "America/Bogota";
@@ -46,12 +46,6 @@ describe("the event's days", () => {
 });
 
 describe("the place", () => {
-  it("goes to Google Maps when it has a name or an address", () => {
-    expect(mapsUrl({ venueName: null, venueAddress: " ", city: "Cúcuta" })).toBeNull();
-    const url = mapsUrl({ venueName: "Salón Ventura", venueAddress: "Av. 0 #11-20", city: "Cúcuta" })!;
-    expect(new URL(url).searchParams.get("query")).toBe("Salón Ventura, Av. 0 #11-20, Cúcuta");
-  });
-
   it("is in the calendar, with the event's own end or eight hours", () => {
     const event = {
       id: "ev1",

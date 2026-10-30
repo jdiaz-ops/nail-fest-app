@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const db = vi.hoisted(() => ({ ticketType: { findUnique: vi.fn(), findFirst: vi.fn(), count: vi.fn() } }));
+const db = vi.hoisted(() => ({ ticketType: { count: vi.fn() } }));
 vi.mock("@/lib/db", () => ({ db }));
 
 import { nailFestSignupResult, showsNailFestSignup } from "./signup";
@@ -9,11 +9,8 @@ import { nailFestAsistire, hasNailFestAsistire } from "./asistire";
 beforeEach(() => {
   process.env.APP_SECRET_KEY = "test-secret";
   process.env.APP_BASE_URL = "https://nailfest.lat";
-  db.ticketType.findUnique.mockReset().mockResolvedValue({ name: "Entrada Gratis" });
   db.ticketType.count.mockReset().mockResolvedValue(0);
 });
-
-const person = { firstName: "Laura", lastName: "Gómez", email: "laura@correo.com" };
 
 describe("the screen after signing up", () => {
   it("is for an event at a place that switched it on", () => {
@@ -23,24 +20,8 @@ describe("the screen after signing up", () => {
     expect(showsNailFestSignup({ signupScreenDesign: "NAIL_FEST", theme: "IMPARABLES", format: "IN_PERSON" })).toBe(false);
   });
 
-  it("shows her ticket with its QR, as in her email", async () => {
-    const r = await nailFestSignupResult({ id: "cmreg00012345678", ticketTypeId: "tt1", ticketCount: 1 }, person, "cmreg00012345678.sig", true);
-    expect(r.tickets).toEqual([{ qr: "/api/ticket-qr/cmreg00012345678.sig", holder: "Laura Gómez", label: "Entrada Gratis", code: "12345678" }]);
-    expect(r.asistire).toMatch(/^https:\/\/nailfest\.lat\/asistire\/cmreg00012345678\./);
-  });
-
-  it("one per ticket when she signed up with company", async () => {
-    const r = await nailFestSignupResult({ id: "cmreg00012345678", ticketTypeId: "tt1", ticketCount: 2 }, person, "cmreg00012345678.sig", true);
-    expect(r.tickets.map((t) => [t.holder, t.label, t.code])).toEqual([
-      ["Laura Gómez", "Entrada Gratis · 1 de 2", "12345678"],
-      ["Acompañante de Laura Gómez", "Entrada Gratis · 2 de 2", "12345678-2"],
-    ]);
-    expect(r.tickets[0]!.qr).toBe("/api/ticket-qr/cmreg00012345678.sig");
-  });
-
-  it("shows nobody's ticket to whoever typed the email of someone already signed up", async () => {
-    const r = await nailFestSignupResult({ id: "cmreg00012345678", ticketTypeId: "tt1", ticketCount: 1 }, person, "cmreg00012345678.sig", false);
-    expect(r.tickets).toEqual([]);
+  it("gives her own «Asistiré» link", () => {
+    expect(nailFestSignupResult("cmreg00012345678")?.asistire).toMatch(/^https:\/\/nailfest\.lat\/asistire\/cmreg00012345678\./);
   });
 });
 
@@ -73,6 +54,7 @@ describe("Nail Fest's «Asistiré»", () => {
       place: "Salón Ventura · Cúcuta",
       invite: "Inscríbete gratis en ",
       link: "nailfest.lat/cucuta",
+      caption: "¡Voy a Nail Fest Cúcuta! 💅\nSábado 7 y domingo 8 de noviembre en Salón Ventura.\nInscríbete gratis: nailfest.lat/cucuta\n@nailfest_co #NailFestCucuta",
     });
     expect(new URL(linkHref).searchParams.get("utm_source")).toBe("asistire");
   });

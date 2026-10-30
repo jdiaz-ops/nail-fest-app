@@ -56,7 +56,7 @@ export default function SignupScreenSwitch({ eventId, on }: { eventId: string; o
       </span>
       <span style={{ flex: 1, minWidth: 220, fontSize: 13.5, color: "#3a3d45" }}>
         {on
-          ? "Quien se inscribe ve esta pantalla, con su entrada y el código QR ahí mismo."
+          ? "Quien se inscribe ve esta pantalla, con «Asistiré» y la invitación para una colega."
           : "Quien se inscribe todavía ve la pantalla de siempre. Así se vería esta:"}
       </span>
       <button

@@ -279,10 +279,9 @@ model Event {
   // email the same day.
   confirmationTips          String[]    @default([])
   // The screen right after signing up (2026-10-30, «Después de la
-  // inscripción»): "NAIL_FEST" — Nail Fest's own for an event at a place,
-  // with her ticket's QR right there, the days and place, «Asistiré» and an
-  // invitation for a colleague (components/nailfest/SignedUp.tsx). Null: the
-  // usual one.
+  // inscripción»): "NAIL_FEST" — Nail Fest's own for an event at a place, the
+  // usual one with her «Asistiré» image and an invitation for a colleague
+  // under it (components/nailfest/SignedUp.tsx). Null: the usual one.
   signupScreenDesign        String?
   // A richer, structured alternative to `description` for an event that
   // wants a real sales-script landing (hero/story/value-stack table/

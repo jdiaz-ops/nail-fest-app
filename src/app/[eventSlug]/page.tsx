@@ -81,7 +81,7 @@ export default async function EventLandingPage({
   // another day (?fecha=2027-03-15: the waiting list, each price stage).
   const fecha = typeof searchParams.fecha === "string" && /^\d{4}-\d{2}-\d{2}$/.test(searchParams.fecha) ? searchParams.fecha : null;
   // …and, from «Después de la inscripción», Nail Fest's screen after signing
-  // up (?vista=inscrita, 2026-10-30), switched on or not, with a sample ticket.
+  // up (?vista=inscrita, 2026-10-30), switched on or not, with sample data.
   const signupLook = searchParams.vista === "inscrita" && hasNailFestAsistire(event);
   const staff = event.status === "DRAFT" || (event.theme === "IMPARABLES" && fecha) || signupLook ? await getCurrentUser() : null;
 
@@ -139,7 +139,7 @@ export default async function EventLandingPage({
 
   const signupPreview =
     signupLook && staff
-      ? { result: await nailFestSignupSample(event), firstName: "Laura", email: "laura@correo.com", phone: "+573001234567" }
+      ? { result: nailFestSignupSample(event), email: "laura@correo.com", phone: "+573001234567" }
       : undefined;
   const [professionOptions, metaConnection, orgSettings, checkoutQuestions, ticketTypes, imageDimensions] = await Promise.all([
     getOrderedProfessionOptions(),

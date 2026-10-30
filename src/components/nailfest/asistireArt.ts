@@ -32,6 +32,8 @@ export interface NailFestAsistireTexts {
   invite: string;
   /** «nailfest.lat/cucuta» */
   link: string;
+  /** What «Publicar en mi feed» copies for the publication's description: the event, the link, @nailfest_co. */
+  caption: string;
 }
 
 export const MOTTO = "Donde se reúne el mundo de las uñas";
