@@ -15,6 +15,9 @@ export const eventBroadcastBodySchema = z
     attachTicketPdf: z.boolean().optional().default(false),
     // The band under its event's designed email's header (Event.broadcastDesign); "" or none, no band.
     designBand: z.string().max(60).nullable().optional(),
+    // Its modules in that design: her «Asistiré» card and «¿Vas con una colega?».
+    designAsistire: z.boolean().optional().default(true),
+    designColega: z.boolean().optional().default(true),
     // Only registrants scanned at the door (the review ask) — see lib/reviews.ts.
     onlyCheckedIn: z.boolean().optional().default(false),
     // Only registrants nobody has scanned yet ("te estamos esperando").

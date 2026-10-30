@@ -23,6 +23,8 @@ type EditingBroadcast = {
   bodyHtml: string;
   attachTicketPdf: boolean;
   designBand: string | null;
+  designAsistire: boolean;
+  designColega: boolean;
   onlyCheckedIn: boolean;
   onlyNotCheckedIn: boolean;
   scheduleKind: ScheduleKind;
@@ -89,6 +91,8 @@ export default function EventBroadcastComposer({
     bodyHtml: string;
     attachTicketPdf: boolean;
     designBand?: string | null;
+    designAsistire?: boolean;
+    designColega?: boolean;
     onlyCheckedIn?: boolean;
     onlyNotCheckedIn?: boolean;
   };
@@ -109,6 +113,9 @@ export default function EventBroadcastComposer({
   const [bodyHtml, setBodyHtml] = useState(editing?.bodyHtml ?? initial?.bodyHtml ?? "");
   const [attachTicketPdf, setAttachTicketPdf] = useState(editing?.attachTicketPdf ?? initial?.attachTicketPdf ?? false);
   const [designBand, setDesignBand] = useState(editing?.designBand ?? initial?.designBand ?? "");
+  // Its modules in the design: her «Asistiré» card and «¿Vas con una colega?» (2026-10-30, on by default).
+  const [designAsistire, setDesignAsistire] = useState(editing?.designAsistire ?? initial?.designAsistire ?? true);
+  const [designColega, setDesignColega] = useState(editing?.designColega ?? initial?.designColega ?? true);
   // «Así se ve»: the email in the design, a moment after each change.
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
   useEffect(() => {
@@ -117,14 +124,14 @@ export default function EventBroadcastComposer({
       fetch(`/api/admin/events/${eventId}/broadcasts/preview`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subject, bodyHtml, band: designBand, attachTicketPdf }),
+        body: JSON.stringify({ subject, bodyHtml, band: designBand, asistire: designAsistire, colega: designColega }),
       })
         .then((res) => (res.ok ? res.json() : null))
         .then((body) => body?.html && setPreviewHtml(body.html))
         .catch(() => {});
     }, 900);
     return () => clearTimeout(timer);
-  }, [designOn, eventId, subject, bodyHtml, designBand, attachTicketPdf]);
+  }, [designOn, eventId, subject, bodyHtml, designBand, designAsistire, designColega]);
   const [checkIn, setCheckIn] = useState<CheckIn>(checkInFrom(editing ?? initial));
   const [scheduleKind, setScheduleKind] = useState<ScheduleKind>(editing?.scheduleKind ?? "IMMEDIATE");
   const [scheduledAtLocal, setScheduledAtLocal] = useState(
@@ -150,7 +157,15 @@ export default function EventBroadcastComposer({
     const res = await fetch(`/api/admin/events/${eventId}/broadcasts/test`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ subject, bodyHtml, band: designBand, attachTicketPdf, to: testTo.split(",").map((s) => s.trim()).filter(Boolean) }),
+      body: JSON.stringify({
+        subject,
+        bodyHtml,
+        band: designBand,
+        asistire: designAsistire,
+        colega: designColega,
+        attachTicketPdf,
+        to: testTo.split(",").map((s) => s.trim()).filter(Boolean),
+      }),
     });
     const body = await res.json().catch(() => ({}));
     setTestSending(false);
@@ -171,6 +186,8 @@ export default function EventBroadcastComposer({
       bodyHtml,
       attachTicketPdf,
       designBand: designBand.trim() || null,
+      designAsistire,
+      designColega,
       onlyCheckedIn: checkIn === "checkedIn",
       onlyNotCheckedIn: checkIn === "notCheckedIn",
       scheduleKind,
@@ -247,6 +264,20 @@ export default function EventBroadcastComposer({
         </div>
       )}
 
+      {designOn && (
+        <div className="field">
+          <label>Módulos después del mensaje</label>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, fontWeight: 400, color: "var(--ink)" }}>
+            <input type="checkbox" checked={designAsistire} onChange={(e) => setDesignAsistire(e.target.checked)} style={{ width: "auto", margin: 0, flex: "none" }} />
+            <span>«¡Cuéntale a todos que vas!» — su imagen «Asistiré»</span>
+          </label>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, fontWeight: 400, color: "var(--ink)" }}>
+            <input type="checkbox" checked={designColega} onChange={(e) => setDesignColega(e.target.checked)} style={{ width: "auto", margin: 0, flex: "none" }} />
+            <span>«¿Vas con una colega?» — compartir por WhatsApp</span>
+          </label>
+        </div>
+      )}
+
       <div className="field">
         <label>Mensaje</label>
         {eventFormat && eventFormat !== "IN_PERSON" && (
@@ -301,7 +332,7 @@ export default function EventBroadcastComposer({
 
       <div className="field">
         <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <input type="checkbox" checked={attachTicketPdf} onChange={(e) => setAttachTicketPdf(e.target.checked)} />
+          <input type="checkbox" checked={attachTicketPdf} onChange={(e) => setAttachTicketPdf(e.target.checked)} style={{ width: "auto", margin: 0, flex: "none" }} />
           <span>Adjuntar la entrada en PDF</span>
         </label>
         <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>

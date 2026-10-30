@@ -19,6 +19,8 @@ const bodySchema = z.object({
   bodyHtml: z.string().min(1),
   to: z.array(z.string().email()).min(1).max(10),
   band: z.string().max(60).nullable().optional(),
+  asistire: z.boolean().optional(),
+  colega: z.boolean().optional(),
   attachTicketPdf: z.boolean().optional(),
 });
 
@@ -30,13 +32,13 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (!parsed.success) {
     return NextResponse.json({ error: "invalid_body", issues: parsed.error.issues }, { status: 400 });
   }
-  const { subject, bodyHtml, to, band, attachTicketPdf } = parsed.data;
+  const { subject, bodyHtml, to, band, asistire, colega, attachTicketPdf } = parsed.data;
   const event = await db.event.findUnique({ where: { id: params.id } });
 
   let html: string;
   let text = subject;
   if (event && usesNailFestEventEmail(event)) {
-    const email = await nailFestEventEmailSample(event, { subject, bodyHtml, band: band ?? null });
+    const email = await nailFestEventEmailSample(event, { subject, bodyHtml, band: band ?? null, asistire, colega });
     html = email.html;
     text = email.text;
   } else {

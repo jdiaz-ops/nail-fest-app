@@ -23,8 +23,7 @@ const BODY = [
 
 const FRAME: NailFestEventEmailFrame = {
   eventName: "Nail Fest Cúcuta",
-  city: "Cúcuta",
-  dates: "Sábado 7 y domingo 8 de noviembre",
+  heading: { name: "Nail Fest Cúcuta", days: "7 y 8", month: "de noviembre", detail: "Sábado y domingo · 2026" },
   venue: "Hotel Casino Internacional",
   share: { url: "https://wa.me/?text=hola", free: true },
   helpUrl: "https://wa.me/573001234567",
@@ -34,7 +33,7 @@ const FRAME: NailFestEventEmailFrame = {
   site: { url: "https://nailfest.lat", host: "nailfest.lat" },
 };
 const BANNER = "https://blob.example/banner.jpg";
-const mail = { subject: "¡Falta 1 semana!", bodyHtml: BODY, band: "Falta 1 semana", asistire: "https://nailfest.lat/asistire/r1.sig", banner: BANNER };
+const mail = { subject: "¡Falta 1 semana!", bodyHtml: BODY, band: "Falta 1 semana", asistire: "https://nailfest.lat/asistire/r1.sig", colega: true, banner: BANNER };
 
 describe("the body's blocks", () => {
   it("are its top-level elements, nested ones inside", () => {
@@ -92,8 +91,10 @@ describe("the email", () => {
   it("in the event's frame, with its band, her «Asistiré», a colleague and the footer — no note on the PDF", () => {
     const { subject, html, text } = nailFestEventEmail(FRAME, mail);
     expect(subject).toBe("¡Falta 1 semana!");
-    expect(html).toContain(">Cúcuta</div>");
-    expect(html).toContain("Sábado 7 y domingo 8 de noviembre");
+    expect(html).toContain(">Nail Fest Cúcuta</div>");
+    expect(html).toContain(">7 y 8</div>");
+    expect(html).toContain(">de noviembre</div>");
+    expect(html).toContain(">Sábado y domingo&nbsp;·&nbsp;2026</div>");
     expect(html).toContain("Falta 1 semana</td>");
     expect(html).not.toContain("Tu entrada va adjunta");
     expect(html).toContain("Escríbenos por WhatsApp");
@@ -112,17 +113,21 @@ describe("the email", () => {
     expect(at("Ver el cronograma")).toBeLessThan(at("Síguenos en"));
   });
 
-  it("the band as it's written, the banners' faces, the city in the script when there's its image", () => {
+  it("the band as it's written, the page's faces, its name and days as images when there are", () => {
     const { html } = nailFestEventEmail(FRAME, mail);
     expect(html).not.toContain("text-transform");
-    expect(html).toMatch(/font-family:Dosis[^"]*">Falta 1 semana<\/td>/);
-    expect(html).toContain("family=Quicksand");
-    expect(html).not.toContain("Fraunces");
+    expect(html).toMatch(/letter-spacing:0\.02em;[^"]*">Falta 1 semana<\/td>/);
+    expect(html).toContain("family=Fraunces");
+    expect(html).not.toContain("Quicksand");
+    // Without Fraunces (Gmail), titles fall to a bold sans, never a newspaper serif.
     expect(html).not.toMatch(/[^-]serif/);
-    const lettering = { url: "https://nailfest.lat/api/correo/ciudad?c=C%C3%BAcuta&s=abc", width: 158, height: 77 };
-    const lettered = nailFestEventEmail({ ...FRAME, cityLettering: lettering }, mail).html;
-    expect(lettered).toContain('<img src="https://nailfest.lat/api/correo/ciudad?c=C%C3%BAcuta&amp;s=abc" width="158" height="77" alt="Cúcuta"');
-    expect(lettered).not.toContain(">Cúcuta</div>");
+    const nameImage = { url: "https://nailfest.lat/api/correo/titulo?k=nombre&t=Nail%20Fest%20C%C3%BAcuta&s=abc", width: 252, height: 46 };
+    const daysImage = { url: "https://nailfest.lat/api/correo/titulo?k=dias&t=7%20y%208&s=def", width: 139, height: 66 };
+    const lettered = nailFestEventEmail({ ...FRAME, heading: { ...FRAME.heading, nameImage, daysImage } }, mail).html;
+    expect(lettered).toContain('<img src="https://nailfest.lat/api/correo/titulo?k=nombre&amp;t=Nail%20Fest%20C%C3%BAcuta&amp;s=abc" width="252" height="46" alt="Nail Fest Cúcuta"');
+    expect(lettered).toContain('width="139" height="66" alt="7 y 8"');
+    expect(lettered).not.toContain(">Nail Fest Cúcuta</div>");
+    expect(lettered).toContain(">de noviembre</div>");
   });
 
   it("nothing Gmail drops: no positioning, no negative margins", () => {
@@ -131,9 +136,11 @@ describe("the email", () => {
     expect(html).not.toMatch(/margin:[^;"]*-\d/);
   });
 
-  it("no band when there's none, nor «Asistiré» without her link", () => {
-    const { html } = nailFestEventEmail({ ...FRAME, helpUrl: null }, { ...mail, bodyHtml: "<p>Hola</p>", band: " ", asistire: null });
-    expect(html).not.toContain("font-family:Dosis");
+  it("no band when there's none, nor the modules the email leaves out", () => {
+    const { html, text } = nailFestEventEmail({ ...FRAME, helpUrl: null }, { ...mail, bodyHtml: "<p>Hola</p>", band: " ", asistire: null, colega: false });
+    expect(html).not.toContain("¿Vas con una colega?");
+    expect(text).not.toContain("COLEGA");
+    expect(html).not.toContain("letter-spacing:0.02em;line-height:1.35;");
     expect(html).not.toContain("Escríbenos por WhatsApp");
     expect(html).not.toContain("Crear mi imagen");
   });

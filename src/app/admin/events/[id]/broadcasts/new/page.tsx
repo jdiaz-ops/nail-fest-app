@@ -53,6 +53,8 @@ export default async function NewEventBroadcastPage({
                 bodyHtml: source.bodyHtml ?? "",
                 attachTicketPdf: source.attachTicketPdf,
                 designBand: source.designBand,
+                designAsistire: source.designAsistire,
+                designColega: source.designColega,
                 onlyCheckedIn: source.onlyCheckedIn,
                 onlyNotCheckedIn: source.onlyNotCheckedIn,
               }

@@ -1,15 +1,14 @@
 import { htmlToPlainText } from "@/lib/email/templates";
-import { BG, FONTS, GREY, INK, LINE, MINT, MINT_LINE, MINT_TEXT, PAGE, PEACH_SOFT, PINK, TEAL_DEEP, TEAL_INK, band, button, cityHeading, display, esc, sans, table } from "./confirmationEmail";
-import type { CityLettering } from "./cityLettering";
+import { BG, FONTS, GREY, INK, LINE, MINT, MINT_LINE, MINT_TEXT, PAGE, PEACH_SOFT, PINK, TEAL_DEEP, TEAL_INK, band, button, display, esc, eventHeading, sans, table, type EventHeading } from "./confirmationEmail";
 
 // Nail Fest's design for an event's emails (Correos del evento, 2026-10-30,
 // the team's boceto), chosen per event (Event.broadcastDesign "NAIL_FEST"):
 // each email as it was written — its subject, body, links and images — in the
-// event's frame: the logo, the city big in Nail Fest's script, its days and
+// event's frame: the logo, its name and days as its page writes them, its
 // place, an optional band («Falta 1 semana», EmailBroadcast.designBand, as
 // it's written), her «Asistiré» image and a colleague to invite — right after
 // its message, before its doubts (the team, same day) —, and a footer with
-// help and Instagram; in the faces of Nail Fest's banners (confirmationEmail.ts).
+// help and Instagram; in the faces of its page (confirmationEmail.ts).
 // The email's own banner, the wide image it opens with, gives way to the
 // frame's header (the team: it said the same twice). Its body is ordered on the way: a line that
 // starts with an emoji becomes a row with the emoji in its own column (lines
@@ -25,12 +24,8 @@ import type { CityLettering } from "./cityLettering";
 
 export interface NailFestEventEmailFrame {
   eventName: string;
-  /** «Cúcuta», big in the header. */
-  city: string;
-  /** The city in Nail Fest's script (cityLettering.ts); its words without it. */
-  cityLettering?: CityLettering | null;
-  /** «Sábado 7 y domingo 8 de noviembre» */
-  dates: string;
+  /** «Nail Fest Cúcuta» and the big «7 y 8 de noviembre», as its page writes them. */
+  heading: EventHeading;
   venue: string | null;
   /** WhatsApp with the event's invitation written, for «¿Vas con una colega?». */
   share: { url: string; free: boolean };
@@ -49,8 +44,10 @@ export interface NailFestEventEmailContent {
   bodyHtml: string;
   /** The band under the header; none when empty. */
   band: string | null;
-  /** Her page to make her «Asistiré» image; no card without one. */
+  /** Her page to make her «Asistiré» image; no card without one (or when the email leaves it out). */
   asistire: string | null;
+  /** Whether it invites a colleague (EmailBroadcast.designColega). */
+  colega: boolean;
   /** The email's banner to leave out (eventEmailFrame.ts's bannerOf): the src of the wide image it opens with. */
   banner: string | null;
 }
@@ -246,7 +243,7 @@ export function designedSections(bodyHtml: string, banner: string | null = null)
     }
     if (/^h[123]$/.test(b.tag)) {
       const heading = b.tag === "h1" ? 25 : b.tag === "h2" ? 21 : 18;
-      push(`<div style="margin:16px 0 10px;${display(heading, 700, INK, align(b.attrs) ? `text-align:${align(b.attrs)};` : "")}">${inline(b.inner)}</div>`);
+      push(`<div style="margin:16px 0 10px;${display(heading, 900, INK, align(b.attrs) ? `text-align:${align(b.attrs)};` : "")}">${inline(b.inner)}</div>`);
       continue;
     }
     if (b.tag === "ul" || b.tag === "ol") {
@@ -351,7 +348,7 @@ ${button(mail.asistire, "Crear mi imagen")}
     : "";
   const colega = card(
     `<div style="text-align:center;">
-<div style="${display(21, 700, "#ffffff")}">¿Vas con una colega?</div>
+<div style="${display(21, 900, "#ffffff")}">¿Vas con una colega?</div>
 <div style="margin:8px auto 14px;max-width:400px;${sans(14.5, 400, MINT_TEXT, "line-height:1.55;")}">${frame.share.free ? "La entrada es gratis: compártele el enlace para que se inscriba y tenga la suya." : "Compártele el enlace para que se inscriba y tenga la suya."}</div>
 ${button(frame.share.url, "Compartir por WhatsApp", `background:#ffffff;color:${TEAL_INK};`)}
 </div>`,
@@ -380,13 +377,13 @@ ${table(
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background:${BG};border-radius:20px;overflow:hidden;border-collapse:separate;">
 <tr><td align="center" style="padding:24px 18px 20px;background:${BG};">
 <img src="${esc(frame.logo)}" width="110" alt="Nail Fest" style="display:block;margin:0 auto;width:110px;height:auto;border:0;">
-${cityHeading(frame.city, frame.cityLettering)}
-<div style="margin-top:8px;${sans(14, 700, INK, "line-height:1.45;")}">${esc(frame.dates)}${frame.venue ? `<br><span style="font-weight:500;color:${GREY};">${esc(frame.venue)}</span>` : ""}</div>
+${eventHeading(frame.heading)}
+${frame.venue ? `<div style="margin-top:10px;${sans(14, 400, GREY, "line-height:1.45;")}">${esc(frame.venue)}</div>` : ""}
 </td></tr>
 ${mail.band?.trim() ? band(esc(mail.band.trim())) : ""}
 ${cards(message)}
 ${asistire}
-${colega}
+${mail.colega ? colega : ""}
 ${cards(rest)}
 <tr><td align="center" style="padding:24px 20px 26px;${sans(13, 400, GREY, "line-height:1.7;")}">
 ${frame.helpUrl ? `¿Dudas? <a href="${esc(frame.helpUrl)}" style="font-weight:700;color:${TEAL_DEEP};text-decoration:none;">Escríbenos por WhatsApp</a> · ` : ""}Síguenos en <a href="${esc(frame.instagram.url)}" style="font-weight:700;color:${TEAL_DEEP};text-decoration:none;">${esc(frame.instagram.handle)}</a>
@@ -404,7 +401,7 @@ Donde se reúne el mundo de las uñas<br>
   const text = [
     htmlToPlainText(mail.bodyHtml),
     ...(mail.asistire ? [`¡CUÉNTALE A TODOS QUE VAS!\nSube una foto tuya y te armamos tu imagen «Asistiré»: ${mail.asistire}`] : []),
-    `¿VAS CON UNA COLEGA?\nCompártele el enlace para que se inscriba: ${frame.share.url}`,
+    ...(mail.colega ? [`¿VAS CON UNA COLEGA?\nCompártele el enlace para que se inscriba: ${frame.share.url}`] : []),
     ...(frame.helpUrl ? [`¿Dudas? Escríbenos por WhatsApp: ${frame.helpUrl}`] : []),
     `Síguenos en ${frame.instagram.handle} · ${frame.site.host}\nRecibes este correo porque te inscribiste a ${frame.eventName}.`,
   ].join("\n\n");

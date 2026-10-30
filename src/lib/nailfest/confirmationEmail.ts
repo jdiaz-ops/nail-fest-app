@@ -1,4 +1,4 @@
-import type { CityLettering } from "./cityLettering";
+import type { Lettering } from "./titleLettering";
 
 // Nail Fest's own confirmation email for its in-person events (2026-10-30,
 // first for Cúcuta), as in the approved boceto: the brand's header with the
@@ -24,11 +24,8 @@ export interface NailFestConfirmation {
   /** Her first name as it's said; "" when there's none. */
   firstName: string;
   eventName: string;
-  /** «Cúcuta», big in the header. */
-  city: string;
   /** «Sábado 7 y domingo 8 de noviembre» */
   dates: string;
-  year: string;
   /** Each day with its hours: [«Sábado 7», «10:00 a. m. a 6:00 p. m.»]. */
   days: [string, string][];
   venue: { name: string | null; address: string | null };
@@ -47,8 +44,8 @@ export interface NailFestConfirmation {
   instagram: { handle: string; url: string };
   images: { logo: string };
   site: { url: string; host: string };
-  /** The city in Nail Fest's script (cityLettering.ts); its words without it. */
-  cityLettering?: CityLettering | null;
+  /** The header's name and days as the event's page writes them. */
+  heading: EventHeading;
 }
 
 // The brand's colors (globals.css' --accent and EventRegistration's own), and
@@ -69,29 +66,57 @@ export const PEACH = "#ffc5a8";
 export const PEACH_SOFT = "#fff1ea";
 export const PINK = "#f6a5b8";
 
-// The faces of Nail Fest's graphics (its banners, 2026-10-30): Quicksand for
-// the words and the titles, Dosis for the band, and the city in Satisfy as an
-// image (cityLettering.ts). Where the mail app loads fonts (Apple's,
-// Samsung's) they're these; Gmail and Outlook load none and show the next
-// ones — Roboto, Helvetica, Arial —, never a serif.
-export const SANS = "Quicksand, Nunito, 'Varela Round', 'Helvetica Neue', Helvetica, Roboto, Arial, sans-serif";
-export const BAND = "Dosis, Quicksand, 'Helvetica Neue', Helvetica, Roboto, Arial, sans-serif";
-export const FONTS = `<link href="https://fonts.googleapis.com/css2?family=Dosis:wght@700;800&amp;family=Quicksand:wght@400;500;600;700&amp;display=swap" rel="stylesheet">`;
+// The faces of the event's page: Inter for the words, Fraunces Black for the
+// titles, and the header's name and days as images in it (titleLettering.ts,
+// 2026-10-30: the team, like the page). Where the mail app loads fonts
+// (Apple's, Samsung's) they're these; Gmail and Outlook load none: the titles
+// then fall to a bold sans — Roboto, Helvetica, Arial —, never a newspaper
+// serif.
+export const SANS = "Inter, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+export const DISPLAY = `Fraunces, ${SANS}`;
+export const FONTS = `<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,900&amp;family=Inter:wght@400;600;700;800&amp;display=swap" rel="stylesheet">`;
+/** The page's teal for the big days (globals.css' --link). */
+export const LINK = "#007a74";
 
 export const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 export const table = (inner: string, style = "") =>
   `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;${style}">${inner}</table>`;
 export const sans = (size: number, weight = 400, color = INK, extra = "") => `font-family:${SANS};font-size:${size}px;font-weight:${weight};color:${color};${extra}`;
-export const display = (size: number, weight = 700, color = INK, extra = "") => `font-family:${SANS};font-size:${size}px;font-weight:${weight};color:${color};line-height:1.2;${extra}`;
-/** The band under the header: its words as they're written, in the banners' face. */
+export const display = (size: number, weight = 900, color = INK, extra = "") => `font-family:${DISPLAY};font-size:${size}px;font-weight:${weight};color:${color};line-height:1.15;${extra}`;
+/** The band under the header: its words as they're written (no forced capitals, the team). */
 export const band = (html: string) =>
-  `<tr><td align="center" style="padding:11px 18px;background:${TEAL};font-family:${BAND};font-size:16px;font-weight:800;color:${TEAL_INK};letter-spacing:0.05em;line-height:1.35;">${html}</td></tr>`;
-/** The city in the header: in Nail Fest's script, as an image; its words where there's none (its alt, in the same
- * teal, when the mail app hides images). */
-export const cityHeading = (city: string, lettering: CityLettering | null | undefined) =>
-  lettering
-    ? `<img src="${esc(lettering.url)}" width="${lettering.width}" height="${lettering.height}" alt="${esc(city)}" style="display:block;margin:2px auto 0;width:${lettering.width}px;max-width:100%;height:auto;border:0;${display(34, 700, TEAL_DEEP)}">`
-    : `<div style="margin-top:6px;${display(36, 700, TEAL_DEEP, "line-height:1.1;")}">${esc(city)}</div>`;
+  `<tr><td align="center" style="padding:11px 18px;background:${TEAL};${sans(15, 800, TEAL_INK, "letter-spacing:0.02em;line-height:1.35;")}">${html}</td></tr>`;
+
+/** The header's name and days as the event's page writes them: «Nail Fest Cúcuta», then the big «7 y 8» with «de
+ * noviembre» and «Sábado y domingo · 2026» beside it (lib/eventHeroDate.ts). */
+export interface EventHeading {
+  name: string;
+  days: string;
+  month: string;
+  detail: string;
+  /** Its name and days in Fraunces Black (titleLettering.ts); their words without them. */
+  nameImage?: Lettering | null;
+  daysImage?: Lettering | null;
+}
+
+/** An image of words, its alt in the same face and color for a mail app that hides images. */
+const lettered = (image: Lettering, words: string, alt: string) =>
+  `<img src="${esc(image.url)}" width="${image.width}" height="${image.height}" alt="${esc(words)}" style="display:block;margin:0 auto;width:${image.width}px;max-width:100%;height:auto;border:0;${alt}">`;
+
+export const eventHeading = (h: EventHeading) =>
+  `${
+    h.nameImage
+      ? lettered(h.nameImage, h.name, display(30))
+      : `<div style="${display(30, 900, INK, "letter-spacing:-0.01em;")}">${esc(h.name)}</div>`
+  }
+<table role="presentation" align="center" cellpadding="0" cellspacing="0" border="0" style="margin:2px auto 0;border-collapse:collapse;"><tr>
+<td valign="middle" style="padding:0 8px 0 0;">${
+    h.daysImage
+      ? lettered(h.daysImage, h.days, display(52, 900, LINK, "line-height:1;"))
+      : `<div style="${display(52, 900, LINK, "line-height:1;letter-spacing:-0.02em;white-space:nowrap;")}">${esc(h.days)}</div>`
+  }</td>
+<td valign="middle" align="left" style="text-align:left;"><div style="${sans(20, 700, INK, "line-height:1.1;")}">${esc(h.month)}</div><div style="margin-top:3px;${sans(14, 400, GREY, "line-height:1.3;")}">${esc(h.detail).replace(/ · /g, "&nbsp;·&nbsp;")}</div></td>
+</tr></table>`;
 const eyebrow = (text: string) => `<div style="${sans(11.5, 800, TEAL_DEEP, "letter-spacing:0.16em;text-transform:uppercase;")}">${esc(text)}</div>`;
 export const button = (href: string, label: string, colors = `background:${TEAL};color:${TEAL_INK};`) =>
   `<a href="${esc(href)}" style="display:inline-block;padding:14px 26px;border-radius:999px;${colors}text-decoration:none;${sans(15.5, 800, "inherit")}">${label}</a>`;
@@ -166,12 +191,12 @@ a{color:inherit;}
 <body style="margin:0;padding:0;background:${PAGE};">
 <div style="display:none;max-height:0;max-width:0;overflow:hidden;opacity:0;mso-hide:all;font-size:1px;line-height:1px;color:${PAGE};">${esc(preheader)}${preheaderFill}</div>
 ${table(
-  `<tr><td align="center" style="padding:20px 10px;">
+  `<tr><td align="center" style="padding:16px 6px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background:#ffffff;border-radius:20px;overflow:hidden;border-collapse:separate;">
-<tr><td align="center" style="padding:30px 24px 26px;background:${BG};">
-<img src="${esc(c.images.logo)}" width="150" alt="Nail Fest" style="display:block;margin:0 auto;width:150px;height:auto;border:0;">
-${cityHeading(c.city, c.cityLettering)}
-<div style="margin-top:10px;${sans(15, 700)}">${esc(c.dates)}&nbsp;<span style="font-weight:500;color:${GREY};">·&nbsp;${esc(c.year)}</span></div>
+<tr><td align="center" style="padding:28px 16px 24px;background:${BG};">
+<img src="${esc(c.images.logo)}" width="120" alt="Nail Fest" style="display:block;margin:0 auto;width:120px;height:auto;border:0;">
+<div style="height:6px;line-height:6px;font-size:0;">&nbsp;</div>
+${eventHeading(c.heading)}
 </td></tr>
 ${band("&#10003;&nbsp; Entrada confirmada")}
 <tr><td class="px" style="padding:28px 34px 4px;">
@@ -199,7 +224,7 @@ ${button(c.asistire.url, "Crear mi imagen")}
 }
 <tr><td class="px" style="padding:30px 34px 0;">${table(
   `<tr><td align="center" style="padding:26px 24px;">
-<div style="${display(22, 700, "#ffffff")}">¿Vas con una colega?</div>
+<div style="${display(22, 900, "#ffffff")}">¿Vas con una colega?</div>
 <div style="margin:8px auto 16px;max-width:400px;${sans(15, 400, MINT_TEXT, "line-height:1.55;")}">La entrada es gratis: compártele el enlace para que se inscriba y tenga la suya.</div>
 ${button(c.share.url, "Compartir por WhatsApp", `background:#ffffff;color:${TEAL_INK};`)}
 </td></tr>`,

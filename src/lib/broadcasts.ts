@@ -216,7 +216,8 @@ export async function sendEventBroadcast(
                 subject: broadcast.subject,
                 bodyHtml: withReviewLink,
                 band: broadcast.designBand,
-                asistire: asistireFor(registration.id),
+                asistire: broadcast.designAsistire ? asistireFor(registration.id) : null,
+                colega: broadcast.designColega,
                 banner,
               })
             : broadcastEmailHtml({ subject: broadcast.subject, bodyHtml: withReviewLink });

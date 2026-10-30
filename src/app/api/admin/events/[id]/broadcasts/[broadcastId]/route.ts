@@ -60,6 +60,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       bodyHtml: sanitizeEventDescription(data.bodyHtml),
       attachTicketPdf: data.attachTicketPdf,
       designBand: data.designBand?.trim() || null,
+      designAsistire: data.designAsistire,
+      designColega: data.designColega,
       onlyCheckedIn: data.onlyCheckedIn,
       onlyNotCheckedIn: data.onlyNotCheckedIn,
       scheduleKind: data.scheduleKind,

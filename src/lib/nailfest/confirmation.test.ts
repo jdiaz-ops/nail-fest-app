@@ -69,9 +69,8 @@ describe("the email", () => {
   const c: NailFestConfirmation = {
     firstName: "Laura",
     eventName: "Nail Fest Cúcuta",
-    city: "Cúcuta",
+    heading: { name: "Nail Fest Cúcuta", days: "7 y 8", month: "de noviembre", detail: "Sábado y domingo · 2026" },
     dates: "Sábado 7 y domingo 8 de noviembre",
-    year: "2026",
     days: [
       ["Sábado 7", "10:00 a. m. a 7:00 p. m."],
       ["Domingo 8", "10:00 a. m. a 5:00 p. m."],

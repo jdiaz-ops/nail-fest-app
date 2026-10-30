@@ -47,10 +47,12 @@ const nextConfig = {
     // resolution mismatch, include the WHOLE package — small library,
     // and the one glob that's actually correct regardless of which
     // entry point or lazily-`imports`-mapped file ends up used.
-    // Plus Satisfy, the script app/api/correo/ciudad draws the city with in
-    // Nail Fest's emails (2026-10-30): read from disk, so it ships too.
+    // Plus Fraunces Black, which app/api/correo/titulo draws the event's name
+    // and days with in Nail Fest's emails (2026-10-30): read from disk, so it
+    // ships with that route.
     outputFileTracingIncludes: {
-      "/api/**": ["./node_modules/pdfkit/**/*", "./src/lib/nailfest/fonts/*"],
+      "/api/**": ["./node_modules/pdfkit/**/*"],
+      "/api/correo/**": ["./src/lib/nailfest/fonts/*"],
     },
   },
   // Keep "[" and "]" out of the client chunk file names. Next names each

@@ -7,13 +7,13 @@ import { sanitizeEventDescription } from "@/lib/sanitizeHtml";
 import { REVIEW_LINK_TAG } from "@/lib/reviews";
 import { probeImageDimensions } from "@/lib/imageDimensions";
 import { asistireSampleUrl, asistireUrl } from "@/lib/imparables/asistire";
-import { defaultNailFestShareText, longDates, NAIL_FEST_DESIGN } from "./confirmation";
+import { defaultNailFestShareText, NAIL_FEST_DESIGN } from "./confirmation";
 import { hasNailFestAsistire } from "./asistire";
-import { cityLettering } from "./cityLettering";
+import { eventHeadingOf } from "./titleLettering";
 import { nailFestEventEmail, topBlocks, type NailFestEventEmailFrame } from "./eventEmail";
 
 // The event's part of Nail Fest's design for its emails (2026-10-30,
-// lib/nailfest/eventEmail.ts): its city, days and place, the invitation for
+// lib/nailfest/eventEmail.ts): its name, days and place, the invitation for
 // a colleague, the team's WhatsApp, the Instagram — the same for each of its
 // emails and each person —, and each email's banner to leave out.
 
@@ -37,12 +37,9 @@ export async function nailFestEventEmailFrame(event: Event): Promise<NailFestEve
   page.searchParams.set("utm_medium", "referido");
   page.searchParams.set("utm_campaign", "correo_evento");
   const shareText = event.shareText?.trim() || defaultNailFestShareText(event, orgSettings.timezone);
-  const city = event.city?.trim() || publicEventName(event);
   return {
     eventName: publicEventName(event),
-    city,
-    cityLettering: cityLettering(base, city),
-    dates: longDates(event, orgSettings.timezone),
+    heading: eventHeadingOf(base, { name: publicEventName(event), startsAt: event.startsAt, endsAt: event.endsAt }, orgSettings.timezone, orgSettings.language),
     venue: event.venueName?.trim() || null,
     share: { url: `https://wa.me/?text=${encodeURIComponent(`${shareText} ${page.toString()}`)}`, free: paid === 0 },
     helpUrl: digits.length >= 8 ? `https://wa.me/${digits}` : null,
@@ -80,7 +77,7 @@ export function asistireFor(registrationId: string): string | null {
  * preview, the list's «Ver con el diseño» and its test emails. */
 export async function nailFestEventEmailSample(
   event: Event,
-  mail: { subject: string; bodyHtml: string; band: string | null }
+  mail: { subject: string; bodyHtml: string; band: string | null; asistire?: boolean; colega?: boolean }
 ): Promise<{ subject: string; text: string; html: string }> {
   const frame = await nailFestEventEmailFrame(event);
   const body = sanitizeEventDescription(
@@ -94,7 +91,8 @@ export async function nailFestEventEmailSample(
     subject: mail.subject,
     bodyHtml: body,
     band: mail.band,
-    asistire: asistireSampleUrl(event.id),
+    asistire: mail.asistire === false ? null : asistireSampleUrl(event.id),
+    colega: mail.colega !== false,
     banner: await bannerOf(body),
   });
 }

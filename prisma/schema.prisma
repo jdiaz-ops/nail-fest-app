@@ -966,6 +966,10 @@ model EmailBroadcast {
   // The band under the header of its event's designed email (2026-10-30,
   // Event.broadcastDesign): «Falta 1 semana». Null: no band.
   designBand            String?
+  // Its modules in that design (same day, the team): her «Asistiré» card and
+  // «¿Vas con una colega?», each on or off per email.
+  designAsistire        Boolean               @default(true)
+  designColega          Boolean               @default(true)
   // Event broadcasts only: send to the registrants who were scanned at the
   // door (Registration.checkedInCount > 0) instead of everyone CONFIRMED —
   // the "ask attendees for a review" send, see lib/reviews.ts.

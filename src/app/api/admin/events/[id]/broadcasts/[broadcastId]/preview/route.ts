@@ -18,6 +18,8 @@ export async function GET(_req: Request, { params }: { params: { id: string; bro
     subject: broadcast.subject,
     bodyHtml: broadcast.bodyHtml,
     band: broadcast.designBand,
+    asistire: broadcast.designAsistire,
+    colega: broadcast.designColega,
   });
   return new NextResponse(email.html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } });
 }
