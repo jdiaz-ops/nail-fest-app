@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requirePageUser } from "@/lib/auth/guard";
+import { getOrgSettings } from "@/lib/settings";
 import { savedConfirmationMode } from "@/lib/confirmationSample";
 import { asistireSampleUrl } from "@/lib/imparables/asistire";
 import TestSendBox from "../../TestSendBox";
@@ -23,8 +24,10 @@ const SENT_NOW = {
 // sent to anyone. ADMIN-only, like the rest of Configuración.
 export default async function AfterPaymentPage({ params, searchParams }: { params: { id: string }; searchParams: { vista?: string } }) {
   await requirePageUser(["ADMIN"]);
-  const event = await db.event.findUnique({ where: { id: params.id } });
+  const [event, orgSettings] = await Promise.all([db.event.findUnique({ where: { id: params.id } }), getOrgSettings()]);
   if (!event) notFound();
+  // The real confirmation attaches the ticket's PDF only for an event at a place, with that option on (sendTicketEmail).
+  const sendsPdf = orgSettings.attachTicketPdf && event.format !== "VIRTUAL";
 
   const mode = savedConfirmationMode(event);
   const tabs: { id: string; label: string; src: string; note: string }[] = [
@@ -100,7 +103,7 @@ export default async function AfterPaymentPage({ params, searchParams }: { param
           <TestSendBox
             url={`/api/admin/events/${event.id}/confirmation/test`}
             body={{ mode }}
-            note="Con datos de ejemplo y «[Prueba]» al comienzo del asunto. Sin la entrada en PDF."
+            note={`Con datos de ejemplo y «[Prueba]» al comienzo del asunto.${sendsPdf ? " Sin la entrada en PDF que lleva el correo real." : ""}`}
           />
           <iframe
             src={active.src}
