@@ -9,6 +9,7 @@ import { splitTagline } from "@/lib/imparables/tagline";
 import ImparablesBlocks from "./ImparablesBlocks";
 import { Tiara } from "./ImpArt";
 import ImpButton from "./ImpButton";
+import ImpCountdown, { ImpCountdownInline } from "./ImpCountdown";
 import ImpPageTracking from "./ImpPageTracking";
 import ImpStickyBar from "./ImpStickyBar";
 import ImpTitle from "./ImpTitle";
@@ -40,13 +41,14 @@ export interface ImparablesEvent {
 }
 
 /** A version of the page (/v/<slug>, lib/imparables/versions.ts): its own cover where it says so, and its special
- * price for the stage on sale, when it has one. */
+ * price for the stage on sale, when it has one — with the full price struck beside it, and the moment it ends
+ * (ISO) to count down to. */
 export interface ImparablesVersion {
   title: string | null;
   subtitle: string | null;
   imageUrl: string | null;
   buttonLabel: string | null;
-  special: { price: number; normal: number; label: string; band: string; note: string } | null;
+  special: { price: number; struck: number; label: string; band: string; endsAt: string | null } | null;
 }
 
 export interface ImparablesPreview {
@@ -150,12 +152,14 @@ export default function ImparablesPage({
   // Beside today's price, the full one struck — always the full price
   // (2026-10-29), unless today's is it.
   const struck = current && saving(current, sales.full) > 0 ? sales.full : null;
-  // A version's special price (2026-10-30): it, with the stage's own struck beside it, everywhere the price shows.
+  // A version's special price (2026-10-30): it, with the full price struck beside it, everywhere the price shows.
   const special = mode === "sale" ? (version?.special ?? null) : null;
   const shownPrice = special ? special.price : (current?.price ?? 0);
-  const struckPrice = special ? special.normal : (struck?.price ?? null);
+  const struckPrice = special ? special.struck : (struck?.price ?? null);
   // The team's preview of another day runs its countdowns on that day's clock.
   const offsetMs = preview?.simulated ? now.getTime() - Date.now() : 0;
+  // …and the special price's own, to its end (the team's boceto, 2026-10-30).
+  const offerLeft = special?.endsAt ? Math.max(0, Math.floor((new Date(special.endsAt).getTime() - now.getTime()) / 1000)) : 0;
 
   // «Nadie nace imparable. Se hace.» (2026-10-29): it closes the section under
   // the cover when there is one, else the cover itself.
@@ -198,12 +202,18 @@ export default function ImparablesPage({
   // hasta el 18 de abril · luego $120.000»); with no cap, its line
   // (lib/imparables/stages.ts). No dollars on the page: only the checkout's
   // PayPal says them.
-  // At a version's special price, its terms instead: it takes no place in the stage's places.
+  // At a version's special price, none of them (it takes no place in the stage's places): a big countdown to its
+  // end instead — «La oferta desaparece en» —, when it has one.
   const pill = mode === "sale" && !special ? stagePill(sales, now) : null;
   const progress = mode === "sale" && !special ? stageProgress(sales) : null;
-  const terms = special ? special.note : mode === "sale" ? (progress ? stageTerms(sales, timezone) : stageLine(sales, timezone)) : null;
-  const deal =
-    mode === "sale" && current ? (
+  const terms = special ? null : mode === "sale" ? (progress ? stageTerms(sales, timezone) : stageLine(sales, timezone)) : null;
+  const deal = special ? (
+    special.endsAt && (
+      <div className="imp-v-oferta">
+        <ImpCountdown to={special.endsAt} label="La oferta desaparece en" initialSeconds={offerLeft} offsetMs={offsetMs} />
+      </div>
+    )
+  ) : mode === "sale" && current ? (
       <div className="imp-deal">
         {pill && <p className="imp-stage-pill">{pill}</p>}
         {progress && (
@@ -351,6 +361,16 @@ export default function ImparablesPage({
 
       {mode === "sale" && current && (
         <ImpStickyBar>
+          {/* A version's special price: its name and its countdown over the row on a phone, where they fit. */}
+          {special?.endsAt && (
+            <p className="imp-st-offer">
+              <b>{special.label}</b>
+              <span className="imp-st-clock">
+                <Clock />
+                <ImpCountdownInline to={special.endsAt} initialSeconds={offerLeft} offsetMs={offsetMs} />
+              </span>
+            </p>
+          )}
           {/* One row (2026-10-29): today's price big with the full one
               struck beside it, and its stage's name with its places left —
               under it on a phone («Etapa Creyente · Quedan 136»), beside it
@@ -364,6 +384,13 @@ export default function ImparablesPage({
               </p>
               <span className="imp-st-name">
                 <span className="imp-st-stage">{special ? special.label : current.name}</span>
+                {special?.endsAt && (
+                  // …and beside its price on a computer.
+                  <span className="imp-st-clock">
+                    <Clock />
+                    La oferta desaparece en <ImpCountdownInline to={special.endsAt} initialSeconds={offerLeft} offsetMs={offsetMs} />
+                  </span>
+                )}
                 {progress && (
                   <>
                     <ProgressBar progress={progress} className="imp-st-bar" />
@@ -397,5 +424,15 @@ export default function ImparablesPage({
       )}
 
     </main>
+  );
+}
+
+/** The stopwatch beside a countdown in the sticky bar. */
+function Clock() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="13.5" r="7.5" />
+      <path d="M12 9.5v4l2.5 2M10 2.5h4M18.5 6l1.5-1.5" />
+    </svg>
   );
 }

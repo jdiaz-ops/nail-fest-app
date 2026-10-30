@@ -2,7 +2,7 @@ import type { LandingVersion } from "@prisma/client";
 import { db } from "@/lib/db";
 import { formatDateInTz } from "@/lib/dateFormat";
 import type { CheckoutTicket } from "./pricing";
-import { pesos, type SalesState } from "./stages";
+import type { SalesState } from "./stages";
 
 // «Versiones de la landing» (2026-10-30): another link to an event's page —
 // nailfest.lat/v/<slug>, app/v/[slug] — with the same page, checkout and
@@ -38,8 +38,11 @@ export function specialPricesOf(v: Pick<LandingVersion, "specialPrices">): Recor
 export interface VersionPrice {
   /** What one ticket costs through it. */
   price: number;
-  /** The stage's own price, struck beside it. */
+  /** The stage's own price: what it costs without it. */
   normal: number;
+  /** Struck beside it: the full price (the last stage's), as everywhere else on the page — «$80.000 en vez de
+   * $150.000» (the team, 2026-10-30); the stage's own when it is the full one. */
+  struck: number;
   /** «Precio Expo Belleza», or «Precio especial». */
   label: string;
   /** Until when, if it ends. */
@@ -50,7 +53,7 @@ export interface VersionPrice {
  * stage (or not below its own), or its maximum reached. */
 export function specialPriceFor(
   v: Pick<LandingVersion, "specialPrices" | "priceLabel" | "maxSpecialSales" | "endsAt">,
-  sales: Pick<SalesState, "current">,
+  sales: Pick<SalesState, "current" | "full">,
   sold: number,
   count = 1
 ): VersionPrice | null {
@@ -59,13 +62,14 @@ export function specialPriceFor(
   const price = specialPricesOf(v)[current.id];
   if (!price || price >= current.price) return null;
   if (v.maxSpecialSales != null && sold + count > v.maxSpecialSales) return null;
-  return { price, normal: current.price, label: v.priceLabel?.trim() || "Precio especial", endsAt: v.endsAt };
+  const struck = sales.full && sales.full.price > current.price ? sales.full.price : current.price;
+  return { price, normal: current.price, struck, label: v.priceLabel?.trim() || "Precio especial", endsAt: v.endsAt };
 }
 
-/** The checkout's ticket at its special price: the stage's own struck beside it, and in pesos only — a special price
+/** The checkout's ticket at its special price: the full price struck beside it, and in pesos only — a special price
  * isn't paid in dollars. */
 export function withVersionPrice(ticket: CheckoutTicket, p: VersionPrice): CheckoutTicket {
-  return { ...ticket, price: p.price, fullPrice: p.normal, usdCents: null, fullUsdCents: null };
+  return { ...ticket, price: p.price, fullPrice: p.struck, usdCents: null, fullUsdCents: null };
 }
 
 /** Tickets paid at its special price so far: what its maximum counts. */
@@ -92,9 +96,9 @@ export function specialBand(p: VersionPrice, timezone: string): string {
   return p.endsAt ? `${p.label} · hasta el ${endDay(p.endsAt, timezone)}` : p.label;
 }
 
-/** Under its buttons: «Solo con este enlace y hasta el domingo 16 de noviembre. Después vuelve a $90.000.» */
+/** At the checkout: «Solo con este enlace y hasta el domingo 16 de noviembre.» (the page counts down to it instead, 2026-10-30). */
 export function specialNote(p: VersionPrice, timezone: string): string {
-  return p.endsAt ? `Solo con este enlace y hasta el ${endDay(p.endsAt, timezone)}. Después vuelve a ${pesos(p.normal)}.` : "Solo con este enlace.";
+  return p.endsAt ? `Solo con este enlace y hasta el ${endDay(p.endsAt, timezone)}.` : "Solo con este enlace.";
 }
 
 /** A link that's a version's: lowercase letters, digits and dashes, 2 to 60 of them. */

@@ -8,19 +8,9 @@ import { useRouter } from "next/navigation";
 // zero the page asks the server again, which by then shows the next price
 // (or the sale that just opened). `offsetMs` moves the clock for the team's
 // preview of another day (?fecha=).
-export default function ImpCountdown({
-  to,
-  label,
-  initialSeconds,
-  seconds = true,
-  offsetMs = 0,
-}: {
-  to: string;
-  label: string;
-  initialSeconds: number;
-  seconds?: boolean;
-  offsetMs?: number;
-}) {
+
+/** Seconds left until `to`, following the clock; at zero, the page asks the server again once. */
+function useSecondsLeft(to: string, initialSeconds: number, offsetMs: number): number {
   const router = useRouter();
   const [left, setLeft] = useState(initialSeconds);
   const refreshed = useRef(false);
@@ -40,10 +30,28 @@ export default function ImpCountdown({
     return () => clearInterval(timer);
   }, [to, router, offsetMs]);
 
+  return left;
+}
+
+const pad = (n: number) => String(n).padStart(2, "0");
+
+export default function ImpCountdown({
+  to,
+  label,
+  initialSeconds,
+  seconds = true,
+  offsetMs = 0,
+}: {
+  to: string;
+  label: string;
+  initialSeconds: number;
+  seconds?: boolean;
+  offsetMs?: number;
+}) {
+  const left = useSecondsLeft(to, initialSeconds, offsetMs);
   const days = Math.floor(left / 86_400);
   const hours = Math.floor((left % 86_400) / 3600);
   const minutes = Math.floor((left % 3600) / 60);
-  const pad = (n: number) => String(n).padStart(2, "0");
   const parts: [string, string][] = [
     [pad(days), days === 1 ? "día" : "días"],
     [pad(hours), hours === 1 ? "hora" : "horas"],
@@ -64,4 +72,12 @@ export default function ImpCountdown({
       </div>
     </div>
   );
+}
+
+/** The same count in one line, for the sticky bar (a version's special price, 2026-10-30): «12d 04:32:10». */
+export function ImpCountdownInline({ to, initialSeconds, offsetMs = 0 }: { to: string; initialSeconds: number; offsetMs?: number }) {
+  const left = useSecondsLeft(to, initialSeconds, offsetMs);
+  const days = Math.floor(left / 86_400);
+  const clock = `${pad(Math.floor((left % 86_400) / 3600))}:${pad(Math.floor((left % 3600) / 60))}:${pad(left % 60)}`;
+  return <span className="imp-clock-t">{days > 0 ? `${days}d ${clock}` : clock}</span>;
 }

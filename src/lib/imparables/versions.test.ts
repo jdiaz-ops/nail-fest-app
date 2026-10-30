@@ -20,7 +20,8 @@ import {
 
 const now = new Date("2026-11-15T15:00:00Z");
 const creyente = { id: "t-creyente", price: 90_000 };
-const sales = { current: creyente } as never;
+const full = { id: "t-full", price: 150_000 };
+const sales = { current: creyente, full } as never;
 const version = { specialPrices: { "t-creyente": 80_000 }, priceLabel: "Precio Expo Belleza", maxSpecialSales: 150, endsAt: new Date("2026-11-17T04:59:00Z") };
 
 describe("when a version shows", () => {
@@ -34,14 +35,20 @@ describe("when a version shows", () => {
 });
 
 describe("its special price", () => {
-  it("for the stage on sale, below its own", () => {
-    expect(specialPriceFor(version, sales, 21)).toEqual({ price: 80_000, normal: 90_000, label: "Precio Expo Belleza", endsAt: version.endsAt });
+  it("for the stage on sale, below its own — the full price struck beside it", () => {
+    expect(specialPriceFor(version, sales, 21)).toEqual({ price: 80_000, normal: 90_000, struck: 150_000, label: "Precio Expo Belleza", endsAt: version.endsAt });
+  });
+
+  it("the stage's own struck when it is the full price", () => {
+    const atFull = { current: full, full } as never;
+    expect(specialPriceFor({ ...version, specialPrices: { "t-full": 120_000 } }, atFull, 0)?.struck).toBe(150_000);
+    expect(specialPriceFor(version, { current: creyente, full: null } as never, 0)?.struck).toBe(90_000);
   });
 
   it("none for a stage without one, at or above its own, or with no stage on sale", () => {
     expect(specialPriceFor({ ...version, specialPrices: { otra: 80_000 } }, sales, 0)).toBeNull();
     expect(specialPriceFor({ ...version, specialPrices: { "t-creyente": 90_000 } }, sales, 0)).toBeNull();
-    expect(specialPriceFor(version, { current: null } as never, 0)).toBeNull();
+    expect(specialPriceFor(version, { current: null, full } as never, 0)).toBeNull();
   });
 
   it("none once its maximum is reached", () => {
@@ -56,15 +63,15 @@ describe("its special price", () => {
     expect(specialPricesOf({ specialPrices: null })).toEqual({});
   });
 
-  it("at the checkout: the stage's own struck beside it, in pesos only", () => {
+  it("at the checkout: the full price struck beside it, in pesos only", () => {
     const ticket = { id: "t-creyente", name: "Etapa Creyente", price: 90_000, fullPrice: 150_000, usdCents: 2500, fullUsdCents: 4000, min: 1, max: 1 };
-    expect(withVersionPrice(ticket, specialPriceFor(version, sales, 0)!)).toEqual({ ...ticket, price: 80_000, fullPrice: 90_000, usdCents: null, fullUsdCents: null });
+    expect(withVersionPrice(ticket, specialPriceFor(version, sales, 0)!)).toEqual({ ...ticket, price: 80_000, fullPrice: 150_000, usdCents: null, fullUsdCents: null });
   });
 
-  it("says until when, and what comes after", () => {
+  it("says until when", () => {
     const p = specialPriceFor(version, sales, 0)!;
     expect(specialBand(p, "America/Bogota")).toBe("Precio Expo Belleza · hasta el lunes 16 de noviembre");
-    expect(specialNote(p, "America/Bogota")).toBe("Solo con este enlace y hasta el lunes 16 de noviembre. Después vuelve a $90.000.");
+    expect(specialNote(p, "America/Bogota")).toBe("Solo con este enlace y hasta el lunes 16 de noviembre.");
     expect(specialNote({ ...p, endsAt: null }, "America/Bogota")).toBe("Solo con este enlace.");
   });
 });
