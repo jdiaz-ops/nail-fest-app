@@ -44,15 +44,22 @@ export interface ImparablesContext {
   panel: { card: CardLandingBlock; people: PeopleLandingBlock } | null;
 }
 
-type Section = { heading: HeadingLandingBlock | null; blocks: LandingBlock[]; id?: string };
+type Section = { heading: HeadingLandingBlock | null; blocks: LandingBlock[]; id?: string; tone?: "dark" | "light" };
 
-/** A section the page adds of its own: the ticket levels on a version that sells them (lib/imparables/tiers.ts,
- * 2026-10-31). */
+/** A section the page adds of its own (2026-10-31: the ticket levels on a version that sells them, lib/imparables/
+ * tiers.ts; the promise and the outcomes on one that sells the transformation, lib/imparables/transformacion.ts):
+ * its heading's parts, its own content or blocks, where it goes, and — when it must — its color; the sections after it
+ * keep alternating from it. */
 export interface ExtraSection {
   id: string;
+  eyebrow?: string;
   title: string;
   intro: string;
-  content: React.ReactNode;
+  content?: React.ReactNode;
+  blocks?: LandingBlock[];
+  tone?: "dark" | "light";
+  /** First of all, before the program, or before the questions (else last). */
+  at: "start" | "beforeAgenda" | "beforeFaq";
 }
 
 /** "8:00 a. m." and "7 p. m." whole on their line, wherever a line breaks (2026-10-29: the day's hours under
@@ -71,17 +78,21 @@ function sectionsOf(blocks: LandingBlock[]): Section[] {
   return sections;
 }
 
-export default function ImparablesBlocks({ blocks, context, levels = null }: { blocks: LandingBlock[]; context: ImparablesContext; levels?: ExtraSection | null }) {
+export default function ImparablesBlocks({ blocks, context, extras = [] }: { blocks: LandingBlock[]; context: ImparablesContext; extras?: ExtraSection[] }) {
   // Only the sections with something to show, so the backgrounds keep alternating.
   const sections = sectionsOf(blocks)
     .map((section) => ({ ...section, content: renderBlocks(section.blocks, context) }))
     .filter((section) => section.content.length > 0 || section.heading?.title || section.heading?.intro);
-  // The levels, right before the questions — after «Todo lo que trae tu boleta» — or last, taking their turn of color.
-  if (levels) {
-    const at = sections.findIndex((section) => section.blocks.some((b) => b.type === "faq"));
-    const heading: HeadingLandingBlock = { type: "heading", eyebrow: "", title: levels.title, intro: levels.intro };
-    sections.splice(at >= 0 ? at : sections.length, 0, { heading, blocks: [], content: [levels.content], id: levels.id });
+  for (const extra of extras) {
+    const before = (type: LandingBlock["type"]) => sections.findIndex((section) => section.blocks.some((b) => b.type === type));
+    const at = extra.at === "start" ? 0 : extra.at === "beforeAgenda" ? before("agenda") : before("faq");
+    const heading: HeadingLandingBlock = { type: "heading", eyebrow: extra.eyebrow ?? "", title: extra.title, intro: extra.intro };
+    const content = [...(extra.blocks ? renderBlocks(extra.blocks, context) : []), ...(extra.content ? [extra.content] : [])];
+    sections.splice(at >= 0 ? at : sections.length, 0, { heading, blocks: extra.blocks ?? [], content, id: extra.id, tone: extra.tone });
   }
+  // Dark, light, dark… from the first; a section with a color of its own takes it, and the next ones go on from it.
+  let dark = false;
+  const tones = sections.map((section) => (dark = section.tone ? section.tone === "dark" : !dark));
   return (
     <>
       {sections.map((section, i) => {
@@ -91,7 +102,7 @@ export default function ImparablesBlocks({ blocks, context, levels = null }: { b
           (b, j) => b.type === "card" && !b.imageUrl && b.icon === "none" && b.title && !/<(ul|ol)\b/i.test(b.html) && !isPanelCard(b, section.blocks[j + 1])
         );
         return (
-          <section key={i} id={section.id} className={`imp-sec${i % 2 === 0 ? " imp-sec--alt" : ""}`}>
+          <section key={i} id={section.id} className={`imp-sec${tones[i] ? " imp-sec--alt" : ""}`}>
             <div className="imp-sec-in">
               {quote && (
                 <span className="imp-quote" aria-hidden="true">

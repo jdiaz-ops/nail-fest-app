@@ -7,6 +7,7 @@ import { publicEventName } from "@/lib/eventDisplayName";
 import { imparablesPageData } from "@/lib/imparables/page";
 import { liveVersion, specialPriceFor, specialSold } from "@/lib/imparables/versions";
 import { isTieredVersion, withTierBlocks } from "@/lib/imparables/tiers";
+import { isTransformationVersion, withTransformationBlocks } from "@/lib/imparables/transformacion";
 import ImparablesPage from "@/components/imparables/ImparablesPage";
 
 export const dynamic = "force-dynamic";
@@ -49,6 +50,8 @@ export default async function VersionPage({ params, searchParams }: { params: { 
   // A version that sells the ticket levels (lib/imparables/tiers.ts, 2026-10-31): «Desde» its stage's price, its
   // guarantee — also in the questions —, and Círculo and Élite in its checkout.
   const levels = isTieredVersion(version.slug);
+  // A version that sells the transformation (lib/imparables/transformacion.ts, 2026-10-31): its words and sections.
+  const transformation = isTransformationVersion(version.slug);
   // Its own count of visits, next to the main page's (LandingView).
   await db.landingView.create({ data: { eventId: event.id, country: headers().get("x-vercel-ip-country"), landingVersionId: version.id } }).catch(() => null);
 
@@ -65,7 +68,7 @@ export default async function VersionPage({ params, searchParams }: { params: { 
         registerButtonLabel: event.registerButtonLabel,
         ctaNote: event.ctaNote,
       }}
-      blocks={levels ? withTierBlocks(data.blocks) : data.blocks}
+      blocks={transformation ? withTransformationBlocks(data.blocks) : levels ? withTierBlocks(data.blocks) : data.blocks}
       sales={data.sales}
       when={data.when}
       timezone={orgSettings.timezone}
@@ -75,6 +78,7 @@ export default async function VersionPage({ params, searchParams }: { params: { 
       brandName={orgSettings.name}
       preview={null}
       levels={levels}
+      transformation={transformation}
       version={{
         title: version.title?.trim() || null,
         subtitle: version.subtitle?.trim() || null,

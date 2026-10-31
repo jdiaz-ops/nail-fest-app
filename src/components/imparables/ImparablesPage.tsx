@@ -15,6 +15,8 @@ import ImpStickyBar from "./ImpStickyBar";
 import ImpTitle from "./ImpTitle";
 import ImpWaitlistForm from "./ImpWaitlistForm";
 import { GuaranteeLine, Shield } from "./ImpTiers";
+import { TRANSFORMATION } from "@/lib/imparables/transformacion";
+import type { ExtraSection } from "./ImparablesBlocks";
 import { tierCounter, tierDeal } from "@/lib/imparables/tiers";
 import { cinzel, manrope } from "./fonts";
 
@@ -127,6 +129,7 @@ export default function ImparablesPage({
   preview,
   version = null,
   levels = false,
+  transformation = false,
 }: {
   event: ImparablesEvent;
   blocks: LandingBlock[];
@@ -142,6 +145,10 @@ export default function ImparablesPage({
   /** A version that sells the ticket levels (lib/imparables/tiers.ts, 2026-10-31): the page says «Desde» its stage's
    * price, and Círculo and Élite wait in the checkout. */
   levels?: boolean;
+  /** A version that sells the transformation (lib/imparables/transformacion.ts, 2026-10-31): its promise after the
+   * intro — with «Nadie nace imparable. Se hace.» under it —, its six outcomes before the program, its closing's
+   * words, and its guarantee under the cover's button. */
+  transformation?: boolean;
 }) {
   // The name is the cover's title; a date in it is left out (the dates are right below).
   const words = coverName(event.displayName).split(/\s+/);
@@ -251,7 +258,23 @@ export default function ImparablesPage({
   const stageDeal = !sellsLevels && !special && mode === "sale" && current ? coverDeal(sales, timezone) : null;
   const rise = stageDeal ? riseCountdown(sales, now) : null;
   const progress = mode === "sale" && !special && (sellsLevels ? counter : stageDeal?.kind === "counter") ? stageProgress(sales) : null;
-  const guarantee = event.ctaNote?.trim() || null;
+  const guarantee = transformation ? TRANSFORMATION.guarantee : event.ctaNote?.trim() || null;
+  // Its two sections of its own (components/imparables/ImparablesBlocks.tsx): the promise, light, first; the outcomes,
+  // dark, before the program.
+  const extras: ExtraSection[] = transformation
+    ? [
+        { id: "promesa", title: TRANSFORMATION.promise.title, intro: TRANSFORMATION.promise.text, content: closingLine, tone: "light", at: "start" },
+        {
+          id: "lograr",
+          eyebrow: TRANSFORMATION.outcomes.eyebrow,
+          title: "",
+          intro: "",
+          blocks: [{ type: "points", tone: "teal", items: TRANSFORMATION.outcomes.items.map((item) => ({ ...item })) }],
+          tone: "dark",
+          at: "beforeAgenda",
+        },
+      ]
+    : [];
   const deal =
     !special && mode === "sale" && current ? (
       sellsLevels ? (
@@ -416,12 +439,13 @@ export default function ImparablesPage({
             <h2 className="imp-h2">{titleWithName(intro.heading.title, coverName(event.displayName))}</h2>
             {/* Sanitized before storage (lib/events.ts). */}
             <div className="imp-rich" dangerouslySetInnerHTML={{ __html: intro.text.html }} />
-            {closingLine}
+            {/* Selling the transformation, the tagline goes under the promise instead. */}
+            {!transformation && closingLine}
           </div>
         </section>
       )}
 
-      <ImparablesBlocks blocks={rest} context={{ sales, offsetMs, when, timezone, now, buyLabel, speakers: faces, panel }} />
+      <ImparablesBlocks blocks={rest} context={{ sales, offsetMs, when, timezone, now, buyLabel, speakers: faces, panel }} extras={extras} />
 
       <section className="imp-close">
         <div className="imp-rays" aria-hidden="true" />
@@ -430,8 +454,20 @@ export default function ImparablesPage({
               (2026-10-29), then the button — and nothing under it since
               2026-10-30: its stage's bar and the day stay on the cover. */}
           <Tiara />
-          {closingLine}
-          {cta}
+          {transformation ? (
+            // Selling the transformation (2026-10-31): «Tu momento es ahora.», its line, the button, and the tagline last.
+            <>
+              <h2 className="imp-h2 imp-close-t">{TRANSFORMATION.closing.title}</h2>
+              <p className="imp-close-p">{TRANSFORMATION.closing.text}</p>
+              {cta}
+              {closingLine}
+            </>
+          ) : (
+            <>
+              {closingLine}
+              {cta}
+            </>
+          )}
         </div>
       </section>
 

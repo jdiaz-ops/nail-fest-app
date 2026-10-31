@@ -126,13 +126,15 @@ export function ImpIcon({ name, size = 22 }: { name: ImpIconName; size?: number 
 /** What each line of «Qué incluye» shows, by what it says. */
 export function iconForPoint(title: string): ImpIconName {
   const t = title.toLowerCase();
-  if (/repetici|grabaci/.test(t)) return "replay";
-  if (/certificad/.test(t)) return "award";
-  if (/en vivo|directo/.test(t)) return "live";
+  if (/repetici|grabaci|vuelv|regres/.test(t)) return "replay";
+  if (/certificad|diploma/.test(t)) return "award";
+  if (/en vivo|directo|^un d[ií]a/.test(t)) return "live";
   if (/pausa/.test(t)) return "move";
-  if (/guía|guia|descarg|plantilla|material/.test(t)) return "file";
-  if (/descuento|cup[oó]n|precio/.test(t)) return "tag";
-  if (/ruta|plan\b/.test(t)) return "map";
+  if (/ruta|plan\b|en grande/.test(t)) return "map";
+  if (/guía|guia|descarg|plantilla|material|herramienta|cuaderno/.test(t)) return "file";
+  if (/descuento|cup[oó]n|precio|cobra/.test(t)) return "tag";
+  if (/garant|miedo/.test(t)) return "shield";
+  if (/agenda|mensaje/.test(t)) return "phone";
   if (/speaker|panel|charla|conferencia|conferencista/.test(t)) return "mic";
   return "star";
 }
