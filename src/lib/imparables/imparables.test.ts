@@ -551,7 +551,7 @@ describe("the template", () => {
   it("brings four things with the ticket (2026-10-29: no «hoja de ruta» nor «descuentos»)", () => {
     const points = IMPARABLES_BLOCKS.find((b) => b.type === "points");
     if (points?.type !== "points") throw new Error("no points");
-    expect(points.items.map((it) => it.title)).toEqual(["Un día completo en vivo", "Repetición por 30 días", "Guías para descargar", "Certificado digital"]);
+    expect(points.items.map((it) => it.title)).toEqual(["Un día completo en vivo", "Vuelve a verlo cuando lo necesites", "Guías para descargar", "Tu diploma Imparable 2027"]);
     // No line under «Agenda».
     expect(IMPARABLES_BLOCKS.find((b) => b.type === "heading" && b.eyebrow === "Agenda")).toMatchObject({ title: "", intro: "" });
   });

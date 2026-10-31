@@ -283,9 +283,9 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
     tone: "pink",
     items: [
       { title: "Un día completo en vivo", text: "9 conferencistas y un panel, de 8 a. m. a 7 p. m., desde tu celular." },
-      { title: "Repetición por 30 días", text: "Lo que te pierdas lo ves cuando puedas, durante 30 días." },
+      { title: "Vuelve a verlo cuando lo necesites", text: "Las charlas quedan disponibles 30 días." },
       { title: "Guías para descargar", text: "El material de cada conferencista." },
-      { title: "Certificado digital", text: "De asistencia, con tu nombre." },
+      { title: "Tu diploma Imparable 2027", text: "Con tu nombre, para tu salón." },
     ],
   },
 
