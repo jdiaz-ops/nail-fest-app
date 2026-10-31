@@ -108,6 +108,8 @@ export default function ImpAsistire(props: Props) {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{ url: string; file: File; canShare: boolean; both?: Record<AsistireFormat, File> } | null>(null);
   const [copied, setCopied] = useState(false);
+  // Nail Fest's, on a phone whose browser can't share images: which of its two buttons saved her image.
+  const [saved, setSaved] = useState<AsistireFormat | null>(null);
 
   // The faces and the logo first: the image is drawn with them.
   useEffect(() => {
@@ -244,6 +246,7 @@ export default function ImpAsistire(props: Props) {
     // publication for «Publicar en mi feed» — whichever she was looking at.
     const both = design === "NAIL_FEST" ? await bothSizes(format, file) : undefined;
     setError(null);
+    setSaved(null);
     setResult({ url: URL.createObjectURL(blob), file, canShare: !!navigator.canShare?.({ files: [file] }), both });
     setStep("lista");
     window.scrollTo({ top: 0 });
@@ -265,16 +268,30 @@ export default function ImpAsistire(props: Props) {
   }
 
   /** «Subir a mi historia» and «Publicar en mi feed»: the link (or the publication's words, with @nailfest_co)
-   * copied, and «Compartir» opened with that size — in the same tap, which the share sheet needs. */
+   * copied, and «Compartir» opened with that size — in the same tap, which the share sheet needs. Where the
+   * phone's browser can't share images (Samsung's, the apps' own, 2026-10-31: the team's phone), that size
+   * saved instead, and a line on what's next in Instagram. */
   function shareTo(kind: AsistireFormat) {
-    const file = result?.both?.[kind];
-    if (!file) return;
+    if (!result) return;
+    const file = result.both?.[kind] ?? result.file;
     const words = kind === "publicacion" && props.design === "NAIL_FEST" ? props.texts.caption : linkHref;
     navigator.clipboard?.writeText(words).catch(() => {});
-    navigator.share({ files: [file] }).catch((err) => {
-      if (err instanceof DOMException && err.name === "AbortError") return;
-      setError("No se pudo abrir «Compartir». Descarga la imagen y súbela desde tu galería.");
-    });
+    if (navigator.canShare?.({ files: [file] })) {
+      navigator.share({ files: [file] }).catch((err) => {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        setError("No se pudo abrir «Compartir». Descarga la imagen y súbela desde tu galería.");
+      });
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = file.name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    setSaved(kind);
   }
 
   async function share() {
@@ -405,8 +422,9 @@ export default function ImpAsistire(props: Props) {
         </>
       )}
 
-      {step === "lista" && result?.canShare && result.both && (
-        // Nail Fest's (2026-10-30): straight to her story or her feed, with what to paste already copied.
+      {step === "lista" && result && props.design === "NAIL_FEST" && (
+        // Nail Fest's (2026-10-30): straight to her story or her feed, with what to paste already copied — on
+        // every phone (2026-10-31), saving the image where «Compartir» can't take it.
         <>
           <button type="button" className="imp-co-btn" onClick={() => shareTo("historia")}>
             <Instagram />
@@ -416,6 +434,17 @@ export default function ImpAsistire(props: Props) {
             <Instagram />
             Publicar en mi feed
           </button>
+          {saved && (
+            <p className="imp-as-saved" aria-live="polite">
+              {saved === "historia"
+                ? "Listo: guardamos tu imagen y copiamos el enlace. En Instagram, súbela a tu historia y pega el enlace con el sticker «Enlace»."
+                : "Listo: guardamos tu imagen y copiamos el texto (ya lleva @nailfest_co). En Instagram, publícala y pega el texto en la descripción."}
+              <br />
+              <a href="https://www.instagram.com/" target="_blank" rel="noreferrer">
+                Abrir Instagram
+              </a>
+            </p>
+          )}
           <a className="imp-as-down" href={result.url} download={result.file.name}>
             <Download />
             Descargar imagen
@@ -426,7 +455,7 @@ export default function ImpAsistire(props: Props) {
         </>
       )}
 
-      {step === "lista" && result && !(result.canShare && result.both) && (
+      {step === "lista" && result && props.design !== "NAIL_FEST" && (
         <>
           {result.canShare && (
             <button type="button" className="imp-co-btn" onClick={share}>
@@ -444,7 +473,7 @@ export default function ImpAsistire(props: Props) {
               <input
                 readOnly
                 value={texts.link}
-                aria-label={props.design === "NAIL_FEST" ? "Enlace para inscribirse" : "Enlace para reservar"}
+                aria-label="Enlace para reservar"
                 onFocus={(e) => e.currentTarget.select()}
               />
               <button type="button" onClick={copy}>

@@ -6781,6 +6781,25 @@ body:has(.imp.nf) {
   width: 18px;
   height: 18px;
 }
+/* After «Subir a mi historia» or «Publicar en mi feed» where the phone's
+   browser can't share images (2026-10-31): saved, copied, and what's next. */
+.imp-as-saved {
+  margin: 10px 0 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--imp-hueso-profundo);
+  font-size: 14px;
+  line-height: 1.45;
+  text-align: center;
+  color: var(--imp-negro);
+}
+.imp-as-saved a {
+  display: inline-block;
+  margin-top: 6px;
+  font-weight: 800;
+  color: var(--imp-bronce-oscuro) !important;
+  text-decoration: underline;
+}
 /* «Arrastra para moverla» over her photo, not over the sticker: the story's
    photo sits higher than Imparables' arch; the publication's, beside the
    words, so the hint goes in the space under it. */
