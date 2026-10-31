@@ -12,7 +12,7 @@ import { youtubeVideo } from "@/lib/landingBlocks/types";
 import { agendaInstant, type EventWhen } from "@/lib/imparables/schedule";
 import { dayMonth, pesos, saving, stageLine, stagesSummary, type SalesState } from "@/lib/imparables/stages";
 import { isPanelCard, listNames, namesIn, panelGuestsOf } from "@/lib/imparables/blocks";
-import { ImpIcon, Silhouette, iconForPoint, initials, instagramUrl, type ImpIconName } from "./ImpArt";
+import { ImpIcon, Silhouette, iconForPoint, initials, type ImpIconName } from "./ImpArt";
 import ImpButton from "./ImpButton";
 import ImpCountdown from "./ImpCountdown";
 import ImpSwipe from "./ImpSwipe";
@@ -205,13 +205,9 @@ function renderBlock(block: LandingBlock, key: number, context: ImparablesContex
             const logo = <img src={item.url} alt={item.handle ? `@${item.handle.replace(/^@+/, "")}` : ""} loading="lazy" />;
             return (
               <li key={j}>
-                {item.handle ? (
-                  <a href={instagramUrl(item.handle)} target="_blank" rel="noopener noreferrer">
-                    {logo}
-                  </a>
-                ) : (
-                  logo
-                )}
+                {/* No links out of the page (the team, 2026-10-31): a landing sells, and a tap to Instagram is a
+                    way out of the funnel. The handle stays in the image's alt. */}
+                {logo}
               </li>
             );
           })}
@@ -365,7 +361,7 @@ function Doubt({ item, speakers }: { item: SlideItem; speakers: PeopleLandingBlo
 
 // ── Cards ────────────────────────────────────────────────────────────────────
 
-/** A leading "<p>@handle</p>" in a host's card is her Instagram, drawn as a gold link. */
+/** A leading "<p>@handle</p>" in a host's card is her Instagram, drawn in gold (as text: no links out of the page). */
 function splitHandle(html: string): { handle: string | null; body: string } {
   const match = /^\s*<p>\s*@([A-Za-z0-9._]+)\s*<\/p>/.exec(html);
   return match ? { handle: match[1]!, body: html.slice(match[0].length) } : { handle: null, body: html };
@@ -387,11 +383,7 @@ function Card({ card }: { card: CardLandingBlock }) {
         <div className="imp-host-t">
           {card.eyebrow && <span className="imp-host-k">{card.eyebrow}</span>}
           {card.title && <b>{card.title}</b>}
-          {handle && (
-            <a className="imp-host-ig" href={instagramUrl(handle)} target="_blank" rel="noopener noreferrer">
-              @{handle}
-            </a>
-          )}
+          {handle && <span className="imp-host-ig">@{handle}</span>}
           {body.trim() && <div className="imp-host-body" dangerouslySetInnerHTML={{ __html: body }} />}
         </div>
       </div>
@@ -445,11 +437,7 @@ function Panelists({ people }: { people: PeopleLandingBlock }) {
             )}
             <div className="imp-pn-t">
               {p.name.trim() ? <b>{p.name}</b> : <small>Por anunciar</small>}
-              {p.name.trim() && p.handle && (
-                <a className="imp-pn-ig" href={instagramUrl(p.handle)} target="_blank" rel="noopener noreferrer">
-                  @{p.handle.replace(/^@+/, "")}
-                </a>
-              )}
+              {p.name.trim() && p.handle && <span className="imp-pn-ig">@{p.handle.replace(/^@+/, "")}</span>}
               {p.tag && <span>{p.tag}</span>}
             </div>
           </div>
@@ -480,13 +468,8 @@ function Speakers({ people }: { people: PeopleLandingBlock }) {
               )}
             </div>
             <div className="imp-sp-name">{p.name}</div>
-            {p.handle ? (
-              <a className="imp-sp-ig" href={instagramUrl(p.handle)} target="_blank" rel="noopener noreferrer">
-                @{p.handle.replace(/^@+/, "")}
-              </a>
-            ) : (
-              <span className="imp-sp-ig" />
-            )}
+            {/* Her handle as text, not a link (the team, 2026-10-31): nothing on the page leads out of it. */}
+            <span className="imp-sp-ig">{p.handle ? `@${p.handle.replace(/^@+/, "")}` : ""}</span>
             <p className="imp-sp-line">{p.tag}</p>
           </div>
         ))}

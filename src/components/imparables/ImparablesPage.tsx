@@ -502,11 +502,16 @@ export default function ImparablesPage({
               </p>
               <span className="imp-st-name">
                 <span className="imp-st-stage">
-                  {special ? special.label : current.name}
+                  {special
+                    ? special.label
+                    : !sellsLevels && !progress && current.cap !== null
+                      ? // Until the counter shows, what the cover says (the team, 2026-10-31).
+                        `Solo ${current.cap}\u00a0cupos a este precio`
+                      : current.name}
                   {/* «Etapa Creyente · 200 cupos» on a version that sells the levels, until its counter shows. */}
                   {sellsLevels && !progress && current.cap !== null && ` · ${current.cap} cupos`}
-                  {/* Elsewhere, until the counter shows: when the price goes up (2026-10-31). */}
-                  {!sellsLevels && !special && !progress && current.closesAt && next && ` · hasta el ${untilDay(current.closesAt, timezone)}`}
+                  {/* A stage with no cap, until the counter shows: when the price goes up (2026-10-31). */}
+                  {!sellsLevels && !special && !progress && current.cap === null && current.closesAt && next && ` · hasta el ${untilDay(current.closesAt, timezone)}`}
                 </span>
                 {special?.endsAt && (
                   // …and beside its price on a computer.
