@@ -46,7 +46,7 @@ describe("Nail Fest's «Asistiré»", () => {
     expect(hasNailFestAsistire({ theme: "IMPARABLES", format: "IN_PERSON" })).toBe(false);
   });
 
-  it("prints the event's address, and the link she copies says it came from an image", async () => {
+  it("prints the event's address, and its link says it came from an image", async () => {
     const { texts, linkHref } = await nailFestAsistire(event as never, "America/Bogota");
     expect(texts).toEqual({
       name: ["Nail Fest", "Cúcuta"],
@@ -54,7 +54,6 @@ describe("Nail Fest's «Asistiré»", () => {
       place: "Salón Ventura · Cúcuta",
       invite: "Inscríbete gratis en ",
       link: "nailfest.lat/cucuta",
-      caption: "¡Voy a Nail Fest Cúcuta! 💅\nSábado 7 y domingo 8 de noviembre en Salón Ventura.\nInscríbete gratis: nailfest.lat/cucuta\n@nailfest_co #NailFestCucuta",
     });
     expect(new URL(linkHref).searchParams.get("utm_source")).toBe("asistire");
   });

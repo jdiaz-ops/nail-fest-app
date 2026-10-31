@@ -6781,24 +6781,24 @@ body:has(.imp.nf) {
   width: 18px;
   height: 18px;
 }
-/* After «Subir a mi historia» or «Publicar en mi feed» where the phone's
-   browser can't share images (2026-10-31): saved, copied, and what's next. */
-.imp-as-saved {
-  margin: 10px 0 0;
-  padding: 12px 14px;
-  border-radius: 14px;
-  background: var(--imp-hueso-profundo);
-  font-size: 14px;
+/* Under Nail Fest's «Descargar imagen» (2026-10-31, the team): where to put it. */
+.imp-as-redes {
+  margin: 14px 0 0;
+  font-size: 15px;
   line-height: 1.45;
   text-align: center;
+  text-wrap: balance;
   color: var(--imp-negro);
 }
-.imp-as-saved a {
-  display: inline-block;
-  margin-top: 6px;
+.imp-as-redes b {
   font-weight: 800;
-  color: var(--imp-bronce-oscuro) !important;
-  text-decoration: underline;
+  color: var(--imp-bronce-oscuro);
+}
+.imp-as-redes small {
+  display: block;
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--imp-texto-3);
 }
 /* «Arrastra para moverla» over her photo, not over the sticker: the story's
    photo sits higher than Imparables' arch; the publication's, beside the

@@ -17,6 +17,7 @@ import {
   type Placement,
 } from "./asistireArt";
 import * as nailFest from "../nailfest/asistireArt";
+import { INSTAGRAM_HANDLE } from "@/lib/brand";
 
 // «Asistiré» (2026-10-30), as in the boceto the team approved: her photo in,
 // her image out — a story or a publication to share, and the link to book.
@@ -106,10 +107,8 @@ export default function ImpAsistire(props: Props) {
   const [moved, setMoved] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<{ url: string; file: File; canShare: boolean; both?: Record<AsistireFormat, File> } | null>(null);
+  const [result, setResult] = useState<{ url: string; file: File; canShare: boolean } | null>(null);
   const [copied, setCopied] = useState(false);
-  // Nail Fest's, on a phone whose browser can't share images: which of its two buttons saved her image.
-  const [saved, setSaved] = useState<AsistireFormat | null>(null);
 
   // The faces and the logo first: the image is drawn with them.
   useEffect(() => {
@@ -242,56 +241,10 @@ export default function ImpAsistire(props: Props) {
       return;
     }
     const file = new File([blob], `asistire-${format}.jpg`, { type: "image/jpeg" });
-    // Nail Fest's (2026-10-30): both sizes, ready before her tap — the story for «Subir a mi historia», the
-    // publication for «Publicar en mi feed» — whichever she was looking at.
-    const both = design === "NAIL_FEST" ? await bothSizes(format, file) : undefined;
     setError(null);
-    setSaved(null);
-    setResult({ url: URL.createObjectURL(blob), file, canShare: !!navigator.canShare?.({ files: [file] }), both });
+    setResult({ url: URL.createObjectURL(blob), file, canShare: !!navigator.canShare?.({ files: [file] }) });
     setStep("lista");
     window.scrollTo({ top: 0 });
-  }
-
-  /** Her image in both sizes: the one on screen, and the other drawn now with her photo where she left it. */
-  async function bothSizes(shown: AsistireFormat, file: File): Promise<Record<AsistireFormat, File> | undefined> {
-    const other: AsistireFormat = shown === "historia" ? "publicacion" : "historia";
-    const size = art.size(other);
-    const canvas = document.createElement("canvas");
-    canvas.width = size.width;
-    canvas.height = size.height;
-    const where = photo ? clampPlacement(art.photoBox(other), photo, placement) : placement;
-    art.draw(canvas.getContext("2d")!, art.layers(other, logoRef.current), photo, where);
-    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.92));
-    if (!blob) return undefined;
-    const second = new File([blob], `asistire-${other}.jpg`, { type: "image/jpeg" });
-    return shown === "historia" ? { historia: file, publicacion: second } : { historia: second, publicacion: file };
-  }
-
-  /** «Subir a mi historia» and «Publicar en mi feed»: the link (or the publication's words, with @nailfest_co)
-   * copied, and «Compartir» opened with that size — in the same tap, which the share sheet needs. Where the
-   * phone's browser can't share images (Samsung's, the apps' own, 2026-10-31: the team's phone), that size
-   * saved instead, and a line on what's next in Instagram. */
-  function shareTo(kind: AsistireFormat) {
-    if (!result) return;
-    const file = result.both?.[kind] ?? result.file;
-    const words = kind === "publicacion" && props.design === "NAIL_FEST" ? props.texts.caption : linkHref;
-    navigator.clipboard?.writeText(words).catch(() => {});
-    if (navigator.canShare?.({ files: [file] })) {
-      navigator.share({ files: [file] }).catch((err) => {
-        if (err instanceof DOMException && err.name === "AbortError") return;
-        setError("No se pudo abrir «Compartir». Descarga la imagen y súbela desde tu galería.");
-      });
-      return;
-    }
-    const url = URL.createObjectURL(file);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = file.name;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 10_000);
-    setSaved(kind);
   }
 
   async function share() {
@@ -423,32 +376,17 @@ export default function ImpAsistire(props: Props) {
       )}
 
       {step === "lista" && result && props.design === "NAIL_FEST" && (
-        // Nail Fest's (2026-10-30): straight to her story or her feed, with what to paste already copied — on
-        // every phone (2026-10-31), saving the image where «Compartir» can't take it.
+        // Nail Fest's (2026-10-31, the team): her image to download, and where to put it — no «Compartir»,
+        // whose window hid Instagram under «Más».
         <>
-          <button type="button" className="imp-co-btn" onClick={() => shareTo("historia")}>
-            <Instagram />
-            Subir a mi historia
-          </button>
-          <button type="button" className="imp-as-btn2" onClick={() => shareTo("publicacion")}>
-            <Instagram />
-            Publicar en mi feed
-          </button>
-          {saved && (
-            <p className="imp-as-saved" aria-live="polite">
-              {saved === "historia"
-                ? "Listo: guardamos tu imagen y copiamos el enlace. En Instagram, súbela a tu historia y pega el enlace con el sticker «Enlace»."
-                : "Listo: guardamos tu imagen y copiamos el texto (ya lleva @nailfest_co). En Instagram, publícala y pega el texto en la descripción."}
-              <br />
-              <a href="https://www.instagram.com/" target="_blank" rel="noreferrer">
-                Abrir Instagram
-              </a>
-            </p>
-          )}
-          <a className="imp-as-down" href={result.url} download={result.file.name}>
+          <a className="imp-co-btn" href={result.url} download={result.file.name}>
             <Download />
             Descargar imagen
           </a>
+          <p className="imp-as-redes">
+            Publícala en tus redes: en tu historia, en tu feed o en tu estado de WhatsApp. Etiquétanos en <b>{INSTAGRAM_HANDLE}</b>.
+            {onIPhone() && <small>En iPhone, mantén el dedo sobre la imagen y toca «Guardar en Fotos».</small>}
+          </p>
           <button type="button" className="imp-co-switch imp-as-otra" onClick={() => setStep("ajustar")}>
             Volver a ajustar
           </button>
@@ -497,6 +435,11 @@ export default function ImpAsistire(props: Props) {
   );
 }
 
+/** An iPhone keeps a download in Files, not in Photos: there, her image is saved from the image itself. */
+function onIPhone() {
+  return /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+}
+
 function Icon({ children }: { children: ReactNode }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -528,16 +471,6 @@ function Share() {
     <Icon>
       <path d="M12 3v12M7 8l5-5 5 5" />
       <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" />
-    </Icon>
-  );
-}
-
-function Instagram() {
-  return (
-    <Icon>
-      <rect x="3" y="3" width="18" height="18" rx="5" />
-      <circle cx="12" cy="12" r="4" />
-      <circle cx="17.3" cy="6.7" r="0.9" fill="currentColor" stroke="none" />
     </Icon>
   );
 }

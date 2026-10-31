@@ -1,7 +1,6 @@
 import type { Event } from "@prisma/client";
 import { db } from "@/lib/db";
 import { publicEventName } from "@/lib/eventDisplayName";
-import { INSTAGRAM_HANDLE } from "@/lib/brand";
 import { ASISTIRE_UTM } from "@/lib/imparables/asistire";
 import type { NailFestAsistireTexts } from "@/components/nailfest/asistireArt";
 import { longDates } from "./confirmation";
@@ -9,9 +8,9 @@ import { longDates } from "./confirmation";
 // Nail Fest's «Asistiré» for its events at a place (2026-10-30): the same
 // page and signed links as Manicuristas Imparables' (lib/imparables/
 // asistire.ts), with Nail Fest's image (components/nailfest/asistireArt.ts).
-// The image prints the event's own address, nailfest.lat/<event>; the link
-// she copies for her story's sticker carries the tags that say the visit
-// came from an image.
+// The image prints the event's own address, nailfest.lat/<event>; the page's
+// link (the same props as Imparables') carries the tags that say a visit came
+// from an image.
 
 const baseUrl = () => (process.env.APP_BASE_URL || "https://nailfest.lat").replace(/\/+$/, "");
 
@@ -20,7 +19,7 @@ export function hasNailFestAsistire(event: Pick<Event, "theme" | "format">): boo
   return event.theme !== "IMPARABLES" && event.format !== "VIRTUAL";
 }
 
-/** What the image says for an event, and the link to paste in a story. */
+/** What the image says for an event, and its link tagged as coming from an image. */
 export async function nailFestAsistire(event: Event, timezone: string): Promise<{ texts: NailFestAsistireTexts; linkHref: string }> {
   const base = baseUrl();
   const city = event.city?.trim() || null;
@@ -31,8 +30,6 @@ export async function nailFestAsistire(event: Event, timezone: string): Promise<
   const date = longDates(event, timezone);
   const link = `${new URL(base).host.replace(/^www\./, "")}/${event.slug}`;
   const venue = event.venueName?.trim();
-  // «#NailFestCucuta»: the city without its accents or spaces.
-  const tag = `#NailFest${accent.normalize("NFD").replace(/[^A-Za-z0-9]/g, "")}`;
   return {
     texts: {
       name: ["Nail Fest", accent],
@@ -40,12 +37,6 @@ export async function nailFestAsistire(event: Event, timezone: string): Promise<
       place: [venue, city].filter(Boolean).join(" · "),
       invite: paid ? "Consigue tu entrada en " : "Inscríbete gratis en ",
       link,
-      caption: [
-        `¡Voy a ${["Nail Fest", accent].filter(Boolean).join(" ")}! 💅`,
-        `${date}${venue ? ` en ${venue}` : ""}.`,
-        `${paid ? "Consigue tu entrada" : "Inscríbete gratis"}: ${link}`,
-        `${INSTAGRAM_HANDLE} ${tag}`,
-      ].join("\n"),
     },
     linkHref: href.toString(),
   };
