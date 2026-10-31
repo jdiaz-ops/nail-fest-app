@@ -644,7 +644,16 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
                 <h2 className="imp-co-h">
                   <i>1</i>Tus datos
                 </h2>
-                {/* Where they live first: it picks the document's types, the phone's code and the currency. */}
+                <div className="imp-co-two">
+                  <Field label="Nombre">
+                    <input className="imp-co-in" autoComplete="given-name" required {...field("firstName")} />
+                  </Field>
+                  <Field label="Apellidos">
+                    <input className="imp-co-in" autoComplete="family-name" required {...field("lastName")} />
+                  </Field>
+                </div>
+                {/* Where they live, under the name (the team, 2026-10-31); it picks the document's types, the phone's code and
+                    the currency, so it stays over the document. */}
                 <div className="imp-co-two">
                   <Field label="País donde vives">
                     <select className="imp-co-in" value={country} onChange={(e) => chooseCountry(e.target.value)}>
@@ -657,14 +666,6 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
                   </Field>
                   <Field label="Ciudad">
                     <input className="imp-co-in" autoComplete="address-level2" required {...field("city")} />
-                  </Field>
-                </div>
-                <div className="imp-co-two">
-                  <Field label="Nombre">
-                    <input className="imp-co-in" autoComplete="given-name" required {...field("firstName")} />
-                  </Field>
-                  <Field label="Apellidos">
-                    <input className="imp-co-in" autoComplete="family-name" required {...field("lastName")} />
                   </Field>
                 </div>
                 <div className="imp-co-doc">

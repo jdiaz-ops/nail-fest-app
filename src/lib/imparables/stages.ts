@@ -264,16 +264,14 @@ export function showsCounter(sales: Pick<SalesState, "current">): boolean {
 }
 
 export type CoverDeal =
-  /** Before the counter: «Etapa Creyente» · «Las primeras 200 entran a $90.000», then «Hasta el 18 de abril (cierre de
-   * Nail Fest Cali) o hasta completar las 200 · luego $120.000». */
-  | { kind: "first"; stage: string; offer: string; terms: string | null }
+  /** Before the counter, one line (the team, 2026-10-31): «Solo 200 cupos» «a este precio · luego $120.000». The
+   * stage's name and its date stay on the fixed bar («Etapa Creyente · hasta el 18 de abril»). */
+  | { kind: "first"; places: string; offer: string }
   /** The counter over its bar: «Quedan 127 de las primeras 200 a $90.000», then «Etapa Creyente · hasta el 18 de abril ·
    * luego $120.000». */
   | { kind: "counter"; title: string; terms: string | null }
   /** A stage with no cap: its line as always. */
   | { kind: "line"; terms: string };
-
-const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
 /** What goes under the cover's button for today's stage (null with none on sale). */
 export function coverDeal(sales: Pick<SalesState, "current" | "next" | "remaining">, timezone: string): CoverDeal | null {
@@ -291,11 +289,7 @@ export function coverDeal(sales: Pick<SalesState, "current" | "next" | "remainin
     const terms = [stage.name, until].filter(Boolean).join(" · ") + then;
     return { kind: "counter", title, terms: terms || null };
   }
-  const offer = `Las primeras ${together(`${stage.cap} entran`)} a ${pesos(stage.price)}`;
-  const close = until ? `${capitalize(until)}${stage.note ? ` (${stage.note})` : ""}` : null;
-  const fill = `hasta completar las ${stage.cap}`;
-  const terms = (close ? `${close} o ${fill}` : capitalize(fill)) + then;
-  return { kind: "first", stage: stage.name, offer, terms };
+  return { kind: "first", places: `Solo ${together(`${stage.cap} cupos`)}`, offer: `a este precio${then}` };
 }
 
 /** The three weeks before today's stage closes on its date with another after it: «El precio sube a $120.000 en…»,

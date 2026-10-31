@@ -80,7 +80,19 @@ function sectionsOf(blocks: LandingBlock[]): Section[] {
   return sections;
 }
 
-export default function ImparablesBlocks({ blocks, context, extras = [] }: { blocks: LandingBlock[]; context: ImparablesContext; extras?: ExtraSection[] }) {
+export default function ImparablesBlocks({
+  blocks,
+  context,
+  extras = [],
+  firstTone = "dark",
+}: {
+  blocks: LandingBlock[];
+  context: ImparablesContext;
+  extras?: ExtraSection[];
+  /** The first section's color: chocolate after the page's light intro, light straight after the cover (the team,
+   * 2026-10-31). The next ones alternate from it. */
+  firstTone?: "dark" | "light";
+}) {
   // Only the sections with something to show, so the backgrounds keep alternating.
   const sections = sectionsOf(blocks)
     .map((section) => ({ ...section, content: renderBlocks(section.blocks, context) }))
@@ -92,9 +104,9 @@ export default function ImparablesBlocks({ blocks, context, extras = [] }: { blo
     const content = [...(extra.blocks ? renderBlocks(extra.blocks, context) : []), ...(extra.content ? [extra.content] : [])];
     sections.splice(at >= 0 ? at : sections.length, 0, { heading, blocks: extra.blocks ?? [], content, id: extra.id, tone: extra.tone });
   }
-  // Dark, light, dark… from the first; a section with a color of its own takes it — «Lo que vas a resolver en un
+  // From the first's color, alternating; a section with a color of its own takes it — «Lo que vas a resolver en un
   // solo día» is always chocolate (the team, 2026-10-31) — and the next ones go on from it.
-  let dark = false;
+  let dark = firstTone !== "dark";
   const tones = sections.map((section) => {
     const own = section.tone ?? (section.blocks.some((b) => b.type === "slides" && b.style === "results") ? "dark" : undefined);
     return (dark = own ? own === "dark" : !dark);

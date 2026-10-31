@@ -4086,19 +4086,6 @@ body:has(.imp) {
   font-size: 14px;
 }
 /* Who organizes it, under the button: «Organiza» and the small logo */
-.imp-organiza {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
-  /* Last on the cover, under the button's price line (2026-10-29). */
-  margin: 18px 0 0;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--imp-texto-2);
-}
 /* «Nadie nace imparable. Se hace.», at the foot of the cover (2026-10-28) */
 /* «Nadie nace imparable. Se hace.»: closing the section under the cover (or
    the cover itself, without one) — 2026-10-29 */
@@ -4120,13 +4107,6 @@ body:has(.imp) {
 }
 .imp-intro .imp-tagline {
   margin-top: 26px;
-}
-.imp-organiza img {
-  height: 16px;
-  width: auto;
-  /* In black on the light cover. */
-  filter: brightness(0);
-  opacity: 0.92;
 }
 .imp-once {
   display: flex;
@@ -7383,19 +7363,9 @@ body:has(.imp.nf) {
   .imp-hero .imp-tagline {
     grid-area: close;
   }
-  /* Its signature at the foot of the photo's column, level with the bar's
-     last line. */
-  .imp-hero .imp-organiza {
-    grid-area: side;
-    align-self: end;
-    justify-content: center;
-    margin: 0;
-  }
-  /* Room under it for the signature. */
   .imp-hero-pic {
     grid-area: side;
     align-self: start;
-    margin-bottom: 48px;
     text-align: center;
   }
   .imp-group {
@@ -8191,7 +8161,8 @@ body:has(.imp.nf) {
   opacity: 0.9;
 }
 .imp-deal .imp-deal-stage {
-  font-size: 16px;
+  /* One line on a phone (the team, 2026-10-31): «Solo 200 cupos a este precio · luego $120.000» fits from 360px. */
+  font-size: clamp(13px, 3.85vw, 16px);
   line-height: 1.35;
   font-weight: 800;
   color: var(--imp-texto);

@@ -308,12 +308,9 @@ export default function ImparablesPage({
             </p>
           )}
           {stageDeal?.kind === "first" && (
-            <>
-              <p className="imp-deal-stage">
-                <b>{stageDeal.stage}</b> · {stageDeal.offer}
-              </p>
-              {stageDeal.terms && <p className="imp-deal-then">{stageDeal.terms}</p>}
-            </>
+            <p className="imp-deal-stage">
+              <b>{stageDeal.places}</b> {stageDeal.offer}
+            </p>
           )}
           {stageDeal?.kind === "counter" && progress && (
             <>
@@ -408,14 +405,7 @@ export default function ImparablesPage({
           {/* The guarantee («Texto debajo del botón») is hidden from the
               cover for now; it stays on the event. */}
           {deal}
-          {!intro && closingLine}
-          {/* Who organizes it, last on the cover, as its signature (2026-10-28:
-              it was «Nail Fest presenta», above the name). */}
-          <p className="imp-organiza">
-            Organiza
-            {/* eslint-disable-next-line @next/next/no-img-element -- fixed logo mark */}
-            <img src="/logo.png" alt={brandName} />
-          </p>
+          {/* «Organiza Nail Fest» left the cover (the team, 2026-10-31); it stays at the foot of the page. */}
         </div>
       </section>
 
@@ -445,7 +435,7 @@ export default function ImparablesPage({
         </section>
       )}
 
-      <ImparablesBlocks blocks={rest} context={{ sales, offsetMs, when, timezone, now, buyLabel, speakers: faces, panel, speakersTagline: transformation ? null : closingLine }} extras={extras} />
+      <ImparablesBlocks blocks={rest} firstTone={intro ? "dark" : "light"} context={{ sales, offsetMs, when, timezone, now, buyLabel, speakers: faces, panel, speakersTagline: transformation ? null : closingLine }} extras={extras} />
 
       <section className="imp-close">
         <div className="imp-rays" aria-hidden="true" />

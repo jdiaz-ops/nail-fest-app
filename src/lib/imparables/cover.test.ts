@@ -28,18 +28,13 @@ describe("the counter", () => {
 });
 
 describe("under the cover's button", () => {
-  it("before the counter: the places as the offer, then the date with its note, the places and the next price", () => {
-    expect(coverDeal(sales(0), TZ)).toEqual({
-      kind: "first",
-      stage: "Etapa Creyente",
-      offer: `Las primeras ${nb("200 entran")} a $90.000`,
-      terms: `Hasta el ${nb("18 de abril")} (cierre de Nail Fest Cali) o hasta completar las 200 · luego $120.000`,
-    });
+  it("before the counter, one line: the places at this price, then the next price", () => {
+    expect(coverDeal(sales(0), TZ)).toEqual({ kind: "first", places: `Solo ${nb("200 cupos")}`, offer: "a este precio · luego $120.000" });
   });
 
-  it("with no date of its own, only its places", () => {
-    const noDate = stages().map((t) => (t.id === "t_cre" ? { ...t, hideAfter: null } : t));
-    expect(coverDeal(sales(0, undefined, noDate), TZ)?.terms).toBe("Hasta completar las 200 · luego $120.000");
+  it("with no stage after it, only the places", () => {
+    const last = stages().filter((t) => t.id === "t_cre");
+    expect(coverDeal(sales(0, undefined, last), TZ)).toEqual({ kind: "first", places: `Solo ${nb("200 cupos")}`, offer: "a este precio" });
   });
 
   it("the counter: what's left of the first 200, then the stage, its date and the next price", () => {
