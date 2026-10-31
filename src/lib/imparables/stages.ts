@@ -248,3 +248,62 @@ export function stageTerms(sales: Pick<SalesState, "current" | "next" | "remaini
   const until = stage.closesAt ? ` o hasta el ${together(untilDay(stage.closesAt, timezone))}` : "";
   return `${stage.name} · hasta completar los ${together(`${stage.cap} cupos`)}${until}${next ? ` · luego ${pesos(next.price)}` : ""}`;
 }
+
+// ── Under the cover's button, as the team's boceto (2026-10-31) ─────────────
+
+/** The counter («Quedan 127 de las primeras 200») shows once this share of a capped stage's places is paid; before,
+ * the page says the places as the offer («Las primeras 200 entran a $90.000»), never how many are still empty. */
+const COUNTER_FROM_PAID_SHARE = 0.3;
+/** The countdown to the price going up shows this long before the stage closes on its date. */
+const RISE_COUNTDOWN_MS = 21 * 86_400_000;
+
+/** Whether today's stage has sold enough for its counter to show. */
+export function showsCounter(sales: Pick<SalesState, "current">): boolean {
+  const stage = sales.current;
+  return Boolean(stage && stage.cap !== null && stage.cap > 0 && stage.paid >= stage.cap * COUNTER_FROM_PAID_SHARE);
+}
+
+export type CoverDeal =
+  /** Before the counter: «Etapa Creyente» · «Las primeras 200 entran a $90.000», then «Hasta el 18 de abril (cierre de
+   * Nail Fest Cali) o hasta completar las 200 · luego $120.000». */
+  | { kind: "first"; stage: string; offer: string; terms: string | null }
+  /** The counter over its bar: «Quedan 127 de las primeras 200 a $90.000», then «Etapa Creyente · hasta el 18 de abril ·
+   * luego $120.000». */
+  | { kind: "counter"; title: string; terms: string | null }
+  /** A stage with no cap: its line as always. */
+  | { kind: "line"; terms: string };
+
+const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+
+/** What goes under the cover's button for today's stage (null with none on sale). */
+export function coverDeal(sales: Pick<SalesState, "current" | "next" | "remaining">, timezone: string): CoverDeal | null {
+  const { current: stage, next } = sales;
+  if (!stage) return null;
+  if (stage.cap === null || stage.cap <= 0) {
+    const line = stageLine(sales, timezone);
+    return line ? { kind: "line", terms: line } : null;
+  }
+  const then = next ? ` · luego ${pesos(next.price)}` : "";
+  const until = stage.closesAt ? `hasta el ${together(untilDay(stage.closesAt, timezone))}` : null;
+  if (showsCounter(sales)) {
+    const progress = stageProgress(sales)!;
+    const title = `${progress.left === 1 ? "Queda 1" : `Quedan ${progress.left}`} de las primeras ${stage.cap} a ${pesos(stage.price)}`;
+    const terms = [stage.name, until].filter(Boolean).join(" · ") + then;
+    return { kind: "counter", title, terms: terms || null };
+  }
+  const offer = `Las primeras ${together(`${stage.cap} entran`)} a ${pesos(stage.price)}`;
+  const close = until ? `${capitalize(until)}${stage.note ? ` (${stage.note})` : ""}` : null;
+  const fill = `hasta completar las ${stage.cap}`;
+  const terms = (close ? `${close} o ${fill}` : capitalize(fill)) + then;
+  return { kind: "first", stage: stage.name, offer, terms };
+}
+
+/** The three weeks before today's stage closes on its date with another after it: «El precio sube a $120.000 en…»,
+ * with what to count down to. Null otherwise. */
+export function riseCountdown(sales: Pick<SalesState, "current" | "next">, now: Date): { to: Date; price: number; seconds: number } | null {
+  const { current: stage, next } = sales;
+  if (!stage || !next || !stage.closesAt) return null;
+  const ms = stage.closesAt.getTime() - now.getTime();
+  if (ms <= 0 || ms > RISE_COUNTDOWN_MS) return null;
+  return { to: stage.closesAt, price: next.price, seconds: Math.floor(ms / 1000) };
+}

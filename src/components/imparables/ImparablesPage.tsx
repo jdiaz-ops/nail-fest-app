@@ -2,7 +2,7 @@ import type { EventFormat } from "@prisma/client";
 import MetaPixelScript from "@/components/MetaPixelScript";
 import type { LandingBlock } from "@/lib/landingBlocks/types";
 import { coverName, type EventWhen } from "@/lib/imparables/schedule";
-import { dayMonth, pesos, progressTitle, saving, stageLine, stagePill, stageProgress, stageTerms, type SalesState } from "@/lib/imparables/stages";
+import { coverDeal, dayMonth, pesos, riseCountdown, saving, stagePill, stageProgress, untilDay, type SalesState } from "@/lib/imparables/stages";
 import { utcToZonedInputValue } from "@/lib/dateFormat";
 import { castLine, castOf, coverOf, introOf, panelOf } from "@/lib/imparables/blocks";
 import { splitTagline } from "@/lib/imparables/tagline";
@@ -14,7 +14,7 @@ import ImpPageTracking from "./ImpPageTracking";
 import ImpStickyBar from "./ImpStickyBar";
 import ImpTitle from "./ImpTitle";
 import ImpWaitlistForm from "./ImpWaitlistForm";
-import { GuaranteeLine } from "./ImpTiers";
+import { GuaranteeLine, Shield } from "./ImpTiers";
 import { tierCounter, tierDeal } from "@/lib/imparables/tiers";
 import { cinzel, manrope } from "./fonts";
 
@@ -67,6 +67,24 @@ function ProgressBar({ progress, className }: { progress: NonNullable<ReturnType
     <span className={`imp-bar${className ? ` ${className}` : ""}`} role="img" aria-label={`${progress.taken} de ${progress.cap} cupos tomados`}>
       {progress.taken > 0 && <i style={{ width: `${Math.round(progress.share * 1000) / 10}%` }} />}
     </span>
+  );
+}
+
+/** The event's «Texto debajo del botón» under the cover's (the team's boceto, 2026-10-31): «Garantía de 30 minutos: si en
+ * la primera media hora…», its label — up to the first colon — in bold, with the shield. */
+function GuaranteeNote({ text }: { text: string }) {
+  const match = /^([^:\n]{1,60}:)\s*([\s\S]*)$/.exec(text.trim());
+  return (
+    <p className="imp-lv-guar imp-deal-guar">
+      <Shield />
+      {match ? (
+        <>
+          <b>{match[1]}</b> {match[2]}
+        </>
+      ) : (
+        text.trim()
+      )}
+    </p>
   );
 }
 
@@ -226,8 +244,14 @@ export default function ImparablesPage({
   // places left —, then the normal price and when it goes up, then the guarantee.
   const counter = sellsLevels ? tierCounter(sales) : null;
   const dealLines = sellsLevels ? tierDeal(sales, timezone) : null;
-  const progress = mode === "sale" && !special && (!sellsLevels || counter) ? stageProgress(sales) : null;
-  const terms = special ? null : mode === "sale" ? (progress ? stageTerms(sales, timezone) : stageLine(sales, timezone)) : null;
+  // On every other page (the team's boceto, 2026-10-31): before 30% of the stage's places are paid, its places as the
+  // offer — «Las primeras 200 entran a $90.000» — and its terms; from then on, the counter over its bar; in the stage's
+  // last three weeks, a countdown to the price going up; and under them the guarantee (the event's «Texto debajo del
+  // botón»). The bar — here and in the sticky bar — only once the counter shows.
+  const stageDeal = !sellsLevels && !special && mode === "sale" && current ? coverDeal(sales, timezone) : null;
+  const rise = stageDeal ? riseCountdown(sales, now) : null;
+  const progress = mode === "sale" && !special && (sellsLevels ? counter : stageDeal?.kind === "counter") ? stageProgress(sales) : null;
+  const guarantee = event.ctaNote?.trim() || null;
   const deal =
     !special && mode === "sale" && current ? (
       sellsLevels ? (
@@ -253,13 +277,29 @@ export default function ImparablesPage({
       ) : (
         <div className="imp-deal">
           {pill && <p className="imp-stage-pill">{pill}</p>}
-          {progress && (
+          {rise && (
+            <p className="imp-stage-pill imp-rise">
+              <Clock />
+              El precio sube a {pesos(rise.price)} en <ImpCountdownInline to={rise.to.toISOString()} initialSeconds={rise.seconds} offsetMs={offsetMs} />
+            </p>
+          )}
+          {stageDeal?.kind === "first" && (
             <>
-              <p className="imp-prog-t">{progressTitle(sales)}</p>
-              <ProgressBar progress={progress} />
+              <p className="imp-deal-stage">
+                <b>{stageDeal.stage}</b> · {stageDeal.offer}
+              </p>
+              {stageDeal.terms && <p className="imp-deal-then">{stageDeal.terms}</p>}
             </>
           )}
-          {terms && <p className={`imp-deal-until${progress ? " imp-deal-terms" : ""}`}>{terms}</p>}
+          {stageDeal?.kind === "counter" && progress && (
+            <>
+              <p className="imp-prog-t">{stageDeal.title}</p>
+              <ProgressBar progress={progress} />
+              {stageDeal.terms && <p className="imp-deal-until imp-deal-terms">{stageDeal.terms}</p>}
+            </>
+          )}
+          {stageDeal?.kind === "line" && <p className="imp-deal-until">{stageDeal.terms}</p>}
+          {guarantee && <GuaranteeNote text={guarantee} />}
         </div>
       )
     ) : null;
@@ -447,6 +487,8 @@ export default function ImparablesPage({
                   {special ? special.label : current.name}
                   {/* «Etapa Creyente · 200 cupos» on a version that sells the levels, until its counter shows. */}
                   {sellsLevels && !progress && current.cap !== null && ` · ${current.cap} cupos`}
+                  {/* Elsewhere, until the counter shows: when the price goes up (2026-10-31). */}
+                  {!sellsLevels && !special && !progress && current.closesAt && next && ` · hasta el ${untilDay(current.closesAt, timezone)}`}
                 </span>
                 {special?.endsAt && (
                   // …and beside its price on a computer.
