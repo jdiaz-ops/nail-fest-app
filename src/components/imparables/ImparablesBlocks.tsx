@@ -488,8 +488,8 @@ function Speakers({ people }: { people: PeopleLandingBlock }) {
 // photo, name and Instagram), only the hour it starts — no durations since
 // 2026-10-28 — a star talk in a box of its own, the active breaks as thin
 // lines and the lunch as a band. A part's header: its label, and its title and
-// subtitle if it has them (since 2026-10-29 Imparables' say only when they
-// start: «Mañana · 8:00 a. m.»).
+// subtitle if it has them (Imparables' say only their name since 2026-10-31:
+// «Mañana», «Tarde»).
 
 /** "10:15 a. m." -> ["10:15", "a. m."]; anything else stays whole. */
 function splitChip(chip: string): [string, string] {

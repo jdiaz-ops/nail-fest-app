@@ -466,10 +466,10 @@ describe("the template", () => {
 
   it("tells its one day in two parts (2026-10-29): the morning's stories, from 8:00, the panel among them — no star talk", () => {
     const { rows, morning } = agendaOf(IMPARABLES_BLOCKS);
-    // Each part says only when it starts: no title (the team, 2026-10-29).
+    // Each part says only its name: no title, and no hour since 2026-10-31 (the team).
     expect(rows.filter((r) => r.kind === "day").map((r) => [r.chip, r.topic])).toEqual([
-      ["Mañana · 8:00 a. m.", ""],
-      ["Tarde · 1:45 p. m.", ""],
+      ["Mañana", ""],
+      ["Tarde", ""],
     ]);
     // No subtitle under each part's title (the team, 2026-10-29).
     expect(rows.filter((r) => r.kind === "day").map((r) => r.takeaway)).toEqual(["", ""]);

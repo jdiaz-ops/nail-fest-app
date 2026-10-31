@@ -212,7 +212,7 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
     type: "agenda",
     rows: [
       // Each part says only when it starts: no title nor subtitle (the team, 2026-10-29).
-      day("Mañana · 8:00 a. m.", "", "8:00 a. m. a 1:45 p. m.", ""),
+      day("Mañana", "", "8:00 a. m. a 1:45 p. m.", ""),
       withHost("8:00 a. m.", "Bienvenida", "Con Heidy Aristizábal, maestra de ceremonias"),
       speaker("8:15 a. m.", "Jimena Montalban"),
       // Its line names Maris its own way, the cards count the rest. No star talk (the team, 2026-10-29).
@@ -227,7 +227,7 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
       speaker("10:35 a. m.", "Paula Chacón"),
       speaker("11:40 a. m.", "Cristina Sierra"),
       session("12:40 p. m.", { topic: "1 hora de almuerzo", text: "De 12:40 a 1:45 p. m." }),
-      day("Tarde · 1:45 p. m.", "", "1:45 p. m. a 7:00 p. m.", ""),
+      day("Tarde", "", "1:45 p. m. a 7:00 p. m.", ""),
       // No tag on the talks (the team, 2026-10-29).
       speaker("1:45 p. m.", "Alejandro Salinas"),
       speaker("2:50 p. m.", "Karen Pinzón"),
