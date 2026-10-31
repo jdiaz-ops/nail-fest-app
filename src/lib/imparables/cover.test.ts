@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { coverDeal, riseCountdown, salesState, showsCounter, stageShortLine, type StageTicketType } from "./stages";
+import { coverDeal, riseCountdown, salesState, showsCounter, type StageTicketType } from "./stages";
 
 // Under the cover's button, as the team's boceto (2026-10-31): the stage's
 // places as the offer until 30% of them are paid, then the counter; the
@@ -67,15 +67,5 @@ describe("the countdown to the price going up", () => {
 
   it("never for the last stage: no price after it", () => {
     expect(riseCountdown(sales(0, "2027-06-20T10:00:00-05:00"), new Date("2027-06-20T10:00:00-05:00"))).toBeNull();
-  });
-});
-
-describe("the stage's terms under the results' button", () => {
-  it("places or date, then the next price — no price of its own", () => {
-    expect(stageShortLine(sales(0), TZ)).toBe(`Etapa Creyente · ${nb("200 cupos")} o hasta el ${nb("18 de abril")} · ${nb("luego $120.000")}`);
-  });
-
-  it("the last stage: its date only", () => {
-    expect(stageShortLine(sales(0, "2027-06-10T10:00:00-05:00"), TZ)).toBe(`Precio full · hasta el ${nb("27 de junio")}`);
   });
 });

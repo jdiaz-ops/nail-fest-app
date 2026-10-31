@@ -2,7 +2,7 @@ import type { EventFormat } from "@prisma/client";
 import MetaPixelScript from "@/components/MetaPixelScript";
 import type { LandingBlock } from "@/lib/landingBlocks/types";
 import { coverName, type EventWhen } from "@/lib/imparables/schedule";
-import { coverDeal, dayMonth, pesos, riseCountdown, saving, stagePill, stageProgress, stageShortLine, untilDay, type SalesState } from "@/lib/imparables/stages";
+import { coverDeal, dayMonth, pesos, riseCountdown, saving, stagePill, stageProgress, untilDay, type SalesState } from "@/lib/imparables/stages";
 import { utcToZonedInputValue } from "@/lib/dateFormat";
 import { castLine, castOf, coverOf, introOf, panelOf } from "@/lib/imparables/blocks";
 import { splitTagline } from "@/lib/imparables/tagline";
@@ -259,15 +259,7 @@ export default function ImparablesPage({
   const rise = stageDeal ? riseCountdown(sales, now) : null;
   const progress = mode === "sale" && !special && (sellsLevels ? counter : stageDeal?.kind === "counter") ? stageProgress(sales) : null;
   const guarantee = transformation ? TRANSFORMATION.guarantee : event.ctaNote?.trim() || null;
-  // At the foot of «Lo que vas a resolver en un solo día» (2026-10-31): the cover's button again and, under it, the
-  // stage's terms — not at a version's special price, which the button already says.
-  const resultsFooter =
-    mode === "sale" && current && cta ? (
-      <div className="imp-res-cta">
-        {cta}
-        {!special && <p className="imp-res-line">{stageShortLine(sales, timezone)}</p>}
-      </div>
-    ) : null;
+
   // Its two sections of its own (components/imparables/ImparablesBlocks.tsx): the promise, light, first; the outcomes,
   // dark, before the program.
   const extras: ExtraSection[] = transformation
@@ -448,13 +440,12 @@ export default function ImparablesPage({
             <h2 className="imp-h2">{titleWithName(intro.heading.title, coverName(event.displayName))}</h2>
             {/* Sanitized before storage (lib/events.ts). */}
             <div className="imp-rich" dangerouslySetInnerHTML={{ __html: intro.text.html }} />
-            {/* Selling the transformation, the tagline goes under the promise instead. */}
-            {!transformation && closingLine}
+            {/* The tagline went from here to the speakers (2026-10-31); selling the transformation, under the promise. */}
           </div>
         </section>
       )}
 
-      <ImparablesBlocks blocks={rest} context={{ sales, offsetMs, when, timezone, now, buyLabel, speakers: faces, panel, resultsFooter }} extras={extras} />
+      <ImparablesBlocks blocks={rest} context={{ sales, offsetMs, when, timezone, now, buyLabel, speakers: faces, panel, speakersTagline: transformation ? null : closingLine }} extras={extras} />
 
       <section className="imp-close">
         <div className="imp-rays" aria-hidden="true" />

@@ -42,8 +42,8 @@ export interface ImparablesContext {
   speakers: PeopleLandingBlock["items"];
   /** The panel: its line in the program tells what its card says, with its panelists' faces. */
   panel: { card: CardLandingBlock; people: PeopleLandingBlock } | null;
-  /** At the foot of «Lo que vas a resolver en un solo día» (2026-10-31): the cover's button and the stage's terms. */
-  resultsFooter?: React.ReactNode;
+  /** «Nadie nace imparable. Se hace.» over the speakers, under their line (the team, 2026-10-31). */
+  speakersTagline?: React.ReactNode;
 }
 
 type Section = { heading: HeadingLandingBlock | null; blocks: LandingBlock[]; id?: string; tone?: "dark" | "light" };
@@ -114,8 +114,8 @@ export default function ImparablesBlocks({ blocks, context, extras = [] }: { blo
               {heading?.eyebrow && <div className="imp-eyebrow">{heading.eyebrow}</div>}
               {heading?.title && <h2 className="imp-h2">{heading.title}</h2>}
               {heading?.intro && <p className="imp-lead">{keepTimes(heading.intro)}</p>}
+              {context.speakersTagline && section.blocks.some((b) => b.type === "people") && <div className="imp-sp-tagline">{context.speakersTagline}</div>}
               {content}
-              {section.blocks.some((b) => b.type === "slides" && b.style === "results") && context.resultsFooter}
             </div>
           </section>
         );

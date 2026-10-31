@@ -307,14 +307,3 @@ export function riseCountdown(sales: Pick<SalesState, "current" | "next">, now: 
   if (ms <= 0 || ms > RISE_COUNTDOWN_MS) return null;
   return { to: stage.closesAt, price: next.price, seconds: Math.floor(ms / 1000) };
 }
-
-/** Under the button at the foot of «Lo que vas a resolver en un solo día» (2026-10-31): «Etapa Creyente · 200 cupos o
- * hasta el 18 de abril · luego $120.000» — the stage's terms without its price, which the button says. */
-export function stageShortLine(sales: Pick<SalesState, "current" | "next">, timezone: string): string | null {
-  const { current: stage, next } = sales;
-  if (!stage) return null;
-  const terms = [stage.cap !== null ? together(`${stage.cap} cupos`) : null, stage.closesAt ? `hasta el ${together(untilDay(stage.closesAt, timezone))}` : null]
-    .filter(Boolean)
-    .join(" o ");
-  return [stage.name, terms || null, next ? together(`luego ${pesos(next.price)}`) : null].filter(Boolean).join(" · ");
-}

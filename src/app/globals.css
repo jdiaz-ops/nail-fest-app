@@ -8329,24 +8329,11 @@ body:has(.imp.nf) {
 }
 
 /* «Lo que vas a resolver en un solo día» (2026-10-31): its three cards stacked on a phone, side by side on a
-   computer — nothing slides —, and the cover's button at its foot with the stage's terms. */
+   computer — nothing slides. */
 .imp-results {
   display: grid;
   gap: 16px;
   margin: 22px 0 0;
-}
-.imp-res-cta {
-  margin-top: 24px;
-  text-align: center;
-}
-.imp-res-cta .imp-cta {
-  margin-top: 0;
-}
-.imp-res-line {
-  margin: 12px 0 0;
-  font-size: 13px;
-  line-height: 1.45;
-  color: var(--imp-texto-2);
 }
 @media (min-width: 900px) {
   .imp-results {
@@ -8355,12 +8342,24 @@ body:has(.imp.nf) {
     align-items: stretch;
     margin-top: 26px;
   }
-  .imp-res-cta {
-    margin-top: 30px;
+}
+
+/* «Nadie nace imparable. Se hace.» over the speakers, under their line (2026-10-31): centered, with air. */
+.imp-sp-tagline {
+  margin: 26px 0 8px;
+  text-align: center;
+}
+.imp-sp-tagline .imp-tagline {
+  margin: 0;
+}
+@media (min-width: 900px) {
+  .imp-sp-tagline {
+    margin: 34px 0 10px;
   }
-  .imp-res-cta .imp-cta {
-    max-width: 440px;
-    margin-left: auto;
-    margin-right: auto;
+  .imp-sp-tagline .imp-tagline span {
+    font-size: 22px;
+  }
+  .imp-sp-tagline .imp-tagline .imp-gold {
+    font-size: 34px;
   }
 }
