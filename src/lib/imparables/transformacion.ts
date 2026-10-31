@@ -93,7 +93,7 @@ export const TRANSFORMATION = {
   refund: GUARANTEE.refund,
   /** Under the cover's button, with the shield. */
   guarantee: `${GUARANTEE.title} ${GUARANTEE.line}`,
-  /** G. The closing, over its button. */
+  /** G. The closing, over its button — on every Imparables page, not only these versions (the team, 2026-10-31). */
   closing: {
     title: "Tu momento es ahora.",
     text: "El 27 de junio, 500 manicuristas van a dejar de pensar en pequeño. Decide si vas a ser una de ellas.",

@@ -67,13 +67,13 @@ describe("their blocks", () => {
 
   it("put the paragraph under each part of the program", () => {
     const agenda = out.find((b) => b.type === "agenda")!;
-    expect(agenda.type === "agenda" && agenda.rows.map((r) => r.takeaway)).toEqual([TRANSFORMATION.agenda.morning, "", TRANSFORMATION.agenda.afternoon, ""]);
+    expect(agenda.type === "agenda" ? agenda.rows.map((r) => r.takeaway) : []).toEqual([TRANSFORMATION.agenda.morning, "", TRANSFORMATION.agenda.afternoon, ""]);
   });
 
   it("turn «Todo lo que trae tu boleta» into «Lo que te llevas», with its six results", () => {
     expect(out[8]).toMatchObject({ type: "heading", title: "Lo que te llevas", eyebrow: "Qué incluye" });
-    const points = out[9];
-    expect(points.type === "points" && points.items.map((i) => i.title)).toEqual([
+    const points = out[9]!;
+    expect(points.type === "points" ? points.items.map((i) => i.title) : []).toEqual([
       "Un día que te cambia la forma de ver tu negocio",
       "Vuelve a verlo cuando lo necesites",
       "Las herramientas de cada conferencista",

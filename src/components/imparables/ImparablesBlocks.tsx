@@ -42,6 +42,8 @@ export interface ImparablesContext {
   speakers: PeopleLandingBlock["items"];
   /** The panel: its line in the program tells what its card says, with its panelists' faces. */
   panel: { card: CardLandingBlock; people: PeopleLandingBlock } | null;
+  /** At the foot of «Lo que vas a resolver en un solo día» (2026-10-31): the cover's button and the stage's terms. */
+  resultsFooter?: React.ReactNode;
 }
 
 type Section = { heading: HeadingLandingBlock | null; blocks: LandingBlock[]; id?: string; tone?: "dark" | "light" };
@@ -113,6 +115,7 @@ export default function ImparablesBlocks({ blocks, context, extras = [] }: { blo
               {heading?.title && <h2 className="imp-h2">{heading.title}</h2>}
               {heading?.intro && <p className="imp-lead">{keepTimes(heading.intro)}</p>}
               {content}
+              {section.blocks.some((b) => b.type === "slides" && b.style === "results") && context.resultsFooter}
             </div>
           </section>
         );
@@ -270,9 +273,21 @@ function Face({ name, speakers }: { name: string; speakers: PeopleLandingBlock["
 function Slides({ block, speakers }: { block: SlidesLandingBlock; speakers: PeopleLandingBlock["items"] }) {
   const items = block.items.filter((it) => it.title.trim() || it.text.trim());
   if (items.length === 0) return null;
+  // The results stacked on a phone, side by side on a computer (2026-10-31: nothing slides); the doubts still slide.
+  if (block.style === "results") {
+    return (
+      <div className="imp-results">
+        {items.map((item, j) => (
+          <Result key={j} item={item} speakers={speakers} />
+        ))}
+      </div>
+    );
+  }
   return (
     <ImpSwipe>
-      {items.map((item, j) => (block.style === "doubts" ? <Doubt key={j} item={item} speakers={speakers} /> : <Result key={j} item={item} speakers={speakers} />))}
+      {items.map((item, j) => (
+        <Doubt key={j} item={item} speakers={speakers} />
+      ))}
     </ImpSwipe>
   );
 }
