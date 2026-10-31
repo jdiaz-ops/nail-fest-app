@@ -51,7 +51,7 @@ describe("ensureTierTypes", () => {
     tierSlug,
     name,
     price,
-    priceUsdCents: null,
+    priceUsdCents: tierSlug === "elite" ? 12_200 : 5_900,
     status: "HIDDEN",
     quantity: 100_000,
     minPerOrder: 1,
@@ -63,7 +63,7 @@ describe("ensureTierTypes", () => {
     const types = await ensureTierTypes("ev_1");
     expect([...types.keys()].sort()).toEqual(["circulo", "elite"]);
     expect(db.ticketType.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({ eventId: "ev_1", tierSlug: "elite", name: "Imparable Élite", price: 390_000, status: "HIDDEN", minPerOrder: 1, maxPerOrder: 1 }),
+      data: expect.objectContaining({ eventId: "ev_1", tierSlug: "elite", name: "Imparable Élite", price: 390_000, priceUsdCents: 12_200, status: "HIDDEN", minPerOrder: 1, maxPerOrder: 1 }),
     });
   });
 

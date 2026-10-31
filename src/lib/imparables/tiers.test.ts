@@ -41,6 +41,12 @@ describe("each level's price in each stage", () => {
     expect(tierPrice(tier("elite"), stage)).toBe(390_000);
   });
 
+  it("Círculo and Élite in dollars at a TRM of 3.200, to the nearest dollar", () => {
+    expect(tier("circulo").fixedUsdCents).toBe(5_900);
+    expect(tier("elite").fixedUsdCents).toBe(12_200);
+    expect(tier("imparable").fixedUsdCents).toBeNull();
+  });
+
   it("Círculo and Élite keep their price even with no stage on sale", () => {
     expect(tierPrice(tier("imparable"), null)).toBeNull();
     expect(tierPrice(tier("circulo"), null)).toBe(190_000);

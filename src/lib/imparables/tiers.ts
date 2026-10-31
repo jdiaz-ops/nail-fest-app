@@ -14,6 +14,11 @@ import { pesos, untilDay, type PriceStage, type SalesState } from "./stages";
 /** The versions (nailfest.lat/v/<slug>) that sell the three levels. */
 export const TIERED_VERSIONS = ["sapate"];
 
+/** Pesos per US dollar for Círculo's and Élite's price in dollars, with PayPal (the team, 2026-10-31: «por ahora una
+ * TRM de 3.200»): each one's pesos at this rate, to the nearest whole dollar — 190.000 → US$59, 390.000 → US$122. */
+export const USD_RATE = 3_200;
+const usdCentsOf = (pesos: number) => Math.round(pesos / USD_RATE) * 100;
+
 export type TierSlug = "imparable" | "circulo" | "elite";
 
 export interface Tier {
@@ -67,7 +72,7 @@ export const TIERS: Tier[] = [
     name: "Imparable Élite",
     priceMode: "fixed",
     fixedPrice: 390_000,
-    fixedUsdCents: null,
+    fixedUsdCents: usdCentsOf(390_000),
     cap: 20,
     order: 1,
     badge: "20 cupos",
@@ -80,7 +85,7 @@ export const TIERS: Tier[] = [
     name: "Imparable Círculo",
     priceMode: "fixed",
     fixedPrice: 190_000,
-    fixedUsdCents: null,
+    fixedUsdCents: usdCentsOf(190_000),
     cap: null,
     order: 2,
     badge: "★ La más elegida",

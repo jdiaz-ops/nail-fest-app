@@ -105,7 +105,8 @@ export interface CheckoutLevel {
   note: string | null;
   /** What it brings besides what the three bring. */
   extras: string[];
-  upgrade: { level: CheckoutLevel; ticket: CheckoutTicket; title: string; text: string; yes: string; no: string } | null;
+  /** title: in pesos; titleUsd: the same in dollars, for whoever pays with PayPal (null without both prices). */
+  upgrade: { level: CheckoutLevel; ticket: CheckoutTicket; title: string; titleUsd: string | null; text: string; yes: string; no: string } | null;
 }
 
 interface Applied {
@@ -706,7 +707,7 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
                   // The level she's buying, and what it brings besides what the three bring.
                   <div className="imp-co-level">
                     <b>{level.name}</b>
-                    {level.note && ` · ${level.note}`} · {money("COP", ticket.price * 100)}
+                    {level.note && ` · ${level.note}`} · {money(shown, shown === "USD" ? (ticket.usdCents ?? 0) : ticket.price * 100)}
                     {level.extras.length > 0 && (
                       <ul>
                         {level.extras.map((extra) => (
@@ -788,7 +789,7 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
                 {offer && (
                   // Buying Imparable: once, right before paying, the offer to move to Círculo.
                   <div className="imp-co-up">
-                    <h3>{offer.title}</h3>
+                    <h3>{shown === "USD" && offer.titleUsd ? offer.titleUsd : offer.title}</h3>
                     <p>{offer.text}</p>
                     <button type="button" className="imp-cta" onClick={takeUpgrade}>
                       {offer.yes}

@@ -10,7 +10,7 @@ import { coverName, kindLine } from "@/lib/imparables/schedule";
 import { specialPriceFor, specialSold, withVersionPrice } from "@/lib/imparables/versions";
 import { TIERS_SECTION, UPGRADE_OFFER, fill, isTieredVersion, tierBySlug, type Tier } from "@/lib/imparables/tiers";
 import { ensureTierTypes, soldOutTiers } from "@/lib/imparables/tiersServer";
-import { pesos } from "@/lib/imparables/stages";
+import { dollars, pesos } from "@/lib/imparables/stages";
 import type { CheckoutTicket } from "@/lib/imparables/pricing";
 import MetaPixelScript from "@/components/MetaPixelScript";
 import ImpCheckout, { type CheckoutLevel } from "./ImpCheckout";
@@ -53,6 +53,8 @@ export default async function ImpCheckoutScreen({ event, version, tier: asked = 
       const circulo = tierBySlug("circulo");
       const circuloTicket = circulo ? fixedTicket(circulo) : null;
       const difference = circuloTicket ? circuloTicket.price - ticket.price : 0;
+      // In dollars too, for whoever pays with PayPal — when both have a price in dollars.
+      const differenceUsd = circuloTicket?.usdCents != null && ticket.usdCents !== null ? circuloTicket.usdCents - ticket.usdCents : null;
       level = {
         slug: chosen.slug,
         name: chosen.name,
@@ -64,6 +66,7 @@ export default async function ImpCheckoutScreen({ event, version, tier: asked = 
                 level: fixedLevel(circulo),
                 ticket: circuloTicket,
                 title: fill(UPGRADE_OFFER.title, { diferencia: pesos(difference) }),
+                titleUsd: differenceUsd !== null && differenceUsd > 0 ? fill(UPGRADE_OFFER.title, { diferencia: dollars(differenceUsd) }) : null,
                 text: UPGRADE_OFFER.text,
                 yes: UPGRADE_OFFER.yes,
                 no: UPGRADE_OFFER.no,
