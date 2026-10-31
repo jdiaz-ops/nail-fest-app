@@ -5,6 +5,7 @@ import { coverName, type EventWhen } from "@/lib/imparables/schedule";
 import { coverDeal, dayMonth, pesos, riseCountdown, saving, stagePill, stageProgress, untilDay, type SalesState } from "@/lib/imparables/stages";
 import { utcToZonedInputValue } from "@/lib/dateFormat";
 import { castLine, castOf, coverOf, introOf, panelOf } from "@/lib/imparables/blocks";
+import { STATEMENT } from "@/lib/imparables/statement";
 import { splitTagline } from "@/lib/imparables/tagline";
 import ImparablesBlocks from "./ImparablesBlocks";
 import { Tiara } from "./ImpArt";
@@ -275,7 +276,24 @@ export default function ImparablesPage({
           at: "beforeAgenda",
         },
       ]
-    : [];
+    : [
+        // «Tu negocio no va a ser el mismo. Y tú tampoco.» between the speakers and the program (the team,
+        // 2026-10-31), where «Lo que vas a resolver en un solo día» was.
+        {
+          id: "cambio",
+          kind: "statement",
+          title: "",
+          intro: "",
+          tone: "dark",
+          at: "beforeAgenda",
+          content: (
+            <p className="imp-statement">
+              <span>{STATEMENT.line}</span>
+              <b className="imp-statement-gold">{STATEMENT.gold}</b>
+            </p>
+          ),
+        },
+      ];
   const deal =
     !special && mode === "sale" && current ? (
       sellsLevels ? (

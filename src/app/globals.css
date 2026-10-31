@@ -8342,6 +8342,59 @@ body:has(.imp.nf) {
   border-top: 1px solid var(--imp-borde-contador);
   background: var(--imp-hueso-profundo);
 }
+/* «Tu negocio no va a ser el mismo. Y tú tampoco.» (the team, 2026-10-31): a band of chocolate between the
+   speakers and the program, the cover's rays rising from its foot, the second line in gold. */
+.imp-sec--statement {
+  overflow: hidden;
+  padding: 60px 22px 64px;
+  text-align: center;
+}
+.imp-sec--statement::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 1100px;
+  height: 540px;
+  transform: translateX(-50%);
+  pointer-events: none;
+  background: repeating-conic-gradient(from 0deg at 50% 100%, rgba(0, 0, 0, 0.22) 0deg 2.6deg, transparent 2.6deg 7.4deg);
+  -webkit-mask-image: radial-gradient(70% 92% at 50% 100%, #000 0%, rgba(0, 0, 0, 0.55) 50%, transparent 86%);
+  mask-image: radial-gradient(70% 92% at 50% 100%, #000 0%, rgba(0, 0, 0, 0.55) 50%, transparent 86%);
+}
+.imp-sec--statement .imp-sec-in {
+  position: relative;
+}
+.imp-statement {
+  margin: 0 auto;
+  font-family: var(--imp-display), Georgia, serif;
+  font-weight: 800;
+  font-size: 34px;
+  line-height: 1.12;
+  color: var(--imp-texto);
+  text-wrap: balance;
+}
+.imp-statement span,
+.imp-statement .imp-statement-gold {
+  display: block;
+}
+.imp-statement .imp-statement-gold {
+  margin-top: 4px;
+  color: var(--imp-resalte);
+}
+@media (min-width: 900px) {
+  .imp-sec--statement {
+    padding: 86px 22px 92px;
+  }
+  .imp-sec--statement::before {
+    width: 1900px;
+    height: 800px;
+  }
+  .imp-statement {
+    max-width: 18ch;
+    font-size: 58px;
+  }
+}
 /* «Nadie nace imparable. Se hace.» over the speakers, under their line (2026-10-31): centered, with air. */
 .imp-sp-tagline {
   margin: 26px 0 8px;

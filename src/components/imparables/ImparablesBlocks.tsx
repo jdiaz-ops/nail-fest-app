@@ -46,7 +46,7 @@ export interface ImparablesContext {
   speakersTagline?: React.ReactNode;
 }
 
-type Section = { heading: HeadingLandingBlock | null; blocks: LandingBlock[]; id?: string; tone?: "dark" | "light" };
+type Section = { heading: HeadingLandingBlock | null; blocks: LandingBlock[]; id?: string; tone?: "dark" | "light"; kind?: "statement" };
 
 /** A section the page adds of its own (2026-10-31: the ticket levels on a version that sells them, lib/imparables/
  * tiers.ts; the promise and the outcomes on one that sells the transformation, lib/imparables/transformacion.ts):
@@ -60,6 +60,8 @@ export interface ExtraSection {
   content?: React.ReactNode;
   blocks?: LandingBlock[];
   tone?: "dark" | "light";
+  /** A statement: its content alone, big and centered, over the rays (the team, 2026-10-31). */
+  kind?: "statement";
   /** First of all, before the program, or before the questions (else last). */
   at: "start" | "beforeAgenda" | "beforeFaq";
 }
@@ -102,7 +104,7 @@ export default function ImparablesBlocks({
     const at = extra.at === "start" ? 0 : extra.at === "beforeAgenda" ? before("agenda") : before("faq");
     const heading: HeadingLandingBlock = { type: "heading", eyebrow: extra.eyebrow ?? "", title: extra.title, intro: extra.intro };
     const content = [...(extra.blocks ? renderBlocks(extra.blocks, context) : []), ...(extra.content ? [extra.content] : [])];
-    sections.splice(at >= 0 ? at : sections.length, 0, { heading, blocks: extra.blocks ?? [], content, id: extra.id, tone: extra.tone });
+    sections.splice(at >= 0 ? at : sections.length, 0, { heading, blocks: extra.blocks ?? [], content, id: extra.id, tone: extra.tone, kind: extra.kind });
   }
   // From the first's color, alternating; a section with a color of its own takes it — «Lo que vas a resolver en un
   // solo día» is always chocolate (the team, 2026-10-31) — and the next ones go on from it.
@@ -123,7 +125,7 @@ export default function ImparablesBlocks({
           <section
             key={i}
             id={section.id}
-            className={`imp-sec${tones[i] ? " imp-sec--alt" : ""}${section.blocks.some((b) => b.type === "people") ? " imp-sec--speakers" : ""}`}
+            className={`imp-sec${tones[i] ? " imp-sec--alt" : ""}${section.blocks.some((b) => b.type === "people") ? " imp-sec--speakers" : ""}${section.kind === "statement" ? " imp-sec--statement" : ""}`}
           >
             <div className="imp-sec-in">
               {quote && (
