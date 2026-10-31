@@ -165,7 +165,7 @@ export default function ImparablesPage({
 
   const { cover, rest: afterCover } = coverOf(blocks);
   const { intro, rest } = introOf(afterCover);
-  const { pillars, line: tagline } = splitTagline(event.subtitle ?? "");
+  const { pillars, headline, line: tagline } = splitTagline(event.subtitle ?? "");
   const { speakers } = castOf(blocks);
   const panel = panelOf(rest);
   // Whose photo goes next to a name on the cards: the speakers', and the panel's guests already named.
@@ -375,9 +375,9 @@ export default function ImparablesPage({
           {version?.subtitle ? (
             <p className="imp-tag">{version.subtitle}</p>
           ) : tagline && (
-            // Its last line only, right under the name (2026-10-28: no headline
-            // above it any more). Sanitized before storage (lib/events.ts).
-            <div className="imp-tag" dangerouslySetInnerHTML={{ __html: tagline }} />
+            // Its headline and its line, right under the name (the team, 2026-10-31: the headline came back over
+            // the line). Sanitized before storage (lib/events.ts).
+            <div className="imp-tag" dangerouslySetInnerHTML={{ __html: `${headline ?? ""}${tagline}` }} />
           )}
           {/* Right before the group photo (2026-10-28): what it is and when, before who. */}
           <p className="imp-pill">

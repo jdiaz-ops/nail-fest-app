@@ -2,9 +2,9 @@
 // is read counted from the end: the last paragraph is the cover's line, the
 // one before it the headline, and a third one before them the pillars
 // («Mentalidad · Dinero · Marketing»). The pillars are told under the group
-// photo (2026-10-28), and the headline is no longer on the cover at all —
-// it stays in the tagline, so bringing it back is only a matter of showing
-// it again.
+// photo (2026-10-28); the headline, off the cover for a while, is back over
+// the line since 2026-10-31 («Empezaron desde abajo, con tus mismos
+// miedos. Hoy tienen el negocio que sueñas.»).
 const PARAGRAPH = /<p\b[^>]*>[\s\S]*?<\/p>/g;
 
 export function splitTagline(html: string): { pillars: string | null; headline: string | null; line: string } {

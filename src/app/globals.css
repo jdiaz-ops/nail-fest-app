@@ -3991,6 +3991,14 @@ body:has(.imp) {
 /* Under the name, the last line of the event's tagline, any bold words in
    bronze (2026-10-28). Its headline is off the cover, and its pillars go
    under the group photo (.imp-pillars) — see lib/imparables/tagline.ts. */
+/* The headline over the line (back since 2026-10-31): bigger, in the cover's ink. */
+.imp-tag > p:not(:last-child) {
+  margin: 0 0 8px;
+  font-size: 20px;
+  line-height: 1.35;
+  font-weight: 600;
+  color: var(--imp-texto);
+}
 /* Strong, it's the cover's message now (2026-10-28): big, in the cover's ink. */
 .imp-tag > p:last-child {
   font-size: 17px;
@@ -7121,11 +7129,17 @@ body:has(.imp.nf) {
     letter-spacing: 0.3em;
     text-indent: 0.3em;
   }
+  .imp-tag > p:not(:last-child) {
+    max-width: 26em;
+    margin: 0 auto 10px;
+    font-size: 27px;
+    line-height: 1.3;
+  }
   .imp-tag > p:last-child {
     max-width: 32em;
     margin-left: auto;
     margin-right: auto;
-    font-size: 25px;
+    font-size: 21px;
   }
   .imp-tagline span {
     font-size: 24px;
@@ -7294,10 +7308,16 @@ body:has(.imp.nf) {
     max-width: none;
     margin: 0;
   }
+  .imp-hero .imp-tag > p:not(:last-child) {
+    max-width: none;
+    margin: 0 0 10px;
+    font-size: clamp(22px, min(2.1vw, 3.9vh), 32px);
+    line-height: 1.3;
+  }
   .imp-hero .imp-tag > p:last-child {
     max-width: none;
     margin: 0;
-    font-size: clamp(19px, min(1.65vw, 3.1vh), 26px);
+    font-size: clamp(18px, min(1.55vw, 2.9vh), 24px);
     line-height: 1.45;
   }
   /* Centered over the button. */

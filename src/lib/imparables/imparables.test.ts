@@ -318,11 +318,11 @@ describe("how the page reads the blocks", () => {
 });
 
 describe("the cover's tagline", () => {
-  it("parts the pillars (under the group photo), the headline (off the cover) and the line under the name", () => {
+  it("parts the pillars (under the group photo), the headline and the line (both under the name)", () => {
     expect(splitTagline(IMPARABLES_FIELDS.subtitle)).toEqual({
       pillars: "<p>Mentalidad · Dinero · Marketing</p>",
-      headline: "<p>Deja de pensar en pequeño</p>",
-      line: "<p>Inspírate en quienes empezaron desde abajo, con tus mismos miedos, y hoy tienen el negocio y la vida que sueñas. <strong>Aprende cómo lo hicieron y replica sus estrategias para ganar</strong>.</p>",
+      headline: "<p>Empezaron desde abajo, con tus mismos miedos. Hoy tienen el negocio que sueñas.</p>",
+      line: "<p><strong>Aprende cómo lo hicieron y replica sus estrategias para ganar.</strong></p>",
     });
   });
 
@@ -420,9 +420,9 @@ describe("the template", () => {
     }
   });
 
-  it("keeps the cover's tagline (its headline off the page for now) and «Nadie nace imparable» under the button", () => {
+  it("keeps the cover's tagline (the team's, 2026-10-31) and «Nadie nace imparable» under the button", () => {
     expect(IMPARABLES_FIELDS.subtitle).toBe(
-      "<p>Mentalidad · Dinero · Marketing</p><p>Deja de pensar en pequeño</p><p>Inspírate en quienes empezaron desde abajo, con tus mismos miedos, y hoy tienen el negocio y la vida que sueñas. <strong>Aprende cómo lo hicieron y replica sus estrategias para ganar</strong>.</p>"
+      "<p>Mentalidad · Dinero · Marketing</p><p>Empezaron desde abajo, con tus mismos miedos. Hoy tienen el negocio que sueñas.</p><p><strong>Aprende cómo lo hicieron y replica sus estrategias para ganar.</strong></p>"
     );
     expect(IMPARABLES_FIELDS.closingText).toBe("Nadie nace imparable. Se hace.");
     expect(IMPARABLES_FIELDS.registerButtonLabel).toBe("Reservar mi cupo");
