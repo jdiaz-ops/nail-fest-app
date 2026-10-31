@@ -259,7 +259,10 @@ export default function ImparablesPage({
   const stageDeal = !sellsLevels && !special && mode === "sale" && current ? coverDeal(sales, timezone) : null;
   const rise = stageDeal ? riseCountdown(sales, now) : null;
   const progress = mode === "sale" && !special && (sellsLevels ? counter : stageDeal?.kind === "counter") ? stageProgress(sales) : null;
-  const guarantee = transformation ? TRANSFORMATION.guarantee : event.ctaNote?.trim() || null;
+  // The guarantee under the cover's button only on the pages that sell the transformation (the team hid it from the
+  // others, 2026-10-31); the event's «Texto debajo del botón» stays on the event, and the guarantee keeps its card
+  // under «Qué incluye».
+  const guarantee = transformation ? TRANSFORMATION.guarantee : null;
 
   // Its two sections of its own (components/imparables/ImparablesBlocks.tsx): the promise, light, first; the outcomes,
   // dark, before the program.
