@@ -28,13 +28,8 @@ describe("the counter", () => {
 });
 
 describe("under the cover's button", () => {
-  it("before the counter, one line: the places at this price, then the next price", () => {
-    expect(coverDeal(sales(0), TZ)).toEqual({ kind: "first", places: `Solo ${nb("200 cupos")}`, offer: "a este precio · luego $120.000" });
-  });
-
-  it("with no stage after it, only the places", () => {
-    const last = stages().filter((t) => t.id === "t_cre");
-    expect(coverDeal(sales(0, undefined, last), TZ)).toEqual({ kind: "first", places: `Solo ${nb("200 cupos")}`, offer: "a este precio" });
+  it("before the counter, one line: the places at this price, and nothing about the next price", () => {
+    expect(coverDeal(sales(0), TZ)).toEqual({ kind: "first", places: `Solo ${nb("200 cupos")}`, offer: "a este precio" });
   });
 
   it("the counter: what's left of the first 200, then the stage, its date and the next price", () => {

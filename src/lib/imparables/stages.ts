@@ -264,8 +264,8 @@ export function showsCounter(sales: Pick<SalesState, "current">): boolean {
 }
 
 export type CoverDeal =
-  /** Before the counter, one line (the team, 2026-10-31): «Solo 200 cupos» «a este precio · luego $120.000». The
-   * stage's name and its date stay on the fixed bar («Etapa Creyente · hasta el 18 de abril»). */
+  /** Before the counter, one line (the team, 2026-10-31): «Solo 200 cupos» «a este precio» — no next price: the
+   * team struck it the same day. The stage's name stays on the fixed bar. */
   | { kind: "first"; places: string; offer: string }
   /** The counter over its bar: «Quedan 127 de las primeras 200 a $90.000», then «Etapa Creyente · hasta el 18 de abril ·
    * luego $120.000». */
@@ -289,7 +289,7 @@ export function coverDeal(sales: Pick<SalesState, "current" | "next" | "remainin
     const terms = [stage.name, until].filter(Boolean).join(" · ") + then;
     return { kind: "counter", title, terms: terms || null };
   }
-  return { kind: "first", places: `Solo ${together(`${stage.cap} cupos`)}`, offer: `a este precio${then}` };
+  return { kind: "first", places: `Solo ${together(`${stage.cap} cupos`)}`, offer: "a este precio" };
 }
 
 /** The three weeks before today's stage closes on its date with another after it: «El precio sube a $120.000 en…»,
