@@ -8,7 +8,7 @@ import { splitName } from "@/lib/name";
 import { clientIpFromHeaders, userAgentFromHeaders } from "@/lib/request";
 import { getOrgSettings } from "@/lib/settings";
 import { WORLD_COUNTRIES } from "@/lib/worldCountries";
-import { waitlistLabel } from "@/lib/imparables/waitlist";
+import { eliteWaitlistLabel, waitlistLabel } from "@/lib/imparables/waitlist";
 
 // Joining an event's waiting list (Manicuristas Imparables' page before its
 // first price stage opens — components/imparables/ImpWaitlistForm.tsx).
@@ -22,17 +22,21 @@ import { waitlistLabel } from "@/lib/imparables/waitlist";
 
 const bodySchema = z.object({
   eventSlug: z.string().min(1),
-  fullName: z.string().trim().min(1).max(120),
+  // Left out only on Élite's list (below).
+  fullName: z.string().trim().max(120).optional(),
   email: z.string().trim().email().max(200),
   // E.164, built by the form from the picked country's code.
   phone: z.string().regex(/^\+\d{7,15}$/),
-  city: z.string().trim().min(1).max(80),
+  city: z.string().trim().max(80).optional(),
   country: z.string().length(2),
   website: z.string().optional(),
   fbc: z.string().optional(),
   fbp: z.string().optional(),
   leadEventId: z.string().max(100).optional(),
   sourceUrl: z.string().max(2000).optional(),
+  // «Avísame si se abre un cupo» once Élite's 20 are paid (lib/imparables/
+  // tiers.ts, 2026-10-31): only her email and WhatsApp, on Élite's own list.
+  list: z.enum(["elite"]).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -41,6 +45,8 @@ export async function POST(req: NextRequest) {
   const input = parsed.data;
   // Honeypot: same answer as any bad request, and nothing written.
   if (input.website) return NextResponse.json({ error: "invalid_body" }, { status: 400 });
+  // The sale's list asks for her name and city too.
+  if (!input.list && (!input.fullName || !input.city)) return NextResponse.json({ error: "invalid_body" }, { status: 400 });
   if (!WORLD_COUNTRIES.some((c) => c.iso2 === input.country)) return NextResponse.json({ error: "invalid_body" }, { status: 400 });
 
   const event = await db.event.findUnique({ where: { slug: input.eventSlug } });
@@ -51,25 +57,25 @@ export async function POST(req: NextRequest) {
   if (orgSettings.bannedEmails.includes(email)) return NextResponse.json({ error: "not_permitted" }, { status: 403 });
   if (await isObviouslyDeadEmail(email)) return NextResponse.json({ error: "email_domain_invalid" }, { status: 400 });
 
-  const { firstName, lastName } = splitName(input.fullName);
-  const label = waitlistLabel(event);
+  const { firstName, lastName } = splitName(input.fullName ?? "");
+  const label = input.list === "elite" ? eliteWaitlistLabel(event) : waitlistLabel(event);
   const person = await db.person.upsert({
     where: { email },
     create: {
       email,
       phone: input.phone,
-      firstName,
+      firstName: firstName || null,
       lastName: lastName || null,
-      city: input.city,
+      city: input.city || null,
       country: input.country,
       labels: { connectOrCreate: { where: { name: label }, create: { name: label } } },
     },
     // Fresh answers from her own hands win; a field she left out never blanks one saved before.
     update: {
       phone: input.phone,
-      firstName,
+      firstName: firstName || undefined,
       lastName: lastName || undefined,
-      city: input.city,
+      city: input.city || undefined,
       country: input.country,
       labels: { connectOrCreate: { where: { name: label }, create: { name: label } } },
     },

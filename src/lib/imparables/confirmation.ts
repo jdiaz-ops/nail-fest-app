@@ -12,6 +12,8 @@ import { getActiveStage, purchaseOf } from "./pricing";
 import { clock, coverName, eventWhen } from "./schedule";
 import { pesos, type SalesState } from "./stages";
 import { versionLive } from "./versions";
+import { TIER_EMAIL, tierBySlug, tiersAbove } from "./tiers";
+import { paidLabel, upgradeUrl } from "./tiersServer";
 import { googleCalendarUrl, imparablesConfirmationEmail, shareLine, type CalendarEvent, type ImparablesConfirmation } from "./confirmationEmail";
 
 // What Manicuristas Imparables' own confirmation email says
@@ -45,7 +47,13 @@ export function defaultShareText(event: Event, timezone: string): string {
 
 async function confirmationOf(
   event: Event,
-  her: { firstName: string | null; code: string; purchase: { stage: string; paid: string } | null; asistire: string },
+  her: {
+    firstName: string | null;
+    code: string;
+    purchase: { stage: string; paid: string } | null;
+    asistire: string;
+    level?: ImparablesConfirmation["level"];
+  },
   sales: SalesState,
   shareText: string | null = event.shareText
 ): Promise<ImparablesConfirmation> {
@@ -76,6 +84,7 @@ async function confirmationOf(
     start: Number.isFinite(hh) && Number.isFinite(mm) ? clock(hh!, mm!) : null,
     linkMinutesBefore: ZOOM_ACCESS_REMINDER_MINUTES_BEFORE,
     purchase: her.purchase,
+    level: her.level ?? null,
     code: her.code,
     calendar: { google: googleCalendarUrl(calendar), ics: `${base}/${event.slug}/calendario` },
     share: {
@@ -100,13 +109,22 @@ export async function imparablesConfirmationFor(
   if (!registration || registration.event.confirmationEmailDesign !== IMPARABLES_DESIGN) return null;
   const purchase = await purchaseOf(registrationId);
   const sales = purchase?.sales ?? (await getActiveStage(registration.event));
+  // Her level (lib/imparables/tiers.ts): Imparable says its stage too; Círculo and Élite, what she paid.
+  const tier = tierBySlug(registration.tierSlug);
   const data = await confirmationOf(
     registration.event,
     {
       firstName: her.firstName,
       code: her.code,
-      purchase: purchase ? { stage: purchase.stage.name, paid: purchase.paid } : null,
+      purchase: purchase ? { stage: purchase.stage.name, paid: purchase.paid } : tier ? { stage: tier.name, paid: await paidLabel(registrationId) } : null,
       asistire: asistireUrl(registrationId),
+      level: tier
+        ? {
+            name: tier.name,
+            next: TIER_EMAIL.next[tier.slug] ?? null,
+            upgrade: tiersAbove(tier.slug).length > 0 ? { url: upgradeUrl(registrationId), line: TIER_EMAIL.upgradeLine } : null,
+          }
+        : null,
     },
     sales
   );

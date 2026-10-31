@@ -7,3 +7,9 @@ import { publicEventName } from "@/lib/eventDisplayName";
 export function waitlistLabel(event: { name: string; publicName?: string | null }): string {
   return `Lista de espera · ${publicEventName(event)}`;
 }
+
+/** Élite's own list once its 20 are paid (lib/imparables/tiers.ts, 2026-10-31): «Lista de espera Élite · Manicuristas
+ * Imparables» — whoever is on it hears first if a place frees up. */
+export function eliteWaitlistLabel(event: { name: string; publicName?: string | null }): string {
+  return `Lista de espera Élite · ${publicEventName(event)}`;
+}

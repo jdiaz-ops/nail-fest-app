@@ -8,6 +8,9 @@ import { getActiveStage } from "@/lib/imparables/pricing";
 import { pesos } from "@/lib/imparables/stages";
 import { specialPricesOf, versionUrl } from "@/lib/imparables/versions";
 import { versionNumbers, type VersionNumbers } from "@/lib/imparables/versionsAdmin";
+import { isTieredVersion } from "@/lib/imparables/tiers";
+import { tierStats, type TierStats } from "@/lib/imparables/tiersServer";
+import { eliteWaitlistLabel } from "@/lib/imparables/waitlist";
 import CopyLinkButton from "@/components/CopyLinkButton";
 
 export const dynamic = "force-dynamic";
@@ -59,6 +62,53 @@ function Numbers({ n }: { n: VersionNumbers }) {
   );
 }
 
+/** A version that sells the ticket levels (lib/imparables/tiers.ts, 2026-10-31): each level's sales and income, Élite's
+ * places and waiting list, and how many moved up. */
+function TierNumbers({ t, label }: { t: TierStats; label: string }) {
+  return (
+    <div style={{ gridColumn: "1 / -1", borderTop: "1px solid #e3e1dc", paddingTop: 12 }}>
+      <div style={{ fontSize: 11.5, color: "#5b5f6b", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Por nivel</div>
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ borderCollapse: "collapse", fontSize: 13.5, fontVariantNumeric: "tabular-nums", minWidth: 360 }}>
+          <thead>
+            <tr style={{ color: "#5b5f6b", textAlign: "left" }}>
+              <th style={{ padding: "4px 16px 4px 0", fontWeight: 600 }}>Nivel</th>
+              <th style={{ padding: "4px 16px 4px 0", fontWeight: 600 }}>Vendidas</th>
+              <th style={{ padding: "4px 0", fontWeight: 600 }}>Ingresos</th>
+            </tr>
+          </thead>
+          <tbody>
+            {t.rows.map((row) => (
+              <tr key={row.tier.slug} style={{ borderTop: "1px solid #f0efec" }}>
+                <td style={{ padding: "5px 16px 5px 0", fontWeight: 600 }}>{row.tier.name}</td>
+                <td style={{ padding: "5px 16px 5px 0" }}>{row.sold.toLocaleString("es-CO")}</td>
+                <td style={{ padding: "5px 0" }}>{pesos(row.revenue)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 10 }}>
+        {t.eliteLeft !== null && (
+          <span style={{ ...chip, ...(t.eliteLeft === 0 ? { background: "#fbefd9", color: "#6e4a12" } : {}) }}>
+            {t.eliteLeft === 0 ? "Élite agotada" : <>Cupos Élite: quedan <b>{t.eliteLeft}</b></>}
+          </span>
+        )}
+        <span style={chip}>
+          Lista de espera Élite: <b>{t.eliteWaitlist}</b>
+        </span>
+        <span style={chip}>
+          Se pasaron de nivel: <b>{t.upgrades}</b>
+        </span>
+      </div>
+      <p style={{ margin: "8px 0 0", fontSize: 12.5, color: "#5b5f6b" }}>
+        Cada compra cuenta en el nivel que tiene hoy, con todo lo que pagó en pesos: su compra y, si se pasó de nivel, la diferencia. La lista de espera Élite
+        está en el CRM con la etiqueta «{label}».
+      </p>
+    </div>
+  );
+}
+
 // «Versiones de la landing» (2026-10-30, lib/imparables/versions.ts): the
 // event's main page and each version of it — its link, what it changes,
 // whether it's on, its QR — with their numbers side by side.
@@ -73,6 +123,10 @@ export default async function LandingVersionsPage({ params }: { params: { id: st
     getActiveStage(event),
   ]);
   const numbers = await versionNumbers(event, versions);
+  const waitlistLabel = eliteWaitlistLabel(event);
+  const tiers = new Map(
+    await Promise.all(versions.filter((v) => isTieredVersion(v.slug)).map(async (v) => [v.id, await tierStats(event.id, v.id, waitlistLabel)] as const))
+  );
   const now = new Date();
   const day = (d: Date) => formatDateInTz(d, { day: "numeric", month: "short" }, orgSettings.timezone, orgSettings.language);
   const typeName = new Map(types.map((t) => [t.id, t.name]));
@@ -167,6 +221,7 @@ export default async function LandingVersionsPage({ params }: { params: { id: st
                 </Link>
               </div>
               <Numbers n={n} />
+              {tiers.has(v.id) && <TierNumbers t={tiers.get(v.id)!} label={waitlistLabel} />}
             </div>
           );
         })}

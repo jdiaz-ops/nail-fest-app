@@ -28,6 +28,9 @@ export interface ImparablesConfirmation {
   linkMinutesBefore: number;
   /** What she bought: «Etapa Creyente», «$90.000». */
   purchase: { stage: string; paid: string } | null;
+  /** Her ticket level, bought through a version that sells them (lib/imparables/tiers.ts, 2026-10-31): «Compraste
+   * Imparable Círculo», what comes next with it, and her link to move up while there's a level above hers. */
+  level?: { name: string; next: string | null; upgrade: { url: string; line: string } | null } | null;
   code: string;
   calendar: { google: string; ics: string };
   /** «Hoy está a $90.000 y luego sube a $120.000: compartirle esto es un buen regalo.», and WhatsApp's share link. */
@@ -154,7 +157,11 @@ ${table(
     [
       row("Cuándo", esc(c.date), when || null),
       row("Dónde", "En vivo por Zoom", "Desde tu celular o tu computador"),
-      c.purchase ? row("Tu compra", `${esc(c.purchase.stage)} · ${esc(c.purchase.paid)}`, null) : "",
+      c.level && c.purchase
+        ? row("Tu compra", `Compraste ${esc(c.level.name)}`, c.purchase.stage === c.level.name ? c.purchase.paid : `${c.purchase.stage} · ${c.purchase.paid}`)
+        : c.purchase
+          ? row("Tu compra", `${esc(c.purchase.stage)} · ${esc(c.purchase.paid)}`, null)
+          : "",
       row("Código", `<span style="letter-spacing:0.08em;font-weight:800;">${esc(c.code)}</span>`, null, true),
     ].join("")
   )}</td></tr>
@@ -165,6 +172,19 @@ ${pill(c.calendar.google, "&#128197;&nbsp; Google Calendar")}${pill(c.calendar.i
   `background:${CARD};border:1.5px solid ${GOLD};border-radius:16px;`
 )}
 </td></tr>
+${
+  c.level?.next
+    ? `<tr><td class="px" style="padding:22px 32px 4px;">
+${eyebrow(`Qué sigue con ${c.level.name}`)}
+<div style="margin-top:8px;${sans(15, 400, WARM, "line-height:1.6;")}">${esc(c.level.next)}</div>
+</td></tr>`
+    : ""
+}
+${
+  c.level?.upgrade
+    ? `<tr><td class="px" style="padding:14px 32px 2px;${sans(14.5, 400, WARM, "line-height:1.55;")}">${esc(c.level.upgrade.line)} <a href="${esc(c.level.upgrade.url)}" style="font-weight:800;color:${BRONZE_DEEP};">Ver cómo</a></td></tr>`
+    : ""
+}
 <tr><td class="px" style="padding:26px 32px 10px;">
 <div style="margin-bottom:6px;${serif(22, 800)}">¿Qué pasa ahora?</div>
 ${table(
@@ -224,11 +244,17 @@ Recibes este correo porque compraste tu entrada a ${esc(c.eventName)}.
       "TU ENTRADA",
       `Cuándo: ${c.date}${when ? ` · ${when}` : ""}`,
       "Dónde: en vivo por Zoom, desde tu celular o tu computador",
-      ...(c.purchase ? [`Tu compra: ${c.purchase.stage} · ${c.purchase.paid}`] : []),
+      ...(c.level && c.purchase
+        ? [`Tu compra: Compraste ${c.level.name} · ${c.purchase.stage === c.level.name ? c.purchase.paid : `${c.purchase.stage} · ${c.purchase.paid}`}`]
+        : c.purchase
+          ? [`Tu compra: ${c.purchase.stage} · ${c.purchase.paid}`]
+          : []),
       `Código: ${c.code}`,
       `Agrégalo a tu calendario: ${c.calendar.google}`,
       `iPhone u Outlook: ${c.calendar.ics}`,
     ].join("\n"),
+    ...(c.level?.next ? [`QUÉ SIGUE CON ${c.level.name.toUpperCase()}\n${c.level.next}`] : []),
+    ...(c.level?.upgrade ? [`${c.level.upgrade.line} ${c.level.upgrade.url}`] : []),
     ["¿QUÉ PASA AHORA?", ...steps.map(([title, body], i) => `${i + 1}. ${title}${title.endsWith(".") ? "" : "."} ${body}`)].join("\n"),
     ...(c.speakers.length ? [`QUIÉNES TE ESPERAN\n${c.speakers.map((p) => p.name).join(", ")}.`] : []),
     ...(c.asistire ? [`¡CUÉNTALE A TODOS QUE VAS!\nSube una foto tuya y te armamos tu imagen «Asistiré» para historias y publicaciones: ${c.asistire.url}`] : []),

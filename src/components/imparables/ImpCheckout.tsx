@@ -64,6 +64,8 @@ const REGISTER_ERRORS: Record<string, string> = {
   no_ticket_on_sale: "Ahora mismo no hay cupos a la venta.",
   usd_not_available: "Esta entrada no se puede pagar en dólares. Elige pagar en pesos con Wompi.",
   paypal_not_configured: "PayPal no está disponible ahora mismo. Puedes pagar en pesos con Wompi.",
+  tier_sold_out: "Este nivel se agotó mientras llenabas el formulario. Vuelve a la página para elegir otro.",
+  invalid_ticket_type: "Esta entrada ya no está disponible. Vuelve a la página y elígela de nuevo.",
 };
 
 function money(currency: Currency, cents: number): string {
@@ -91,6 +93,19 @@ export interface ImpCheckoutProps {
   /** The version of the page it's the checkout of (/v/<slug>, lib/imparables/versions.ts): its link, and its special
    * price's name when the ticket is at it. */
   version?: { slug: string; special: { label: string } | null } | null;
+  /** On a version that sells the ticket levels (lib/imparables/tiers.ts, 2026-10-31): the one she's buying, and —
+   * buying Imparable — the one offer to move to Círculo before paying. */
+  level?: CheckoutLevel | null;
+}
+
+export interface CheckoutLevel {
+  slug: string;
+  name: string;
+  /** Under its name: its stage («Etapa Creyente»), or «Precio único, no cambia». */
+  note: string | null;
+  /** What it brings besides what the three bring. */
+  extras: string[];
+  upgrade: { level: CheckoutLevel; ticket: CheckoutTicket; title: string; text: string; yes: string; no: string } | null;
 }
 
 interface Applied {
@@ -107,7 +122,7 @@ interface Registered {
   paypal?: { paymentId: string };
 }
 
-export default function ImpCheckout({ eventSlug, backHref, name, dates, format, ticket: openedWith, codes, professions, paypal, version = null }: ImpCheckoutProps) {
+export default function ImpCheckout({ eventSlug, backHref, name, dates, format, ticket: openedWith, codes, professions, paypal, version = null, level: openedLevel = null }: ImpCheckoutProps) {
   // What's on sale: the stage the page opened with, until paying finds another one is (/api/register's price_changed).
   const [ticket, setTicket] = useState(openedWith);
   // The version's special price, while the ticket is at it.
@@ -127,6 +142,9 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [paying, setPaying] = useState(false);
+  // Her level, and the one offer to move to Círculo until she answers it.
+  const [level, setLevel] = useState(openedLevel);
+  const [offer, setOffer] = useState(openedLevel?.upgrade ?? null);
   const opened = useRef(false);
   const formRef = useRef<HTMLFormElement>(null);
   // Once the buyer picks a currency themselves, the country no longer changes it.
@@ -319,6 +337,7 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
           shownUnitCents: cur === "USD" ? (ticket.usdCents ?? undefined) : ticket.price * 100,
           website: form.website,
           version: version?.slug,
+          tier: level?.slug,
         }),
       });
     } catch {
@@ -347,6 +366,14 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
       } else if (body?.error === "discount_invalid") {
         setApplied(null);
         fail(`${body.message ?? "Ese código ya no aplica."} Revisa el total antes de pagar.`);
+      } else if (body?.error === "already_bought") {
+        // Moving up after buying is her link's, paying only the difference — with a level bought here; a ticket
+        // bought elsewhere moves up with the team.
+        fail(
+          body.tier
+            ? `Ya tienes tu boleta con este correo (${body.tier}). Para pasarte de nivel, abre el enlace «Ver cómo» de tu correo de confirmación: pagas solo la diferencia.`
+            : "Ya tienes tu boleta con este correo. Si quieres pasarte de nivel, escríbenos por WhatsApp y lo hacemos contigo."
+        );
       } else {
         fail(REGISTER_ERRORS[body?.error] ?? "Algo salió mal, intenta de nuevo.");
       }
@@ -359,6 +386,18 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
       return null;
     }
     return body as Registered;
+  }
+
+  // «Sí, quiero Círculo»: its ticket at its own price — one, no code — and the offer answered.
+  function takeUpgrade() {
+    if (!offer) return;
+    setTicket(offer.ticket);
+    setLevel(offer.level);
+    setOffer(null);
+    setQty(1);
+    setApplied(null);
+    if (offer.ticket.usdCents === null) setCurrency("COP");
+    setNotice(null);
   }
 
   // «Pagar», in pesos: Wompi's window.
@@ -663,6 +702,20 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
                 <h2 className="imp-co-h">
                   <i>3</i>Pago
                 </h2>
+                {level && (
+                  // The level she's buying, and what it brings besides what the three bring.
+                  <div className="imp-co-level">
+                    <b>{level.name}</b>
+                    {level.note && ` · ${level.note}`} · {money("COP", ticket.price * 100)}
+                    {level.extras.length > 0 && (
+                      <ul>
+                        {level.extras.map((extra) => (
+                          <li key={extra}>{extra}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
                 {canPayUsd ? (
                   // Only the country's way to pay (2026-10-29): in pesos with
                   // Wompi from Colombia, in dollars with PayPal from anywhere
@@ -732,6 +785,19 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
                 </p>
               )}
               <div className="imp-co-end">
+                {offer && (
+                  // Buying Imparable: once, right before paying, the offer to move to Círculo.
+                  <div className="imp-co-up">
+                    <h3>{offer.title}</h3>
+                    <p>{offer.text}</p>
+                    <button type="button" className="imp-cta" onClick={takeUpgrade}>
+                      {offer.yes}
+                    </button>
+                    <button type="button" className="imp-co-up-no" onClick={() => setOffer(null)}>
+                      {offer.no}
+                    </button>
+                  </div>
+                )}
                 {usd && paypal ? (
                   <PayPalButtons
                     clientId={paypal.clientId}

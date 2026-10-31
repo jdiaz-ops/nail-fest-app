@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
         person,
         event: registration.event,
         qrToken: registration.qrToken,
-        registration: { id: registration.id, ticketTypeId: registration.ticketTypeId, ticketCount: registration.ticketCount },
+        registration: { id: registration.id, ticketTypeId: registration.ticketTypeId, ticketCount: registration.ticketCount, tierSlug: registration.tierSlug },
       });
     }
   }

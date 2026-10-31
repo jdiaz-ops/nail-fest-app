@@ -7847,3 +7847,336 @@ body:has(.imp.nf) {
   font-weight: 700;
   cursor: pointer;
 }
+
+/* Manicuristas Imparables' ticket levels, on the versions that sell them
+   (lib/imparables/tiers.ts, 2026-10-31): «Elige cómo vivirlo» — Élite,
+   Círculo and Imparable side by side on a computer with Círculo raised, one
+   under the other on a phone with Élite first —, the guarantee's line, the
+   cover's link down to them, the checkout's level with its one offer to
+   move to Círculo, and her page to move up after buying. */
+.imp-lv-cards {
+  display: grid;
+  gap: 16px;
+  margin-top: 26px;
+}
+@media (min-width: 900px) {
+  .imp-lv-cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+    margin-top: 34px;
+  }
+}
+.imp-lv {
+  display: flex;
+  flex-direction: column;
+  padding: 22px 20px 20px;
+  border-radius: 20px;
+  background: var(--imp-tarjeta);
+  border: 1.5px solid var(--imp-tarjeta-borde);
+}
+/* Círculo: a gold edge and a lighter card, a little taller on a computer. */
+.imp-lv.is-top {
+  border: 2px solid var(--imp-oro);
+  box-shadow: 0 18px 40px -22px rgba(59, 36, 24, 0.55);
+}
+.imp-sec:not(.imp-sec--alt) .imp-lv.is-top,
+.imp-up .imp-lv.is-top {
+  background: #fffaf2;
+}
+.imp-sec--alt .imp-lv.is-top {
+  background: var(--imp-chocolate-medio);
+}
+@media (min-width: 900px) {
+  .imp-lv-cards .imp-lv.is-top {
+    margin-top: -14px;
+    padding-top: 30px;
+    padding-bottom: 28px;
+  }
+}
+.imp-lv-body {
+  display: flex;
+  flex: 1 0 auto;
+  flex-direction: column;
+}
+.imp-lv-tag {
+  min-height: 1.3em;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--imp-acento);
+}
+.imp-lv-name {
+  margin: 8px 0 0;
+  font-family: var(--imp-display), serif;
+  font-size: 25px;
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--imp-titulo);
+}
+.imp-lv-amt {
+  margin: 12px 0 0;
+  font-size: 40px;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--imp-texto);
+}
+.imp-lv-amt s {
+  margin-left: 6px;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--imp-texto-3);
+}
+.imp-lv-note {
+  margin: 8px 0 0;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--imp-texto-2);
+}
+.imp-lv-lists {
+  flex: 1 0 auto;
+  margin-bottom: 22px;
+}
+.imp-lv-list {
+  display: grid;
+  gap: 9px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14.5px;
+  line-height: 1.4;
+  color: var(--imp-texto);
+}
+.imp-lv-list li {
+  display: flex;
+  gap: 10px;
+}
+.imp-lv-list svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  color: var(--imp-acento);
+}
+.imp-lv-extra li {
+  font-weight: 800;
+}
+.imp-lv-more {
+  margin: 16px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--imp-linea);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--imp-acento);
+}
+.imp-lv .imp-cta {
+  margin-top: auto;
+}
+/* Élite once its 20 are paid: in grey, and its waiting list. */
+.imp-lv.is-out .imp-lv-body {
+  filter: grayscale(1);
+  opacity: 0.75;
+}
+.imp-lv.is-out .imp-lv-tag {
+  color: var(--imp-texto-2);
+}
+.imp-lv-wl {
+  display: grid;
+  gap: 10px;
+  padding-top: 16px;
+  border-top: 1px solid var(--imp-linea);
+}
+/* Its fields as the page's waiting list's (.imp-wl). */
+.imp-lv-wl .imp-fld {
+  margin-bottom: 0;
+}
+.imp-lv-wl input,
+.imp-lv-wl select {
+  width: 100%;
+  min-width: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--imp-caja);
+  border: 1px solid var(--imp-linea);
+  color: var(--imp-texto);
+  font-size: 16px;
+}
+.imp-lv-wl input::placeholder {
+  color: var(--imp-texto-3);
+}
+.imp-lv-wl input:focus,
+.imp-lv-wl select:focus {
+  outline: none;
+  border-color: var(--imp-oro);
+  box-shadow: 0 0 0 3px var(--imp-linea);
+}
+.imp-lv-wl [role="option"][aria-selected="true"] {
+  background: var(--imp-linea) !important;
+}
+.imp-lv-wl > p {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--imp-texto);
+}
+.imp-lv-wl .imp-cta {
+  margin-top: 6px;
+  border: 1.5px solid var(--imp-oro);
+}
+.imp-lv-wl-err {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #b3261e;
+}
+.imp-lv-after {
+  max-width: 46ch;
+  margin: 24px auto 0;
+  font-size: 15px;
+  line-height: 1.5;
+  text-align: center;
+  text-wrap: balance;
+  color: var(--imp-texto-2);
+}
+.imp-lv-guar {
+  max-width: 52ch;
+  margin: 14px auto 0;
+  font-size: 14.5px;
+  line-height: 1.5;
+  text-align: center;
+  text-wrap: balance;
+  color: var(--imp-texto);
+}
+.imp-lv-guar svg {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  margin-right: 6px;
+  vertical-align: -3px;
+  color: var(--imp-oro);
+}
+.imp-lv-guar b {
+  font-weight: 800;
+}
+/* The cover, under the stage's line: the guarantee and «Ver Círculo y Élite». */
+.imp-lv-cover {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+.imp-lv-cover .imp-lv-guar {
+  margin: 0 auto;
+  font-size: 14px;
+}
+.imp-lv-link {
+  justify-self: center;
+  font-size: 14.5px;
+  font-weight: 800;
+  color: var(--imp-acento) !important;
+  text-decoration: underline;
+}
+/* Under the closing's button. */
+.imp-lv-close {
+  margin: 16px 0 0;
+  text-align: center;
+}
+/* On a computer the cover's words go left, as the stage's line above them. */
+@media (min-width: 1100px) {
+  .imp-hero .imp-lv-cover .imp-lv-guar {
+    margin: 0;
+    text-align: left;
+  }
+  .imp-hero .imp-lv-link {
+    justify-self: start;
+  }
+}
+/* The checkout: the level she's buying, and the one offer to move to Círculo. */
+.imp-co-level {
+  margin: 0 0 14px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: var(--imp-tarjeta);
+  border: 1px solid var(--imp-tarjeta-borde);
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--imp-texto);
+}
+.imp-co-level b {
+  font-size: 15px;
+}
+.imp-co-level ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+.imp-co-up {
+  margin: 18px 0 0;
+  padding: 18px;
+  border-radius: 18px;
+  border: 2px solid var(--imp-oro);
+  background: #fffaf2;
+  color: var(--imp-negro);
+}
+.imp-co-up h3 {
+  margin: 0;
+  font-family: var(--imp-display), serif;
+  font-size: 20px;
+  line-height: 1.2;
+  color: var(--imp-chocolate);
+}
+.imp-co-up p {
+  margin: 8px 0 0;
+  font-size: 14.5px;
+  line-height: 1.45;
+}
+.imp-co-up .imp-cta {
+  margin-top: 14px;
+}
+.imp-co-up-no {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  padding: 6px;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--imp-bronce-oscuro);
+  text-decoration: underline;
+  cursor: pointer;
+}
+/* Her page to move up (nailfest.lat/mejorar/…). */
+.imp-up {
+  min-height: 100vh;
+}
+.imp-up .imp-sec-in {
+  max-width: 560px;
+}
+.imp-up-now {
+  margin: 12px 0 0;
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--imp-texto-2);
+}
+.imp-up-now b {
+  color: var(--imp-texto);
+}
+.imp-up .imp-lv-cards {
+  grid-template-columns: minmax(0, 1fr);
+}
+.imp-up .imp-lv .imp-lv-note b {
+  color: var(--imp-texto);
+}
+.imp-up-msg {
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--imp-tarjeta);
+  border: 1px solid var(--imp-tarjeta-borde);
+  font-size: 14.5px;
+  line-height: 1.45;
+}

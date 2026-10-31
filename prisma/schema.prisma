@@ -430,6 +430,11 @@ model TicketType {
   stageCap            Int?
   stageNote           String?
   stageSoldOutAt      DateTime?
+  // A ticket level sold at its own fixed price on the versions that sell the
+  // levels (lib/imparables/tiers.ts, 2026-10-31): "circulo", "elite". Kept in
+  // step with that file (lib/imparables/tiersServer.ts), hidden from every
+  // page's own list, and never a price stage.
+  tierSlug            String?
   createdAt           DateTime         @default(now())
   updatedAt           DateTime         @updatedAt
 
@@ -439,6 +444,7 @@ model TicketType {
   discountCodes      DiscountCode[]
   stageChanges       PricingStageChange[]
 
+  @@unique([eventId, tierSlug])
   @@index([eventId])
 }
 
@@ -566,6 +572,12 @@ model Registration {
   landingVersion   LandingVersion? @relation(fields: [landingVersionId], references: [id], onDelete: SetNull)
   landingVersionId String?
 
+  // Her ticket level, bought through a version that sells them
+  // (lib/imparables/tiers.ts, 2026-10-31): "imparable", "circulo", "elite" —
+  // the one she moved up to, once that payment is approved. Null: a purchase
+  // with no levels.
+  tierSlug String?
+
   consents       Consent[]
   metaEvents     MetaEvent[]
   scans          ScanLog[]
@@ -644,6 +656,11 @@ model Payment {
   // version's own maximum instead (lib/imparables/versions.ts).
   landingVersion    LandingVersion? @relation(fields: [landingVersionId], references: [id], onDelete: SetNull)
   landingVersionId  String?
+  // The ticket level it pays for (lib/imparables/tiers.ts, 2026-10-31), and —
+  // when it only pays the difference to move up from one, with no new
+  // purchase — the level she had.
+  tierSlug          String?
+  upgradeFrom       String?
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 

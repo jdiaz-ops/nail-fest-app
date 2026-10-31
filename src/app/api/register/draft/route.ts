@@ -109,7 +109,8 @@ export async function POST(req: NextRequest) {
     let ticketTypeId: string | null | undefined = undefined;
     if (input.ticketTypeId) {
       const ticketType = await db.ticketType.findUnique({ where: { id: input.ticketTypeId } });
-      if (ticketType && ticketType.eventId === event.id && ticketType.status === "ON_SALE") {
+      // A fixed level's ticket (lib/imparables/tiers.ts) is hidden from the pages' lists, and still what she was buying.
+      if (ticketType && ticketType.eventId === event.id && (ticketType.status === "ON_SALE" || ticketType.tierSlug)) {
         ticketTypeId = ticketType.id;
       }
     }

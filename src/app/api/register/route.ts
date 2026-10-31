@@ -11,6 +11,8 @@ import { DISCOUNT_ERROR_MESSAGES, resolveDiscount, type DiscountResult } from "@
 import { paypalConfigured } from "@/lib/payments/paypal";
 import { checkoutOffer, getActiveStage } from "@/lib/imparables/pricing";
 import { specialPriceFor, specialSold, versionLive, withVersionPrice, type VersionPrice } from "@/lib/imparables/versions";
+import { isHigherTier, isTieredVersion, tierAvailable, tierBySlug, type Tier } from "@/lib/imparables/tiers";
+import { tierPaidCounts } from "@/lib/imparables/tiersServer";
 import { clientIpFromHeaders, userAgentFromHeaders } from "@/lib/request";
 import { splitName } from "@/lib/name";
 import { getOrgSettings } from "@/lib/settings";
@@ -102,6 +104,10 @@ const bodySchema = z.object({
   // The version of the page she's buying through (/v/<slug>, 2026-10-30):
   // its special price, when it still has one, is worked out again below.
   version: z.string().max(80).optional(),
+  // Its ticket level, on a version that sells them (lib/imparables/tiers.ts,
+  // 2026-10-31): Imparable at the stage on sale, Círculo and Élite at their
+  // own price — worked out again below.
+  tier: z.enum(["imparable", "circulo", "elite"]).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -243,6 +249,8 @@ export async function POST(req: NextRequest) {
   // through while it shows, and its special price when one applies.
   let landingVersionId: string | null = null;
   let special: VersionPrice | null = null;
+  // Her level, bought through a version that sells them (null: anything else).
+  let tier: Tier | null = null;
   if (input.ticketTypeId) {
     // Only the type-existence/status/min-max checks happen here, outside
     // the transaction below — those never change based on a concurrent
@@ -251,7 +259,8 @@ export async function POST(req: NextRequest) {
     // comment) since THAT one is exactly the race a concurrent request can
     // hit.
     ticketType = await db.ticketType.findUnique({ where: { id: input.ticketTypeId } });
-    if (!ticketType || ticketType.eventId !== event.id || ticketType.status !== "ON_SALE") {
+    // A fixed level's ticket type is hidden from every page's list: only bought through its version (below).
+    if (!ticketType || ticketType.eventId !== event.id || (ticketType.status !== "ON_SALE" && !ticketType.tierSlug)) {
       return NextResponse.json({ error: "invalid_ticket_type" }, { status: 400 });
     }
     // Outside its own dates (hideUntil/hideAfter) a ticket type isn't on
@@ -274,17 +283,38 @@ export async function POST(req: NextRequest) {
         if (version && version.eventId === event.id && versionLive(version, now)) {
           landingVersionId = version.id;
           special = specialPriceFor(version, sales, await specialSold(version.id), input.ticketCount ?? 1);
+          // Through a version that sells the levels (lib/imparables/tiers.ts), every purchase is at one: Imparable
+          // unless she chose another.
+          if (isTieredVersion(version.slug)) tier = tierBySlug(input.tier ?? "imparable");
         }
       }
-      // A special price is paid in pesos only.
-      if (special && input.currency === "USD") return NextResponse.json({ error: "usd_not_available" }, { status: 400 });
-      // The same stage at another price (changed from the admin) is a change too; so is a special price that no
-      // longer applies (the version ended, or reached its maximum).
-      const unitCents = input.currency === "USD" ? ticketType.priceUsdCents : (special?.price ?? ticketType.price) * 100;
-      if (sales.current.id !== ticketType.id || (input.shownUnitCents !== undefined && input.shownUnitCents !== unitCents)) {
-        const offer = await checkoutOffer(sales, orgSettings.timezone);
-        const ticket = offer && special ? withVersionPrice(offer.ticket, special) : offer?.ticket;
-        return NextResponse.json({ error: "price_changed", ticket, line: offer?.line ?? null, special: Boolean(special) }, { status: 409 });
+      // A fixed level's ticket only through such a version, and only as that level.
+      if (ticketType.tierSlug && tier?.slug !== ticketType.tierSlug) return NextResponse.json({ error: "invalid_ticket_type" }, { status: 400 });
+      // Already hers and paid, a higher level is paying the difference from her link, never a second purchase; the
+      // same one (or Imparable) is a resend, as anywhere.
+      if (tier?.priceMode === "fixed" && existingRegistrationForCapacityCheck?.status === "CONFIRMED") {
+        const had = tierBySlug(existingRegistrationForCapacityCheck.tierSlug);
+        if (!had || isHigherTier(tier.slug, had.slug)) return NextResponse.json({ error: "already_bought", tier: had?.name ?? null }, { status: 409 });
+      }
+      if (tier?.priceMode === "fixed") {
+        // Círculo and Élite: their own price — in pesos, or in dollars when it has them —, one per order, no special
+        // price, no discount (below), and Élite while it has places.
+        special = null;
+        if (!tier.fixedPrice || ticketType.tierSlug !== tier.slug || ticketType.price !== tier.fixedPrice) return NextResponse.json({ error: "invalid_ticket_type" }, { status: 400 });
+        if (!tierAvailable(tier, (await tierPaidCounts(event.id))[tier.slug])) return NextResponse.json({ error: "tier_sold_out" }, { status: 409 });
+        const unitCents = input.currency === "USD" ? ticketType.priceUsdCents : ticketType.price * 100;
+        if (input.shownUnitCents !== undefined && input.shownUnitCents !== unitCents) return NextResponse.json({ error: "invalid_ticket_type" }, { status: 400 });
+      } else {
+        // A special price is paid in pesos only.
+        if (special && input.currency === "USD") return NextResponse.json({ error: "usd_not_available" }, { status: 400 });
+        // The same stage at another price (changed from the admin) is a change too; so is a special price that no
+        // longer applies (the version ended, or reached its maximum).
+        const unitCents = input.currency === "USD" ? ticketType.priceUsdCents : (special?.price ?? ticketType.price) * 100;
+        if (sales.current.id !== ticketType.id || (input.shownUnitCents !== undefined && input.shownUnitCents !== unitCents)) {
+          const offer = await checkoutOffer(sales, orgSettings.timezone);
+          const ticket = offer && special ? withVersionPrice(offer.ticket, special) : offer?.ticket;
+          return NextResponse.json({ error: "price_changed", ticket, line: offer?.line ?? null, special: Boolean(special) }, { status: 409 });
+        }
       }
     }
     if ((ticketType.hideUntil && now < ticketType.hideUntil) || (ticketType.hideAfter && now > ticketType.hideAfter)) {
@@ -319,7 +349,7 @@ export async function POST(req: NextRequest) {
   // anything is written, so a code that no longer applies changes nothing.
   let discount: Extract<DiscountResult, { ok: true }> | null = null;
   // Not on top of a version's special price.
-  if (input.discountCode?.trim() && ticketType && ticketType.price > 0 && !special) {
+  if (input.discountCode?.trim() && ticketType && ticketType.price > 0 && !special && tier?.priceMode !== "fixed") {
     const result = await resolveDiscount({
       eventId: event.id,
       ticketTypeId: ticketType.id,
@@ -463,7 +493,8 @@ export async function POST(req: NextRequest) {
               where: { id: existingRegistration.id },
               data: {
                 customFields,
-                ticketTypeId: input.ticketTypeId ?? null,
+                // A level's purchase already paid keeps its ticket and level on a resend (moving up is her link's).
+                ticketTypeId: wasAlreadyConfirmed && existingRegistration.tierSlug ? existingRegistration.ticketTypeId : (input.ticketTypeId ?? null),
                 ticketCount,
                 status: nextStatus,
                 confirmedAt: nextStatus === "CONFIRMED" ? existingRegistration.confirmedAt ?? new Date() : existingRegistration.confirmedAt,
@@ -471,8 +502,9 @@ export async function POST(req: NextRequest) {
                 // lib/registrationWithdrawal.ts).
                 cancelledAt: null,
                 cancelledById: null,
-                // Through which version of the page she buys, if any (never rewritten on a resend of a purchase).
-                ...(wasAlreadyConfirmed ? {} : { landingVersionId }),
+                // Through which version of the page she buys, if any, and at which level (never rewritten on a resend
+                // of a purchase).
+                ...(wasAlreadyConfirmed ? {} : { landingVersionId, tierSlug: tier?.slug ?? null }),
               },
             })
           : await tx.registration.create({
@@ -491,6 +523,7 @@ export async function POST(req: NextRequest) {
                 ttclid: input.attribution?.ttclid,
                 gclid: input.attribution?.gclid,
                 landingVersionId,
+                tierSlug: tier?.slug ?? null,
               },
             });
 
@@ -586,6 +619,8 @@ export async function POST(req: NextRequest) {
         stageSlug: ticketType?.stageSlug ?? null,
         // At a version's special price: out of its stage's cap (lib/imparables/versions.ts).
         landingVersionId: special ? landingVersionId : null,
+        // The level it pays for (lib/imparables/tiers.ts).
+        tierSlug: tier?.slug ?? null,
       },
     });
     if (currency === "USD") {

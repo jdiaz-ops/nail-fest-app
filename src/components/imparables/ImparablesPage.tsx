@@ -14,6 +14,8 @@ import ImpPageTracking from "./ImpPageTracking";
 import ImpStickyBar from "./ImpStickyBar";
 import ImpTitle from "./ImpTitle";
 import ImpWaitlistForm from "./ImpWaitlistForm";
+import ImpTiers, { GuaranteeLine } from "./ImpTiers";
+import { TIERS_SECTION, tierCardStageLine, tierCounter, tierStageLine, type TierSlug } from "@/lib/imparables/tiers";
 import { cinzel, manrope } from "./fonts";
 
 // Manicuristas Imparables' own page (EventTheme IMPARABLES, 2026-10-26):
@@ -49,6 +51,11 @@ export interface ImparablesVersion {
   imageUrl: string | null;
   buttonLabel: string | null;
   special: { price: number; struck: number; label: string; endsAt: string | null } | null;
+}
+
+/** A version that sells the ticket levels (lib/imparables/tiers.ts, 2026-10-31): the ones with no places left. */
+export interface ImparablesLevels {
+  soldOut: TierSlug[];
 }
 
 export interface ImparablesPreview {
@@ -106,6 +113,7 @@ export default function ImparablesPage({
   brandName,
   preview,
   version = null,
+  levels = null,
 }: {
   event: ImparablesEvent;
   blocks: LandingBlock[];
@@ -118,6 +126,7 @@ export default function ImparablesPage({
   brandName: string;
   preview: ImparablesPreview | null;
   version?: ImparablesVersion | null;
+  levels?: ImparablesLevels | null;
 }) {
   // The name is the cover's title; a date in it is left out (the dates are right below).
   const words = coverName(event.displayName).split(/\s+/);
@@ -205,20 +214,45 @@ export default function ImparablesPage({
   // At a version's special price, none of them: it takes no place in the stage's places, and its band over the
   // cover counts down to its end.
   const pill = mode === "sale" && !special ? stagePill(sales, now) : null;
-  const progress = mode === "sale" && !special ? stageProgress(sales) : null;
+  // On a version that sells the ticket levels (lib/imparables/tiers.ts, 2026-10-31): the stage's counter only under 30%
+  // of its places left, and its line with its note and the next stage's name until then; under them, the guarantee
+  // and the link down to the levels.
+  const sellsLevels = Boolean(levels) && mode === "sale" && Boolean(current) && !special;
+  const counter = sellsLevels ? tierCounter(sales) : null;
+  const progress = mode === "sale" && !special && (!sellsLevels || counter) ? stageProgress(sales) : null;
   const terms = special ? null : mode === "sale" ? (progress ? stageTerms(sales, timezone) : stageLine(sales, timezone)) : null;
   const deal =
     !special && mode === "sale" && current ? (
-      <div className="imp-deal">
-        {pill && <p className="imp-stage-pill">{pill}</p>}
-        {progress && (
-          <>
-            <p className="imp-prog-t">{progressTitle(sales)}</p>
-            <ProgressBar progress={progress} />
-          </>
-        )}
-        {terms && <p className={`imp-deal-until${progress ? " imp-deal-terms" : ""}`}>{terms}</p>}
-      </div>
+      sellsLevels ? (
+        <div className="imp-deal">
+          {pill && <p className="imp-stage-pill">{pill}</p>}
+          {counter && progress ? (
+            <>
+              <p className="imp-prog-t">{counter.text}</p>
+              <ProgressBar progress={progress} />
+            </>
+          ) : (
+            <p className="imp-deal-until">{tierStageLine(sales, timezone)}</p>
+          )}
+          <div className="imp-lv-cover">
+            <GuaranteeLine />
+            <a className="imp-lv-link" href="#niveles">
+              {TIERS_SECTION.coverLink}
+            </a>
+          </div>
+        </div>
+      ) : (
+        <div className="imp-deal">
+          {pill && <p className="imp-stage-pill">{pill}</p>}
+          {progress && (
+            <>
+              <p className="imp-prog-t">{progressTitle(sales)}</p>
+              <ProgressBar progress={progress} />
+            </>
+          )}
+          {terms && <p className={`imp-deal-until${progress ? " imp-deal-terms" : ""}`}>{terms}</p>}
+        </div>
+      )
     ) : null;
 
   return (
@@ -338,7 +372,20 @@ export default function ImparablesPage({
         </section>
       )}
 
-      <ImparablesBlocks blocks={rest} context={{ sales, offsetMs, when, timezone, now, buyLabel, speakers: faces, panel }} />
+      <ImparablesBlocks
+        blocks={rest}
+        context={{ sales, offsetMs, when, timezone, now, buyLabel, speakers: faces, panel }}
+        levels={
+          sellsLevels && levels
+            ? {
+                id: "niveles",
+                title: TIERS_SECTION.title,
+                intro: TIERS_SECTION.subtitle,
+                content: <ImpTiers eventSlug={event.slug} sales={sales} soldOut={levels.soldOut} stageLine={tierCardStageLine(sales, timezone)} />,
+              }
+            : null
+        }
+      />
 
       <section className="imp-close">
         <div className="imp-rays" aria-hidden="true" />
@@ -349,6 +396,14 @@ export default function ImparablesPage({
           <Tiara />
           {closingLine}
           {cta}
+          {/* On a version that sells the ticket levels: the link up to them (lib/imparables/tiers.ts, 2026-10-31). */}
+          {sellsLevels && (
+            <p className="imp-lv-close">
+              <a className="imp-lv-link" href="#niveles">
+                {TIERS_SECTION.coverLink}
+              </a>
+            </p>
+          )}
         </div>
       </section>
 
@@ -389,8 +444,15 @@ export default function ImparablesPage({
           <div className="imp-sticky-in">
             <div className="imp-st-p">
               <p className="imp-st-amt">
-                <b>{pesos(shownPrice)}</b>
-                {struckPrice !== null && <s>{pesos(struckPrice)}</s>}
+                {sellsLevels ? (
+                  // «Desde $90.000»: the lowest of the levels, today's stage (2026-10-31).
+                  <b>Desde {pesos(shownPrice)}</b>
+                ) : (
+                  <>
+                    <b>{pesos(shownPrice)}</b>
+                    {struckPrice !== null && <s>{pesos(struckPrice)}</s>}
+                  </>
+                )}
               </p>
               <span className="imp-st-name">
                 <span className="imp-st-stage">{special ? special.label : current.name}</span>

@@ -6,6 +6,7 @@ import { hasActiveConsent } from "@/lib/consent";
 import { issueQrToken } from "@/lib/ticket";
 import { sendTicketEmail } from "@/lib/sendTicketEmail";
 import { sendTicketLinkViaWhatsApp } from "@/lib/whatsapp/sendTicketLink";
+import { tierBySlug } from "@/lib/imparables/tiers";
 import { registerParticipant } from "@/lib/zoom";
 import { scheduleZoomAccessReminder } from "@/lib/qstash";
 import type { Event, Person, Registration } from "@prisma/client";
@@ -99,12 +100,14 @@ export async function finalizeConfirmedRegistration(params: {
     person,
     event,
     qrToken,
-    registration: { id: registration.id, ticketTypeId: registration.ticketTypeId, ticketCount: registration.ticketCount },
+    registration: { id: registration.id, ticketTypeId: registration.ticketTypeId, ticketCount: registration.ticketCount, tierSlug: registration.tierSlug },
     // NOT zoomJoinUrl — see this function's own comment above on why the
     // confirmation email doesn't include it either.
   });
 
-  const whatsappTicketLinkSent = await sendTicketLinkViaWhatsApp({ person, event, qrToken });
+  // Her level's name with the event's, when it's Círculo or Élite (lib/imparables/tiers.ts).
+  const tier = tierBySlug(registration.tierSlug);
+  const whatsappTicketLinkSent = await sendTicketLinkViaWhatsApp({ person, event, qrToken, tierName: tier?.priceMode === "fixed" ? tier.name : null });
 
   if (!wasAlreadyConfirmed && (await hasActiveConsent(person.id, "ADVERTISING"))) {
     await queueMetaEvent({

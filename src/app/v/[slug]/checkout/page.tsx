@@ -23,5 +23,6 @@ export default async function VersionCheckoutPage({ params, searchParams }: { pa
     for (const [k, v] of Object.entries(searchParams)) for (const one of Array.isArray(v) ? v : v ? [v] : []) q.append(k, one);
     redirect(`/${event.slug}/checkout${q.toString() ? `?${q}` : ""}`);
   }
-  return <ImpCheckoutScreen event={event} version={version} />;
+  // On a version that sells the ticket levels, the one its button chose (?tier=circulo, lib/imparables/tiers.ts).
+  return <ImpCheckoutScreen event={event} version={version} tier={typeof searchParams.tier === "string" ? searchParams.tier : null} />;
 }

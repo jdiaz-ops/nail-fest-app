@@ -9,6 +9,7 @@ import { confirmationCodeFor, ticketHolderName, ticketsFor } from "@/lib/ticket"
 import { publicEventName } from "@/lib/eventDisplayName";
 import { purchaseNote } from "@/lib/imparables/pricing";
 import { imparablesConfirmationFor } from "@/lib/imparables/confirmation";
+import { ticketNameOf } from "@/lib/imparables/tiers";
 import { nailFestConfirmationFor } from "@/lib/nailfest/confirmation";
 
 // Shared by /api/register (first send + resend-on-resubmit), /api/resend-
@@ -58,7 +59,9 @@ export async function sendTicketEmail(params: {
   // {person, event, qrToken} shape. ticketTypeId is resolved to the
   // TicketType's own name here (one lookup, one place) rather than
   // making every caller fetch and pass a name string.
-  registration?: { id: string; ticketTypeId?: string | null; ticketCount?: number | null };
+  // tierSlug: her ticket level (lib/imparables/tiers.ts, 2026-10-31), whose
+  // name her tickets show instead of the type's.
+  registration?: { id: string; ticketTypeId?: string | null; ticketCount?: number | null; tierSlug?: string | null };
   // This registrant's own personal Zoom join link — see
   // lib/registrationConfirmation.ts, the only real caller that ever sets
   // this (a VIRTUAL/HYBRID event with Zoom configured). Undefined for
@@ -74,6 +77,7 @@ export async function sendTicketEmail(params: {
     const ticketType = params.registration?.ticketTypeId
       ? await db.ticketType.findUnique({ where: { id: params.registration.ticketTypeId } })
       : null;
+    const typeName = ticketNameOf({ tierSlug: params.registration?.tierSlug ?? null, ticketType });
     // Last 8 chars of the cuid, uppercased — not cryptographically
     // meaningful, just a short human-readable reference (same idea as an
     // "order #") for someone reading it over the phone or WhatsApp.
@@ -90,7 +94,7 @@ export async function sendTicketEmail(params: {
               qrImageUrl: `${process.env.APP_BASE_URL || ""}/api/ticket-qr/${token}`,
               confirmationCode: t.confirmationCode,
               holderName: ticketHolderName(holder, t.ticketNumber),
-              label: `${ticketType?.name ?? "Entrada"} · ${t.ticketNumber} de ${ticketCount}`,
+              label: `${typeName ?? "Entrada"} · ${t.ticketNumber} de ${ticketCount}`,
             };
           })
         : undefined;
@@ -123,7 +127,7 @@ export async function sendTicketEmail(params: {
             firstName: params.person.firstName,
             tickets: tickets
               ? tickets.map((t) => ({ qrImageUrl: t.qrImageUrl, holder: t.holderName, label: t.label, code: t.confirmationCode }))
-              : [{ qrImageUrl, holder, label: ticketType?.name ?? "Entrada general", code: confirmationCode }],
+              : [{ qrImageUrl, holder, label: typeName ?? "Entrada general", code: confirmationCode }],
             people: ticketCount,
             pdfAttached: orgSettings.attachTicketPdf && format !== "VIRTUAL",
           }).catch((err) => {
@@ -142,7 +146,7 @@ export async function sendTicketEmail(params: {
           endsAt: params.event.endsAt ?? undefined,
           scheduleDays: params.event.scheduleDays,
           qrImageUrl,
-          ticketTypeName: ticketType?.name,
+          ticketTypeName: typeName,
           ticketCount: params.registration?.ticketCount ?? undefined,
           confirmationCode,
           orgName: orgSettings.name,
@@ -165,7 +169,7 @@ export async function sendTicketEmail(params: {
           scheduleDays: params.event.scheduleDays,
           qrImageUrl,
           eventImageUrl: params.event.imageUrl ?? undefined,
-          ticketTypeName: ticketType?.name,
+          ticketTypeName: typeName,
           ticketCount: params.registration?.ticketCount ?? undefined,
           confirmationCode,
           orgName: orgSettings.name,
@@ -216,7 +220,7 @@ export async function sendTicketEmail(params: {
           startsAt: params.event.startsAt,
           endsAt: params.event.endsAt ?? undefined,
           scheduleDays: params.event.scheduleDays,
-          ticketTypeName: ticketType?.name,
+          ticketTypeName: typeName,
           ticketCount: params.registration?.ticketCount ?? undefined,
           confirmationCode,
           qrToken: params.qrToken,

@@ -45,8 +45,13 @@ export async function sendTicketLinkViaWhatsApp(params: {
   person: Person;
   event: Pick<Event, "name" | "publicName" | "startsAt" | "endsAt" | "venueName" | "venueAddress" | "format" | "scheduleDays">;
   qrToken: string;
+  /** Her ticket level, when it's one of the fixed ones (lib/imparables/tiers.ts, 2026-10-31): the approved template
+   * has no place of its own for it, so it goes with the event's name — «Manicuristas Imparables · Imparable
+   * Círculo». */
+  tierName?: string | null;
 }): Promise<boolean> {
-  const { person, event, qrToken } = params;
+  const { person, qrToken } = params;
+  const event = params.tierName ? { ...params.event, publicName: `${publicEventName(params.event)} · ${params.tierName}` } : params.event;
   if (!person.phone) return false;
 
   // A pure VIRTUAL event can have its own APPROVED template configured

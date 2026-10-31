@@ -44,7 +44,16 @@ export interface ImparablesContext {
   panel: { card: CardLandingBlock; people: PeopleLandingBlock } | null;
 }
 
-type Section = { heading: HeadingLandingBlock | null; blocks: LandingBlock[] };
+type Section = { heading: HeadingLandingBlock | null; blocks: LandingBlock[]; id?: string };
+
+/** A section the page adds of its own: the ticket levels on a version that sells them (lib/imparables/tiers.ts,
+ * 2026-10-31). */
+export interface ExtraSection {
+  id: string;
+  title: string;
+  intro: string;
+  content: React.ReactNode;
+}
 
 /** "8:00 a. m." and "7 p. m." whole on their line, wherever a line breaks (2026-10-29: the day's hours under
  * «Agenda» and in what the ticket brings). */
@@ -62,11 +71,17 @@ function sectionsOf(blocks: LandingBlock[]): Section[] {
   return sections;
 }
 
-export default function ImparablesBlocks({ blocks, context }: { blocks: LandingBlock[]; context: ImparablesContext }) {
+export default function ImparablesBlocks({ blocks, context, levels = null }: { blocks: LandingBlock[]; context: ImparablesContext; levels?: ExtraSection | null }) {
   // Only the sections with something to show, so the backgrounds keep alternating.
   const sections = sectionsOf(blocks)
     .map((section) => ({ ...section, content: renderBlocks(section.blocks, context) }))
     .filter((section) => section.content.length > 0 || section.heading?.title || section.heading?.intro);
+  // The levels, right before the questions — after «Todo lo que trae tu boleta» — or last, taking their turn of color.
+  if (levels) {
+    const at = sections.findIndex((section) => section.blocks.some((b) => b.type === "faq"));
+    const heading: HeadingLandingBlock = { type: "heading", eyebrow: "", title: levels.title, intro: levels.intro };
+    sections.splice(at >= 0 ? at : sections.length, 0, { heading, blocks: [], content: [levels.content], id: levels.id });
+  }
   return (
     <>
       {sections.map((section, i) => {
@@ -76,7 +91,7 @@ export default function ImparablesBlocks({ blocks, context }: { blocks: LandingB
           (b, j) => b.type === "card" && !b.imageUrl && b.icon === "none" && b.title && !/<(ul|ol)\b/i.test(b.html) && !isPanelCard(b, section.blocks[j + 1])
         );
         return (
-          <section key={i} className={`imp-sec${i % 2 === 0 ? " imp-sec--alt" : ""}`}>
+          <section key={i} id={section.id} className={`imp-sec${i % 2 === 0 ? " imp-sec--alt" : ""}`}>
             <div className="imp-sec-in">
               {quote && (
                 <span className="imp-quote" aria-hidden="true">

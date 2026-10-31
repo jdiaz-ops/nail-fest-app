@@ -25,7 +25,7 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
     person: registration.person,
     event: registration.event,
     qrToken: registration.qrToken,
-    registration: { id: registration.id, ticketTypeId: registration.ticketTypeId, ticketCount: registration.ticketCount },
+    registration: { id: registration.id, ticketTypeId: registration.ticketTypeId, ticketCount: registration.ticketCount, tierSlug: registration.tierSlug },
   });
 
   return NextResponse.json(result);

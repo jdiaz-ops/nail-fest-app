@@ -4,6 +4,7 @@ import type { WompiTransaction } from "@/lib/payments/wompi";
 import { paymentIdFromReference } from "@/lib/payments/reference";
 import { finalizeConfirmedRegistration } from "@/lib/registrationConfirmation";
 import { closeStageIfFull } from "@/lib/imparables/pricing";
+import { afterTierPurchase, applyUpgrade } from "@/lib/imparables/tiersServer";
 import { cancelRegistrant } from "@/lib/zoom";
 
 export type ConfirmResult = "approved" | "declined" | "voided" | "error" | "pending" | "not_found";
@@ -65,6 +66,13 @@ export async function settlePayment(settlement: Settlement): Promise<ConfirmResu
 
   const { registration } = payment;
 
+  // The difference to move up a ticket level (lib/imparables/tiers.ts,
+  // 2026-10-31): her purchase was already confirmed; only her level moves up.
+  if (payment.upgradeFrom) {
+    await applyUpgrade(payment);
+    return "approved";
+  }
+
   // Atomic conditional transition — closes the real race between the
   // webhook and the redirect-return page landing at nearly the same
   // moment (both reading "not yet CONFIRMED" before either writes).
@@ -88,6 +96,8 @@ export async function settlePayment(settlement: Settlement): Promise<ConfirmResu
     registration: updated,
     wasAlreadyConfirmed: false,
   });
+  // A level's purchase: Heidy's welcome to an Élite.
+  if (updated.tierSlug) await afterTierPurchase(updated.id);
 
   return "approved";
 }

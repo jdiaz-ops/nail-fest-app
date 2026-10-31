@@ -2,6 +2,7 @@ import { readFileSync } from "fs";
 import path from "path";
 import PDFDocument from "pdfkit";
 import { db } from "@/lib/db";
+import { ticketNameOf } from "@/lib/imparables/tiers";
 import { getOrgSettings } from "@/lib/settings";
 import { formatDateInTz } from "@/lib/dateFormat";
 import { formatHeroDate } from "@/lib/eventHeroDate";
@@ -379,7 +380,8 @@ export async function buildTicketPdfDataForRegistration(registrationId: string):
     startsAt: registration.event.startsAt,
     endsAt: registration.event.endsAt ?? undefined,
     scheduleDays: registration.event.scheduleDays,
-    ticketTypeName: registration.ticketType?.name,
+    // Her ticket level's name, when she has one (lib/imparables/tiers.ts).
+    ticketTypeName: ticketNameOf(registration),
     ticketCount: registration.ticketCount ?? undefined,
     confirmationCode: confirmationCodeFor(registration.id),
     qrToken: registration.qrToken,
