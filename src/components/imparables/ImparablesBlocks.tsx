@@ -120,7 +120,11 @@ export default function ImparablesBlocks({
           (b, j) => b.type === "card" && !b.imageUrl && b.icon === "none" && b.title && !/<(ul|ol)\b/i.test(b.html) && !isPanelCard(b, section.blocks[j + 1])
         );
         return (
-          <section key={i} id={section.id} className={`imp-sec${tones[i] ? " imp-sec--alt" : ""}`}>
+          <section
+            key={i}
+            id={section.id}
+            className={`imp-sec${tones[i] ? " imp-sec--alt" : ""}${section.blocks.some((b) => b.type === "people") ? " imp-sec--speakers" : ""}`}
+          >
             <div className="imp-sec-in">
               {quote && (
                 <span className="imp-quote" aria-hidden="true">

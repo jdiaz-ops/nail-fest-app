@@ -8335,6 +8335,13 @@ body:has(.imp.nf) {
   }
 }
 
+/* The speakers right after the cover, both light (the team, 2026-10-31): a hairline and a bone a tone deeper than
+   the cover's cut the two apart; the eyebrow «Conferencistas» over the title comes from the block. */
+.imp-sec--speakers:not(.imp-sec--alt) {
+  --imp-fondo: var(--imp-hueso-profundo);
+  border-top: 1px solid var(--imp-borde-contador);
+  background: var(--imp-hueso-profundo);
+}
 /* «Nadie nace imparable. Se hace.» over the speakers, under their line (2026-10-31): centered, with air. */
 .imp-sp-tagline {
   margin: 26px 0 8px;
