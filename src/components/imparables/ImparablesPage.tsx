@@ -14,8 +14,8 @@ import ImpPageTracking from "./ImpPageTracking";
 import ImpStickyBar from "./ImpStickyBar";
 import ImpTitle from "./ImpTitle";
 import ImpWaitlistForm from "./ImpWaitlistForm";
-import ImpTiers, { GuaranteeLine } from "./ImpTiers";
-import { TIERS_SECTION, tierCardStageLine, tierCounter, tierStageLine, type TierSlug } from "@/lib/imparables/tiers";
+import { GuaranteeLine } from "./ImpTiers";
+import { tierCounter, tierDeal } from "@/lib/imparables/tiers";
 import { cinzel, manrope } from "./fonts";
 
 // Manicuristas Imparables' own page (EventTheme IMPARABLES, 2026-10-26):
@@ -51,11 +51,6 @@ export interface ImparablesVersion {
   imageUrl: string | null;
   buttonLabel: string | null;
   special: { price: number; struck: number; label: string; endsAt: string | null } | null;
-}
-
-/** A version that sells the ticket levels (lib/imparables/tiers.ts, 2026-10-31): the ones with no places left. */
-export interface ImparablesLevels {
-  soldOut: TierSlug[];
 }
 
 export interface ImparablesPreview {
@@ -113,7 +108,7 @@ export default function ImparablesPage({
   brandName,
   preview,
   version = null,
-  levels = null,
+  levels = false,
 }: {
   event: ImparablesEvent;
   blocks: LandingBlock[];
@@ -126,7 +121,9 @@ export default function ImparablesPage({
   brandName: string;
   preview: ImparablesPreview | null;
   version?: ImparablesVersion | null;
-  levels?: ImparablesLevels | null;
+  /** A version that sells the ticket levels (lib/imparables/tiers.ts, 2026-10-31): the page says «Desde» its stage's
+   * price, and Círculo and Élite wait in the checkout. */
+  levels?: boolean;
 }) {
   // The name is the cover's title; a date in it is left out (the dates are right below).
   const words = coverName(event.displayName).split(/\s+/);
@@ -165,6 +162,10 @@ export default function ImparablesPage({
   const special = mode === "sale" ? (version?.special ?? null) : null;
   const shownPrice = special ? special.price : (current?.price ?? 0);
   const struckPrice = special ? special.struck : (struck?.price ?? null);
+  // On a version that sells the ticket levels (lib/imparables/tiers.ts; the team's boceto, 2026-10-31): one price on the
+  // page, «Desde $90.000» — no price struck on the buttons —, its places and the normal price under the cover's button,
+  // and Círculo and Élite only in the checkout.
+  const sellsLevels = levels && mode === "sale" && Boolean(current) && !special;
   // The team's preview of another day runs its countdowns on that day's clock.
   const offsetMs = preview?.simulated ? now.getTime() - Date.now() : 0;
   // …and the special price's own, to its end, in the band over the cover and in the sticky bar (the team, 2026-10-30).
@@ -194,10 +195,17 @@ export default function ImparablesPage({
           {heroLabel}
           <span className="imp-cta-dot"> ·</span>
         </span>
-        <span className="imp-cta-p">
-          {struckPrice !== null && <s>{pesos(struckPrice)}</s>}
-          <span>{pesos(shownPrice)}</span>
-        </span>
+        {sellsLevels ? (
+          <span className="imp-cta-p imp-cta-p--desde">
+            <span className="imp-cta-desde">Desde</span>
+            <span>{pesos(shownPrice)}</span>
+          </span>
+        ) : (
+          <span className="imp-cta-p">
+            {struckPrice !== null && <s>{pesos(struckPrice)}</s>}
+            <span>{pesos(shownPrice)}</span>
+          </span>
+        )}
       </ImpButton>
     ) : mode === "waitlist" ? (
       <ImpButton action="waitlist" className="imp-cta">
@@ -214,11 +222,10 @@ export default function ImparablesPage({
   // At a version's special price, none of them: it takes no place in the stage's places, and its band over the
   // cover counts down to its end.
   const pill = mode === "sale" && !special ? stagePill(sales, now) : null;
-  // On a version that sells the ticket levels (lib/imparables/tiers.ts, 2026-10-31): the stage's counter only under 30%
-  // of its places left, and its line with its note and the next stage's name until then; under them, the guarantee
-  // and the link down to the levels.
-  const sellsLevels = Boolean(levels) && mode === "sale" && Boolean(current) && !special;
+  // There, under the cover's button: «Etapa Creyente · Solo 200 cupos a $90.000» — the counter instead, under 30% of its
+  // places left —, then the normal price and when it goes up, then the guarantee.
   const counter = sellsLevels ? tierCounter(sales) : null;
+  const dealLines = sellsLevels ? tierDeal(sales, timezone) : null;
   const progress = mode === "sale" && !special && (!sellsLevels || counter) ? stageProgress(sales) : null;
   const terms = special ? null : mode === "sale" ? (progress ? stageTerms(sales, timezone) : stageLine(sales, timezone)) : null;
   const deal =
@@ -232,13 +239,15 @@ export default function ImparablesPage({
               <ProgressBar progress={progress} />
             </>
           ) : (
-            <p className="imp-deal-until">{tierStageLine(sales, timezone)}</p>
+            dealLines && (
+              <p className="imp-deal-stage">
+                <b>{dealLines.stage}</b> · {dealLines.offer}
+              </p>
+            )
           )}
+          {dealLines?.then && <p className="imp-deal-then">{dealLines.then}</p>}
           <div className="imp-lv-cover">
             <GuaranteeLine />
-            <a className="imp-lv-link" href="#niveles">
-              {TIERS_SECTION.coverLink}
-            </a>
           </div>
         </div>
       ) : (
@@ -372,20 +381,7 @@ export default function ImparablesPage({
         </section>
       )}
 
-      <ImparablesBlocks
-        blocks={rest}
-        context={{ sales, offsetMs, when, timezone, now, buyLabel, speakers: faces, panel }}
-        levels={
-          sellsLevels && levels
-            ? {
-                id: "niveles",
-                title: TIERS_SECTION.title,
-                intro: TIERS_SECTION.subtitle,
-                content: <ImpTiers eventSlug={event.slug} sales={sales} soldOut={levels.soldOut} stageLine={tierCardStageLine(sales, timezone)} />,
-              }
-            : null
-        }
-      />
+      <ImparablesBlocks blocks={rest} context={{ sales, offsetMs, when, timezone, now, buyLabel, speakers: faces, panel }} />
 
       <section className="imp-close">
         <div className="imp-rays" aria-hidden="true" />
@@ -396,14 +392,6 @@ export default function ImparablesPage({
           <Tiara />
           {closingLine}
           {cta}
-          {/* On a version that sells the ticket levels: the link up to them (lib/imparables/tiers.ts, 2026-10-31). */}
-          {sellsLevels && (
-            <p className="imp-lv-close">
-              <a className="imp-lv-link" href="#niveles">
-                {TIERS_SECTION.coverLink}
-              </a>
-            </p>
-          )}
         </div>
       </section>
 
@@ -455,7 +443,11 @@ export default function ImparablesPage({
                 )}
               </p>
               <span className="imp-st-name">
-                <span className="imp-st-stage">{special ? special.label : current.name}</span>
+                <span className="imp-st-stage">
+                  {special ? special.label : current.name}
+                  {/* «Etapa Creyente · 200 cupos» on a version that sells the levels, until its counter shows. */}
+                  {sellsLevels && !progress && current.cap !== null && ` · ${current.cap} cupos`}
+                </span>
                 {special?.endsAt && (
                   // …and beside its price on a computer.
                   <span className="imp-clock imp-st-clock">

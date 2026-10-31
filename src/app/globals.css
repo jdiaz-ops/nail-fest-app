@@ -8180,3 +8180,113 @@ body:has(.imp.nf) {
   font-size: 14.5px;
   line-height: 1.45;
 }
+
+/* A version that sells the ticket levels, as the team's boceto (2026-10-31): «Desde $90.000» on its buttons, no price
+   struck; under the cover's button its stage and places, then the normal price and when it goes up. */
+.imp-cta-p--desde {
+  gap: 6px;
+}
+.imp-cta-desde {
+  font-weight: 600;
+  opacity: 0.9;
+}
+.imp-deal .imp-deal-stage {
+  font-size: 16px;
+  line-height: 1.35;
+  font-weight: 800;
+  color: var(--imp-texto);
+}
+.imp-deal .imp-deal-stage b {
+  color: var(--imp-acento);
+}
+.imp-deal .imp-deal-then {
+  margin-top: 2px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--imp-texto-2);
+}
+/* Its checkout's «Tu entrada»: Imparable chosen; Círculo and Élite as what they add. */
+.imp-co-tiers {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 14px;
+}
+.imp-co-tiers-h {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--imp-texto);
+}
+.imp-co-tiers-i {
+  margin: -4px 0 2px;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--imp-texto-2);
+}
+.imp-co-tier {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 10px;
+  padding: 13px 14px;
+  border-radius: 14px;
+  background: var(--imp-tarjeta);
+  border: 1px solid var(--imp-linea);
+  cursor: pointer;
+}
+.imp-co-tier.is-on {
+  padding: 12px 13px;
+  border: 2px solid var(--imp-oro);
+  background: #fffaf2;
+}
+.imp-co-tier input {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  margin: 2px 0 0;
+  border-radius: 50%;
+  border: 2px solid var(--imp-texto-3);
+  background: transparent;
+  cursor: pointer;
+}
+.imp-co-tier input:checked {
+  border: 6px solid var(--imp-texto);
+}
+.imp-co-tier input:focus-visible {
+  outline: 2px solid var(--imp-oro);
+  outline-offset: 2px;
+}
+.imp-co-tier-b {
+  display: grid;
+  gap: 3px;
+}
+.imp-co-tier-tag {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--imp-acento);
+}
+.imp-co-tier-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+.imp-co-tier-top b,
+.imp-co-tier-top span {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--imp-texto);
+}
+.imp-co-tier-top span {
+  white-space: nowrap;
+}
+.imp-co-tier-s {
+  font-size: 13px;
+  line-height: 1.42;
+  color: var(--imp-texto-2);
+}
+.imp-co-tier-s b {
+  font-weight: 700;
+  color: var(--imp-texto);
+}

@@ -8,12 +8,11 @@ import { imparablesPageData } from "@/lib/imparables/page";
 import { checkoutOffer } from "@/lib/imparables/pricing";
 import { coverName, kindLine } from "@/lib/imparables/schedule";
 import { specialPriceFor, specialSold, withVersionPrice } from "@/lib/imparables/versions";
-import { TIERS_SECTION, UPGRADE_OFFER, fill, isTieredVersion, tierBySlug, type Tier } from "@/lib/imparables/tiers";
+import { CHECKOUT_LEVELS, fill, isTieredVersion, tierBySlug } from "@/lib/imparables/tiers";
 import { ensureTierTypes, soldOutTiers } from "@/lib/imparables/tiersServer";
-import { dollars, pesos } from "@/lib/imparables/stages";
-import type { CheckoutTicket } from "@/lib/imparables/pricing";
+import { pesos } from "@/lib/imparables/stages";
 import MetaPixelScript from "@/components/MetaPixelScript";
-import ImpCheckout, { type CheckoutLevel } from "./ImpCheckout";
+import ImpCheckout, { type CheckoutChoice, type CheckoutLevels } from "./ImpCheckout";
 import { cinzel, manrope } from "./fonts";
 
 // The congress's one-page checkout, for its main page (/<event>/checkout) and
@@ -32,48 +31,43 @@ export default async function ImpCheckoutScreen({ event, version, tier: asked = 
   const special = version ? specialPriceFor(version, data.sales, await specialSold(version.id)) : null;
   let ticket = special ? withVersionPrice(offer.ticket, special) : offer.ticket;
 
-  // A version that sells the ticket levels (lib/imparables/tiers.ts, 2026-10-31): the one its button chose — Círculo
-  // and Élite at their own price, one, through their own ticket types; Imparable at the stage on sale, with the one
-  // offer to move to Círculo. A level with no places left goes back to the levels.
-  let level: CheckoutLevel | null = null;
-  if (version && isTieredVersion(version.slug)) {
+  // A version that sells the ticket levels (lib/imparables/tiers.ts; the team's boceto, 2026-10-31): «Tu entrada» —
+  // Imparable at the stage on sale, chosen; Círculo and Élite to change it for, at their own price, one, through their
+  // own ticket types (one with no places left stays out). ?tier= chooses one from the start. Not at a version's special
+  // price: then it's that price's ticket alone.
+  let levels: CheckoutLevels | null = null;
+  if (version && isTieredVersion(version.slug) && !special) {
     const [types, soldOut] = await Promise.all([ensureTierTypes(event.id), soldOutTiers(event.id)]);
-    const fixedTicket = (t: Tier): CheckoutTicket | null => {
-      const type = types.get(t.slug);
-      return type && t.fixedPrice ? { id: type.id, name: t.name, price: t.fixedPrice, fullPrice: null, usdCents: t.fixedUsdCents, fullUsdCents: null, min: 1, max: 1 } : null;
-    };
-    const fixedLevel = (t: Tier): CheckoutLevel => ({ slug: t.slug, name: t.name, note: TIERS_SECTION.fixedNote, extras: t.perks, upgrade: null });
-    const chosen = tierBySlug(asked) ?? tierBySlug("imparable")!;
-    if (chosen.priceMode === "fixed") {
-      const fixed = fixedTicket(chosen);
-      if (!fixed || soldOut.includes(chosen.slug)) redirect(`${page}#niveles`);
-      ticket = fixed;
-      level = fixedLevel(chosen);
-    } else {
-      const circulo = tierBySlug("circulo");
-      const circuloTicket = circulo ? fixedTicket(circulo) : null;
-      const difference = circuloTicket ? circuloTicket.price - ticket.price : 0;
-      // In dollars too, for whoever pays with PayPal — when both have a price in dollars.
-      const differenceUsd = circuloTicket?.usdCents != null && ticket.usdCents !== null ? circuloTicket.usdCents - ticket.usdCents : null;
-      level = {
-        slug: chosen.slug,
-        name: chosen.name,
-        note: data.sales.current?.name ?? null,
-        extras: chosen.perks,
-        upgrade:
-          circulo && circuloTicket && difference > 0 && !special && !soldOut.includes(circulo.slug)
-            ? {
-                level: fixedLevel(circulo),
-                ticket: circuloTicket,
-                title: fill(UPGRADE_OFFER.title, { diferencia: pesos(difference) }),
-                titleUsd: differenceUsd !== null && differenceUsd > 0 ? fill(UPGRADE_OFFER.title, { diferencia: dollars(differenceUsd) }) : null,
-                text: UPGRADE_OFFER.text,
-                yes: UPGRADE_OFFER.yes,
-                no: UPGRADE_OFFER.no,
-              }
-            : null,
-      };
+    const stage = data.sales.current;
+    const full = data.sales.full;
+    const normal = stage && full && full.id !== stage.id && full.price > stage.price ? full.price : null;
+    const imparable = tierBySlug("imparable")!;
+    const choices: CheckoutChoice[] = [
+      {
+        slug: imparable.slug,
+        name: imparable.name,
+        tag: null,
+        note: stage ? { strong: stage.name, rest: normal !== null ? fill(CHECKOUT_LEVELS.normal, { precio: pesos(normal) }) : null } : null,
+        line: imparable.checkoutLine,
+        ticket,
+      },
+    ];
+    for (const slug of ["circulo", "elite"] as const) {
+      const tier = tierBySlug(slug);
+      const type = tier ? types.get(tier.slug) : undefined;
+      if (!tier || !type || !tier.fixedPrice || soldOut.includes(tier.slug)) continue;
+      choices.push({
+        slug: tier.slug,
+        name: tier.name,
+        tag: tier.badge,
+        note: null,
+        line: tier.checkoutLine,
+        ticket: { id: type.id, name: tier.name, price: tier.fixedPrice, fullPrice: null, usdCents: tier.fixedUsdCents, fullUsdCents: null, min: 1, max: 1 },
+      });
     }
+    const chosen = choices.find((c) => c.slug === tierBySlug(asked)?.slug) ?? choices[0]!;
+    ticket = chosen.ticket;
+    levels = { title: CHECKOUT_LEVELS.title, intro: CHECKOUT_LEVELS.intro, choices, chosen: chosen.slug };
   }
   const professions = await getOrderedProfessionOptions();
   const words = coverName(publicEventName(event)).split(/\s+/);
@@ -94,7 +88,7 @@ export default async function ImpCheckoutScreen({ event, version, tier: asked = 
         professions={professions}
         paypal={ticket.usdCents ? paypalCheckoutConfig() : null}
         version={version ? { slug: version.slug, special: special ? { label: special.label } : null } : null}
-        level={level}
+        levels={levels}
       />
     </main>
   );

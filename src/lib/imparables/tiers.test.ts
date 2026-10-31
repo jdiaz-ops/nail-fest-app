@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { salesState, type StageTicketType } from "./stages";
-import { GUARANTEE, TIERS, isTieredVersion, tierAvailable, tierBySlug, tierCounter, tierPrice, tiersInOrder, upgradeDifference, withTierBlocks } from "./tiers";
+import { GUARANTEE, TIERS, isTieredVersion, tierAvailable, tierBySlug, tierCounter, tierDeal, tierPrice, tiersInOrder, upgradeDifference, withTierBlocks } from "./tiers";
 import type { LandingBlock } from "@/lib/landingBlocks/types";
 
 // The ticket levels (lib/imparables/tiers.ts, 2026-10-31): only on the versions
@@ -89,19 +89,47 @@ describe("the stage's counter", () => {
   });
 
   it("shows with 59 left", () => {
-    expect(counter(59)?.text).toBe("Etapa Creyente · 70\u00a0% vendida · quedan 59 cupos a $90.000");
+    expect(counter(59)?.text).toBe("Etapa Creyente · quedan 59 de 200\u00a0cupos a $90.000");
   });
 
-  it("says it as the team asked at 72%", () => {
-    expect(counter(56)).toEqual({ text: "Etapa Creyente · 72\u00a0% vendida · quedan 56 cupos a $90.000", share: 0.72, left: 56 });
+  it("says it as the team's boceto at 72%", () => {
+    expect(counter(56)).toEqual({ text: "Etapa Creyente · quedan 56 de 200\u00a0cupos a $90.000", share: 0.72, left: 56 });
   });
 
   it("one place left", () => {
-    expect(counter(1)?.text).toBe("Etapa Creyente · 99\u00a0% vendida · queda 1 cupo a $90.000");
+    expect(counter(1)?.text).toBe("Etapa Creyente · queda 1 de 200\u00a0cupos a $90.000");
   });
 
   it("nothing for a stage with no cap", () => {
     expect(tierCounter(salesState(stages(), new Date("2027-06-10T10:00:00-05:00"), STARTS))).toBeNull();
+  });
+});
+
+describe("under the cover's button", () => {
+  const nb = (t: string) => t.replace(/ /g, "\u00a0");
+  const deal = (date: string, types = stages()) => tierDeal(salesState(types, new Date(date), STARTS), "America/Bogota");
+
+  it("Creyente: its 200 places, the normal price, and when it goes up", () => {
+    expect(deal("2027-02-01T10:00:00-05:00")).toEqual({
+      stage: "Etapa Creyente",
+      offer: `Solo ${nb("200 cupos")} a $90.000`,
+      then: `Precio normal $150.000. Después del ${nb("18 de abril")}, o cuando se acaben los ${nb("200 cupos")}, sube a $120.000.`,
+    });
+  });
+
+  it("with no date of its own, only its places; with no cap, only its date", () => {
+    const noDate = stages().map((t) => (t.id === "t_cre" ? { ...t, hideAfter: null } : t));
+    expect(deal("2027-02-01T10:00:00-05:00", noDate)?.then).toBe(`Precio normal $150.000. Cuando se acaben los ${nb("200 cupos")}, sube a $120.000.`);
+    const noCap = stages().map((t) => (t.id === "t_cre" ? { ...t, cap: null } : t));
+    expect(deal("2027-02-01T10:00:00-05:00", noCap)).toEqual({
+      stage: "Etapa Creyente",
+      offer: "$90.000",
+      then: `Precio normal $150.000. Después del ${nb("18 de abril")} sube a $120.000.`,
+    });
+  });
+
+  it("at the full price: no normal price, nothing after it", () => {
+    expect(deal("2027-06-10T10:00:00-05:00")).toEqual({ stage: "Precio full", offer: "$150.000", then: null });
   });
 });
 

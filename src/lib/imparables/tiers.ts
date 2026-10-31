@@ -40,6 +40,8 @@ export interface Tier {
   perks: string[];
   /** Its button on the page. */
   button: string;
+  /** Under its name in the checkout's «Tu entrada»: what it brings. */
+  checkoutLine: string;
 }
 
 /** What the three bring, the same in the three cards and in the same order. */
@@ -79,6 +81,8 @@ export const TIERS: Tier[] = [
     // Everything Círculo brings, and its own.
     perks: [...CIRCULO_PERKS, ...ELITE_PERKS],
     button: "Reservar Élite",
+    checkoutLine:
+      "Todo lo de Círculo y además: mesa de 8 con el conferencista que elijas, 20 minutos a solas con Heidy, entrada VIP con acompañante a todos los Nail Fest 2027 y tu nombre en el cierre",
   },
   {
     slug: "circulo",
@@ -91,6 +95,8 @@ export const TIERS: Tier[] = [
     badge: "★ La más elegida",
     perks: CIRCULO_PERKS,
     button: "Reservar Círculo",
+    checkoutLine:
+      "Todo lo de Imparable y además: sesión privada por Zoom con 3 conferencistas, grupo de 30 días con Heidy, repetición por 90 días y fila rápida en un Nail Fest 2027",
   },
   {
     slug: "imparable",
@@ -103,6 +109,7 @@ export const TIERS: Tier[] = [
     badge: null,
     perks: [],
     button: "Reservar mi cupo",
+    checkoutLine: "9 charlas en vivo, repetición por 30 días, cuaderno, guías y certificado",
   },
 ];
 
@@ -144,11 +151,12 @@ export const GUARANTEE = {
 };
 
 /** The checkout's one offer to move from Imparable to Círculo, before paying. */
-export const UPGRADE_OFFER = {
-  title: "Pásate a Círculo por {diferencia} más",
-  text: "Sesión privada con 3 conferencistas, grupo de 30 días con Heidy, repetición 90 días y fila rápida en un Nail Fest.",
-  yes: "Sí, quiero Círculo",
-  no: "No, sigo con Imparable",
+/** The checkout's «Tu entrada» on these versions (the team's boceto, 2026-10-31): Imparable chosen at the stage on
+ * sale, and Círculo and Élite to change it for, as what they add. «{precio}»: the normal price. */
+export const CHECKOUT_LEVELS = {
+  title: "Tu entrada",
+  intro: "Imparable ya incluye las 9 charlas en vivo. Si quieres estar más cerca, cámbiala por Círculo o Élite.",
+  normal: "precio normal {precio}",
 };
 
 /** Moving up after buying (her link «Pasarme a Círculo», in her confirmation and in her account). */
@@ -269,26 +277,12 @@ export function fill(text: string, values: Record<string, string>): string {
 /** Under 30% of the stage's places left, the counter shows; above, only the stage's line. */
 const COUNTER_FROM_SHARE_LEFT = 0.3;
 
-/** «Etapa Creyente · 200 cupos a $90.000 o hasta el 18 de abril (cierre de Nail Fest Cali) · luego $120.000 (etapa
- * Decidida)»: today's stage with its note, and the next one by name. */
-export function tierStageLine(sales: Pick<SalesState, "current" | "next">, timezone: string): string | null {
-  const { current: stage, next } = sales;
-  if (!stage) return null;
-  const until = stage.closesAt ? `hasta el ${untilDay(stage.closesAt, timezone)}${stage.note ? ` (${stage.note})` : ""}` : "";
-  const then = next ? ` · luego ${pesos(next.price)} (${next.name.replace(/^Etapa\b/, "etapa")})` : "";
-  if (stage.cap !== null) return `${stage.name} · ${stage.cap} cupos a ${pesos(stage.price)}${until ? ` o ${until}` : ""}${then}`;
-  return [stage.name, pesos(stage.price), until].filter(Boolean).join(" · ") + then;
-}
+/** "18 de abril", "200 cupos" kept on one line wherever the line breaks. */
+const together = (text: string) => text.replace(/ /g, "\u00a0");
 
-/** Under Imparable's price on its card: «Etapa Creyente · hasta el 18 de abril · luego $120.000». */
-export function tierCardStageLine(sales: Pick<SalesState, "current" | "next">, timezone: string): string | null {
-  const { current: stage, next } = sales;
-  if (!stage) return null;
-  return [stage.name, stage.closesAt ? `hasta el ${untilDay(stage.closesAt, timezone)}` : null, next ? `luego ${pesos(next.price)}` : null].filter(Boolean).join(" · ");
-}
-
-/** The counter, once fewer than 30% of the stage's places are left: «Etapa Creyente · 72 % vendida · quedan 56 cupos a
- * $90.000», and how full it is for its bar. Null while more are left, or for a stage with no cap. */
+/** The counter, once fewer than 30% of the stage's places are left: «Etapa Creyente · quedan 56 de 200 cupos a
+ * $90.000» (the team's boceto, 2026-10-31), and how full it is for its bar. Null while more are left, or for a stage
+ * with no cap. */
 export function tierCounter(sales: Pick<SalesState, "current">): { text: string; share: number; left: number } | null {
   const stage = sales.current;
   if (!stage || stage.cap === null || stage.cap <= 0) return null;
@@ -296,10 +290,30 @@ export function tierCounter(sales: Pick<SalesState, "current">): { text: string;
   const left = stage.cap - taken;
   if (left >= stage.cap * COUNTER_FROM_SHARE_LEFT) return null;
   const share = taken / stage.cap;
-  // Down, so it never says «100 %» with a place left.
-  const sold = `${Math.floor(share * 100)} % vendida`;
-  const places = left === 1 ? "queda 1 cupo" : `quedan ${left} cupos`;
-  return { text: `${stage.name} · ${sold} · ${places} a ${pesos(stage.price)}`, share, left };
+  const places = `${left === 1 ? "queda" : "quedan"} ${left} de ${together(`${stage.cap} cupos`)}`;
+  return { text: `${stage.name} · ${places} a ${pesos(stage.price)}`, share, left };
+}
+
+/** Under the cover's button on these versions (the team's boceto, 2026-10-31), while the counter doesn't show: the
+ * stage and its places — «Etapa Creyente» · «Solo 200 cupos a $90.000» —; and, under it or the counter, the normal
+ * price and when it goes up — «Precio normal $150.000. Después del 18 de abril, o cuando se acaben los 200 cupos, sube a
+ * $120.000.» Each part only when the stages have it. */
+export function tierDeal(
+  sales: Pick<SalesState, "current" | "next" | "full">,
+  timezone: string
+): { stage: string; offer: string; then: string | null } | null {
+  const stage = sales.current;
+  if (!stage) return null;
+  const places = stage.cap !== null ? together(`${stage.cap} cupos`) : null;
+  const offer = places ? `Solo ${places} a ${pesos(stage.price)}` : pesos(stage.price);
+  const normal = sales.full && sales.full.id !== stage.id && sales.full.price > stage.price ? `Precio normal ${pesos(sales.full.price)}.` : null;
+  let rise: string | null = null;
+  if (sales.next) {
+    const date = stage.closesAt ? `Después del ${together(untilDay(stage.closesAt, timezone))}` : null;
+    const when = date && places ? `${date}, o cuando se acaben los ${places},` : date ? date : places ? `Cuando se acaben los ${places},` : "Luego";
+    rise = `${when} sube a ${pesos(sales.next.price)}.`;
+  }
+  return { stage: stage.name, offer, then: [normal, rise].filter(Boolean).join(" ") || null };
 }
 
 /** The 30 minutes' guarantee, wherever the page says it (the template's card and doubt, as the team may have them). */

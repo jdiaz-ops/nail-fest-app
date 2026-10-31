@@ -93,20 +93,32 @@ export interface ImpCheckoutProps {
   /** The version of the page it's the checkout of (/v/<slug>, lib/imparables/versions.ts): its link, and its special
    * price's name when the ticket is at it. */
   version?: { slug: string; special: { label: string } | null } | null;
-  /** On a version that sells the ticket levels (lib/imparables/tiers.ts, 2026-10-31): the one she's buying, and —
-   * buying Imparable — the one offer to move to Círculo before paying. */
-  level?: CheckoutLevel | null;
+  /** On a version that sells the ticket levels (lib/imparables/tiers.ts; the team's boceto, 2026-10-31): «Tu entrada»
+   * — Imparable, and Círculo and Élite to change it for. */
+  levels?: CheckoutLevels | null;
 }
 
-export interface CheckoutLevel {
+/** One of «Tu entrada»'s choices. */
+export interface CheckoutChoice {
   slug: string;
   name: string;
-  /** Under its name: its stage («Etapa Creyente»), or «Precio único, no cambia». */
-  note: string | null;
-  /** What it brings besides what the three bring. */
-  extras: string[];
-  /** title: in pesos; titleUsd: the same in dollars, for whoever pays with PayPal (null without both prices). */
-  upgrade: { level: CheckoutLevel; ticket: CheckoutTicket; title: string; titleUsd: string | null; text: string; yes: string; no: string } | null;
+  /** Its small tag: «★ La más elegida», «20 cupos». */
+  tag: string | null;
+  /** Imparable's first line: its stage, bold, and its normal price («Etapa Creyente · precio normal $150.000»). */
+  note: { strong: string; rest: string | null } | null;
+  /** What it brings. */
+  line: string;
+  /** What she buys with it. */
+  ticket: CheckoutTicket;
+}
+
+export interface CheckoutLevels {
+  title: string;
+  intro: string;
+  /** Imparable first: the others show what they add to it. */
+  choices: CheckoutChoice[];
+  /** The one chosen when the checkout opens. */
+  chosen: string;
 }
 
 interface Applied {
@@ -123,7 +135,7 @@ interface Registered {
   paypal?: { paymentId: string };
 }
 
-export default function ImpCheckout({ eventSlug, backHref, name, dates, format, ticket: openedWith, codes, professions, paypal, version = null, level: openedLevel = null }: ImpCheckoutProps) {
+export default function ImpCheckout({ eventSlug, backHref, name, dates, format, ticket: openedWith, codes, professions, paypal, version = null, levels = null }: ImpCheckoutProps) {
   // What's on sale: the stage the page opened with, until paying finds another one is (/api/register's price_changed).
   const [ticket, setTicket] = useState(openedWith);
   // The version's special price, while the ticket is at it.
@@ -143,9 +155,9 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [paying, setPaying] = useState(false);
-  // Her level, and the one offer to move to Círculo until she answers it.
-  const [level, setLevel] = useState(openedLevel);
-  const [offer, setOffer] = useState(openedLevel?.upgrade ?? null);
+  // «Tu entrada»: its choices (Imparable's ticket follows a change of stage) and the one she's buying.
+  const [choices, setChoices] = useState(levels?.choices ?? []);
+  const [chosen, setChosen] = useState(levels?.chosen ?? null);
   const opened = useRef(false);
   const formRef = useRef<HTMLFormElement>(null);
   // Once the buyer picks a currency themselves, the country no longer changes it.
@@ -338,7 +350,7 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
           shownUnitCents: cur === "USD" ? (ticket.usdCents ?? undefined) : ticket.price * 100,
           website: form.website,
           version: version?.slug,
-          tier: level?.slug,
+          tier: chosen ?? undefined,
         }),
       });
     } catch {
@@ -355,6 +367,8 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
         const count = Math.min(Math.max(qty, next.min), next.max);
         const inUsd = cur === "USD" && next.usdCents !== null;
         setTicket(next);
+        // Imparable is the stage on sale: its choice in «Tu entrada» says the new one too.
+        if (chosen && chosen === choices[0]?.slug) setChoices((cs) => cs.map((c, i) => (i === 0 ? { ...c, ticket: next } : c)));
         setSpecial(body.special ? (version?.special ?? null) : null);
         setQty(count);
         if (cur === "USD" && !inUsd) setCurrency("COP");
@@ -389,16 +403,24 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
     return body as Registered;
   }
 
-  // «Sí, quiero Círculo»: its ticket at its own price — one, no code — and the offer answered.
-  function takeUpgrade() {
-    if (!offer) return;
-    setTicket(offer.ticket);
-    setLevel(offer.level);
-    setOffer(null);
-    setQty(1);
+  // A choice in «Tu entrada»: its ticket at its own price — Círculo and Élite one, no code —; «Pagar» says its total.
+  function choose(choice: CheckoutChoice) {
+    if (choice.slug === chosen) return;
+    setChosen(choice.slug);
+    setTicket(choice.ticket);
+    setQty((q) => Math.min(Math.max(q, choice.ticket.min), choice.ticket.max));
     setApplied(null);
-    if (offer.ticket.usdCents === null) setCurrency("COP");
+    if (choice.ticket.usdCents === null) setCurrency("COP");
     setNotice(null);
+  }
+
+  // What a choice costs in «Tu entrada», in the currency shown: Imparable's price, and the others' over it («+ $100.000»).
+  function choicePrice(choice: CheckoutChoice, index: number): string {
+    const base = choices[0]!;
+    const inUsd = shown === "USD" && choice.ticket.usdCents !== null && base.ticket.usdCents !== null;
+    const cents = (c: CheckoutChoice) => (inUsd ? c.ticket.usdCents! : c.ticket.price * 100);
+    if (index === 0) return money(inUsd ? "USD" : "COP", cents(choice));
+    return `+ ${money(inUsd ? "USD" : "COP", Math.max(0, cents(choice) - cents(base)))}`;
   }
 
   // «Pagar», in pesos: Wompi's window.
@@ -703,18 +725,33 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
                 <h2 className="imp-co-h">
                   <i>3</i>Pago
                 </h2>
-                {level && (
-                  // The level she's buying, and what it brings besides what the three bring.
-                  <div className="imp-co-level">
-                    <b>{level.name}</b>
-                    {level.note && ` · ${level.note}`} · {money(shown, shown === "USD" ? (ticket.usdCents ?? 0) : ticket.price * 100)}
-                    {level.extras.length > 0 && (
-                      <ul>
-                        {level.extras.map((extra) => (
-                          <li key={extra}>{extra}</li>
-                        ))}
-                      </ul>
-                    )}
+                {levels && choices.length > 0 && (
+                  // «Tu entrada»: Imparable chosen; Círculo and Élite as what they add to it.
+                  <div className="imp-co-tiers" role="radiogroup" aria-label={levels.title}>
+                    <p className="imp-co-tiers-h">{levels.title}</p>
+                    <p className="imp-co-tiers-i">{levels.intro}</p>
+                    {choices.map((choice, i) => (
+                      <label key={choice.slug} className={`imp-co-tier${choice.slug === chosen ? " is-on" : ""}`}>
+                        <input type="radio" name="imp-tier" value={choice.slug} checked={choice.slug === chosen} onChange={() => choose(choice)} />
+                        <span className="imp-co-tier-b">
+                          {choice.tag && <span className="imp-co-tier-tag">{choice.tag}</span>}
+                          <span className="imp-co-tier-top">
+                            <b>{choice.name}</b>
+                            <span>{choicePrice(choice, i)}</span>
+                          </span>
+                          <span className="imp-co-tier-s">
+                            {choice.note && (
+                              <>
+                                <b>{choice.note.strong}</b>
+                                {choice.note.rest && ` · ${choice.note.rest}`}
+                                <br />
+                              </>
+                            )}
+                            {choice.line}
+                          </span>
+                        </span>
+                      </label>
+                    ))}
                   </div>
                 )}
                 {canPayUsd ? (
@@ -786,19 +823,6 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
                 </p>
               )}
               <div className="imp-co-end">
-                {offer && (
-                  // Buying Imparable: once, right before paying, the offer to move to Círculo.
-                  <div className="imp-co-up">
-                    <h3>{shown === "USD" && offer.titleUsd ? offer.titleUsd : offer.title}</h3>
-                    <p>{offer.text}</p>
-                    <button type="button" className="imp-cta" onClick={takeUpgrade}>
-                      {offer.yes}
-                    </button>
-                    <button type="button" className="imp-co-up-no" onClick={() => setOffer(null)}>
-                      {offer.no}
-                    </button>
-                  </div>
-                )}
                 {usd && paypal ? (
                   <PayPalButtons
                     clientId={paypal.clientId}

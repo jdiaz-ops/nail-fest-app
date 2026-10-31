@@ -7,7 +7,6 @@ import { publicEventName } from "@/lib/eventDisplayName";
 import { imparablesPageData } from "@/lib/imparables/page";
 import { liveVersion, specialPriceFor, specialSold } from "@/lib/imparables/versions";
 import { isTieredVersion, withTierBlocks } from "@/lib/imparables/tiers";
-import { soldOutTiers } from "@/lib/imparables/tiersServer";
 import ImparablesPage from "@/components/imparables/ImparablesPage";
 
 export const dynamic = "force-dynamic";
@@ -47,9 +46,9 @@ export default async function VersionPage({ params, searchParams }: { params: { 
   const now = new Date();
   const data = await imparablesPageData(event, orgSettings.timezone, now);
   const special = specialPriceFor(version, data.sales, await specialSold(version.id));
-  // A version that sells the ticket levels (lib/imparables/tiers.ts, 2026-10-31): its section and its guarantee,
-  // also in the questions.
-  const levels = isTieredVersion(version.slug) ? { soldOut: await soldOutTiers(event.id) } : null;
+  // A version that sells the ticket levels (lib/imparables/tiers.ts, 2026-10-31): «Desde» its stage's price, its
+  // guarantee — also in the questions —, and Círculo and Élite in its checkout.
+  const levels = isTieredVersion(version.slug);
   // Its own count of visits, next to the main page's (LandingView).
   await db.landingView.create({ data: { eventId: event.id, country: headers().get("x-vercel-ip-country"), landingVersionId: version.id } }).catch(() => null);
 
