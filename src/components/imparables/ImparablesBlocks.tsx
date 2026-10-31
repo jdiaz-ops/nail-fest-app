@@ -92,9 +92,13 @@ export default function ImparablesBlocks({ blocks, context, extras = [] }: { blo
     const content = [...(extra.blocks ? renderBlocks(extra.blocks, context) : []), ...(extra.content ? [extra.content] : [])];
     sections.splice(at >= 0 ? at : sections.length, 0, { heading, blocks: extra.blocks ?? [], content, id: extra.id, tone: extra.tone });
   }
-  // Dark, light, dark… from the first; a section with a color of its own takes it, and the next ones go on from it.
+  // Dark, light, dark… from the first; a section with a color of its own takes it — «Lo que vas a resolver en un
+  // solo día» is always chocolate (the team, 2026-10-31) — and the next ones go on from it.
   let dark = false;
-  const tones = sections.map((section) => (dark = section.tone ? section.tone === "dark" : !dark));
+  const tones = sections.map((section) => {
+    const own = section.tone ?? (section.blocks.some((b) => b.type === "slides" && b.style === "results") ? "dark" : undefined);
+    return (dark = own ? own === "dark" : !dark);
+  });
   return (
     <>
       {sections.map((section, i) => {
