@@ -17,7 +17,7 @@ import {
   type Placement,
 } from "./asistireArt";
 import * as nailFest from "../nailfest/asistireArt";
-import { IMPARABLES_INSTAGRAM_HANDLE, INSTAGRAM_HANDLE } from "@/lib/brand";
+import { INSTAGRAM_HANDLE } from "@/lib/brand";
 
 // «Asistiré» (2026-10-30), as in the boceto the team approved: her photo in,
 // her image out — a story or a publication to share, and the link to book.
@@ -384,7 +384,7 @@ export default function ImpAsistire(props: Props) {
             Descargar imagen
           </a>
           <p className="imp-as-redes">
-            Publícala en tus redes: en tu historia, en tu feed o en tu estado de WhatsApp. Etiquétanos en <b>{INSTAGRAM_HANDLE}</b> y <b>{IMPARABLES_INSTAGRAM_HANDLE}</b>.
+            Publícala en tus redes: en tu historia, en tu feed o en tu estado de WhatsApp. Etiquétanos en <b>{INSTAGRAM_HANDLE}</b>.
             {onIPhone() && <small>En iPhone, mantén el dedo sobre la imagen y toca «Guardar en Fotos».</small>}
           </p>
           <button type="button" className="imp-co-switch imp-as-otra" onClick={() => setStep("ajustar")}>
