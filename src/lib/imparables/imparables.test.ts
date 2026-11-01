@@ -3,7 +3,7 @@ import path from "path";
 import { describe, expect, it } from "vitest";
 import { landingBlockSchema } from "@/lib/landingBlocks/schema";
 import { parseLandingBlocks, type AgendaLandingBlock, type LandingBlock } from "@/lib/landingBlocks/types";
-import { castLine, castOf, coverOf, introOf, isPanelCard, namesIn, panelGuestsOf, panelOf } from "./blocks";
+import { castLine, castOf, coverOf, introOf, isPanelCard, namesIn, panelGuestsOf, panelOf, sponsorLogosOf } from "./blocks";
 import { agendaInstant, coverName, dayEnd, eventWhen, readClock } from "./schedule";
 import { dollars, pesos, progressTitle, salesState, saving, stageLine, stagePill, stageProgress, stagesSummary, stageTerms, untilDay, type StageTicketType } from "./stages";
 import { splitTagline } from "./tagline";
@@ -584,5 +584,20 @@ describe("the template", () => {
     expect(faq.items.find((it) => it.question === "¿Por qué sube el precio?")!.answer).toBe(
       "Porque premiamos a las que deciden primero. {{etapas}} El precio nunca baja."
     );
+  });
+});
+
+describe("the sponsors' logos on the cover (2026-11-01)", () => {
+  const heading = (eyebrow: string, title: string, hidden = false) => ({ type: "heading", eyebrow, title, intro: "", hidden }) as LandingBlock;
+  const gallery = (urls: string[], hidden = false) =>
+    ({ type: "gallery", layout: "grid", items: urls.map((url, i) => ({ url, handle: `Marca ${i + 1}` })), showFirst: 0, zoom: false, moreLabel: "", hidden }) as LandingBlock;
+
+  it("come from the gallery under «Con el apoyo de», even while that section is hidden", () => {
+    const blocks = [heading("Agenda", ""), heading("Con el apoyo de", "Nuestros patrocinadores", true), gallery(["/a.png", " ", "/b.png"], true)];
+    expect(sponsorLogosOf(blocks).map((s) => s.url)).toEqual(["/a.png", "/b.png"]);
+  });
+
+  it("none without that section", () => {
+    expect(sponsorLogosOf([heading("Galería", "Fotos"), gallery(["/x.png"])])).toEqual([]);
   });
 });

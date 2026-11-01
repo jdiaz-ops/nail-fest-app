@@ -132,6 +132,7 @@ export default async function EventLandingPage({
         pixelId={data.pixelId}
         whatsappUrl={data.whatsappUrl}
         brandName={orgSettings.name}
+        sponsors={data.sponsors}
         preview={staff ? { draft: draftPreview, simulated: now === simulated ? simulated : null, shortcuts: data.shortcuts } : null}
       />
     );

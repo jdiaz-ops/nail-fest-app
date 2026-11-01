@@ -76,6 +76,7 @@ export default async function VersionPage({ params, searchParams }: { params: { 
       pixelId={data.pixelId}
       whatsappUrl={data.whatsappUrl}
       brandName={orgSettings.name}
+      sponsors={data.sponsors}
       preview={null}
       levels={levels}
       transformation={transformation}

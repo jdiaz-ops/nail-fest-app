@@ -1,6 +1,6 @@
 import type { EventFormat } from "@prisma/client";
 import MetaPixelScript from "@/components/MetaPixelScript";
-import type { LandingBlock } from "@/lib/landingBlocks/types";
+import type { LandingBlock, GalleryItem } from "@/lib/landingBlocks/types";
 import { coverName, type EventWhen } from "@/lib/imparables/schedule";
 import { coverDeal, dayMonth, pesos, riseCountdown, saving, stagePill, stageProgress, untilDay, type SalesState } from "@/lib/imparables/stages";
 import { utcToZonedInputValue } from "@/lib/dateFormat";
@@ -131,6 +131,7 @@ export default function ImparablesPage({
   version = null,
   levels = false,
   transformation = false,
+  sponsors = [],
 }: {
   event: ImparablesEvent;
   blocks: LandingBlock[];
@@ -150,6 +151,8 @@ export default function ImparablesPage({
    * intro — with «Nadie nace imparable. Se hace.» under it —, its six outcomes before the program, its closing's
    * words, and its guarantee under the cover's button. */
   transformation?: boolean;
+  /** The sponsors' logos, under «Organiza» on the cover (lib/imparables/blocks.ts sponsorLogosOf, 2026-11-01). */
+  sponsors?: GalleryItem[];
 }) {
   // The name is the cover's title; a date in it is left out (the dates are right below).
   const words = coverName(event.displayName).split(/\s+/);
@@ -426,7 +429,26 @@ export default function ImparablesPage({
           {/* The guarantee («Texto debajo del botón») is hidden from the
               cover for now; it stays on the event. */}
           {deal}
-          {/* «Organiza Nail Fest» left the cover (the team, 2026-10-31); it stays at the foot of the page. */}
+          {/* «Organiza Nail Fest» and, under it, «Con el apoyo de» and the sponsors' logos, last on the cover (the team,
+              2026-11-01). */}
+          <div className="imp-org">
+            <p className="imp-organiza">
+              Organiza
+              {/* eslint-disable-next-line @next/next/no-img-element -- fixed logo mark */}
+              <img src="/logo.png" alt={brandName} />
+            </p>
+            {sponsors.length > 0 && (
+              <div className="imp-apoyo">
+                <span>Con el apoyo de</span>
+                <div className="imp-apoyo-logos">
+                  {sponsors.map((sponsor, i) => (
+                    // eslint-disable-next-line @next/next/no-img-element -- admin-uploaded logo, arbitrary Blob URL
+                    <img key={i} src={sponsor.url} alt={sponsor.handle} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </section>
 

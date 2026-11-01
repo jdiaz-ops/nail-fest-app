@@ -971,11 +971,15 @@ function AgendaBlockEditor({
                 style={{ flex: "1 1 200px" }}
               />
             </div>
+            {imparables && (
+              // Manicuristas Imparables' active breaks show the brand's logo next to «Presentada por» (2026-11-01).
+              <ImageField label="Logo de la marca (opcional: sale junto a «Presentada por» en las pausas)" url={row.brandLogoUrl} onChange={(brandLogoUrl) => updateRow(i, { ...row, brandLogoUrl })} />
+            )}
             <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, fontWeight: 400 }}>
               <input type="checkbox" checked={row.sponsored} onChange={(e) => updateRow(i, { ...row, sponsored: e.target.checked })} style={{ width: "auto" }} />
               Marca patrocinadora: destacar esta demostración con &quot;Presentado por&quot; y el nombre de la marca
             </label>
-            {row.sponsored && !row.brand && (
+            {row.sponsored && !row.brand && !(imparables && row.brandLogoUrl) && (
               <p style={{ fontSize: 12, color: "#8a5a1f", margin: 0 }}>Escribe el nombre de la marca arriba: es lo que sale junto a &quot;Presentado por&quot;.</p>
             )}
             <input

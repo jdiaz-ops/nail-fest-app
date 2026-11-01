@@ -1,4 +1,4 @@
-import type { CardLandingBlock, HeadingLandingBlock, ImageLandingBlock, LandingBlock, PeopleLandingBlock, TextLandingBlock } from "@/lib/landingBlocks/types";
+import type { CardLandingBlock, GalleryItem, HeadingLandingBlock, ImageLandingBlock, LandingBlock, PeopleLandingBlock, TextLandingBlock } from "@/lib/landingBlocks/types";
 
 // How Manicuristas Imparables' page reads an event's blocks
 // (components/imparables/ImparablesBlocks.tsx): an image before the first
@@ -75,4 +75,17 @@ export function castLine(blocks: LandingBlock[]): { names: string; also: string 
   const panel = blocks.find((b, i): b is CardLandingBlock => isPanelCard(b, blocks[i + 1]) && Boolean(b.title.trim()));
   const also = [host ? `con ${host.title.trim()}` : "", panel ? `${host ? "y " : "con "}el panel «${panel.title.trim()}»` : ""].filter(Boolean).join(" ");
   return { names: listNames(castOf(blocks).speakers.map((s) => s.name.trim())), also };
+}
+
+/** The sponsors' logos (the team, 2026-11-01): the gallery under the heading «Con el apoyo de» / «Nuestros
+ * patrocinadores», read even while that section is hidden — the cover shows them under «Organiza». */
+export function sponsorLogosOf(blocks: LandingBlock[]): GalleryItem[] {
+  for (let i = 0; i < blocks.length - 1; i++) {
+    const block = blocks[i]!;
+    const next = blocks[i + 1]!;
+    if (block.type === "heading" && /apoyo|patrocin/i.test(`${block.eyebrow} ${block.title}`) && next.type === "gallery") {
+      return next.items.filter((item) => item.url.trim());
+    }
+  }
+  return [];
 }

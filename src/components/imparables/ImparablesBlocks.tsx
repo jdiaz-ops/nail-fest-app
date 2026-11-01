@@ -604,8 +604,8 @@ function AgendaLine({
   const [digits, suffix] = splitChip(row.chip);
   if (!title && !row.chip) return null;
   if (isPause) {
-    // A band of its own (2026-11-01, the team): its hour, how long it is, what it brings (its «Nota extra») and, when a
-    // brand brings it («Patrocinado» and its «Marca» in the admin), «Presentada por» and the brand's name.
+    // A band of its own (2026-11-01, the team): its hour, how long it is, its theme and what it brings and, when a brand
+    // brings it («Patrocinado» with its «Marca» or its logo in the admin), «Presentada por» and the brand's logo.
     const sponsor = row.sponsored && (row.brand.trim() || row.brandLogoUrl);
     return (
       <li className={`is-pause${sponsor ? " is-sponsored" : ""}`}>
@@ -620,15 +620,18 @@ function AgendaLine({
             {title}
             {minutes && ` · ${minutes} min`}
           </span>
+          {/* Its theme (the line's «Etiqueta»), then what it brings (its «Nota extra»), 2026-11-01. */}
+          {row.label.trim() && <b className="imp-pause-t">{row.label.trim()}</b>}
           {row.text.trim() && <span className="imp-pause-what">{row.text.trim()}</span>}
           {sponsor && (
             <span className="imp-pause-by">
               <small>Presentada por</small>
-              {row.brand.trim() ? (
-                <b>{row.brand.trim()}</b>
-              ) : (
+              {/* The brand's logo when it has one (the team, 2026-11-01), else its name. */}
+              {row.brandLogoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element -- admin-uploaded logo, arbitrary Blob URL
-                <img src={row.brandLogoUrl} alt="" />
+                <img src={row.brandLogoUrl} alt={row.brand.trim()} />
+              ) : (
+                <b>{row.brand.trim()}</b>
               )}
             </span>
           )}

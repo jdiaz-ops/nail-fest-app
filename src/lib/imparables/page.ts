@@ -1,7 +1,8 @@
 import type { Event } from "@prisma/client";
 import { db } from "@/lib/db";
 import { utcToZonedInputValue } from "@/lib/dateFormat";
-import { parseLandingBlocks, type LandingBlock } from "@/lib/landingBlocks/types";
+import { parseLandingBlocks, type GalleryItem, type LandingBlock } from "@/lib/landingBlocks/types";
+import { sponsorLogosOf } from "./blocks";
 import { eventWhen, type EventWhen } from "./schedule";
 import { loadStages } from "./pricing";
 import { salesState, type SalesState } from "./stages";
@@ -13,6 +14,8 @@ import { salesState, type SalesState } from "./stages";
 
 export interface ImparablesPageData {
   blocks: LandingBlock[];
+  /** The sponsors' logos, for the cover (blocks.ts sponsorLogosOf). */
+  sponsors: GalleryItem[];
   sales: SalesState;
   when: EventWhen;
   pixelId: string | null;
@@ -43,8 +46,11 @@ export async function imparablesPageData(event: Event, timezone: string, now: Da
   ];
 
   const digits = whatsapp?.displayPhoneNumber?.replace(/\D/g, "") ?? "";
+  const all = parseLandingBlocks(event.landingBlocks);
   return {
-    blocks: parseLandingBlocks(event.landingBlocks).filter((b) => !b.hidden),
+    blocks: all.filter((b) => !b.hidden),
+    // Under «Organiza» on the cover, from their section even while it's hidden (2026-11-01).
+    sponsors: sponsorLogosOf(all),
     sales,
     when: eventWhen(event, timezone),
     pixelId: meta?.pixelId ?? null,
