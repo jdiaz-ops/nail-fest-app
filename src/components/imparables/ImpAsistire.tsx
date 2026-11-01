@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties, type KeyboardEvent, type PointerEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties, type KeyboardEvent, type PointerEvent, type ReactNode } from "react";
 import {
   asistireLayers,
   clampPlacement,
@@ -29,6 +29,8 @@ import { INSTAGRAM_HANDLE } from "@/lib/brand";
 
 type Props = {
   fonts: AsistireFonts;
+  /** Her link's token, to count when she makes her image and when she takes it (lib/asistireUse.ts); none: nothing counted. */
+  track?: string;
   /** The short link to paste in a story's link sticker: https://nailfest.lat/imparables */
   linkHref: string;
 } & ({ design?: "IMPARABLES"; texts: AsistireTexts } | { design: "NAIL_FEST"; texts: nailFest.NailFestAsistireTexts });
@@ -94,6 +96,7 @@ async function readPhoto(file: File): Promise<HTMLCanvasElement> {
 
 export default function ImpAsistire(props: Props) {
   const { design, texts, fonts, linkHref } = props;
+  const count = useAsistireCount(props.track);
   const art = useMemo(() => artOf({ design, texts, fonts, linkHref } as Props), [design, texts, fonts, linkHref]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const layersRef = useRef<AsistireLayers | null>(null);
@@ -244,6 +247,7 @@ export default function ImpAsistire(props: Props) {
     setError(null);
     setResult({ url: URL.createObjectURL(blob), file, canShare: !!navigator.canShare?.({ files: [file] }) });
     setStep("lista");
+    count("CREATED");
     window.scrollTo({ top: 0 });
   }
 
@@ -251,6 +255,7 @@ export default function ImpAsistire(props: Props) {
     if (!result) return;
     try {
       await navigator.share({ files: [result.file] });
+      count("DOWNLOADED");
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
       setError("No se pudo abrir «Compartir». Descarga la imagen y súbela desde tu galería.");
@@ -379,7 +384,7 @@ export default function ImpAsistire(props: Props) {
         // Nail Fest's (2026-10-31, the team): her image to download, and where to put it — no «Compartir»,
         // whose window hid Instagram under «Más».
         <>
-          <a className="imp-co-btn" href={result.url} download={result.file.name}>
+          <a className="imp-co-btn" href={result.url} download={result.file.name} onClick={() => count("DOWNLOADED")}>
             <Download />
             Descargar imagen
           </a>
@@ -401,7 +406,7 @@ export default function ImpAsistire(props: Props) {
               Compartir
             </button>
           )}
-          <a className={result.canShare ? "imp-as-btn2" : "imp-co-btn"} href={result.url} download={result.file.name}>
+          <a className={result.canShare ? "imp-as-btn2" : "imp-co-btn"} href={result.url} download={result.file.name} onClick={() => count("DOWNLOADED")}>
             <Download />
             Descargar imagen
           </a>
@@ -433,6 +438,42 @@ export default function ImpAsistire(props: Props) {
       )}
     </div>
   );
+}
+
+/** Tells the team's count (/api/asistire/uso) that she made her image or took it — nothing of her photo; a count that
+ * doesn't go through changes nothing on her page. */
+function useAsistireCount(token: string | undefined) {
+  return useCallback(
+    (step: "CREATED" | "DOWNLOADED") => {
+      if (!token) return;
+      void fetch("/api/asistire/uso", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, step, visitor: visitorId() }),
+        keepalive: true,
+      }).catch(() => undefined);
+    },
+    [token],
+  );
+}
+
+const VISITOR_KEY = "nf-asistire-visitor";
+
+/** Her browser's id, for the event's public link: kept on her phone, so she counts once; a new one where it can't be kept. */
+function visitorId(): string {
+  try {
+    const kept = window.localStorage.getItem(VISITOR_KEY);
+    if (kept && /^[A-Za-z0-9_-]{8,64}$/.test(kept)) return kept;
+  } catch {
+    // No storage (a private window): a new id this time.
+  }
+  const id = (globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`).replace(/[^A-Za-z0-9_-]/g, "");
+  try {
+    window.localStorage.setItem(VISITOR_KEY, id);
+  } catch {
+    // Kept for this time only.
+  }
+  return id;
 }
 
 /** An iPhone keeps a download in Files, not in Photos: there, her image is saved from the image itself. */

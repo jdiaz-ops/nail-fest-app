@@ -334,6 +334,7 @@ model Event {
   discountCodes      DiscountCode[]
   sequences          Sequence[]
   landingVersions    LandingVersion[]
+  asistireUses       AsistireUse[]
 
   @@index([city])
   @@index([status])
@@ -362,6 +363,31 @@ model LandingView {
 
   @@index([eventId, country])
   @@index([landingVersionId])
+}
+
+// «Asistiré» (2026-11-01, the team): who made her image and who took it — downloaded it, or shared it straight from
+// her phone — per event. One row per person and step, so a count is people and `times` says how often: her
+// registration through her own link («r:<id>»), or her browser through the event's public link («v:<id>», the one
+// in stories and the team's sample). Nothing of her photo: it never leaves her phone.
+enum AsistireStep {
+  CREATED
+  DOWNLOADED
+}
+
+model AsistireUse {
+  id        String       @id @default(cuid())
+  event     Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId   String
+  person    String
+  // Her own link: true; the event's public link: false.
+  personal  Boolean
+  step      AsistireStep
+  times     Int          @default(1)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@unique([eventId, person, step])
+  @@index([eventId, step])
 }
 
 // Our previous ticketing platform's own "ticket type" concept, kept even

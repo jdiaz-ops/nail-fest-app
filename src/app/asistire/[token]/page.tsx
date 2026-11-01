@@ -25,8 +25,8 @@ export default async function AsistirePage({ params }: { params: { token: string
   const sampleEventId = registrationId ? asistireSampleEventId(registrationId) : null;
   if (sampleEventId) {
     const event = await db.event.findUnique({ where: { id: sampleEventId } });
-    if (event?.theme === "IMPARABLES") return <AsistireScreen event={event} />;
-    if (event && hasNailFestAsistire(event)) return <NailFestAsistireScreen event={event} />;
+    if (event?.theme === "IMPARABLES") return <AsistireScreen event={event} token={params.token} />;
+    if (event && hasNailFestAsistire(event)) return <NailFestAsistireScreen event={event} token={params.token} />;
     notFound();
   }
   const registration = registrationId ? await db.registration.findUnique({ where: { id: registrationId }, include: { event: true } }) : null;
@@ -34,8 +34,8 @@ export default async function AsistirePage({ params }: { params: { token: string
   const waiting = registration.status === "STARTED" || registration.status === "PENDING_PAYMENT";
   if (registration.event.theme === "IMPARABLES") {
     if (registration.status !== "CONFIRMED" && !waiting) notFound();
-    return <AsistireScreen event={registration.event} waiting={waiting} />;
+    return <AsistireScreen event={registration.event} waiting={waiting} token={params.token} />;
   }
   if (!hasNailFestAsistire(registration.event) || registration.status !== "CONFIRMED") notFound();
-  return <NailFestAsistireScreen event={registration.event} />;
+  return <NailFestAsistireScreen event={registration.event} token={params.token} />;
 }

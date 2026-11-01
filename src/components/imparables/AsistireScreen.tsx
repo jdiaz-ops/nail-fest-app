@@ -10,7 +10,7 @@ import { cinzel, manrope } from "./fonts";
 // (ImpAsistire.tsx) for someone whose purchase is confirmed, or, while her
 // payment is still being confirmed, a note to come back. Shown by her own
 // link and by the team's sample link (app/asistire/[token]).
-export default async function AsistireScreen({ event, waiting = false }: { event: Event; waiting?: boolean }) {
+export default async function AsistireScreen({ event, waiting = false, token }: { event: Event; waiting?: boolean; token?: string }) {
   const words = coverName(publicEventName(event)).split(/\s+/);
   const big = words.pop() ?? "";
   const pre = words.join(" ");
@@ -42,6 +42,7 @@ export default async function AsistireScreen({ event, waiting = false }: { event
               texts={{ pre, big, date: eventWhen(event, orgSettings.timezone).dates, kind: kindLine(event), link: link.text }}
               fonts={{ display: cinzel.style.fontFamily, body: manrope.style.fontFamily }}
               linkHref={link.href}
+              track={token}
             />
           )}
         </div>

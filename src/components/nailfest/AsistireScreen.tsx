@@ -9,7 +9,7 @@ import { fraunces, inter } from "./fonts";
 // (.imp.nf in globals.css). Shown by her own link — from her confirmation
 // email and the page after signing up — and by the team's sample link
 // (app/asistire/[token]).
-export default async function NailFestAsistireScreen({ event }: { event: Event }) {
+export default async function NailFestAsistireScreen({ event, token }: { event: Event; token?: string }) {
   const orgSettings = await getOrgSettings();
   const { texts, linkHref } = await nailFestAsistire(event, orgSettings.timezone);
 
@@ -28,7 +28,7 @@ export default async function NailFestAsistireScreen({ event }: { event: Event }
           <span />
         </header>
         <div className="imp-co-main">
-          <ImpAsistire design="NAIL_FEST" texts={texts} fonts={{ display: fraunces.style.fontFamily, body: inter.style.fontFamily }} linkHref={linkHref} />
+          <ImpAsistire design="NAIL_FEST" texts={texts} fonts={{ display: fraunces.style.fontFamily, body: inter.style.fontFamily }} linkHref={linkHref} track={token} />
         </div>
       </div>
     </main>

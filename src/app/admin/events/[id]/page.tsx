@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
-import { StatCard } from "../../StatsUI";
+import { asistireCounts } from "@/lib/asistireUse";
+import { hasNailFestAsistire } from "@/lib/nailfest/asistire";
+import { Section, StatCard } from "../../StatsUI";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +31,8 @@ export default async function EventSummaryPage({ params }: { params: { id: strin
   ]);
 
   if (!event) return null;
+  // «Asistiré» (2026-11-01, the team): on the events that have the image.
+  const asistire = event.theme === "IMPARABLES" || hasNailFestAsistire(event) ? await asistireCounts(event.id) : null;
 
   const issued = ticketAgg._sum.ticketCount ?? 0;
   const checkedIn = checkedInAgg._sum.checkedInCount ?? 0;
@@ -51,6 +55,8 @@ export default async function EventSummaryPage({ params }: { params: { id: strin
         <StatCard label="Carritos abandonados" value={String(abandonedCount)} />
       </div>
 
+      {asistire && <AsistireCounts counts={asistire} />}
+
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
         <Link href={`/admin/events/${event.id}/reports`} className="secondary" style={{ padding: "10px 18px", fontSize: 14 }}>
           Ver reportes completos →
@@ -60,5 +66,26 @@ export default async function EventSummaryPage({ params }: { params: { id: strin
         </Link>
       </div>
     </div>
+  );
+}
+
+/** How many people made their «¡Asistiré!» image and how many took it, by link. */
+function AsistireCounts({ counts }: { counts: Awaited<ReturnType<typeof asistireCounts>> }) {
+  const created = counts.created.personal + counts.created.public;
+  const downloaded = counts.downloaded.personal + counts.downloaded.public;
+  return (
+    <Section
+      title="Imagen «¡Asistiré!»"
+      note="Personas, contadas desde el 1 de noviembre de 2026. «Su enlace» es el del correo de cada una; el «enlace público», el de las historias y las pruebas del equipo. En iPhone, quien guarda la imagen manteniendo el dedo sobre ella no cuenta como descarga."
+    >
+      <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 8 }}>
+        <StatCard label="Crearon su imagen" value={String(created)} sub={`${counts.created.personal} con su enlace · ${counts.created.public} con el enlace público`} />
+        <StatCard
+          label="La descargaron o compartieron"
+          value={String(downloaded)}
+          sub={created > 0 ? `${Math.min(100, Math.round((downloaded / created) * 100))}% de las que la crearon` : undefined}
+        />
+      </div>
+    </Section>
   );
 }
