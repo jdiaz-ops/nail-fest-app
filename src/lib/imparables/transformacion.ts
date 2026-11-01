@@ -41,14 +41,14 @@ export const TRANSFORMATION = {
   },
   /** D. Under each part of the program's header. */
   agenda: {
-    morning: "Vas a escuchar cuatro historias que se parecen a la tuya: la mesa alquilada, el miedo a cobrar, el día en que casi lo dejan.",
-    afternoon: "Ahora te toca a ti. Paso a paso, con tus propios números, vas a armar el plan: cuánto cobrar, cómo verte, cómo atraer, cómo retener.",
+    morning: "Vas a escuchar tres historias que se parecen a la tuya: el día en que casi lo dejan, la mesa alquilada, el miedo a cobrar. Y antes del almuerzo, tus números en orden.",
+    afternoon: "Ahora te toca a ti. Paso a paso, con tus números ya claros, vas a armar el plan: cómo verte, cómo atraer, cómo retener.",
   },
   /** E. «Todo lo que trae tu boleta», from things to results. */
   takeaways: {
     title: "Lo que te llevas",
     items: [
-      { title: "Un día que te cambia la forma de ver tu negocio", text: "9 conferencistas y un panel, de 8 a. m. a 7 p. m., desde tu celular." },
+      { title: "Un día que te cambia la forma de ver tu negocio", text: "8 conferencistas, de 8 a. m. a 6 p. m., desde tu celular." },
       { title: "Vuelve a verlo cuando lo necesites", text: "Las charlas quedan disponibles 30 días." },
       { title: "Las herramientas de cada conferencista", text: "Guías para aplicar lo que escuchaste." },
       { title: "Tu diploma Imparable 2027", text: "Con tu nombre, para tu salón." },
@@ -78,15 +78,15 @@ export const TRANSFORMATION = {
     },
     {
       question: "¿Qué me llevo exactamente?",
-      answer: "Nueve charlas en vivo, un panel, tu cuaderno con tu plan, las guías de los conferencistas, la repetición por 30 días y tu diploma.",
+      answer: "Ocho charlas en vivo, tu cuaderno con tu plan, las guías de los conferencistas, la repetición por 30 días y tu diploma.",
     },
     {
-      question: "¿Cómo hago para no distraerme 11 horas?",
+      question: "¿Cómo hago para no distraerme 10 horas?",
       answer: "El día está armado en bloques de dos charlas con pausas activas, una hora de almuerzo y el cuaderno para escribir mientras escuchas. Y lo que te pierdas lo ves en la repetición.",
     },
     {
       question: "¿Hay garantía?",
-      answer: "Sí. Escucha la primera charla y, si a las 9:20 a. m. sientes que no es para ti, escríbenos antes del mediodía y te devolvemos el 100 %.",
+      answer: "Sí. Escucha la primera charla y, si a las 9:15 a. m. sientes que no es para ti, escríbenos antes del mediodía y te devolvemos el 100 %.",
     },
   ],
   /** «¿Puedo pedir reembolso?» says this guarantee instead of the 30 minutes'. */

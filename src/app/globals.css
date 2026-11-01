@@ -5102,31 +5102,64 @@ body:has(.imp) {
   width: 100%;
   height: 100%;
 }
-/* An active break: a thin line with its length */
+/* An active break (2026-11-01, the team): a band of its own, a soft gold over the card — its hour, «Pausa activa ·
+   10 min», what it brings and, when a brand brings it, «Presentada por» and the brand's name in the titles' face. */
 .imp-ag li.is-pause {
-  padding: 3px 0;
-  border-top: 0;
+  align-items: flex-start;
+  margin: 10px -4px;
+  padding: 14px 16px 14px 14px;
+  border: 1px solid rgba(140, 106, 62, 0.28);
+  border-radius: 14px;
+  background: rgba(201, 164, 106, 0.12);
 }
 .imp-ag li.is-pause + li {
   border-top: 0;
 }
-.imp-ag li.is-pause span {
+.imp-pause {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.imp-pause-k {
   font-size: 12px;
   font-weight: 800;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--imp-acento);
+}
+.imp-pause-what {
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--imp-texto);
+}
+.imp-pause-by {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(140, 106, 62, 0.2);
+}
+.imp-pause-by small {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--imp-texto-3);
 }
-.imp-ag li.is-pause span::before,
-.imp-ag li.is-pause span::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: var(--imp-linea);
+.imp-pause-by b {
+  font-family: var(--imp-display), Georgia, serif;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--imp-acento);
+}
+.imp-pause-by img {
+  height: 24px;
+  width: auto;
 }
 /* The lunch: a band of its own, how long it is and its hours (2026-10-29) */
 .imp-ag li.is-lunch {

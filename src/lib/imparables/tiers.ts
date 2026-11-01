@@ -46,7 +46,7 @@ export interface Tier {
 
 /** What the three bring, the same in the three cards and in the same order. */
 export const COMMON_PERKS = [
-  "9 charlas en vivo: 8 conferencistas y un panel, un domingo completo",
+  "8 charlas en vivo, un domingo completo",
   "Repetición por 30 días",
   "Cuaderno «Mi Ruta Imparable» en PDF",
   "Guías de los conferencistas",
@@ -138,11 +138,11 @@ export const GUARANTEE = {
   line: "escucha la primera charla y, si no es para ti, te devolvemos el 100 % ese mismo día.",
   question: "¿Y si no me gusta?",
   answer:
-    "Entra el 27 de junio, escucha la charla de Jimena y, si a las 9:20 a. m. sientes que esto no es para ti, escríbenos por WhatsApp antes del mediodía de ese día y te devolvemos el 100 % de lo que pagaste, sin preguntas. Aplica para los tres niveles.",
+    "Entra el 27 de junio, escucha la primera charla y, si a las 9:15 a. m. sientes que esto no es para ti, escríbenos por WhatsApp antes del mediodía de ese día y te devolvemos el 100 % de lo que pagaste, sin preguntas. Aplica para los tres niveles.",
   /** «¿Puedo pedir reembolso?» on these versions: the same, with this guarantee instead of the 30 minutes. */
   refund: [
     "Sí, en estos casos:",
-    "• Garantía Imparable: el 27 de junio escucha la primera charla y, si a las 9:20 a. m. sientes que no es para ti, escríbenos por WhatsApp antes del mediodía y te devolvemos el 100 %.",
+    "• Garantía Imparable: el 27 de junio escucha la primera charla y, si a las 9:15 a. m. sientes que no es para ti, escríbenos por WhatsApp antes del mediodía y te devolvemos el 100 %.",
     "• Si te arrepientes dentro de los 5 días hábiles siguientes a tu compra, también te devolvemos el 100 %, siempre que el congreso no haya empezado.",
     "• Si Nail Fest cambia la fecha o cancela el congreso, tú eliges: te devolvemos todo o usas tu boleta en la nueva fecha.",
     "Fuera de estos casos no hacemos devoluciones, pero puedes pasarle tu boleta a otra persona escribiéndonos hasta el 25 de junio, y si no puedes verlo en vivo tienes la repetición.",

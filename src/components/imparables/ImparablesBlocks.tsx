@@ -533,6 +533,7 @@ function Agenda({ rows, context }: { rows: AgendaRow[]; context: ImparablesConte
                 key={j}
                 row={row}
                 instant={instants[i]![j] ?? null}
+                minutes={minutesBetween(instants[i]![j] ?? null, instants[i]![j + 1] ?? null)}
                 timezone={context.timezone}
                 handle={row.instructor ? handleOf(row.instructor) : ""}
                 panel={context.panel && isPanelRow(row, context.panel.card) ? context.panel : null}
@@ -550,6 +551,13 @@ function Agenda({ rows, context }: { rows: AgendaRow[]; context: ImparablesConte
   );
 }
 
+/** How long a line lasts: until the next one starts (an active break's «10 min», 2026-11-01). */
+function minutesBetween(from: string | null, to: string | null): number | null {
+  if (!from || !to) return null;
+  const minutes = Math.round((Date.parse(to) - Date.parse(from)) / 60_000);
+  return minutes > 0 && minutes < 120 ? minutes : null;
+}
+
 /** The program's line for the panel: the one whose title names it. */
 function isPanelRow(row: AgendaRow, card: CardLandingBlock): boolean {
   const title = card.title.trim().toLowerCase();
@@ -559,12 +567,15 @@ function isPanelRow(row: AgendaRow, card: CardLandingBlock): boolean {
 function AgendaLine({
   row,
   instant,
+  minutes,
   timezone,
   handle,
   panel,
 }: {
   row: AgendaRow;
   instant: string | null;
+  /** Until the next line: an active break says how long it is. */
+  minutes: number | null;
   timezone: string;
   /** Her Instagram, next to her name. */
   handle: string;
@@ -593,9 +604,35 @@ function AgendaLine({
   const [digits, suffix] = splitChip(row.chip);
   if (!title && !row.chip) return null;
   if (isPause) {
+    // A band of its own (2026-11-01, the team): its hour, how long it is, what it brings (its «Nota extra») and, when a
+    // brand brings it («Patrocinado» and its «Marca» in the admin), «Presentada por» and the brand's name.
+    const sponsor = row.sponsored && (row.brand.trim() || row.brandLogoUrl);
     return (
-      <li className="is-pause">
-        <span>{title}</span>
+      <li className={`is-pause${sponsor ? " is-sponsored" : ""}`}>
+        {row.chip && (
+          <span className="imp-ag-time">
+            <span>{digits}</span>
+            {suffix && <small>{suffix}</small>}
+          </span>
+        )}
+        <span className="imp-pause">
+          <span className="imp-pause-k">
+            {title}
+            {minutes && ` · ${minutes} min`}
+          </span>
+          {row.text.trim() && <span className="imp-pause-what">{row.text.trim()}</span>}
+          {sponsor && (
+            <span className="imp-pause-by">
+              <small>Presentada por</small>
+              {row.brand.trim() ? (
+                <b>{row.brand.trim()}</b>
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element -- admin-uploaded logo, arbitrary Blob URL
+                <img src={row.brandLogoUrl} alt="" />
+              )}
+            </span>
+          )}
+        </span>
       </li>
     );
   }
