@@ -8421,21 +8421,13 @@ body:has(.imp.nf) {
   }
 }
 
-/* The closing on a version that sells the transformation (lib/imparables/transformacion.ts, 2026-10-31): «Tu momento
-   es ahora.» and its line over the button, the tagline under it. */
+/* The closing (lib/imparables/transformacion.ts, 2026-10-31): «Tu momento es ahora.» over the button, the tagline
+   under it — without its line since 2026-11-01. */
 .imp-close .imp-close-t {
   margin: 14px auto 0;
   max-width: 16ch;
 }
-.imp-close .imp-close-p {
-  max-width: 44ch;
-  margin: 12px auto 0;
-  font-size: 16px;
-  line-height: 1.55;
-  color: var(--imp-texto-2);
-  text-wrap: balance;
-}
-.imp-close .imp-close-p + .imp-cta {
+.imp-close .imp-close-t + .imp-cta {
   margin-top: 22px;
 }
 

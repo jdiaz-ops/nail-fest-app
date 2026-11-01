@@ -548,10 +548,10 @@ describe("the template", () => {
     expect(faq.items[1]!.answer).toMatch(/grabaciones de todas las charlas.*30 días en nailfest\.lat, con tu cuenta/);
   });
 
-  it("brings four things with the ticket (2026-10-29: no «hoja de ruta» nor «descuentos»)", () => {
+  it("brings three things with the ticket (2026-10-29: no «hoja de ruta» nor «descuentos»; 2026-11-01: no guides)", () => {
     const points = IMPARABLES_BLOCKS.find((b) => b.type === "points");
     if (points?.type !== "points") throw new Error("no points");
-    expect(points.items.map((it) => it.title)).toEqual(["Un día completo en vivo", "Vuelve a verlo cuando lo necesites", "Guías para descargar", "Tu diploma Imparable 2027"]);
+    expect(points.items.map((it) => it.title)).toEqual(["Un día completo en vivo", "Vuelve a verlo cuando lo necesites", "Tu diploma Imparable 2027"]);
     // No line under «Agenda».
     expect(IMPARABLES_BLOCKS.find((b) => b.type === "heading" && b.eyebrow === "Agenda")).toMatchObject({ title: "", intro: "" });
   });

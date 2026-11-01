@@ -487,10 +487,9 @@ export default function ImparablesPage({
               (2026-10-29), then the button — and nothing under it since
               2026-10-30: its stage's bar and the day stay on the cover. */}
           <Tiara />
-          {/* «Tu momento es ahora.», its line, the button, and the tagline last (2v's closing, on every page since
-              2026-10-31: lib/imparables/transformacion.ts). */}
+          {/* «Tu momento es ahora.», the button, and the tagline last (2v's closing, on every page since 2026-10-31:
+              lib/imparables/transformacion.ts; without its line «El 27 de junio, 500 manicuristas…» since 2026-11-01). */}
           <h2 className="imp-h2 imp-close-t">{TRANSFORMATION.closing.title}</h2>
-          <p className="imp-close-p">{TRANSFORMATION.closing.text}</p>
           {cta}
           {closingLine}
         </div>
