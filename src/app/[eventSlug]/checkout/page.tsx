@@ -24,11 +24,18 @@ export async function generateMetadata({ params }: { params: { eventSlug: string
 // sale it goes back to the event's page. Paying in dollars with PayPal shows
 // up only for a stage with a USD price, with PayPal set up
 // (lib/payments/paypal.ts).
-export default async function CheckoutPage({ params }: { params: { eventSlug: string } }) {
+export default async function CheckoutPage({
+  params,
+  searchParams,
+}: {
+  params: { eventSlug: string };
+  searchParams: Record<string, string | string[] | undefined>;
+}) {
   const event = await db.event.findUnique({
     where: { slug: params.eventSlug },
   });
   if (!event || event.status === "DRAFT") notFound();
   if (event.theme !== "IMPARABLES") redirect(`/${event.slug}`);
-  return <ImpCheckoutScreen event={event} version={null} />;
+  // From the abandoned-cart reminder: ?retomar= fills the form with her draft (lib/checkoutResume.ts).
+  return <ImpCheckoutScreen event={event} version={null} resume={typeof searchParams.retomar === "string" ? searchParams.retomar : null} />;
 }

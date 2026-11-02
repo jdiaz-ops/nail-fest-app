@@ -24,5 +24,13 @@ export default async function VersionCheckoutPage({ params, searchParams }: { pa
     redirect(`/${event.slug}/checkout${q.toString() ? `?${q}` : ""}`);
   }
   // On a version that sells the ticket levels, the one its button chose (?tier=circulo, lib/imparables/tiers.ts).
-  return <ImpCheckoutScreen event={event} version={version} tier={typeof searchParams.tier === "string" ? searchParams.tier : null} />;
+  // From the abandoned-cart reminder: ?retomar= fills the form with her draft (lib/checkoutResume.ts).
+  return (
+    <ImpCheckoutScreen
+      event={event}
+      version={version}
+      tier={typeof searchParams.tier === "string" ? searchParams.tier : null}
+      resume={typeof searchParams.retomar === "string" ? searchParams.retomar : null}
+    />
+  );
 }

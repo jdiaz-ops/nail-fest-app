@@ -5,6 +5,7 @@ import { abandonedCartEmail } from "@/lib/email/templates";
 import { getOrgSettings } from "@/lib/settings";
 import { abandonedCartCallbackUrl, verifyQstashSignature } from "@/lib/qstash";
 import { publicEventName } from "@/lib/eventDisplayName";
+import { checkoutResumeToken } from "@/lib/checkoutResume";
 
 // QStash's callback for one abandoned-cart reminder (see
 // lib/abandonedCart.ts / lib/qstash.ts's scheduleAbandonedCartEmail) —
@@ -32,7 +33,7 @@ export async function POST(req: NextRequest) {
 
   const registration = await db.registration.findUnique({
     where: { id: registrationId },
-    include: { person: true, event: true, ticketType: true },
+    include: { person: true, event: true, ticketType: true, landingVersion: { select: { slug: true } } },
   });
 
   if (!registration || registration.status !== "STARTED") {
@@ -60,12 +61,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, skipped: true });
   }
 
+  // Manicuristas Imparables has its one-page checkout: the reminder opens it
+  // already filled with her draft (lib/checkoutResume.ts, 2026-11-02), on the
+  // version of the page she came from. Every other event: its page.
+  const base = process.env.APP_BASE_URL || "";
+  let eventUrl = `${base}/${registration.event.slug}`;
+  if (registration.event.theme === "IMPARABLES") {
+    try {
+      const page = registration.landingVersion ? `/v/${registration.landingVersion.slug}` : `/${registration.event.slug}`;
+      eventUrl = `${base}${page}/checkout?retomar=${encodeURIComponent(checkoutResumeToken(registration.id))}`;
+    } catch {
+      // No APP_SECRET_KEY to sign with: the event's page, as before.
+    }
+  }
+
   const { subject, text, html } = abandonedCartEmail({
     step,
     firstName: registration.person.firstName ?? "",
     eventName: publicEventName(registration.event),
     eventCity: registration.event.city,
-    eventUrl: `${process.env.APP_BASE_URL || ""}/${registration.event.slug}`,
+    eventUrl,
     ticketTypeName: registration.ticketType?.name,
     orgName: orgSettings.name,
   });

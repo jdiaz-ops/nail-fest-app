@@ -10,6 +10,7 @@ import type { WompiWidgetParams } from "@/lib/payments/wompi";
 import { getValidFbc, track } from "@/components/tracking";
 import { openWompiWidget } from "@/components/wompiWidget";
 import PayPalButtons from "@/components/PayPalButtons";
+import { forgetCheckoutMemory, readCheckoutMemory, writeCheckoutMemory, type CheckoutPrefill } from "@/lib/imparables/checkoutMemory";
 import { Tiara } from "./ImpArt";
 
 // Manicuristas Imparables' one-page checkout (2026-10-29), after
@@ -96,6 +97,8 @@ export interface ImpCheckoutProps {
   /** On a version that sells the ticket levels (lib/imparables/tiers.ts; the team's boceto, 2026-10-31): «Tu entrada»
    * — Imparable, and Círculo and Élite to change it for. */
   levels?: CheckoutLevels | null;
+  /** Opened from the abandoned-cart reminder's link (?retomar=, lib/imparables/checkoutPrefill.ts): what her draft saved. */
+  prefill?: CheckoutPrefill | null;
 }
 
 /** One of «Tu entrada»'s choices. */
@@ -135,7 +138,7 @@ interface Registered {
   paypal?: { paymentId: string };
 }
 
-export default function ImpCheckout({ eventSlug, backHref, name, dates, format, ticket: openedWith, codes, professions, paypal, version = null, levels = null }: ImpCheckoutProps) {
+export default function ImpCheckout({ eventSlug, backHref, name, dates, format, ticket: openedWith, codes, professions, paypal, version = null, levels = null, prefill = null }: ImpCheckoutProps) {
   // What's on sale: the stage the page opened with, until paying finds another one is (/api/register's price_changed).
   const [ticket, setTicket] = useState(openedWith);
   // The version's special price, while the ticket is at it.
@@ -166,6 +169,10 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
   const codeAsk = useRef(0);
   // Whether paying already said what went wrong — PayPal's own onError comes after it.
   const explained = useRef(false);
+  // Whether what she typed before is back (lib/imparables/checkoutMemory.ts): only then is the form remembered.
+  const remembered = useRef(false);
+  // A code she had applied, applied again once what she had chosen is back.
+  const [codeToRestore, setCodeToRestore] = useState<string | null>(null);
 
   // Opening the checkout: the same counts the modal used to keep — Meta's
   // InitiateCheckout, Clarity's funnel, and our own (/api/funnel/open).
@@ -181,6 +188,94 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
       keepalive: true,
     }).catch(() => {});
   }, [eventSlug, version?.slug]);
+
+  // What she typed before, back (the team, 2026-11-02): reloading or coming
+  // back doesn't start her over (lib/imparables/checkoutMemory.ts). Opened
+  // from the abandoned-cart reminder, what her draft saved fills in the rest
+  // — and wins over what this browser remembers of someone else.
+  useEffect(() => {
+    const memory = readCheckoutMemory(eventSlug);
+    const fromLink = prefill?.email ? prefill : null;
+    const mine = memory && (!fromLink || memory.form.email.trim().toLowerCase() === fromLink.email.trim().toLowerCase()) ? memory : null;
+    const known = (iso2: string | null | undefined): iso2 is string => Boolean(iso2) && WORLD_COUNTRIES.some((c) => c.iso2 === iso2);
+    const home = known(fromLink?.country) ? fromLink.country : known(mine?.country) ? mine.country : null;
+    let sold = ticket;
+    if (mine) {
+      setForm((f) => ({ ...f, ...mine.form }));
+      const choice = mine.chosen ? choices.find((c) => c.slug === mine.chosen) : undefined;
+      if (choice && choice.slug !== chosen) {
+        setChosen(choice.slug);
+        setTicket(choice.ticket);
+        sold = choice.ticket;
+      }
+      setQty(Math.min(Math.max(mine.qty, sold.min, 1), sold.max));
+      if (mine.currency === "USD" && paypal !== null && sold.usdCents !== null) setCurrency("USD");
+      currencyPicked.current = mine.currencyPicked;
+      if (mine.code && codes) setCodeToRestore(mine.code);
+    }
+    if (fromLink) {
+      setForm((f) => ({
+        ...f,
+        email: fromLink.email,
+        firstName: fromLink.firstName || f.firstName,
+        lastName: fromLink.lastName || f.lastName,
+        city: fromLink.city || f.city,
+        phone: fromLink.phone || f.phone,
+        profession: fromLink.profession || f.profession,
+      }));
+      if (fromLink.qty) setQty(Math.min(Math.max(fromLink.qty, sold.min, 1), sold.max));
+      // Her link's token out of the address bar: it isn't meant to be passed on.
+      const url = new URL(window.location.href);
+      url.searchParams.delete("retomar");
+      window.history.replaceState(window.history.state, "", url.toString());
+    }
+    if (home) {
+      setCountry(home);
+      const homeDocs = home === "CO" ? DOCS_CO : DOCS_ABROAD;
+      const savedDoc = mine && mine.country === home ? mine.docType : null;
+      setDocType(homeDocs.some((d) => d.value === savedDoc) ? savedDoc! : homeDocs[0]!.value);
+      if (!mine?.currencyPicked && paypal !== null && sold.usdCents !== null) setCurrency(home === "CO" ? "COP" : "USD");
+    }
+    const phoneHome = known(fromLink?.phoneCountry) ? fromLink.phoneCountry : known(mine?.phoneCountry) ? mine.phoneCountry : home;
+    if (phoneHome) setPhoneCountry(phoneHome);
+    remembered.current = true;
+    // Once, on opening: what was saved, then what she does.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // A code she had applied, checked again with what's back (how many, which currency, which ticket).
+  useEffect(() => {
+    if (!codeToRestore) return;
+    setCodeToRestore(null);
+    void checkCode(codeToRestore, qty, shown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [codeToRestore]);
+
+  // Remembered as she types — a moment after, not on every key. Never the
+  // honeypot; an emptied form forgets.
+  useEffect(() => {
+    if (!remembered.current) return;
+    const timer = window.setTimeout(() => {
+      const { email, firstName, lastName, docNumber, company, city, phone, profession } = form;
+      const typed = { email, firstName, lastName, docNumber, company, city, phone, profession };
+      if (!Object.values(typed).some((v) => v.trim())) {
+        forgetCheckoutMemory(eventSlug);
+        return;
+      }
+      writeCheckoutMemory(eventSlug, {
+        form: typed,
+        qty,
+        country,
+        phoneCountry,
+        docType,
+        currency,
+        currencyPicked: currencyPicked.current,
+        code: applied?.code ?? null,
+        chosen,
+      });
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [eventSlug, form, qty, country, phoneCountry, docType, currency, applied, chosen]);
 
   const docs = country === "CO" ? DOCS_CO : DOCS_ABROAD;
   const doc = docs.find((d) => d.value === docType) ?? docs[0]!;
@@ -255,9 +350,14 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
     if (applied) void checkCode(applied.code, next, shown);
   }
 
-  // Someone who leaves after giving their email can still be reminded (see /api/register/draft).
-  function saveDraft() {
-    if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) return;
+  // Someone who leaves after giving their email can still be reminded (see
+  // /api/register/draft) — and the reminder's link brings back what she gave
+  // (lib/imparables/checkoutPrefill.ts), so it's saved again as she fills in
+  // her name, city, phone and profile, not just the email (2026-11-02). A
+  // change not rendered yet comes in `changed`.
+  function saveDraft(changed: Partial<typeof form> = {}) {
+    const form_ = { ...form, ...changed };
+    if (!/^\S+@\S+\.\S+$/.test(form_.email.trim())) return;
     const { utmSource, utmMedium, utmCampaign } = attributionFromSearchParams(new URLSearchParams(window.location.search));
     fetch("/api/register/draft", {
       method: "POST",
@@ -265,12 +365,12 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
       keepalive: true,
       body: JSON.stringify({
         eventSlug,
-        email: form.email.trim(),
+        email: form_.email.trim(),
         phone: fullPhone() || undefined,
-        firstName: form.firstName.trim() || undefined,
-        lastName: form.lastName.trim() || undefined,
-        city: form.city.trim() || undefined,
-        profession: form.profession || undefined,
+        firstName: form_.firstName.trim() || undefined,
+        lastName: form_.lastName.trim() || undefined,
+        city: form_.city.trim() || undefined,
+        profession: form_.profession || undefined,
         country,
         ticketTypeId: ticket.id,
         ticketCount: qty,
@@ -382,6 +482,7 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
         setApplied(null);
         fail(`${body.message ?? "Ese código ya no aplica."} Revisa el total antes de pagar.`);
       } else if (body?.error === "already_bought") {
+        forgetCheckoutMemory(eventSlug);
         // Moving up after buying is her link's, paying only the difference — with a level bought here; a ticket
         // bought elsewhere moves up with the team.
         fail(
@@ -395,7 +496,8 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
       return null;
     }
     if (!body?.requiresPayment) {
-      // Already paid before (a resend): nothing to charge.
+      // Already paid before (a resend): nothing to charge, nothing to remember.
+      forgetCheckoutMemory(eventSlug);
       explained.current = true;
       setNotice("Ya tienes tu cupo confirmado. Te reenviamos la confirmación a tu correo.");
       return null;
@@ -646,10 +748,10 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
                 </h2>
                 <div className="imp-co-two">
                   <Field label="Nombre">
-                    <input className="imp-co-in" autoComplete="given-name" required {...field("firstName")} />
+                    <input className="imp-co-in" autoComplete="given-name" required {...field("firstName")} onBlur={() => saveDraft()} />
                   </Field>
                   <Field label="Apellidos">
-                    <input className="imp-co-in" autoComplete="family-name" required {...field("lastName")} />
+                    <input className="imp-co-in" autoComplete="family-name" required {...field("lastName")} onBlur={() => saveDraft()} />
                   </Field>
                 </div>
                 {/* Where they live, under the name (the team, 2026-10-31); it picks the document's types, the phone's code and
@@ -665,7 +767,7 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
                     </select>
                   </Field>
                   <Field label="Ciudad">
-                    <input className="imp-co-in" autoComplete="address-level2" required {...field("city")} />
+                    <input className="imp-co-in" autoComplete="address-level2" required {...field("city")} onBlur={() => saveDraft()} />
                   </Field>
                 </div>
                 <div className="imp-co-doc">
@@ -688,7 +790,7 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
                   </Field>
                 )}
                 <Field label="Correo electrónico">
-                  <input className="imp-co-in" type="email" inputMode="email" autoComplete="email" required {...field("email")} onBlur={saveDraft} />
+                  <input className="imp-co-in" type="email" inputMode="email" autoComplete="email" required {...field("email")} onBlur={() => saveDraft()} />
                 </Field>
                 <div className={`imp-co-field${missing === "Celular con WhatsApp" ? " is-missing" : ""}`} data-label="Celular con WhatsApp">
                   <span className="imp-co-lab">Celular con WhatsApp</span>
@@ -700,7 +802,7 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
                         </option>
                       ))}
                     </select>
-                    <input className="imp-co-in" type="tel" inputMode="tel" autoComplete="tel-national" placeholder={phoneHint} required {...field("phone")} />
+                    <input className="imp-co-in" type="tel" inputMode="tel" autoComplete="tel-national" placeholder={phoneHint} required {...field("phone")} onBlur={() => saveDraft()} />
                   </div>
                   {missing === "Celular con WhatsApp" && <span className="imp-co-err">Falta tu celular.</span>}
                 </div>
@@ -714,7 +816,11 @@ export default function ImpCheckout({ eventSlug, backHref, name, dates, format, 
                   <p className="imp-co-q">¿Cuál de estas opciones te describe mejor?</p>
                   {professions.map((p) => (
                     <label className="imp-co-opt" key={p}>
-                      <input type="radio" name="profession" value={p} required checked={form.profession === p} onChange={() => setForm((f) => ({ ...f, profession: p }))} />
+                      <input type="radio" name="profession" value={p} required checked={form.profession === p} onChange={() => {
+                          setForm((f) => ({ ...f, profession: p }));
+                          saveDraft({ profession: p });
+                        }}
+                      />
                       <span>{p}</span>
                     </label>
                   ))}

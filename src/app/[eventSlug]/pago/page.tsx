@@ -10,6 +10,7 @@ import PostPaymentQuestions from "@/components/PostPaymentQuestions";
 import { getCurrentUser } from "@/lib/auth/session";
 import { imparablesAfterPayment } from "@/lib/imparables/confirmation";
 import ImpPaymentResult from "@/components/imparables/ImpPaymentResult";
+import ForgetCheckout from "@/components/imparables/ForgetCheckout";
 
 export const dynamic = "force-dynamic";
 
@@ -81,7 +82,13 @@ export default async function PaymentReturnPage({
   // header, what comes next, no question about Instagram.
   if (event?.theme === "IMPARABLES") {
     const data = await imparablesAfterPayment(event, vista ? "muestra" : searchParams.registrationId ? { registrationId: searchParams.registrationId } : null);
-    return <ImpPaymentResult event={event} answer={result} data={data} />;
+    return (
+      <>
+        {/* Paid: what the checkout remembered of her in this browser goes (lib/imparables/checkoutMemory.ts). */}
+        {result === "approved" && !vista && <ForgetCheckout eventSlug={event.slug} />}
+        <ImpPaymentResult event={event} answer={result} data={data} />
+      </>
+    );
   }
 
   // Paid, back from Wompi or PayPal: the optional question the one-page

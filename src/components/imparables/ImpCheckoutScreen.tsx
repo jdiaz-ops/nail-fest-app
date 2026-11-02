@@ -12,6 +12,7 @@ import { CHECKOUT_LEVELS, fill, isTieredVersion, tierBySlug } from "@/lib/impara
 import { ensureTierTypes, soldOutTiers } from "@/lib/imparables/tiersServer";
 import { pesos } from "@/lib/imparables/stages";
 import MetaPixelScript from "@/components/MetaPixelScript";
+import { checkoutPrefill } from "@/lib/imparables/checkoutPrefill";
 import ImpCheckout, { type CheckoutChoice, type CheckoutLevels } from "./ImpCheckout";
 import { cinzel, manrope } from "./fonts";
 
@@ -19,8 +20,19 @@ import { cinzel, manrope } from "./fonts";
 // for a version of it (/v/<slug>/checkout, 2026-10-30): the stage on sale
 // (lib/imparables/pricing.ts) — at the version's special price when it has
 // one, in pesos only — and back to the page it came from. Without a stage on
-// sale, back to that page.
-export default async function ImpCheckoutScreen({ event, version, tier: asked = null }: { event: Event; version: LandingVersion | null; tier?: string | null }) {
+// sale, back to that page. Opened from the abandoned-cart reminder (?retomar=,
+// lib/checkoutResume.ts), the form comes filled with what her draft saved.
+export default async function ImpCheckoutScreen({
+  event,
+  version,
+  tier: asked = null,
+  resume = null,
+}: {
+  event: Event;
+  version: LandingVersion | null;
+  tier?: string | null;
+  resume?: string | null;
+}) {
   const page = version ? `/v/${version.slug}` : `/${event.slug}`;
   const orgSettings = await getOrgSettings();
   const now = new Date();
@@ -69,7 +81,7 @@ export default async function ImpCheckoutScreen({ event, version, tier: asked = 
     ticket = chosen.ticket;
     levels = { title: CHECKOUT_LEVELS.title, intro: CHECKOUT_LEVELS.intro, choices, chosen: chosen.slug };
   }
-  const professions = await getOrderedProfessionOptions();
+  const [professions, prefill] = await Promise.all([getOrderedProfessionOptions(), checkoutPrefill(event.id, resume)]);
   const words = coverName(publicEventName(event)).split(/\s+/);
   const big = words.pop() ?? "";
 
@@ -89,6 +101,7 @@ export default async function ImpCheckoutScreen({ event, version, tier: asked = 
         paypal={ticket.usdCents ? paypalCheckoutConfig() : null}
         version={version ? { slug: version.slug, special: special ? { label: special.label } : null } : null}
         levels={levels}
+        prefill={prefill}
       />
     </main>
   );
