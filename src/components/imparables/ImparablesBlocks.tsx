@@ -581,7 +581,8 @@ function AgendaLine({
   handle: string;
   panel: ImparablesContext["panel"];
 }) {
-  const isPause = !row.instructor && !row.photoUrl && /^pausa/i.test(row.topic.trim());
+  // An active break: its topic says so («Pausa activa»), whoever guides it (2026-11-02: its «Quién la da» and photo).
+  const isPause = /^pausa/i.test(row.topic.trim());
   // The lunch, a band of its own: how long it is («1 hora de almuerzo») and its hours (2026-10-29).
   const isLunch = !row.instructor && !row.photoUrl && /almuerzo/i.test(row.topic);
   // Rows saved before topic/instructor existed keep everything in `text`.
@@ -607,6 +608,9 @@ function AgendaLine({
     // A band of its own (2026-11-01, the team): its hour, how long it is, its theme and what it brings and, when a brand
     // brings it («Patrocinado» with its «Marca» or its logo in the admin), «Presentada por» and the brand's logo.
     const sponsor = row.sponsored && (row.brand.trim() || row.brandLogoUrl);
+    // Who guides it (2026-11-02, the team), from its «Quién la da» — «@ssanchezacademy · manicurista y fisioterapeuta»:
+    // «Guiada por», like «Presentada por», then the round photo, the first part in bold and the rest under it.
+    const [guide, ...guideNote] = row.instructor.trim().split(" · ");
     return (
       <li className={`is-pause${sponsor ? " is-sponsored" : ""}`}>
         {row.chip && (
@@ -623,6 +627,19 @@ function AgendaLine({
           {/* Its theme (the line's «Etiqueta»), then what it brings (its «Nota extra»), 2026-11-01. */}
           {row.label.trim() && <b className="imp-pause-t">{row.label.trim()}</b>}
           {row.text.trim() && <span className="imp-pause-what">{row.text.trim()}</span>}
+          {guide && (
+            <span className="imp-pause-who">
+              <small>Guiada por</small>
+              <span className="imp-pause-who-p">
+                {/* eslint-disable-next-line @next/next/no-img-element -- admin-uploaded photo, arbitrary Blob URL */}
+                {row.photoUrl && <img src={row.photoUrl} alt="" loading="lazy" />}
+                <span>
+                  <b>{guide}</b>
+                  {guideNote.length > 0 && <em>{guideNote.join(" · ")}</em>}
+                </span>
+              </span>
+            </span>
+          )}
           {sponsor && (
             <span className="imp-pause-by">
               <small>Presentada por</small>

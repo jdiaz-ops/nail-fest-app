@@ -5175,6 +5175,66 @@ body:has(.imp) {
   line-height: 1.3;
   color: var(--imp-texto);
 }
+/* Who guides it (2026-11-02): «Guiada por», like «Presentada por», then the round photo, the name in bold and, under
+   it, what they do. */
+.imp-pause-who {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(140, 106, 62, 0.2);
+}
+.imp-pause-who small {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--imp-texto-3);
+}
+.imp-pause-who-p {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.imp-pause-who-p img {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.imp-pause-who-p > span {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.imp-pause-who-p b {
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.25;
+  color: var(--imp-texto);
+  overflow-wrap: break-word;
+}
+.imp-pause-who-p em {
+  font-size: 13px;
+  font-style: normal;
+  line-height: 1.35;
+  color: var(--imp-texto-2);
+}
+/* On a phone, an Instagram name as long as «@ssanchezacademy» still in one line. */
+@media (max-width: 520px) {
+  .imp-pause-who-p {
+    gap: 8px;
+  }
+  .imp-pause-who-p img {
+    width: 32px;
+    height: 32px;
+  }
+  .imp-pause-who-p b {
+    font-size: 13.5px;
+  }
+}
 /* «Organiza Nail Fest» and, under it, «Con el apoyo de» with the sponsors' logos in grey, last on the cover (the team,
    2026-11-01): centered on a phone, two logos a row; on a computer, centered across the whole cover, under the words
    and the photo, the logos in one row (2026-11-02). */
