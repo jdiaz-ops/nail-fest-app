@@ -3,6 +3,7 @@ import { getCheckoutQuestions } from "@/lib/checkoutForm";
 import { getOrgSettings } from "@/lib/settings";
 import { buildBuyerFields } from "@/lib/registrationDetails";
 import { ticketIssuedAt } from "@/lib/ticketIssuedAt";
+import { formatPaid, paidTotal } from "@/lib/payments/paidTotal";
 import IssuedTicketsTable from "../../IssuedTicketsTable";
 
 export const dynamic = "force-dynamic";
@@ -24,9 +25,13 @@ export default async function IssuedTicketsPage({ params }: { params: { id: stri
         person: true,
         ticketType: true,
         scans: { orderBy: { scannedAt: "desc" } },
-        // Its last approved payment (an upgrade's aside): with its confirmation, the day it was issued — see
-        // lib/ticketIssuedAt.ts.
-        payments: { where: { status: "APPROVED", upgradeFrom: null }, orderBy: { createdAt: "desc" }, take: 1, select: { createdAt: true } },
+        // Its payments that went through (approved, or refunded in full since): what she paid (lib/payments/
+        // paidTotal.ts), and, with its confirmation, the day it was issued (lib/ticketIssuedAt.ts).
+        payments: {
+          where: { status: { in: ["APPROVED", "REFUNDED"] } },
+          orderBy: { createdAt: "desc" },
+          select: { status: true, amountInCents: true, refundedCents: true, currency: true, upgradeFrom: true, createdAt: true },
+        },
       },
     }),
     getCheckoutQuestions(),
@@ -56,7 +61,7 @@ export default async function IssuedTicketsPage({ params }: { params: { id: stri
 
   // Newest issued first: by the day each was paid, not the day its row was first created (lib/ticketIssuedAt.ts).
   const issued = registrations
-    .map((r) => ({ r, issuedAt: ticketIssuedAt(r, r.payments[0]?.createdAt) }))
+    .map((r) => ({ r, issuedAt: ticketIssuedAt(r, r.payments.find((p) => p.status === "APPROVED" && !p.upgradeFrom)?.createdAt) }))
     .sort((a, b) => b.issuedAt.getTime() - a.issuedAt.getTime());
 
   const rows = issued.map(({ r, issuedAt }) => {
@@ -66,6 +71,8 @@ export default async function IssuedTicketsPage({ params }: { params: { id: stri
       qrToken: r.qrToken,
       status: r.status as "CONFIRMED" | "CANCELLED",
       issuedAt: issuedAt.toISOString(),
+      // "—" in the table: nothing paid through Nail Fest (free, or imported from the previous platform).
+      paid: formatPaid(paidTotal(r.payments)) ?? (r.payments.some((p) => p.status === "REFUNDED") ? "Reembolsado" : null),
       ticketTypeName: r.ticketType?.name ?? null,
       ticketCount: r.ticketCount,
       checkedInCount: r.checkedInCount,

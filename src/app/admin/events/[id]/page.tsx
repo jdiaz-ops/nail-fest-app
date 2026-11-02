@@ -2,6 +2,7 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { asistireCounts } from "@/lib/asistireUse";
 import { hasNailFestAsistire } from "@/lib/nailfest/asistire";
+import { formatPesos, formatUsd, paidTotal } from "@/lib/payments/paidTotal";
 import { Section, StatCard } from "../../StatsUI";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +18,7 @@ export const dynamic = "force-dynamic";
 // scanner's own Dashboard respectively; a glance page that's also a full
 // report stops being a glance.
 export default async function EventSummaryPage({ params }: { params: { id: string } }) {
-  const [event, ticketAgg, checkedInAgg, abandonedCount, uniqueRegs, multiTicketRegs] = await Promise.all([
+  const [event, ticketAgg, checkedInAgg, abandonedCount, uniqueRegs, multiTicketRegs, payments] = await Promise.all([
     db.event.findUnique({ where: { id: params.id } }),
     db.registration.aggregate({ where: { eventId: params.id, status: "CONFIRMED" }, _sum: { ticketCount: true } }),
     db.registration.aggregate({ where: { eventId: params.id, status: "CONFIRMED" }, _sum: { checkedInCount: true } }),
@@ -28,6 +29,11 @@ export default async function EventSummaryPage({ params }: { params: { id: strin
     // pidieron 2+ boletas en una sola inscripción, no gente distinta.
     db.registration.count({ where: { eventId: params.id, status: "CONFIRMED" } }),
     db.registration.count({ where: { eventId: params.id, status: "CONFIRMED", ticketCount: { gt: 1 } } }),
+    // «Ventas» (2026-11-02): what the confirmed tickets' buyers paid, net of partial refunds — lib/payments/paidTotal.ts.
+    db.payment.findMany({
+      where: { status: "APPROVED", registration: { eventId: params.id, status: "CONFIRMED" } },
+      select: { status: true, amountInCents: true, refundedCents: true, currency: true },
+    }),
   ]);
 
   if (!event) return null;
@@ -39,11 +45,16 @@ export default async function EventSummaryPage({ params }: { params: { id: strin
   const checkInRate = issued > 0 ? Math.round((checkedIn / issued) * 100) : 0;
   const remaining = event.capacity != null ? Math.max(0, event.capacity - issued) : null;
   const daysToGo = Math.ceil((event.startsAt.getTime() - Date.now()) / (24 * 60 * 60 * 1000));
+  // Pesos first; dollars (PayPal) under them, or alone when there are no pesos yet.
+  const sales = paidTotal(payments);
+  const salesValue = sales.pesos > 0 || sales.usdCents === 0 ? formatPesos(sales.pesos) : formatUsd(sales.usdCents);
+  const salesSub = sales.pesos > 0 && sales.usdCents > 0 ? `+ ${formatUsd(sales.usdCents)} por PayPal` : undefined;
 
   return (
     <div>
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 32 }}>
         <StatCard label="Boletas emitidas" value={String(issued)} sub={event.capacity != null ? `de ${event.capacity} cupos` : undefined} />
+        <StatCard label="Ventas" value={salesValue} sub={salesSub} />
         <StatCard
           label="Registros únicos"
           value={String(uniqueRegs)}

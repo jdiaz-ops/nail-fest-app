@@ -22,6 +22,8 @@ export interface TicketRow {
   status: "CONFIRMED" | "CANCELLED";
   // The day it was issued: paid or confirmed, not when its registration row was first created (lib/ticketIssuedAt.ts).
   issuedAt: string;
+  // What she paid ("$90.000", "US$25", "Reembolsado") — null when nothing was paid through Nail Fest (lib/payments/paidTotal.ts).
+  paid: string | null;
   ticketTypeName: string | null;
   ticketCount: number;
   checkedInCount: number;
@@ -201,6 +203,7 @@ export default function IssuedTicketsTable({
             <tr style={{ textAlign: "left", background: "#faf9f7" }}>
               <th style={{ padding: "8px 12px" }}>Nombre</th>
               <th style={{ padding: "8px 12px" }}>Tipo de entrada</th>
+              <th style={{ padding: "8px 12px", textAlign: "right" }}>Pagado</th>
               <th style={{ padding: "8px 12px" }}>Emitida</th>
               <th style={{ padding: "8px 12px" }}>Fuente</th>
               <th style={{ padding: "8px 12px" }}>Check-in</th>
@@ -223,6 +226,7 @@ export default function IssuedTicketsTable({
                     <div style={{ color: "#5b5f6b", fontSize: 12 }}>{r.person.email}</div>
                   </td>
                   <td style={{ padding: "10px 12px" }}>{r.ticketTypeName ?? "—"}</td>
+                  <td style={{ padding: "10px 12px", textAlign: "right", whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>{r.paid ?? "—"}</td>
                   <td style={{ padding: "10px 12px", color: "#5b5f6b" }}>
                     {formatDateInTz(new Date(r.issuedAt), { dateStyle: "medium" }, timezone, language)}
                   </td>
