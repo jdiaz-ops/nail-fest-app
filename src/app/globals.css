@@ -3988,6 +3988,12 @@ body:has(.imp) {
 .imp-tag p {
   margin: 0;
 }
+/* The headline's sentences, one a line on a computer only (lib/imparables/tagline.ts sentencePerLine, 2026-11-02). */
+@media (max-width: 1099.98px) {
+  .imp-tag-br {
+    display: none;
+  }
+}
 /* Under the name, the last line of the event's tagline, any bold words in
    bronze (2026-10-28). Its headline is off the cover, and its pillars go
    under the group photo (.imp-pillars) — see lib/imparables/tagline.ts. */
@@ -7431,17 +7437,35 @@ body:has(.imp.nf) {
     max-width: none;
     margin: 0;
   }
+  /* The headline, the cover's statement (2026-11-02): bigger and tighter, a
+     sentence a line. */
   .imp-hero .imp-tag > p:not(:last-child) {
     max-width: none;
-    margin: 0 0 10px;
-    font-size: clamp(22px, min(2.1vw, 3.9vh), 32px);
-    line-height: 1.3;
+    margin: 0;
+    font-size: clamp(26px, min(2.4vw, 4.3vh), 38px);
+    line-height: 1.2;
+    letter-spacing: -0.012em;
   }
+  /* Under it, past a short gold rule, the line in bronze: smaller, in one
+     line wherever it fits. */
   .imp-hero .imp-tag > p:last-child {
     max-width: none;
     margin: 0;
-    font-size: clamp(18px, min(1.55vw, 2.9vh), 24px);
+    font-size: clamp(17px, min(1.3vw, 2.4vh), 21px);
     line-height: 1.45;
+    text-wrap: pretty;
+  }
+  .imp-hero .imp-tag > p:last-child strong {
+    font-weight: 700;
+  }
+  .imp-hero .imp-tag > p:last-child:not(:first-child)::before {
+    content: "";
+    display: block;
+    width: 56px;
+    height: 2px;
+    margin: min(22px, 2.4vh) 0 min(16px, 1.8vh);
+    border-radius: 2px;
+    background: var(--imp-oro);
   }
   /* Centered over the button. */
   .imp-hero .imp-pill {

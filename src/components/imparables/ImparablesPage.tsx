@@ -6,7 +6,7 @@ import { coverDeal, dayMonth, pesos, riseCountdown, saving, stagePill, stageProg
 import { utcToZonedInputValue } from "@/lib/dateFormat";
 import { castLine, castOf, coverOf, introOf, panelOf } from "@/lib/imparables/blocks";
 import { STATEMENT } from "@/lib/imparables/statement";
-import { splitTagline } from "@/lib/imparables/tagline";
+import { sentencePerLine, splitTagline } from "@/lib/imparables/tagline";
 import ImparablesBlocks from "./ImparablesBlocks";
 import { Tiara } from "./ImpArt";
 import ImpButton from "./ImpButton";
@@ -400,8 +400,9 @@ export default function ImparablesPage({
             <p className="imp-tag">{version.subtitle}</p>
           ) : tagline && (
             // Its headline and its line, right under the name (the team, 2026-10-31: the headline came back over
-            // the line). Sanitized before storage (lib/events.ts).
-            <div className="imp-tag" dangerouslySetInnerHTML={{ __html: `${headline ?? ""}${tagline}` }} />
+            // the line), the headline a sentence a line on a computer (lib/imparables/tagline.ts). Sanitized before
+            // storage (lib/events.ts).
+            <div className="imp-tag" dangerouslySetInnerHTML={{ __html: `${headline ? sentencePerLine(headline) : ""}${tagline}` }} />
           )}
           {/* Right before the group photo (2026-10-28): what it is and when, before who. */}
           <p className="imp-pill">

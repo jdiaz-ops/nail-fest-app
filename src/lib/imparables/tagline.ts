@@ -7,6 +7,16 @@
 // miedos. Hoy tienen el negocio que sueñas.»).
 const PARAGRAPH = /<p\b[^>]*>[\s\S]*?<\/p>/g;
 
+/** On a computer, the headline a sentence a line (2026-11-02): «Empezaron desde abajo, con tus mismos miedos.» over
+ * «Hoy tienen el negocio que sueñas.» — a <br class="imp-tag-br"> after each sentence's end that another follows, in
+ * its words only, never inside a tag. Hidden on a phone or a tablet, where the sentences run on (globals.css). */
+export function sentencePerLine(html: string): string {
+  return html
+    .split(/(<[^>]*>)/)
+    .map((part) => (part.startsWith("<") ? part : part.replace(/([.!?…])(\s+)(?=[¿¡«"“]?[A-ZÁÉÍÓÚÜÑ])/g, '$1<br class="imp-tag-br">$2')))
+    .join("");
+}
+
 export function splitTagline(html: string): { pillars: string | null; headline: string | null; line: string } {
   const paragraphs = [...html.matchAll(PARAGRAPH)].map((m) => m[0]);
   const n = paragraphs.length;
