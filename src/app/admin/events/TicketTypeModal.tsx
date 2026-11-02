@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { PAYPAL_IN_CHECKOUT } from "@/lib/payments/paypalSwitch";
 
 type Status = "ON_SALE" | "HIDDEN" | "ACCESS_CODE_REQUIRED" | "SOLD_OUT" | "UNAVAILABLE" | "ADMIN_ONLY";
 type Issuance = "INDIVIDUAL" | "GROUP";
@@ -198,7 +199,11 @@ export default function TicketTypeModal({
               style={{ borderRadius: "0 8px 8px 0" }}
             />
           </div>
-          <span style={{ fontSize: 12, color: "#5b5f6b" }}>Vacío: esta entrada solo se paga en pesos con Wompi.</span>
+          <span style={{ fontSize: 12, color: "#5b5f6b" }}>
+            {PAYPAL_IN_CHECKOUT
+              ? "Vacío: esta entrada solo se paga en pesos con Wompi."
+              : "PayPal está oculto en el checkout por ahora: este precio no se le muestra a nadie y todo se paga en pesos con Wompi."}
+          </span>
         </div>
       </div>
 

@@ -86,13 +86,23 @@ vencimiento y máximo de usos opcionales. Un uso cuenta solo cuando el pago
 se aprueba, y ningún código deja el total por debajo de $1.500 (el mínimo
 de Wompi). Los demás eventos siguen con su formulario de siempre.
 
-## Cuenta compartida con Marcolini — cómo llegan los eventos
+## Cómo llegan los eventos de Wompi
 
-Este comercio de Wompi (el mismo `pago a H la Cosedora` que verás en el
-checkout — Wompi no deja personalizar ese nombre por transacción) lo
-usan también marcolini.lat y una integración con Shopify (Conexa). Wompi
-solo permite UNA "URL de Eventos" por comercio, y desde el 2026-10-29 esa
-URL es la de Marcolini:
+**Desde el 2026-11-02, directo a Nail Fest.** La "URL de Eventos" del
+comercio (`pago a H la Cosedora`; Wompi permite una sola por comercio) en
+producción es `https://nailfest.lat/api/webhooks/wompi`. La tienda de H la
+Cosedora en Marcolini se desactivó, y Marcolini ya no recibe ni reenvía
+nada. Esa ruta verifica el checksum con `WOMPI_EVENTS_SECRET` (sin él, o
+si no coincide, responde 401), consulta la transacción al API de Wompi y
+confirma con lo que dice el API, no el body (500 si Wompi o la base de
+datos fallan, para que Wompi reintente). Con PSE, si la persona no vuelve
+al comercio, el aviso puede tardar unos minutos: es lo que tarda PSE en
+confirmarle a Wompi. `RELAY_SHARED_SECRET` ya no hace falta.
+
+### Antes (2026-10-29 a 2026-11-02): cuenta compartida con Marcolini
+
+Este comercio de Wompi lo usaban también marcolini.lat y una integración
+con Shopify (Conexa). En ese tiempo la URL de Eventos era la de Marcolini:
 
 - Toda referencia que genera Nail Fest empieza por `NF-` (`NF-<id del
   pago>`, una por intento de pago).
@@ -113,6 +123,17 @@ URL es la de Marcolini:
   algún evento llega directo de Wompi.
 
 ## PayPal (pagos en dólares)
+
+**Oculto desde el 2026-11-02.** El interruptor es `PAYPAL_IN_CHECKOUT` en
+`src/lib/payments/paypalSwitch.ts` (en `false`): ningún checkout muestra
+«Dólares · PayPal», el servidor rechaza una compra en dólares y el admin
+avisa que el precio en USD no se muestra. Motivo: PayPal no acepta pagos
+entre cuentas de Colombia, y la de H la Cosedora SAS es colombiana; en las
+primeras pruebas en vivo, tanto con tarjeta colombiana como con cuenta
+PayPal colombiana, PayPal mostró su propio error (las órdenes sí se
+crearon: «201» en Event Logs → API Calls). Las credenciales de live, el
+webhook y la captura quedan como están. Para volver a mostrarlo: `true`,
+después de que alguien que viva fuera de Colombia pague con éxito.
 
 Desde el 2026-10-29, una entrada con **precio en USD** (Editar evento →
 Entradas → «Precio en USD (opcional, para pagar con PayPal)») se puede

@@ -1,4 +1,5 @@
 import type { Settlement } from "@/lib/payments/confirmRegistrationPayment";
+import { PAYPAL_IN_CHECKOUT } from "@/lib/payments/paypalSwitch";
 
 // PayPal (REST API, Orders v2) — the second gateway (2026-10-29), for buyers
 // who pay in US dollars, mostly from outside Colombia for the virtual
@@ -63,9 +64,11 @@ export function paypalConfigured(): boolean {
 }
 
 /** What the checkout's PayPal buttons need: the public client id, and whether it's the sandbox. Null — no PayPal on
- * the page — without the server's credentials, or when the browser's client id isn't the server's (half switched
- * between sandbox and live: the buyer would approve an order the server can't capture). */
+ * the page — while it's hidden (PAYPAL_IN_CHECKOUT, lib/payments/paypalSwitch.ts), without the server's credentials,
+ * or when the browser's client id isn't the server's (half switched between sandbox and live: the buyer would approve
+ * an order the server can't capture). */
 export function paypalCheckoutConfig(): { clientId: string; sandbox: boolean } | null {
+  if (!PAYPAL_IN_CHECKOUT) return null;
   const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
   if (!paypalConfigured() || !clientId) return null;
   if (clientId !== process.env.PAYPAL_CLIENT_ID) {

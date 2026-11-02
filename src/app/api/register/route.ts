@@ -9,6 +9,7 @@ import { nailFestSignupResult, showsNailFestSignup } from "@/lib/nailfest/signup
 import { buildCheckoutUrl, wompiReference, wompiWidgetParams } from "@/lib/payments/wompi";
 import { DISCOUNT_ERROR_MESSAGES, resolveDiscount, type DiscountResult } from "@/lib/discounts";
 import { paypalConfigured } from "@/lib/payments/paypal";
+import { PAYPAL_IN_CHECKOUT } from "@/lib/payments/paypalSwitch";
 import { checkoutOffer, getActiveStage } from "@/lib/imparables/pricing";
 import { specialPriceFor, specialSold, versionLive, withVersionPrice, type VersionPrice } from "@/lib/imparables/versions";
 import { isHigherTier, isTieredVersion, tierAvailable, tierBySlug, type Tier } from "@/lib/imparables/tiers";
@@ -332,12 +333,14 @@ export async function POST(req: NextRequest) {
   }
 
   // In dollars only a ticket with its own USD price can be paid, and only
-  // with PayPal set up — checked before anything is written.
+  // with PayPal set up and offered (lib/payments/paypalSwitch.ts: hidden
+  // since 2026-11-02, a page left open from before included) — checked
+  // before anything is written.
   const currency = input.currency ?? "COP";
   if (currency === "USD" && (!ticketType?.priceUsdCents || ticketType.price <= 0)) {
     return NextResponse.json({ error: "usd_not_available" }, { status: 400 });
   }
-  if (currency === "USD" && !paypalConfigured()) {
+  if (currency === "USD" && (!PAYPAL_IN_CHECKOUT || !paypalConfigured())) {
     return NextResponse.json({ error: "paypal_not_configured" }, { status: 400 });
   }
   // A paid ticket's subtotal in the payment's own cents: COP's whole pesos ×
