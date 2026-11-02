@@ -20,7 +20,8 @@ export interface TicketRow {
   id: string;
   qrToken: string | null;
   status: "CONFIRMED" | "CANCELLED";
-  createdAt: string;
+  // The day it was issued: paid or confirmed, not when its registration row was first created (lib/ticketIssuedAt.ts).
+  issuedAt: string;
   ticketTypeName: string | null;
   ticketCount: number;
   checkedInCount: number;
@@ -223,7 +224,7 @@ export default function IssuedTicketsTable({
                   </td>
                   <td style={{ padding: "10px 12px" }}>{r.ticketTypeName ?? "—"}</td>
                   <td style={{ padding: "10px 12px", color: "#5b5f6b" }}>
-                    {formatDateInTz(new Date(r.createdAt), { dateStyle: "medium" }, timezone, language)}
+                    {formatDateInTz(new Date(r.issuedAt), { dateStyle: "medium" }, timezone, language)}
                   </td>
                   <td style={{ padding: "10px 12px", color: "#5b5f6b" }}>{r.utmSource ?? "orgánico"}</td>
                   <td style={{ padding: "10px 12px" }}>

@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { getCheckoutQuestions } from "@/lib/checkoutForm";
 import { getOrgSettings } from "@/lib/settings";
 import { buildBuyerFields } from "@/lib/registrationDetails";
+import { ticketIssuedAt } from "@/lib/ticketIssuedAt";
 import IssuedTicketsTable from "../../IssuedTicketsTable";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +24,9 @@ export default async function IssuedTicketsPage({ params }: { params: { id: stri
         person: true,
         ticketType: true,
         scans: { orderBy: { scannedAt: "desc" } },
+        // Its last approved payment (an upgrade's aside): with its confirmation, the day it was issued — see
+        // lib/ticketIssuedAt.ts.
+        payments: { where: { status: "APPROVED", upgradeFrom: null }, orderBy: { createdAt: "desc" }, take: 1, select: { createdAt: true } },
       },
     }),
     getCheckoutQuestions(),
@@ -50,13 +54,18 @@ export default async function IssuedTicketsPage({ params }: { params: { id: stri
     if (log.personId && !latestEmailByPerson.has(log.personId)) latestEmailByPerson.set(log.personId, log);
   }
 
-  const rows = registrations.map((r) => {
+  // Newest issued first: by the day each was paid, not the day its row was first created (lib/ticketIssuedAt.ts).
+  const issued = registrations
+    .map((r) => ({ r, issuedAt: ticketIssuedAt(r, r.payments[0]?.createdAt) }))
+    .sort((a, b) => b.issuedAt.getTime() - a.issuedAt.getTime());
+
+  const rows = issued.map(({ r, issuedAt }) => {
     const latestEmail = latestEmailByPerson.get(r.personId) ?? null;
     return {
       id: r.id,
       qrToken: r.qrToken,
       status: r.status as "CONFIRMED" | "CANCELLED",
-      createdAt: r.createdAt.toISOString(),
+      issuedAt: issuedAt.toISOString(),
       ticketTypeName: r.ticketType?.name ?? null,
       ticketCount: r.ticketCount,
       checkedInCount: r.checkedInCount,
