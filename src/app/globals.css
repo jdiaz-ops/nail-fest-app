@@ -5170,7 +5170,8 @@ body:has(.imp) {
   color: var(--imp-texto);
 }
 /* «Organiza Nail Fest» and, under it, «Con el apoyo de» with the sponsors' logos in grey, last on the cover (the team,
-   2026-11-01): centered on a phone, two logos a row; left, in one row, under the button on a computer. */
+   2026-11-01): centered on a phone, two logos a row; on a computer, centered across the whole cover, under the words
+   and the photo, the logos in one row (2026-11-02). */
 .imp-org {
   display: flex;
   flex-direction: column;
@@ -5231,18 +5232,17 @@ body:has(.imp) {
 }
 @media (min-width: 1100px) {
   .imp-hero .imp-org {
-    grid-area: close;
-    align-items: flex-start;
-    margin-top: 30px;
+    grid-area: org;
+    margin-top: min(40px, 4.5vh);
   }
   .imp-hero .imp-apoyo {
-    align-items: flex-start;
-    width: auto;
+    width: min(720px, 100%);
   }
   .imp-hero .imp-apoyo-logos {
     display: flex;
     flex-wrap: wrap;
-    gap: 14px 28px;
+    justify-content: center;
+    gap: 14px 40px;
   }
   .imp-hero .imp-apoyo-logos img {
     height: 26px;
@@ -7389,7 +7389,9 @@ body:has(.imp.nf) {
     /* Laid out as the team drew it (2026-10-29): the words from the top, the
        stage's bar at the foot; the photo from the top, the signature at the
        foot, level with the bar. The empty row takes whatever height the
-       photo has over the words, as air between the button and the bar. */
+       photo has over the words, as air between the button and the bar.
+       «Organiza» and the sponsors' logos last, centered across both
+       (2026-11-02). */
     grid-template-areas:
       "tiara tiara"
       "name  name"
@@ -7398,8 +7400,9 @@ body:has(.imp.nf) {
       "cta   side"
       ".     side"
       "deal  side"
-      "close side";
-    grid-template-rows: auto auto repeat(3, auto) 1fr auto auto;
+      "close side"
+      "org   org";
+    grid-template-rows: auto auto repeat(3, auto) 1fr auto auto auto;
     column-gap: clamp(40px, 4.5vw, 80px);
     max-width: 1440px;
     text-align: left;
