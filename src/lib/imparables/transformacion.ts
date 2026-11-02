@@ -48,7 +48,7 @@ export const TRANSFORMATION = {
   takeaways: {
     title: "Lo que te llevas",
     items: [
-      { title: "Un día que te cambia la forma de ver tu negocio", text: "8 conferencistas, de 8 a. m. a 6:10 p. m., desde tu celular." },
+      { title: "Un día que te cambia la forma de ver tu negocio", text: "8 conferencistas, de 8 a. m. a 6:30 p. m., desde tu celular." },
       { title: "Vuelve a verlo cuando lo necesites", text: "Las charlas quedan disponibles 30 días." },
       { title: "Las herramientas de cada conferencista", text: "Guías para aplicar lo que escuchaste." },
       { title: "Tu diploma Imparable 2027", text: "Con tu nombre, para tu salón." },
