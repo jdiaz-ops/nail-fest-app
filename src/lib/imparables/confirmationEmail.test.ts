@@ -46,12 +46,12 @@ describe("Manicuristas Imparables' confirmation email", () => {
     expect(text).toContain("Tu compra: Etapa Creyente · $90.000");
   });
 
-  it("tells what happens now in five steps, with the day and the hour", () => {
+  it("tells what happens now in four steps, with the day and the hour — not the replay", () => {
     const { html, text } = imparablesConfirmationEmail(base());
-    for (const step of ["Guarda este correo", "Te escribimos por WhatsApp", "El 27 de junio, 15 minutos antes", "Conéctate a las 8:00 a. m.", "30 días de repetición"]) {
+    for (const step of ["Guarda este correo", "Te escribimos por WhatsApp", "El 27 de junio, 15 minutos antes", "Conéctate a las 8:00 a. m."]) {
       expect(html).toContain(step);
     }
-    expect(html).toContain("Si te pierdes algo, las grabaciones estarán disponibles durante 30 días.");
+    expect(html).not.toContain("30 días de repetición");
     expect(html).toContain("Hora Colombia: si estás en otro país, ajusta la hora.");
     expect(text).toContain("4. Conéctate a las 8:00 a. m. Hora Colombia:");
   });
@@ -117,6 +117,6 @@ describe("what happens now, on the payment's page", () => {
   it("the email's steps with her email and her WhatsApp in one, without the replay", () => {
     const steps = nextSteps({ day: "27 de junio", linkMinutesBefore: 15, start: "8:00 a. m.", zone: "hora Colombia" }, true);
     expect(steps.map(([title]) => title)).toEqual(["Revisa tu correo y tu WhatsApp", "El 27 de junio, 15 minutos antes", "Conéctate a las 8:00 a. m."]);
-    expect(nextSteps({ day: "27 de junio", linkMinutesBefore: 15, start: null, zone: "hora Colombia" })).toHaveLength(5);
+    expect(nextSteps({ day: "27 de junio", linkMinutesBefore: 15, start: null, zone: "hora Colombia" })).toHaveLength(4);
   });
 });

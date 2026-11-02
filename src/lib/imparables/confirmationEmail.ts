@@ -78,9 +78,9 @@ export function shareLine(today: string | null, next: string | null): string {
   return today && next ? `Hoy está a ${today} y luego sube a ${next}: compartirle esto es un buen regalo.` : "Compartirle esto es un buen regalo.";
 }
 
-/** «¿Qué pasa ahora?»: the email's five steps — and, on the payment's page
+/** «¿Qué pasa ahora?»: the email's four steps — and, on the payment's page
  * (2026-10-30), the same with the first two in one: her email and her
- * WhatsApp; and without the replay (the team, 2026-11-02), which the email keeps. */
+ * WhatsApp. Neither says the replay any more (the team, 2026-11-02). */
 export function nextSteps(c: Pick<ImparablesConfirmation, "day" | "linkMinutesBefore" | "start" | "zone">, onPage = false): [string, string][] {
   const first: [string, string][] = onPage
     ? [["Revisa tu correo y tu WhatsApp", "En tu correo está tu comprobante de compra: guárdalo. Al WhatsApp que registraste te llegan los recordatorios del congreso."]]
@@ -88,7 +88,7 @@ export function nextSteps(c: Pick<ImparablesConfirmation, "day" | "linkMinutesBe
         ["Guarda este correo", "Es tu comprobante de compra."],
         ["Te escribimos por WhatsApp", "Al número que registraste te llegan los recordatorios del congreso."],
       ];
-  const steps: [string, string][] = [
+  return [
     ...first,
     [`El ${c.day}, ${c.linkMinutesBefore} minutos antes`, "Te llega tu enlace personal de Zoom por correo y WhatsApp. Es solo tuyo: no lo compartas."],
     [
@@ -96,8 +96,6 @@ export function nextSteps(c: Pick<ImparablesConfirmation, "day" | "linkMinutesBe
       `${c.zone.charAt(0).toUpperCase()}${c.zone.slice(1)}: si estás en otro país, ajusta la hora. Ten libreta a mano.`,
     ],
   ];
-  if (!onPage) steps.push(["30 días de repetición", "Si te pierdes algo, las grabaciones estarán disponibles durante 30 días."]);
-  return steps;
 }
 
 export function imparablesConfirmationEmail(c: ImparablesConfirmation): { html: string; text: string } {
