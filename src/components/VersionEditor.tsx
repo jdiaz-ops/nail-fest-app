@@ -70,6 +70,7 @@ export default function VersionEditor({
     Object.fromEntries(Object.entries(initial.specialPrices).map(([id, p]) => [id, String(p)]))
   );
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -127,6 +128,28 @@ export default function VersionEditor({
       return;
     }
     setMessage({ ok: true, text: "Guardado." });
+    router.refresh();
+  }
+
+  // «Borrar versión» (2026-11-02): after saying what goes with it and what stays.
+  async function remove() {
+    if (!v.id) return;
+    const sure = window.confirm(
+      `¿Borrar la versión «${initial.name}»?\n\n` +
+        `Su enlace (/v/${initial.slug}) y su QR dejan de funcionar. Si ya imprimiste el QR, mejor desactívala: así lleva a la página principal.\n\n` +
+        `Las compras que entraron por ella no se borran: siguen en Entradas emitidas y en Ventas. En el cuadro de versiones, sus visitas y ventas pasan a la página principal.\n\n` +
+        `No se puede deshacer.`
+    );
+    if (!sure) return;
+    setDeleting(true);
+    setMessage(null);
+    const res = await fetch(`/api/admin/events/${eventId}/versions/${v.id}`, { method: "DELETE" });
+    if (!res.ok) {
+      setDeleting(false);
+      setMessage({ ok: false, text: "No se pudo borrar." });
+      return;
+    }
+    router.push(`/admin/events/${eventId}/versiones`);
     router.refresh();
   }
 
@@ -275,8 +298,8 @@ export default function VersionEditor({
           <p style={hint}>Hora Colombia. Vacío: desde ya y sin fin. Cuando vence, el QR sigue sirviendo: lleva a la página principal con el precio normal.</p>
         </div>
 
-        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-          <button className="primary" type="button" onClick={save} disabled={saving} style={{ width: "auto", padding: "10px 24px" }}>
+        <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+          <button className="primary" type="button" onClick={save} disabled={saving || deleting} style={{ width: "auto", padding: "10px 24px" }}>
             {saving ? "Guardando…" : v.id ? "Guardar cambios" : "Guardar versión"}
           </button>
           {v.id && (
@@ -285,6 +308,16 @@ export default function VersionEditor({
             </a>
           )}
           {message && <span style={{ fontSize: 14, color: message.ok ? "#1f7a4d" : "#c2185b" }}>{message.text}</span>}
+          {v.id && (
+            <button
+              type="button"
+              onClick={remove}
+              disabled={saving || deleting}
+              style={{ ...secondary, marginLeft: "auto", color: "#c2185b", borderColor: "#f0c4d4", width: "auto" }}
+            >
+              {deleting ? "Borrando…" : "Borrar versión"}
+            </button>
+          )}
         </div>
       </div>
 

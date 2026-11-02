@@ -18,3 +18,15 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string; 
   if ("problem" in saved) return NextResponse.json({ error: "invalid", message: saved.problem }, { status: 400 });
   return NextResponse.json({ ok: true, id: saved.id });
 }
+
+// Deleted from its editor's «Borrar versión» (2026-11-02, the team). Its link stops working (/v/<slug> no longer finds
+// an event: 404). What came in through it stays — registrations, payments, visits — without it (onDelete: SetNull):
+// on the versions' page they count toward the main page's.
+export async function DELETE(_req: NextRequest, { params }: { params: { id: string; versionId: string } }) {
+  const auth = await requireUser(["ADMIN"]);
+  if ("response" in auth) return auth.response;
+  const version = await db.landingVersion.findUnique({ where: { id: params.versionId }, select: { eventId: true } });
+  if (!version || version.eventId !== params.id) return NextResponse.json({ error: "not_found" }, { status: 404 });
+  await db.landingVersion.delete({ where: { id: params.versionId } });
+  return NextResponse.json({ ok: true });
+}
