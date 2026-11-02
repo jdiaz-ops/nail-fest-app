@@ -58,7 +58,7 @@ export const IMPARABLES_SPEAKERS: ImparablesSpeaker[] = [
     handle: "@soypauc_tuprofe",
     tag: "Empezó en una mesa de manicure. Hoy es CEO de El Imperio de las Uñas: 7 spas en Bogotá, academia propia y un negocio que factura miles de millones al año.",
     talk: "Créete el cuento: cobra lo que vales y deja de hacerlo todo sola",
-    subtitle: "Los miedos que tuvo que vencer: cobrar sin culpa, delegar y armar un equipo.",
+    subtitle: "Los miedos que tuvo que vencer y retos que superar: cobrar sin culpa, delegar y armar un equipo.",
     photoUrl: PHOTO("pau"),
   },
   {
