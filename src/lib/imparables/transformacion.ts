@@ -41,7 +41,7 @@ export const TRANSFORMATION = {
   },
   /** D. Under each part of the program's header. */
   agenda: {
-    morning: "Vas a escuchar historias que se parecen a la tuya: el día en que casi lo dejan todo, la mesa alquilada, el miedo a cobrar. Y antes del almuerzo, tus números en orden.",
+    morning: "Vas a escuchar historias que se parecen a la tuya: el día en que casi lo dejan todo, la mesa alquilada, el miedo a cobrar.",
     afternoon: "Ahora te toca a ti. Paso a paso, con tus números ya claros, vas a armar el plan: cómo verte, cómo atraer, cómo retener.",
   },
   /** E. «Todo lo que trae tu boleta», from things to results. */
