@@ -9,11 +9,15 @@ describe("«Qué incluye tu cupo»", () => {
     expect(isTicketIncludesTitle(undefined)).toBe(false);
   });
 
-  it("brings its three groups — two, three and two cards — and nothing unconfirmed", () => {
-    expect(INCLUYE.groups.map((g) => [g.label, g.items.length])).toEqual([
-      ["Desde que reservas", 2],
-      ["El 27 de junio", 3],
-      ["Después", 2],
+  it("brings its seven cards in the order the team marked, and nothing unconfirmed", () => {
+    expect(INCLUYE.items.map((it) => it.title)).toEqual([
+      "8 conferencistas que ya lo lograron",
+      "Un día pensado para tu cuerpo",
+      "Vuélvelo a ver cuando quieras",
+      "Tu diploma digital Imparable 2027",
+      "Premios en vivo",
+      "Tu tarjeta de bienvenida",
+      "Tu kit Imparable",
     ]);
     const all = JSON.stringify(INCLUYE).toLowerCase();
     for (const word of ["cuaderno", "guías", "descuento"]) expect(all).not.toContain(word);

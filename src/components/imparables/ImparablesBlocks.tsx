@@ -160,29 +160,21 @@ export default function ImparablesBlocks({
   );
 }
 
-/** «Qué incluye tu cupo»'s three groups (lib/imparables/incluye.ts): each its small gold label over its cards — the
- * cards of «Qué incluye», a gold line icon, a bold title, a line —, a column on a phone and, on a computer, the group's
- * cards in a row (as many columns as cards). */
+/** «Qué incluye tu cupo»'s seven cards (lib/imparables/incluye.ts), in the team's order — the cards of «Qué incluye»,
+ * a gold line icon, a bold title, a line —: a column on a phone, two or three in a row on a computer. */
 function TicketIncludes() {
   return (
-    <div className="imp-incs">
-      {INCLUYE.groups.map((group) => (
-        <div key={group.label} className="imp-inc-group">
-          <p className="imp-inc-k">{group.label}</p>
-          <ul className="imp-inc" style={{ "--inc-cols": group.items.length } as React.CSSProperties}>
-            {group.items.map((item) => (
-              <li key={item.title}>
-                <ImpIcon name={item.icon} size={28} />
-                <span>
-                  <b>{item.title}</b>
-                  <small>{keepTimes(item.text)}</small>
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
+    <ul className="imp-inc">
+      {INCLUYE.items.map((item) => (
+        <li key={item.title}>
+          <ImpIcon name={item.icon} size={28} />
+          <span>
+            <b>{item.title}</b>
+            <small>{keepTimes(item.text)}</small>
+          </span>
+        </li>
       ))}
-    </div>
+    </ul>
   );
 }
 
