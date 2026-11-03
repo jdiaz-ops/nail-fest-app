@@ -319,8 +319,6 @@ export default function ImparablesPage({
             )
           )}
           {dealLines?.then && <p className="imp-deal-then">{dealLines.then}</p>}
-          {/* Who it's for, under the stage's line, in gold (the team, 2026-11-03: lib/imparables/esParaMi.ts). */}
-          <p className="imp-deal-for imp-gold">{ES_PARA_MI.coverLine}</p>
           <div className="imp-lv-cover">
             <GuaranteeLine />
           </div>
@@ -347,8 +345,6 @@ export default function ImparablesPage({
             </>
           )}
           {stageDeal?.kind === "line" && <p className="imp-deal-until">{stageDeal.terms}</p>}
-          {/* Who it's for, under the stage's line, in gold (the team, 2026-11-03: lib/imparables/esParaMi.ts). */}
-          <p className="imp-deal-for imp-gold">{ES_PARA_MI.coverLine}</p>
           {guarantee && <GuaranteeNote text={guarantee} />}
         </div>
       )
@@ -472,11 +468,10 @@ export default function ImparablesPage({
         </div>
       )}
 
-      {/* «¿Es para mí?» (the team, 2026-11-03): between the cover and «¿Qué tienen en común…?», who it's for — the gold
-          card — and the closing line under it, word for word (lib/imparables/esParaMi.ts). */}
+      {/* «Este congreso es para ti si…» (the team, 2026-11-03): between the cover and «¿Qué tienen en común…?», who
+          it's for — the gold card — and the closing line under it, word for word (lib/imparables/esParaMi.ts). */}
       <section className="imp-sec imp-forwho" aria-labelledby="imp-forwho-t">
         <div className="imp-sec-in">
-          <div className="imp-eyebrow">{ES_PARA_MI.eyebrow}</div>
           <h2 className="imp-h2" id="imp-forwho-t">
             {ES_PARA_MI.title}
           </h2>

@@ -4503,8 +4503,8 @@ body:has(.imp) {
   font-weight: 800;
   color: var(--imp-titulo);
 }
-/* «¿Es para mí?» (the team, 2026-11-03), between the cover and «¿Qué tienen en común…?»: its eyebrow, «Este
-   congreso es para ti si…» in the titles' face, who it's for in a card with a gold border on a warm white and gold
+/* «Este congreso es para ti si…» (the team, 2026-11-03), between the cover and «¿Qué tienen en común…?»: its title
+   in the titles' face, who it's for in a card with a gold border on a warm white and gold
    ticks, and the closing line under it, bold in the titles' gold. On a computer, the card only as wide as reads well. */
 .imp-sec.imp-forwho {
   padding: 40px 22px;
@@ -4574,18 +4574,6 @@ body:has(.imp) {
 @media (min-width: 1100px) {
   .imp-sec.imp-forwho {
     padding: 72px clamp(40px, 5vw, 80px);
-  }
-}
-/* Who it's for, on the cover under the stage's line (the team, 2026-11-03): in gold, small and bold. */
-.imp-deal .imp-deal-for {
-  margin-top: 6px;
-  font-size: 13.5px;
-  font-weight: 800;
-  line-height: 1.4;
-}
-@media (min-width: 1100px) {
-  .imp-deal .imp-deal-for {
-    font-size: 14px;
   }
 }
 .imp-quote {
