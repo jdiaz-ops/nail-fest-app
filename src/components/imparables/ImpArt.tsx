@@ -112,6 +112,26 @@ const ICONS = {
       <path d="M15.6 14.4a4.6 4.6 0 0 1 5.4 4.6" />
     </>
   ),
+  // «Qué incluye tu cupo» (2026-11-03): a card with her photo, a kit that shines, a flower for the body.
+  photo: (
+    <>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <circle cx="9" cy="10.5" r="2.4" />
+      <path d="M5.5 16.5a3.5 3.5 0 0 1 7 0M14.5 10h4M14.5 13.5h3" />
+    </>
+  ),
+  sparkles: (
+    <>
+      <path d="M11 3.5l1.9 4.6 4.6 1.9-4.6 1.9L11 16.5l-1.9-4.6L4.5 10l4.6-1.9z" />
+      <path d="M18 14.5l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9z" />
+    </>
+  ),
+  flower: (
+    <>
+      <path d="M12 20.5c-4.2-1.1-7.5-4.6-7.5-9 3 .2 5.8 1.7 7.5 4.1 1.7-2.4 4.5-3.9 7.5-4.1 0 4.4-3.3 7.9-7.5 9z" />
+      <path d="M12 15.6c-1.5-2-2.2-4.3-1.8-6.7L12 3.5l1.8 5.4c.4 2.4-.3 4.7-1.8 6.7z" />
+    </>
+  ),
 };
 export type ImpIconName = keyof typeof ICONS;
 

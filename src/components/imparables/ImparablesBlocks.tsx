@@ -12,6 +12,7 @@ import { youtubeVideo } from "@/lib/landingBlocks/types";
 import { agendaInstant, type EventWhen } from "@/lib/imparables/schedule";
 import { dayMonth, pesos, saving, stageLine, stagesSummary, type SalesState } from "@/lib/imparables/stages";
 import { isPanelCard, listNames, namesIn, panelGuestsOf } from "@/lib/imparables/blocks";
+import { INCLUYE, isTicketIncludesTitle } from "@/lib/imparables/incluye";
 import { ImpIcon, Silhouette, iconForPoint, initials, type ImpIconName } from "./ImpArt";
 import ImpButton from "./ImpButton";
 import ImpCountdown from "./ImpCountdown";
@@ -46,7 +47,7 @@ export interface ImparablesContext {
   speakersTagline?: React.ReactNode;
 }
 
-type Section = { heading: HeadingLandingBlock | null; blocks: LandingBlock[]; id?: string; tone?: "dark" | "light"; kind?: "statement" };
+type Section = { heading: HeadingLandingBlock | null; blocks: LandingBlock[]; id?: string; tone?: "dark" | "light"; kind?: "statement" | "includes" };
 
 /** A section the page adds of its own (2026-10-31: the ticket levels on a version that sells them, lib/imparables/
  * tiers.ts; the promise and the outcomes on one that sells the transformation, lib/imparables/transformacion.ts):
@@ -97,7 +98,20 @@ export default function ImparablesBlocks({
 }) {
   // Only the sections with something to show, so the backgrounds keep alternating.
   const sections = sectionsOf(blocks)
-    .map((section) => ({ ...section, content: renderBlocks(section.blocks, context) }))
+    .map((section) =>
+      // «Todo lo que trae tu boleta» is «Qué incluye tu cupo» (the team, 2026-11-03: lib/imparables/incluye.ts) — its
+      // eyebrow, its line in italics and its three groups, in chocolate as before.
+      isTicketIncludesTitle(section.heading?.title)
+        ? {
+            heading: { type: "heading" as const, eyebrow: INCLUYE.eyebrow, title: "", intro: INCLUYE.subtitle },
+            blocks: [],
+            content: [<TicketIncludes key="incluye" />],
+            id: section.id,
+            tone: "dark" as const,
+            kind: "includes" as const,
+          }
+        : { ...section, content: renderBlocks(section.blocks, context) }
+    )
     .filter((section) => section.content.length > 0 || section.heading?.title || section.heading?.intro);
   for (const extra of extras) {
     const before = (type: LandingBlock["type"]) => sections.findIndex((section) => section.blocks.some((b) => b.type === type));
@@ -125,7 +139,7 @@ export default function ImparablesBlocks({
           <section
             key={i}
             id={section.id}
-            className={`imp-sec${tones[i] ? " imp-sec--alt" : ""}${section.blocks.some((b) => b.type === "people") ? " imp-sec--speakers" : ""}${section.kind === "statement" ? " imp-sec--statement" : ""}`}
+            className={`imp-sec${tones[i] ? " imp-sec--alt" : ""}${section.blocks.some((b) => b.type === "people") ? " imp-sec--speakers" : ""}${section.kind === "statement" ? " imp-sec--statement" : ""}${section.kind === "includes" ? " imp-sec--includes" : ""}`}
           >
             <div className="imp-sec-in">
               {quote && (
@@ -143,6 +157,32 @@ export default function ImparablesBlocks({
         );
       })}
     </>
+  );
+}
+
+/** «Qué incluye tu cupo»'s three groups (lib/imparables/incluye.ts): each its small gold label over its cards — the
+ * cards of «Qué incluye», a gold line icon, a bold title, a line —, a column on a phone and, on a computer, the group's
+ * cards in a row (as many columns as cards). */
+function TicketIncludes() {
+  return (
+    <div className="imp-incs">
+      {INCLUYE.groups.map((group) => (
+        <div key={group.label} className="imp-inc-group">
+          <p className="imp-inc-k">{group.label}</p>
+          <ul className="imp-inc" style={{ "--inc-cols": group.items.length } as React.CSSProperties}>
+            {group.items.map((item) => (
+              <li key={item.title}>
+                <ImpIcon name={item.icon} size={28} />
+                <span>
+                  <b>{item.title}</b>
+                  <small>{keepTimes(item.text)}</small>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
   );
 }
 

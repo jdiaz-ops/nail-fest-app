@@ -5647,6 +5647,51 @@ body:has(.imp) {
   font-size: 15px;
   color: var(--imp-texto-2);
 }
+/* «Qué incluye tu cupo» (the team, 2026-11-03: lib/imparables/incluye.ts), in place of «Todo lo que trae tu boleta»:
+   its eyebrow, its line in italics and three groups, each its small gold label over the cards above. One column on a
+   phone; on a computer each group's cards in a row, as many columns as cards. 24px between groups on a phone, 36px on
+   a computer. */
+.imp-sec.imp-sec--includes {
+  padding: 44px 22px;
+}
+.imp-sec--includes .imp-lead {
+  font-style: italic;
+}
+.imp-incs {
+  display: grid;
+  gap: 24px;
+  margin-top: 26px;
+}
+.imp-inc-k {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--imp-acento);
+}
+.imp-inc-group .imp-inc {
+  margin-top: 12px;
+  gap: 12px;
+}
+@media (min-width: 900px) {
+  .imp-sec.imp-sec--includes {
+    padding: 80px 40px;
+  }
+  .imp-incs {
+    gap: 36px;
+    margin-top: 30px;
+  }
+  .imp-inc-group .imp-inc {
+    grid-template-columns: repeat(var(--inc-cols, 2), minmax(0, 1fr));
+    gap: 16px;
+  }
+}
+@media (min-width: 1100px) {
+  .imp-sec.imp-sec--includes {
+    padding: 80px clamp(40px, 5vw, 80px);
+  }
+}
 
 /* Tu boleta */
 .imp-now {
