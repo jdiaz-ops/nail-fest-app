@@ -8,7 +8,6 @@ describe("the gold strip", () => {
       { text: "mentalidad, dinero y marketing", bold: true },
       { text: " para ", bold: false },
       { text: "manicuristas", bold: true },
-      { text: " que saben que pueden más", bold: false },
     ]);
   });
 
