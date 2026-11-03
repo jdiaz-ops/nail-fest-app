@@ -82,7 +82,7 @@ export interface ImpCheckoutProps {
   name: { pre: string; big: string };
   /** "27 de junio de 2027" */
   dates: string;
-  /** "Congreso virtual · 100% en vivo" */
+  /** "Congreso virtual en vivo · Zoom" */
   format: string;
   /** The price stage on sale (lib/imparables/pricing.ts): in pesos; in dollars (cents), when it has a USD price. */
   ticket: CheckoutTicket;

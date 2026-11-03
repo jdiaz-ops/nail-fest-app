@@ -75,7 +75,7 @@ export default function ImpPaymentResult({
         </p>
         <p className="imp-pago-fecha">
           {c.date}
-          {event.format === "IN_PERSON" ? "" : " · 100% en vivo"}
+          {event.format === "IN_PERSON" ? "" : event.format === "VIRTUAL" ? " · En vivo por Zoom" : " · En vivo"}
         </p>
       </header>
 

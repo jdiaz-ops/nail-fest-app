@@ -57,9 +57,10 @@ export function coverName(name: string): string {
   return base || name.trim();
 }
 
-/** What the congress is, in a line, as its checkout says it: «Congreso virtual · 100% en vivo», «Presencial y virtual», or its city. */
+/** What the congress is, in a line, as its checkout and its «¡Asistiré!» card say it: «Congreso virtual en vivo · Zoom» (the
+ * team, 2026-11-03: no «100%»), «Presencial y virtual», or its city. */
 export function kindLine(event: { format: string; city: string | null }): string {
-  return event.format === "VIRTUAL" ? "Congreso virtual · 100% en vivo" : event.format === "HYBRID" ? "Presencial y virtual" : (event.city ?? "");
+  return event.format === "VIRTUAL" ? "Congreso virtual en vivo · Zoom" : event.format === "HYBRID" ? "Presencial y virtual" : (event.city ?? "");
 }
 
 export interface EventWhen {

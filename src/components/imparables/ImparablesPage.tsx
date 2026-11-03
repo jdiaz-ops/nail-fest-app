@@ -161,12 +161,12 @@ export default function ImparablesPage({
   const pre = words.join(" ");
   // The pill right before the group photo (2026-10-28): when, big — written
   // the way the team writes it there, «27 de junio 2027» (2026-10-29: no «de»
-  // before the year only) — and under it, smaller, what it is. No hours, no
-  // platform named.
+  // before the year only) — and under it, smaller, what it is: «Congreso virtual
+  // en vivo · Zoom» (the team, 2026-11-03: no «100%», and the platform named). No hours.
   const place = event.venueName || event.city;
   const kind = event.format === "VIRTUAL" ? "Congreso virtual" : event.format === "HYBRID" ? `Presencial${place ? ` en ${place}` : ""} y virtual` : place;
   const pillDate = when.compact.replace(/ de (\d{4})$/, " $1");
-  const pillNote = [kind, event.format === "VIRTUAL" ? "100% en vivo" : ""].filter(Boolean).join(" ");
+  const pillNote = [kind, event.format === "VIRTUAL" ? "en vivo · Zoom" : ""].filter(Boolean).join(" ");
 
   const { cover, rest: afterCover } = coverOf(blocks);
   const { intro, rest } = introOf(afterCover);

@@ -34,15 +34,15 @@ export function calendarEventOf(event: Pick<Event, "id" | "slug" | "name" | "pub
     title: coverName(publicEventName(event)),
     start: event.startsAt,
     end: event.endsAt ?? new Date(event.startsAt.getTime() + 11 * 3_600_000),
-    description: `Congreso virtual 100% en vivo por Zoom. Tu enlace personal te llega por correo y WhatsApp ${ZOOM_ACCESS_REMINDER_MINUTES_BEFORE} minutos antes de empezar.`,
+    description: `Congreso virtual en vivo por Zoom. Tu enlace personal te llega por correo y WhatsApp ${ZOOM_ACCESS_REMINDER_MINUTES_BEFORE} minutos antes de empezar.`,
     location: "Zoom (tu enlace te llega por correo y WhatsApp)",
     url: `${baseUrl()}/${event.slug}`,
   };
 }
 
-/** «Compartir por WhatsApp»'s message when the event has none of its own: «Mira este congreso para manicuristas: Manicuristas Imparables, 27 de junio, 100% en vivo.» */
+/** «Compartir por WhatsApp»'s message when the event has none of its own: «Mira este congreso para manicuristas: Manicuristas Imparables, 27 de junio, en vivo por Zoom.» */
 export function defaultShareText(event: Event, timezone: string): string {
-  return `Mira este congreso para manicuristas: ${coverName(publicEventName(event))}, ${eventWhen(event, timezone).short}, 100% en vivo.`;
+  return `Mira este congreso para manicuristas: ${coverName(publicEventName(event))}, ${eventWhen(event, timezone).short}, en vivo por Zoom.`;
 }
 
 async function confirmationOf(

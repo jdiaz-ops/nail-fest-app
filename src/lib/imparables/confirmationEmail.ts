@@ -143,7 +143,7 @@ ${table(
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background:${BONE};border-radius:20px;overflow:hidden;border-collapse:separate;">
 <tr><td align="center" style="padding:0;background:${CHOCOLATE};">
 <img src="${esc(c.images.header)}" width="600" alt="${esc(c.eventName)}" style="display:block;width:100%;max-width:600px;height:auto;border:0;">
-<div style="padding:0 24px 26px;${sans(14, 700, CREAM_SOFT)}">${esc(c.date)} · 100% en vivo</div>
+<div style="padding:0 24px 26px;${sans(14, 700, CREAM_SOFT)}">${esc(c.date)} · En vivo por Zoom</div>
 </td></tr>
 <tr><td align="center" style="padding:9px 20px;background:${GOLD};${sans(12.5, 800, INK, "letter-spacing:0.16em;")}">&#10003;&nbsp; CUPO CONFIRMADO</td></tr>
 <tr><td class="px" style="padding:30px 32px 6px;">

@@ -6,7 +6,7 @@ const CALENDAR = {
   title: "Manicuristas Imparables",
   start: new Date("2027-06-27T08:00:00-05:00"),
   end: new Date("2027-06-27T19:00:00-05:00"),
-  description: "Congreso virtual 100% en vivo por Zoom. Tu enlace personal te llega por correo y WhatsApp 30 minutos antes de empezar.",
+  description: "Congreso virtual en vivo por Zoom. Tu enlace personal te llega por correo y WhatsApp 30 minutos antes de empezar.",
   location: "Zoom (tu enlace te llega por correo y WhatsApp)",
   url: "https://nailfest.lat/manicuristas-imparables-2027",
 };
@@ -107,7 +107,7 @@ describe("her calendar", () => {
     expect(ics).toContain("DTEND:20270628T000000Z\r\n");
     expect(ics).toContain("TRIGGER:-PT1H");
     const unfolded = ics.replace(/\r\n /g, "");
-    expect(unfolded).toContain("DESCRIPTION:Congreso virtual 100% en vivo por Zoom. Tu enlace personal te llega por correo y WhatsApp 30 minutos antes de empezar.\\nhttps://nailfest.lat/manicuristas-imparables-2027");
+    expect(unfolded).toContain("DESCRIPTION:Congreso virtual en vivo por Zoom. Tu enlace personal te llega por correo y WhatsApp 30 minutos antes de empezar.\\nhttps://nailfest.lat/manicuristas-imparables-2027");
     for (const line of ics.split("\r\n")) expect(Buffer.byteLength(line, "utf8")).toBeLessThanOrEqual(75);
     expect(unfolded).toContain("LOCATION:Zoom (tu enlace te llega por correo y WhatsApp)");
   });

@@ -14,7 +14,7 @@ export interface AsistireTexts {
   big: string;
   /** «Domingo 27 de junio de 2027» */
   date: string;
-  /** «Congreso virtual · 100% en vivo» */
+  /** «Congreso virtual en vivo · Zoom» */
   kind: string;
   /** «nailfest.lat/imparables» */
   link: string;
