@@ -5950,8 +5950,9 @@ body:has(.imp) {
    bigger, on the left; the price, its places, what it brings, the button and how to pay on the right, after a fine
    gold line — the whole card in one screen. */
 @media (min-width: 900px) {
+  /* Close to the program over it, on the same light ground (the team, 2026-11-03: «cierra un poco el gap»). */
   .imp-sec.imp-sec--ticket {
-    padding: 80px 40px 48px;
+    padding: 16px 40px 48px;
   }
   .imp-bt-card {
     max-width: 1000px;
