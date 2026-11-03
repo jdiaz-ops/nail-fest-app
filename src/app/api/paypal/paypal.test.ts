@@ -48,6 +48,14 @@ const { finalizeConfirmedRegistration, cancelRegistrant } = vi.hoisted(() => ({ 
 vi.mock("@/lib/registrationConfirmation", () => ({ finalizeConfirmedRegistration }));
 vi.mock("@/lib/zoom", () => ({ cancelRegistrant }));
 vi.mock("@/lib/settings", () => ({ getOrgSettings: async () => ({ name: "Nail Fest" }) }));
+// PayPal in the checkout (lib/payments/paypalSwitch.ts, off since 2026-11-02): on here, so these tests keep
+// what it does when it comes back; the last one turns it off.
+const paypalSwitch = vi.hoisted(() => ({ on: true }));
+vi.mock("@/lib/payments/paypalSwitch", () => ({
+  get PAYPAL_IN_CHECKOUT() {
+    return paypalSwitch.on;
+  },
+}));
 
 import { POST as createOrder } from "./orders/route";
 import { POST as captureOrder } from "./orders/[orderId]/capture/route";
@@ -453,5 +461,14 @@ describe("sandbox and live", () => {
     vi.stubEnv("NEXT_PUBLIC_PAYPAL_CLIENT_ID", "AZDxjDScFpQtjWTOUtWKbyN_bDt4OgqaF4eYXlewfBP4");
     vi.stubEnv("PAYPAL_CLIENT_SECRET", "");
     expect(paypalCheckoutConfig()).toBeNull();
+  });
+
+  it("hidden (PAYPAL_IN_CHECKOUT off), no checkout shows PayPal, credentials or not", () => {
+    paypalSwitch.on = false;
+    try {
+      expect(paypalCheckoutConfig()).toBeNull();
+    } finally {
+      paypalSwitch.on = true;
+    }
   });
 });
