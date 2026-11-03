@@ -37,7 +37,7 @@ export const INCLUYE = {
         {
           icon: "flower",
           title: "Un día pensado para tu cuerpo",
-          text: "4 pausas activas para manos, espalda y ojos, guiadas por una manicurista fisioterapeuta.",
+          text: "4 pausas activas para manos, espalda y ojos, guiadas por @ssanchezacademy, manicurista y fisioterapeuta.",
         },
         { icon: "gift", title: "Premios en vivo", text: "Sorteos con premios de las marcas aliadas durante el día, entre quienes estén conectadas." },
       ],
