@@ -14,6 +14,6 @@ export const ES_PARA_MI = {
   closing: "Si dijiste «esa soy yo», el 27 de junio es tuyo.",
 };
 
-/** The gold strip over everything, before the cover, that says who it's for at once (the team's boceto, 2026-11-03;
- * without «que trabajan por su cuenta» the same day). */
-export const FRANJA = "Congreso virtual para manicuristas";
+/** The gold strip over everything, before the cover, that says what it is and who it's for at once (the team's boceto,
+ * 2026-11-03; these words the same day). In capitals on the page (globals.css .imp-strip). */
+export const FRANJA = "Congreso virtual de mentalidad, dinero y marketing para manicuristas";
