@@ -5345,6 +5345,10 @@ body:has(.imp) {
   width: min(320px, 100%);
   padding-top: 14px;
   border-top: 1px solid var(--imp-linea);
+  /* Under the logos, a gold line, as wide, that ends the cover before «Este congreso es para ti si…» (the team,
+     2026-11-03). */
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--imp-oro);
 }
 .imp-apoyo > span {
   font-size: 11px;
