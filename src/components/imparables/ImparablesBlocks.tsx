@@ -125,9 +125,13 @@ export default function ImparablesBlocks({
   // solo día» is always chocolate (the team, 2026-10-31) — and the next ones go on from it.
   let dark = firstTone !== "dark";
   const tones = sections.map((section) => {
-    // «Boleta Imparable» always on the light ground — its card is chocolate — and the questions after it keep their
-    // color, so the page still ends light, then the dark closing (2026-11-03).
-    if (section.kind === "ticket") return false;
+    // «Boleta Imparable» always on the light ground, its chocolate card the dark band: the section after it — the
+    // questions — goes light, then the dark closing, whatever comes before it (2026-11-03; «Qué incluye tu cupo»,
+    // dark, hidden the same day).
+    if (section.kind === "ticket") {
+      dark = true;
+      return false;
+    }
     const own = section.tone ?? (section.blocks.some((b) => b.type === "slides" && b.style === "results") ? "dark" : undefined);
     return (dark = own ? own === "dark" : !dark);
   });
