@@ -17,7 +17,7 @@ import ImpTitle from "./ImpTitle";
 import ImpWaitlistForm from "./ImpWaitlistForm";
 import { GuaranteeLine, Shield } from "./ImpTiers";
 import { TRANSFORMATION } from "@/lib/imparables/transformacion";
-import { ES_PARA_MI, FRANJA } from "@/lib/imparables/esParaMi";
+import { ES_PARA_MI, FRANJA, boldParts } from "@/lib/imparables/esParaMi";
 import { stubDate } from "@/lib/imparables/boleta";
 import ImpBoleta from "./ImpBoleta";
 import type { ExtraSection } from "./ImparablesBlocks";
@@ -417,7 +417,9 @@ export default function ImparablesPage({
       )}
 
       {/* Who it's for, before anything else: the gold strip (the team's boceto, 2026-11-03: lib/imparables/esParaMi.ts). */}
-      <p className="imp-strip">{FRANJA}</p>
+      <p className="imp-strip">
+        {boldParts(FRANJA).map((part, i) => (part.bold ? <b key={i}>{part.text}</b> : <span key={i}>{part.text}</span>))}
+      </p>
 
       {special && (
         // «Precio especial visitantes Nail Fest Bogotá · La oferta termina en: ⏱ 122d 11:22:05» (the team, 2026-10-30).

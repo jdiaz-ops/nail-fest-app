@@ -5686,25 +5686,31 @@ body:has(.imp) {
   }
 }
 
-/* The gold strip over everything that says who it's for (the team's boceto, 2026-11-03: lib/imparables/esParaMi.ts). */
+/* The gold strip over everything that says what it is and who it's for (the team's boceto, 2026-11-03:
+   lib/imparables/esParaMi.ts): gold as a leaf, brighter at its middle, with a thin edge of light on top; its words
+   in chocolate, not in capitals, the bold ones bolder. */
 .imp-strip {
   margin: 0;
-  padding: 11px 16px;
-  background: var(--imp-oro);
+  padding: 12px 18px 11px;
+  background: linear-gradient(90deg, #a9864f 0%, #d6b981 20%, #f0dcb2 50%, #d6b981 80%, #a9864f 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -1px 0 rgba(59, 36, 24, 0.25);
   color: var(--imp-chocolate);
   text-align: center;
-  font-size: 12px;
-  font-weight: 800;
+  font-size: 14px;
+  font-weight: 500;
   line-height: 1.45;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
   text-wrap: balance;
+}
+.imp-strip b {
+  font-weight: 800;
 }
 @media (min-width: 900px) {
   .imp-strip {
-    padding: 12px 24px;
-    font-size: 13px;
-    letter-spacing: 0.14em;
+    padding: 13px 24px 12px;
+    font-size: 15px;
   }
 }
 

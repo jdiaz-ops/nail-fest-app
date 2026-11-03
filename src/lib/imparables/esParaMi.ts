@@ -15,5 +15,13 @@ export const ES_PARA_MI = {
 };
 
 /** The gold strip over everything, before the cover, that says what it is and who it's for at once (the team's boceto,
- * 2026-11-03; these words the same day). In capitals on the page (globals.css .imp-strip). */
-export const FRANJA = "Congreso virtual de mentalidad, dinero y marketing para manicuristas";
+ * 2026-11-03; these words, as written, the same day): what goes between ** ** in bold. */
+export const FRANJA = "Congreso virtual de **mentalidad, dinero y marketing** para **manicuristas**";
+
+/** "a **b** c" → [{ text: "a ", bold: false }, { text: "b", bold: true }, { text: " c", bold: false }]: the strip's words. */
+export function boldParts(text: string): { text: string; bold: boolean }[] {
+  return text
+    .split(/\*\*(.+?)\*\*/)
+    .map((part, i) => ({ text: part, bold: i % 2 === 1 }))
+    .filter((part) => part.text !== "");
+}
