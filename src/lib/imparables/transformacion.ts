@@ -68,8 +68,8 @@ export const TRANSFORMATION = {
       answer: "Porque en Instagram ves pedazos; aquí ves el camino completo, en orden, con un cuaderno para aterrizarlo a tu negocio y con 500 colegas haciendo lo mismo el mismo día.",
     },
     {
-      question: "¿Me sirve si llevo poco tiempo? ¿Y si llevo muchos años?",
-      answer: "Sirve si ya tienes clientas y sientes que estás estancada. Las historias de la mañana son para las dos; el plan de la tarde se arma con tus números, lleves uno o quince años.",
+      question: "¿Me sirve si trabajo en mi casa?",
+      answer: "Sí. La mayoría de las conferencistas empezaron exactamente ahí. El plan de la tarde se arma con tus números, sean los que sean.",
     },
     {
       question: "¿Cómo me va a servir dentro de tres meses?",

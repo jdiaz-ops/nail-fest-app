@@ -17,6 +17,7 @@ import ImpTitle from "./ImpTitle";
 import ImpWaitlistForm from "./ImpWaitlistForm";
 import { GuaranteeLine, Shield } from "./ImpTiers";
 import { TRANSFORMATION } from "@/lib/imparables/transformacion";
+import { ES_PARA_MI } from "@/lib/imparables/esParaMi";
 import type { ExtraSection } from "./ImparablesBlocks";
 import { tierCounter, tierDeal } from "@/lib/imparables/tiers";
 import { cinzel, manrope } from "./fonts";
@@ -318,6 +319,8 @@ export default function ImparablesPage({
             )
           )}
           {dealLines?.then && <p className="imp-deal-then">{dealLines.then}</p>}
+          {/* Who it's for, under the stage's line, in gold (the team, 2026-11-03: lib/imparables/esParaMi.ts). */}
+          <p className="imp-deal-for imp-gold">{ES_PARA_MI.coverLine}</p>
           <div className="imp-lv-cover">
             <GuaranteeLine />
           </div>
@@ -344,6 +347,8 @@ export default function ImparablesPage({
             </>
           )}
           {stageDeal?.kind === "line" && <p className="imp-deal-until">{stageDeal.terms}</p>}
+          {/* Who it's for, under the stage's line, in gold (the team, 2026-11-03: lib/imparables/esParaMi.ts). */}
+          <p className="imp-deal-for imp-gold">{ES_PARA_MI.coverLine}</p>
           {guarantee && <GuaranteeNote text={guarantee} />}
         </div>
       )
@@ -466,6 +471,35 @@ export default function ImparablesPage({
           />
         </div>
       )}
+
+      {/* «¿Es para mí?» (the team's boceto, 2026-11-03): between the cover and «¿Qué tienen en común…?», who it's for —
+          the gold card — and who it isn't, word for word (lib/imparables/esParaMi.ts). */}
+      <section className="imp-sec imp-forwho" aria-labelledby="imp-forwho-t">
+        <div className="imp-sec-in">
+          <div className="imp-eyebrow">{ES_PARA_MI.eyebrow}</div>
+          <h2 className="imp-h2" id="imp-forwho-t">
+            {ES_PARA_MI.title}
+          </h2>
+          <div className="imp-forwho-grid">
+            <div className="imp-panel imp-panel--yes">
+              <b className="imp-panel-k">{ES_PARA_MI.yes.label}</b>
+              <ul>
+                {ES_PARA_MI.yes.items.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+            <div className="imp-panel imp-panel--no">
+              <b className="imp-panel-k">{ES_PARA_MI.no.label}</b>
+              <ul>
+                {ES_PARA_MI.no.items.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {intro && (
         // Right under the cover, in its colors (2026-10-29): what all the speakers have in common.

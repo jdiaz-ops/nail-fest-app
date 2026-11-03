@@ -4503,6 +4503,104 @@ body:has(.imp) {
   font-weight: 800;
   color: var(--imp-titulo);
 }
+/* «¿Es para mí?» (the team's boceto, 2026-11-03), between the cover and «¿Qué tienen en común…?»: its eyebrow, «Es
+   para ti si…» in the titles' face, and two cards — who it's for, with a gold border on a warm white and gold ticks;
+   who it isn't, a plain card, its label and its dashes in grey. Stacked on a phone, 14px apart; side by side, 1.4 to
+   1, on a computer. */
+.imp-sec.imp-forwho {
+  padding: 40px 22px;
+}
+.imp-forwho-grid {
+  display: grid;
+  gap: 14px;
+  margin-top: 22px;
+}
+.imp-panel {
+  padding: 22px 20px;
+  border: 1px solid var(--imp-tarjeta-borde);
+  border-radius: 18px;
+  background: var(--imp-tarjeta);
+}
+.imp-panel--yes {
+  border-color: var(--imp-oro);
+  background: #fbf7ee;
+}
+.imp-panel-k {
+  display: block;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--imp-acento);
+}
+.imp-panel--no .imp-panel-k {
+  color: var(--imp-texto-3);
+}
+.imp-panel ul {
+  display: grid;
+  gap: 14px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.imp-panel li {
+  position: relative;
+  padding-left: 28px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--imp-texto);
+}
+.imp-panel li::before {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-weight: 800;
+}
+.imp-panel--yes li::before {
+  content: "✓";
+  color: var(--imp-titulo);
+}
+.imp-panel--no li {
+  color: var(--imp-texto-2);
+}
+.imp-panel--no li::before {
+  content: "—";
+  color: var(--imp-texto-3);
+}
+@media (min-width: 900px) {
+  .imp-sec.imp-forwho {
+    padding: 72px 40px;
+  }
+  .imp-forwho-grid {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    align-items: start;
+    gap: 18px;
+    margin-top: 28px;
+  }
+  .imp-panel {
+    padding: 28px;
+  }
+  .imp-panel li {
+    font-size: 17px;
+  }
+}
+@media (min-width: 1100px) {
+  .imp-sec.imp-forwho {
+    padding: 72px clamp(40px, 5vw, 80px);
+  }
+}
+/* Who it's for, on the cover under the stage's line (the team, 2026-11-03): in gold, small and bold. */
+.imp-deal .imp-deal-for {
+  margin-top: 6px;
+  font-size: 13.5px;
+  font-weight: 800;
+  line-height: 1.4;
+}
+@media (min-width: 1100px) {
+  .imp-deal .imp-deal-for {
+    font-size: 14px;
+  }
+}
 .imp-quote {
   position: absolute;
   right: -8px;
