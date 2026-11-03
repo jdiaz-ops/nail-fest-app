@@ -18,6 +18,7 @@ import ImpWaitlistForm from "./ImpWaitlistForm";
 import { GuaranteeLine, Shield } from "./ImpTiers";
 import { TRANSFORMATION } from "@/lib/imparables/transformacion";
 import { ES_PARA_MI, FRANJA, boldParts } from "@/lib/imparables/esParaMi";
+import { EDICION } from "@/lib/imparables/edicion";
 import { stubDate } from "@/lib/imparables/boleta";
 import ImpBoleta from "./ImpBoleta";
 import type { ExtraSection } from "./ImparablesBlocks";
@@ -443,6 +444,10 @@ export default function ImparablesPage({
         <div className="imp-hero-in">
           <Tiara />
           <ImpTitle pre={pre} big={big} />
+          {/* The edition, under the name, between two gold lines (lib/imparables/edicion.ts; the team's boceto, 2026-11-03). */}
+          <p className="imp-edition">
+            <span>{EDICION}</span>
+          </p>
           {version?.title && <h2 className="imp-v-title">{version.title}</h2>}
           {version?.subtitle ? (
             <p className="imp-tag">{version.subtitle}</p>
