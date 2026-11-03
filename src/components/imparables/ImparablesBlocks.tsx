@@ -47,7 +47,7 @@ export interface ImparablesContext {
   speakersTagline?: React.ReactNode;
 }
 
-type Section = { heading: HeadingLandingBlock | null; blocks: LandingBlock[]; id?: string; tone?: "dark" | "light"; kind?: "statement" | "includes" };
+type Section = { heading: HeadingLandingBlock | null; blocks: LandingBlock[]; id?: string; tone?: "dark" | "light"; kind?: "statement" | "includes" | "ticket" };
 
 /** A section the page adds of its own (2026-10-31: the ticket levels on a version that sells them, lib/imparables/
  * tiers.ts; the promise and the outcomes on one that sells the transformation, lib/imparables/transformacion.ts):
@@ -61,8 +61,9 @@ export interface ExtraSection {
   content?: React.ReactNode;
   blocks?: LandingBlock[];
   tone?: "dark" | "light";
-  /** A statement: its content alone, big and centered, over the rays (the team, 2026-10-31). */
-  kind?: "statement";
+  /** A statement: its content alone, big and centered, over the rays (the team, 2026-10-31). «Boleta Imparable»
+   * (ImpBoleta.tsx, 2026-11-03): its card on the light ground, the colors after it going on as if it weren't there. */
+  kind?: "statement" | "ticket";
   /** First of all, before the program, or before the questions (else last). */
   at: "start" | "beforeAgenda" | "beforeFaq";
 }
@@ -124,6 +125,9 @@ export default function ImparablesBlocks({
   // solo día» is always chocolate (the team, 2026-10-31) — and the next ones go on from it.
   let dark = firstTone !== "dark";
   const tones = sections.map((section) => {
+    // «Boleta Imparable» always on the light ground — its card is chocolate — and the questions after it keep their
+    // color, so the page still ends light, then the dark closing (2026-11-03).
+    if (section.kind === "ticket") return false;
     const own = section.tone ?? (section.blocks.some((b) => b.type === "slides" && b.style === "results") ? "dark" : undefined);
     return (dark = own ? own === "dark" : !dark);
   });
@@ -139,7 +143,7 @@ export default function ImparablesBlocks({
           <section
             key={i}
             id={section.id}
-            className={`imp-sec${tones[i] ? " imp-sec--alt" : ""}${section.blocks.some((b) => b.type === "people") ? " imp-sec--speakers" : ""}${section.kind === "statement" ? " imp-sec--statement" : ""}${section.kind === "includes" ? " imp-sec--includes" : ""}`}
+            className={`imp-sec${tones[i] ? " imp-sec--alt" : ""}${section.blocks.some((b) => b.type === "people") ? " imp-sec--speakers" : ""}${section.kind === "statement" ? " imp-sec--statement" : ""}${section.kind === "includes" ? " imp-sec--includes" : ""}${section.kind === "ticket" ? " imp-sec--ticket" : ""}`}
           >
             <div className="imp-sec-in">
               {quote && (

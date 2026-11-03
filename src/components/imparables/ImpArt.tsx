@@ -5,10 +5,10 @@ import type { LandingTone } from "@/lib/landingBlocks/types";
 // arrives. Plain SVG in the page's own colors (globals.css), same strokes as
 // the boceto.
 
-/** On the cover and the closing, in the color .imp-tiara gives it. */
-export function Tiara() {
+/** On the cover and the closing, in the color .imp-tiara gives it (on the drawn «Boleta Imparable», its own class). */
+export function Tiara({ className = "imp-tiara" }: { className?: string } = {}) {
   return (
-    <svg className="imp-tiara" viewBox="0 0 190 52" aria-hidden="true">
+    <svg className={className} viewBox="0 0 190 52" aria-hidden="true">
       <path d="M6 48 Q95 -4 184 48" fill="none" stroke="currentColor" strokeWidth="2.6" />
       <path d="M30 46 Q95 12 160 46" fill="none" stroke="currentColor" strokeWidth="1.2" opacity=".7" />
       <polygon points="95,8 99.4,19 111,19.6 101.9,26.8 105,38 95,31.6 85,38 88.1,26.8 79,19.6 90.6,19" fill="currentColor" />

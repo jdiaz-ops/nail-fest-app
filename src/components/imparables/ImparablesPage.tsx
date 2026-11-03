@@ -17,7 +17,9 @@ import ImpTitle from "./ImpTitle";
 import ImpWaitlistForm from "./ImpWaitlistForm";
 import { GuaranteeLine, Shield } from "./ImpTiers";
 import { TRANSFORMATION } from "@/lib/imparables/transformacion";
-import { ES_PARA_MI } from "@/lib/imparables/esParaMi";
+import { ES_PARA_MI, FRANJA } from "@/lib/imparables/esParaMi";
+import { stubDate } from "@/lib/imparables/boleta";
+import ImpBoleta from "./ImpBoleta";
 import type { ExtraSection } from "./ImparablesBlocks";
 import { tierCounter, tierDeal } from "@/lib/imparables/tiers";
 import { cinzel, manrope } from "./fonts";
@@ -301,6 +303,46 @@ export default function ImparablesPage({
           ),
         },
       ];
+  // «Boleta Imparable» (the team's boceto, 2026-11-03: components/imparables/ImpBoleta.tsx) between «Qué incluye tu
+  // cupo» and the questions, while tickets are on sale, on the pages that sell the general admission alone: today's
+  // price as the cover's button says it and, under it, what the sticky bar says of its places.
+  if (mode === "sale" && current && !sellsLevels && !transformation) {
+    const placesLine = special
+      ? special.label
+      : progress
+        ? `${progress.left === 1 ? "Queda 1 cupo" : `Quedan ${progress.left} cupos`} a este precio`
+        : current.cap !== null
+          ? `Solo ${current.cap} cupos a este precio`
+          : current.closesAt && next
+            ? `Hasta el ${untilDay(current.closesAt, timezone)}`
+            : null;
+    extras.push({
+      id: "boleta",
+      kind: "ticket",
+      title: "",
+      intro: "",
+      at: "beforeFaq",
+      content: (
+        <ImpBoleta
+          eventName={[pre, big].filter(Boolean).join(" ")}
+          date={when.dates.replace(/ de (\d{4})$/, " $1")}
+          stub={stubDate(when.days[0])}
+          price={shownPrice}
+          struck={struckPrice}
+          line={placesLine}
+          rise={
+            rise && (
+              <p className="imp-stage-pill imp-rise">
+                <Clock />
+                El precio sube a {pesos(rise.price)} en <ImpCountdownInline to={rise.to.toISOString()} initialSeconds={rise.seconds} offsetMs={offsetMs} />
+              </p>
+            )
+          }
+          buyLabel={buyLabel}
+        />
+      ),
+    });
+  }
   const deal =
     !special && mode === "sale" && current ? (
       sellsLevels ? (
@@ -373,6 +415,9 @@ export default function ImparablesPage({
           )}
         </div>
       )}
+
+      {/* Who it's for, before anything else: the gold strip (the team's boceto, 2026-11-03: lib/imparables/esParaMi.ts). */}
+      <p className="imp-strip">{FRANJA}</p>
 
       {special && (
         // «Precio especial visitantes Nail Fest Bogotá · La oferta termina en: ⏱ 122d 11:22:05» (the team, 2026-10-30).

@@ -13,3 +13,6 @@ export const ES_PARA_MI = {
   /** Under the card. */
   closing: "Si dijiste «esa soy yo», el 27 de junio es tuyo.",
 };
+
+/** The gold strip over everything, before the cover, that says who it's for at once (the team's boceto, 2026-11-03). */
+export const FRANJA = "Congreso virtual para manicuristas que trabajan por su cuenta";
