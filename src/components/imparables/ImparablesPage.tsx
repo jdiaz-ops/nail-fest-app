@@ -472,32 +472,22 @@ export default function ImparablesPage({
         </div>
       )}
 
-      {/* «¿Es para mí?» (the team's boceto, 2026-11-03): between the cover and «¿Qué tienen en común…?», who it's for —
-          the gold card — and who it isn't, word for word (lib/imparables/esParaMi.ts). */}
+      {/* «¿Es para mí?» (the team, 2026-11-03): between the cover and «¿Qué tienen en común…?», who it's for — the gold
+          card — and the closing line under it, word for word (lib/imparables/esParaMi.ts). */}
       <section className="imp-sec imp-forwho" aria-labelledby="imp-forwho-t">
         <div className="imp-sec-in">
           <div className="imp-eyebrow">{ES_PARA_MI.eyebrow}</div>
           <h2 className="imp-h2" id="imp-forwho-t">
             {ES_PARA_MI.title}
           </h2>
-          <div className="imp-forwho-grid">
-            <div className="imp-panel imp-panel--yes">
-              <b className="imp-panel-k">{ES_PARA_MI.yes.label}</b>
-              <ul>
-                {ES_PARA_MI.yes.items.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </div>
-            <div className="imp-panel imp-panel--no">
-              <b className="imp-panel-k">{ES_PARA_MI.no.label}</b>
-              <ul>
-                {ES_PARA_MI.no.items.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-            </div>
+          <div className="imp-panel imp-panel--yes">
+            <ul>
+              {ES_PARA_MI.items.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
           </div>
+          <p className="imp-forwho-close">{ES_PARA_MI.closing}</p>
         </div>
       </section>
 

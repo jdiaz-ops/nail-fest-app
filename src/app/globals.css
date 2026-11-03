@@ -4503,17 +4503,11 @@ body:has(.imp) {
   font-weight: 800;
   color: var(--imp-titulo);
 }
-/* «¿Es para mí?» (the team's boceto, 2026-11-03), between the cover and «¿Qué tienen en común…?»: its eyebrow, «Es
-   para ti si…» in the titles' face, and two cards — who it's for, with a gold border on a warm white and gold ticks;
-   who it isn't, a plain card, its label and its dashes in grey. Stacked on a phone, 14px apart; side by side, 1.4 to
-   1, on a computer. */
+/* «¿Es para mí?» (the team, 2026-11-03), between the cover and «¿Qué tienen en común…?»: its eyebrow, «Este
+   congreso es para ti si…» in the titles' face, who it's for in a card with a gold border on a warm white and gold
+   ticks, and the closing line under it, bold in the titles' gold. On a computer, the card only as wide as reads well. */
 .imp-sec.imp-forwho {
   padding: 40px 22px;
-}
-.imp-forwho-grid {
-  display: grid;
-  gap: 14px;
-  margin-top: 22px;
 }
 .imp-panel {
   padding: 22px 20px;
@@ -4525,21 +4519,13 @@ body:has(.imp) {
   border-color: var(--imp-oro);
   background: #fbf7ee;
 }
-.imp-panel-k {
-  display: block;
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--imp-acento);
-}
-.imp-panel--no .imp-panel-k {
-  color: var(--imp-texto-3);
+.imp-forwho .imp-panel {
+  margin-top: 22px;
 }
 .imp-panel ul {
   display: grid;
   gap: 14px;
-  margin: 16px 0 0;
+  margin: 0;
   padding: 0;
   list-style: none;
 }
@@ -4560,28 +4546,29 @@ body:has(.imp) {
   content: "✓";
   color: var(--imp-titulo);
 }
-.imp-panel--no li {
-  color: var(--imp-texto-2);
-}
-.imp-panel--no li::before {
-  content: "—";
-  color: var(--imp-texto-3);
+.imp-forwho-close {
+  margin: 20px 0 0;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.35;
+  color: var(--imp-titulo);
+  text-wrap: balance;
 }
 @media (min-width: 900px) {
   .imp-sec.imp-forwho {
     padding: 72px 40px;
   }
-  .imp-forwho-grid {
-    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
-    align-items: start;
-    gap: 18px;
+  .imp-forwho .imp-panel {
+    max-width: 720px;
     margin-top: 28px;
-  }
-  .imp-panel {
     padding: 28px;
   }
   .imp-panel li {
     font-size: 17px;
+  }
+  .imp-forwho-close {
+    margin-top: 26px;
+    font-size: 22px;
   }
 }
 @media (min-width: 1100px) {
