@@ -6,7 +6,8 @@ import { clampPlacement, FIRST_PLACEMENT, MAX_ZOOM, photoRect, type AsistireFont
 // The profile frame of Manicuristas Imparables' kit (the team, 2026-11-04): her photo in a circle, ringed in
 // chocolate and gold with «MANICURISTA IMPARABLE» over it and the congress's day under it — 1080×1080, to use on
 // WhatsApp and Instagram, where the photo shows as a circle. She picks her photo, moves it with her finger and makes it
-// bigger or smaller, and downloads it. All of it in her browser: her photo isn't sent anywhere.
+// bigger or smaller, and downloads it — no «Guardar o compartir» (the team, 2026-11-04: «dejar solo descargar»). All
+// of it in her browser: her photo isn't sent anywhere.
 
 const SIZE = 1080;
 const C = SIZE / 2;
@@ -132,7 +133,7 @@ export default function ImpMarco({ fonts, texts }: { fonts: AsistireFonts; texts
   const [placement, setPlacement] = useState<Placement>(FIRST_PLACEMENT);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<{ url: string; file: File; canShare: boolean } | null>(null);
+  const [result, setResult] = useState<{ url: string; file: File } | null>(null);
 
   useEffect(() => {
     let gone = false;
@@ -218,17 +219,7 @@ export default function ImpMarco({ fonts, texts }: { fonts: AsistireFonts; texts
       return;
     }
     const file = new File([blob], "foto-perfil-imparable.png", { type: "image/png" });
-    setResult({ url: URL.createObjectURL(blob), file, canShare: !!navigator.canShare?.({ files: [file] }) });
-  }
-
-  async function share() {
-    if (!result) return;
-    try {
-      await navigator.share({ files: [result.file] });
-    } catch (err) {
-      if (err instanceof DOMException && err.name === "AbortError") return;
-      setError("No se pudo abrir «Compartir». Descarga la foto y súbela desde tu galería.");
-    }
+    setResult({ url: URL.createObjectURL(blob), file });
   }
 
   return (
@@ -261,12 +252,7 @@ export default function ImpMarco({ fonts, texts }: { fonts: AsistireFonts; texts
 
       {result ? (
         <div className="imp-mf-end">
-          {result.canShare && (
-            <button type="button" className="imp-co-btn" onClick={share}>
-              Guardar o compartir
-            </button>
-          )}
-          <a className={result.canShare ? "imp-mc-btn2" : "imp-co-btn"} href={result.url} download={result.file.name}>
+          <a className="imp-co-btn" href={result.url} download={result.file.name}>
             Descargar mi foto
           </a>
           <p className="imp-mc-note">
