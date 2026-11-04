@@ -9728,9 +9728,6 @@ body:has(.imp.nf) {
 .imp-kit-dl:focus-visible {
   background: var(--imp-oro-hover);
 }
-.imp-kit-iphone {
-  margin-top: 16px;
-}
 /* The three buttons in a line, whatever their names' lengths: each picture takes the room left above its button. */
 .imp-kit-grid > li {
   display: flex;

@@ -61,7 +61,6 @@ export default function ImpKit({ event, frameUrl, helpUrl }: { event: Event; /**
                 </li>
               ))}
             </ul>
-            <p className="imp-mc-note imp-kit-iphone">En iPhone también puedes abrirlo, mantener el dedo sobre la imagen y tocar «Guardar en Fotos».</p>
           </section>
 
           {helpUrl && (
