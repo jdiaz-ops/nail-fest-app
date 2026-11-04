@@ -15,6 +15,7 @@ const base = (over: Partial<ImparablesConfirmation> = {}): ImparablesConfirmatio
   firstName: "Laura",
   eventName: "Manicuristas Imparables",
   date: "Domingo 27 de junio de 2027",
+  cover: { date: "27 de junio 2027", note: "Congreso virtual en vivo" },
   hours: "8:00 a. m. a 7:00 p. m.",
   zone: "hora Colombia",
   day: "27 de junio",

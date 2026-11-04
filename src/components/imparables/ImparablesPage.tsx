@@ -1,7 +1,7 @@
 import type { EventFormat } from "@prisma/client";
 import MetaPixelScript from "@/components/MetaPixelScript";
 import type { LandingBlock, GalleryItem } from "@/lib/landingBlocks/types";
-import { coverName, type EventWhen } from "@/lib/imparables/schedule";
+import { coverName, coverPill, type EventWhen } from "@/lib/imparables/schedule";
 import { coverDeal, dayMonth, pesos, riseCountdown, saving, stagePill, stageProgress, untilDay, type SalesState } from "@/lib/imparables/stages";
 import { utcToZonedInputValue } from "@/lib/dateFormat";
 import { castLine, castOf, coverOf, introOf, panelOf } from "@/lib/imparables/blocks";
@@ -165,10 +165,7 @@ export default function ImparablesPage({
   // the way the team writes it there, «4 de julio 2027» (2026-10-29: no «de»
   // before the year only) — and under it, smaller, what it is: «Congreso virtual
   // en vivo» (the team, 2026-11-03: no «100%», no platform). No hours.
-  const place = event.venueName || event.city;
-  const kind = event.format === "VIRTUAL" ? "Congreso virtual" : event.format === "HYBRID" ? `Presencial${place ? ` en ${place}` : ""} y virtual` : place;
-  const pillDate = when.compact.replace(/ de (\d{4})$/, " $1");
-  const pillNote = [kind, event.format === "VIRTUAL" ? "en vivo" : ""].filter(Boolean).join(" ");
+  const { date: pillDate, note: pillNote } = coverPill(event, when);
 
   const { cover, rest: afterCover } = coverOf(blocks);
   const { intro, rest } = introOf(afterCover);

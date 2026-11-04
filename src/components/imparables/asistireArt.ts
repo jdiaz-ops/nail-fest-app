@@ -33,8 +33,6 @@ export interface AsistireSponsor {
   url: string;
 }
 
-/** The congress's pillars, as its page tells them under the group photo. */
-export const PILLARS = "Mentalidad · Dinero · Marketing";
 /** As many brands as fit the row. */
 export const MAX_SPONSORS = 4;
 

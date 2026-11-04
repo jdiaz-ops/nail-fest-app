@@ -12,7 +12,7 @@ import { imparablesEventEmail, type ImparablesEventEmailFrame } from "./eventEma
 import { KIT } from "./kit";
 import { congresoSampleToken } from "./miCongreso";
 import { getActiveStage } from "./pricing";
-import { coverName, eventWhen } from "./schedule";
+import { coverName, coverPill, eventWhen } from "./schedule";
 import { pesos } from "./stages";
 
 // The event's part of Manicuristas Imparables' design for its emails (eventEmail.ts, 2026-11-04): its name and day under
@@ -38,7 +38,7 @@ export async function imparablesEventEmailFrame(event: Event): Promise<Imparable
   const link = (f: { name: string; file: string; mini: string }) => ({ name: f.name, file: absolute(f.file), mini: absolute(f.mini) });
   return {
     eventName: coverName(publicEventName(event)),
-    headerLine: `${eventWhen(event, orgSettings.timezone).dates} · En vivo por Zoom`,
+    cover: coverPill(event, eventWhen(event, orgSettings.timezone)),
     share: {
       // Today's price and the next one, when there are; the gift alone otherwise.
       line: shareLine(sales.current?.price ? pesos(sales.current.price) : null, sales.current?.price && sales.next?.price ? pesos(sales.next.price) : null),

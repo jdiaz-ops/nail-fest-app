@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { landingBlockSchema } from "@/lib/landingBlocks/schema";
 import { parseLandingBlocks, type AgendaLandingBlock, type LandingBlock } from "@/lib/landingBlocks/types";
 import { castLine, castOf, coverOf, introOf, isPanelCard, namesIn, panelGuestsOf, panelOf, sponsorLogosOf } from "./blocks";
-import { agendaInstant, coverName, dayEnd, eventWhen, readClock } from "./schedule";
+import { agendaInstant, coverName, coverPill, dayEnd, eventWhen, readClock } from "./schedule";
 import { dollars, pesos, progressTitle, salesState, saving, stageLine, stagePill, stageProgress, stagesSummary, stageTerms, untilDay, type StageTicketType } from "./stages";
 import { splitTagline } from "./tagline";
 import { IMPARABLES_BLOCKS, IMPARABLES_FIELDS, IMPARABLES_GROUP_PHOTO, IMPARABLES_PANELISTS, IMPARABLES_SPEAKERS, IMPARABLES_STAGES } from "./template";
@@ -257,6 +257,9 @@ describe("eventWhen", () => {
 describe("the name on the cover", () => {
   it("leaves out the date the public name carries: it's right below", () => {
     expect(coverName("Manicuristas Imparables - 27 & 28 Junio 2027")).toBe("Manicuristas Imparables");
+    // The cover's pill, and its emails' header (2026-11-04).
+    expect(coverPill({ format: "VIRTUAL", city: null }, { compact: "4 de julio de 2027" })).toEqual({ date: "4 de julio 2027", note: "Congreso virtual en vivo" });
+    expect(coverPill({ format: "HYBRID", venueName: "Ágora", city: "Bogotá" }, { compact: "4 de julio de 2027" }).note).toBe("Presencial en Ágora y virtual");
     expect(coverName("Manicuristas Imparables – junio 2027")).toBe("Manicuristas Imparables");
     expect(coverName("Manicuristas Imparables 2027")).toBe("Manicuristas Imparables");
     expect(coverName("  Manicuristas Imparables ")).toBe("Manicuristas Imparables");

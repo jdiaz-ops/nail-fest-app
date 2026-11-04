@@ -5,6 +5,7 @@ import { resolveEventBroadcastRecipients, checkInOf } from "@/lib/broadcastRecip
 import { resolveSegment, type SegmentFilter } from "@/lib/segments/builder";
 import { bulkActiveConsent } from "@/lib/consent";
 import { emailProvider } from "@/lib/email";
+import { senderNameFor } from "@/lib/brand";
 import { broadcastEmail, broadcastEmailHtml } from "@/lib/email/templates";
 import { buildUnsubscribeUrl } from "@/lib/unsubscribe";
 import { renderTicketPdfBuffer } from "@/lib/ticketPdf";
@@ -262,6 +263,8 @@ export async function sendEventBroadcast(
               subject: content.subject,
               text: content.text,
               html: content.html,
+              // From the name its event's emails come from (2026-11-04: «Manicuristas Imparables» for the congress).
+              fromName: senderNameFor(broadcast.event),
               attachments: pdfAttachment
                 ? [{ filename: "entrada-nailfest.pdf", content: pdfAttachment, contentType: "application/pdf" }]
                 : undefined,

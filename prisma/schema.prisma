@@ -287,6 +287,9 @@ model Event {
   // Nail Fest's frame for an event at a place, the body as written, ordered
   // (lib/nailfest/eventEmail.ts). Null: as always.
   broadcastDesign           String?
+  // The name all its emails come from (the team, 2026-11-04: set in «Correos del evento»). Null: its brand's —
+  // «Manicuristas Imparables» for the congress, «Nail Fest» for every other event (lib/brand.ts senderNameFor).
+  emailSenderName           String?
   // A richer, structured alternative to `description` for an event that
   // wants a real sales-script landing (hero/story/value-stack table/
   // schedule/speakers/FAQ/etc. — see lib/salesPage/types.ts) instead of

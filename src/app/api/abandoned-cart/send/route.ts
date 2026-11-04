@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { emailProvider } from "@/lib/email";
+import { senderNameFor } from "@/lib/brand";
 import { abandonedCartEmail } from "@/lib/email/templates";
 import { getOrgSettings } from "@/lib/settings";
 import { abandonedCartCallbackUrl, verifyQstashSignature } from "@/lib/qstash";
@@ -86,7 +87,7 @@ export async function POST(req: NextRequest) {
   });
 
   try {
-    const sent = await emailProvider.sendTransactional({ to: registration.person.email, subject, text, html });
+    const sent = await emailProvider.sendTransactional({ to: registration.person.email, subject, text, html, fromName: senderNameFor(registration.event) });
     await db.emailLog.create({
       data: {
         kind: "TRANSACTIONAL",

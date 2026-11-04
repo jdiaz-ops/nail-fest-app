@@ -4,7 +4,7 @@ import { closingSubject, imparablesClosingEmail, type ImparablesClosing } from "
 const base = (over: Partial<ImparablesClosing> = {}): ImparablesClosing => ({
   firstName: "Laura",
   eventName: "Manicuristas Imparables",
-  date: "Domingo 4 de julio de 2027",
+  cover: { date: "4 de julio 2027", note: "Congreso virtual en vivo" },
   recordings: { url: "https://nailfest.lat/mi-congreso/reg_1.firma", until: "martes 3 de agosto" },
   diploma: { url: "https://nailfest.lat/api/diploma/reg_1.firma?descargar" },
   review: { url: "https://nailfest.lat/resena/qr_1" },

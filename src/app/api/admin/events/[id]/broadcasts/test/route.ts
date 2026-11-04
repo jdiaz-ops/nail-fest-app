@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { emailProvider } from "@/lib/email";
+import { senderNameFor } from "@/lib/brand";
 import { sanitizeEventDescription } from "@/lib/sanitizeHtml";
 import { requireUser } from "@/lib/auth/guard";
 import { activeEventEmailDesign, eventEmailSample } from "@/lib/eventEmailDesign";
@@ -74,6 +75,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         subject: `[PRUEBA] ${subject}`,
         text,
         html,
+        // From the name its event's emails come from, as the real send.
+        fromName: senderNameFor(event),
         attachments: pdf ? [{ filename: PDF_ATTACHMENT_NAME, content: pdf, contentType: "application/pdf" }] : undefined,
       })
     )

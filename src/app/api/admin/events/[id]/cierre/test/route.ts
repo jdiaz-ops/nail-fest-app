@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth/guard";
 import { emailProvider } from "@/lib/email";
+import { senderNameFor } from "@/lib/brand";
 import { imparablesClosingSample } from "@/lib/imparables/closing";
 
 export const dynamic = "force-dynamic";
@@ -34,7 +35,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   try {
     const email = await imparablesClosingSample(event);
     for (const address of to) {
-      await emailProvider.sendTransactional({ to: address, subject: `[Prueba] ${email.subject}`, text: email.text, html: email.html });
+      await emailProvider.sendTransactional({ to: address, subject: `[Prueba] ${email.subject}`, text: email.text, html: email.html, fromName: senderNameFor(event) });
     }
     return NextResponse.json({ ok: true, sent: to });
   } catch (error) {

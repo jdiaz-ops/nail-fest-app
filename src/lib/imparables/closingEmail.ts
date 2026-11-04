@@ -1,4 +1,5 @@
 import { button, C, emailDocument, esc, eyebrow, sans, serif, stars } from "./emailFrame";
+import { PILLARS } from "./schedule";
 
 // Manicuristas Imparables' closing email (the team, 2026-11-04: «al terminar tenemos que enviar un correo con la página
 // de acceso a las grabaciones + descargar el diploma virtual + pedir reseña»): after the congress, in its design — thank
@@ -12,8 +13,8 @@ export interface ImparablesClosing {
   firstName: string;
   /** «Manicuristas Imparables» */
   eventName: string;
-  /** «Domingo 4 de julio de 2027» */
-  date: string;
+  /** Under the cover's mark: «4 de julio 2027», «Congreso virtual en vivo» (schedule.ts coverPill). */
+  cover: { date: string; note: string };
   /** Her recordings page, and the last day it shows them: «martes 3 de agosto». */
   recordings: { url: string; until: string };
   /** Her diploma, to download. */
@@ -112,7 +113,7 @@ ${button(c.review.url, "Dejar mi reseña")}`,
   const html = emailDocument({
     title: subject,
     preheader: "Las grabaciones de cada charla, tu diploma y una pregunta: ¿cómo te fue?",
-    header: { image: c.images.header, alt: c.eventName, line: c.date },
+    header: { image: c.images.header, alt: c.eventName, pillars: PILLARS, ...c.cover },
     band: "GRACIAS POR SER IMPARABLE",
     rows,
     footer: { logo: c.images.logo, siteUrl: c.site.url, host: c.site.host, why: `Recibes este correo porque compraste tu entrada a ${c.eventName}.` },

@@ -9,7 +9,7 @@ import { sponsorLogosOf } from "./blocks";
 import { closingSubject, imparablesClosingEmail, type ImparablesClosing } from "./closingEmail";
 import { congressTimes, dayWords, readRecordings } from "./grabaciones";
 import { congresoSamplePath, congresoSampleToken, congresoUrl, diplomaPath, diplomaUrl } from "./miCongreso";
-import { coverName, eventWhen } from "./schedule";
+import { coverName, coverPill, eventWhen } from "./schedule";
 
 // The closing email's data (closingEmail.ts): the event's part — its name, its day, how long its recordings last, the
 // team's WhatsApp — and each buyer's own links. The team's sample (Laura) opens the event's sample pages; nothing here
@@ -28,7 +28,7 @@ async function closingOf(event: Event, her: { firstName: string; recordings: str
   return {
     firstName: her.firstName,
     eventName: coverName(publicEventName(event)),
-    date: eventWhen(event, orgSettings.timezone).dates,
+    cover: coverPill(event, eventWhen(event, orgSettings.timezone)),
     recordings: { url: her.recordings, until: dayWords(times.recordingsUntil) },
     diploma: her.diploma ? { url: her.diploma } : null,
     review: her.review ? { url: her.review } : null,

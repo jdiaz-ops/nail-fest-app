@@ -3,6 +3,7 @@ import { leadingEmoji, paragraphLines, topBlocks } from "@/lib/nailfest/eventEma
 import { TICKET_TAG } from "@/lib/nailfest/eventTickets";
 import type { KitLink } from "./confirmationEmail";
 import { button, C, emailDocument, esc, sans, serif, table } from "./emailFrame";
+import { PILLARS } from "./schedule";
 
 // Manicuristas Imparables' design for its event's emails («Correos del evento», the team's boceto, 2026-11-04), chosen
 // per event (Event.broadcastDesign "IMPARABLES"), as Nail Fest's is for its events at a place
@@ -19,7 +20,8 @@ export interface ImparablesEventEmailFrame {
   /** «Manicuristas Imparables» */
   eventName: string;
   /** Under the cover: «Domingo 4 de julio de 2027 · En vivo por Zoom». */
-  headerLine: string;
+  /** Under the cover's mark: «4 de julio 2027», «Congreso virtual en vivo» (schedule.ts coverPill). */
+  cover: { date: string; note: string };
   /** «¿Conoces a una colega que lo necesita?»: its line and WhatsApp with the event's invitation written. */
   share: { line: string; url: string };
   /** The team's WhatsApp, when there's one. */
@@ -196,7 +198,7 @@ ${button(mail.asistire, "Crear mi imagen")}`,
       ? [
           section(
             `${title("Tu kit Imparable")}
-${line("Fondos de pantalla para tu celular. Toca el que quieras para guardarlo.")}
+${line("Fondos de pantalla para tu celular y el marco del congreso para tu foto de perfil. Toca el fondo que quieras para guardarlo.")}
 ${kitRow(frame.kit.wallpapers)}
 <div style="margin:8px 0 0;">${button(mail.kit.pageUrl, "Ver todo mi kit")}</div>
 <div style="margin:22px auto 14px;max-width:420px;${sans(15, 400, C.WARM, "line-height:1.55;")}">Y pon tu foto en el marco del congreso para tu perfil de WhatsApp e Instagram.</div>
@@ -226,7 +228,7 @@ ${button(frame.share.url, "Compartir por WhatsApp")}`,
   const html = emailDocument({
     title: mail.subject,
     preheader,
-    header: { image: frame.images.header, alt: frame.eventName, line: frame.headerLine },
+    header: { image: frame.images.header, alt: frame.eventName, pillars: PILLARS, ...frame.cover },
     band: mail.band,
     rows,
     footer: { logo: frame.images.logo, siteUrl: frame.site.url, host: frame.site.host, why: `Recibes este correo porque compraste tu entrada a ${frame.eventName}.` },

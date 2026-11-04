@@ -1,3 +1,6 @@
+import { coverHeader } from "./emailFrame";
+import { PILLARS } from "./schedule";
+
 // Manicuristas Imparables' own confirmation email (2026-10-29), as in the
 // approved boceto: the congress's header and «Cupo confirmado», the hello,
 // her ticket (when, where, what she paid, her code, her calendar), what
@@ -11,6 +14,8 @@
 // Nothing here touches the database.
 
 export interface ImparablesConfirmation {
+  /** Under the cover's mark, with the pillars: «4 de julio 2027», «Congreso virtual en vivo» (schedule.ts coverPill). */
+  cover: { date: string; note: string };
   /** Her first name as it's said; "" when there's none. */
   firstName: string;
   eventName: string;
@@ -160,7 +165,7 @@ ${table(
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background:${BONE};border-radius:20px;overflow:hidden;border-collapse:separate;">
 <tr><td align="center" style="padding:0;background:${CHOCOLATE};">
 <img src="${esc(c.images.header)}" width="600" alt="${esc(c.eventName)}" style="display:block;width:100%;max-width:600px;height:auto;border:0;">
-<div style="padding:0 24px 26px;${sans(14, 700, CREAM_SOFT)}">${esc(c.date)} · En vivo por Zoom</div>
+${coverHeader({ pillars: PILLARS, ...c.cover })}
 </td></tr>
 <tr><td align="center" style="padding:9px 20px;background:${GOLD};${sans(12.5, 800, INK, "letter-spacing:0.16em;")}">&#10003;&nbsp; CUPO CONFIRMADO</td></tr>
 <tr><td class="px" style="padding:30px 32px 6px;">
@@ -236,7 +241,7 @@ ${
   c.kit
     ? `<tr><td class="px" align="center" style="padding:28px 32px 30px;background:${CARD};border-top:1px solid ${LINE};">
 <div style="${serif(21, 800, INK, "line-height:1.25;")}">Tu kit Imparable</div>
-<div style="margin:10px auto 18px;max-width:420px;${sans(15, 400, WARM, "line-height:1.55;")}">Fondos de pantalla para tu celular. Toca el que quieras para guardarlo.</div>
+<div style="margin:10px auto 18px;max-width:420px;${sans(15, 400, WARM, "line-height:1.55;")}">Fondos de pantalla para tu celular y el marco del congreso para tu foto de perfil. Toca el fondo que quieras para guardarlo.</div>
 ${kitRow(c.kit.wallpapers)}
 <a href="${esc(c.kit.pageUrl)}" style="display:inline-block;margin:8px 0 0;padding:14px 24px;border-radius:14px;background:${GOLD};text-decoration:none;${sans(15.5, 800, INK)}">Ver todo mi kit</a>
 <div style="margin:22px auto 14px;max-width:420px;${sans(15, 400, WARM, "line-height:1.55;")}">Y pon tu foto en el marco del congreso para tu perfil de WhatsApp e Instagram.</div>

@@ -19,6 +19,8 @@ export interface SendEmailInput {
   attachments?: EmailAttachment[];
   /** From OrgSettings.replyToEmail (see /admin/settings/contact) — omit to fall back to the From address. */
   replyTo?: string;
+  /** The name in its From, for an event's emails (lib/brand.ts senderNameFor, 2026-11-04) — omit for «Nail Fest». */
+  fromName?: string;
 }
 
 export interface EmailProvider {
@@ -33,7 +35,14 @@ export interface EmailProvider {
 // list instead of a real name. Wraps it with one so "Tu entrada para
 // Nail Fest..." shows up FROM "Nail Fest", not "tickets" — shared by
 // both providers (ses.ts/resend.ts) so they never drift. Left alone if
-// the env var was already hand-written with a display name.
-export function friendlyFrom(email: string): string {
-  return email.includes("<") ? email : `Nail Fest <${email}>`;
+// the env var was already hand-written with a display name — unless the
+// email names its own sender (an event's, «Manicuristas Imparables»,
+// 2026-11-04): then that name, on the same address.
+export function friendlyFrom(email: string, name?: string): string {
+  // Nothing that could break the header out of its name.
+  const own = (name ?? "").replace(/[\r\n"<>\\]/g, "").trim();
+  if (!own) return email.includes("<") ? email : `Nail Fest <${email}>`;
+  const address = email.includes("<") ? email.slice(email.lastIndexOf("<") + 1, email.lastIndexOf(">")).trim() : email.trim();
+  // A name with a comma, a dot or the like goes in quotes.
+  return `${/[()[\]:;@,.]/.test(own) ? `"${own}"` : own} <${address}>`;
 }

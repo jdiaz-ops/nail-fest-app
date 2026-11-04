@@ -10,7 +10,7 @@ import { asistireSampleUrl, asistireUrl, kitUrl, marcoUrl } from "./asistire";
 import { KIT } from "./kit";
 import { castOf } from "./blocks";
 import { getActiveStage, purchaseOf } from "./pricing";
-import { clock, coverName, eventWhen } from "./schedule";
+import { clock, coverName, coverPill, eventWhen } from "./schedule";
 import { pesos, type SalesState } from "./stages";
 import { versionLive } from "./versions";
 import { TIER_EMAIL, tierBySlug, tiersAbove } from "./tiers";
@@ -79,6 +79,7 @@ async function confirmationOf(
     firstName: sayName(her.firstName),
     eventName: name,
     date: when.dates,
+    cover: coverPill(event, when),
     hours: when.hours,
     zone: tz === "America/Bogota" ? "hora Colombia" : `hora de ${tz.split("/").pop()?.replace(/_/g, " ")}`,
     day: when.short,

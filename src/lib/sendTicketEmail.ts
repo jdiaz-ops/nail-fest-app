@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import type { EventFormat } from "@prisma/client";
 import { emailProvider } from "@/lib/email";
+import { senderNameFor } from "@/lib/brand";
 import { confirmationEmail } from "@/lib/email/templates";
 import { renderConfirmationFromTemplate, renderSubjectFromTemplate } from "@/lib/confirmationTemplate";
 import { renderTicketPdfBuffer } from "@/lib/ticketPdf";
@@ -52,6 +53,10 @@ export async function sendTicketEmail(params: {
     // here for the exact same "any older/other caller" reason as the
     // sibling field above.
     confirmationEmailSubject?: string | null;
+    // The name its emails come from (Event.emailSenderName, 2026-11-04) — optional for the same reason as the two
+    // above; without one, its brand's, by its theme.
+    emailSenderName?: string | null;
+    theme?: string | null;
   };
   qrToken: string;
   // Registration.id/ticketTypeId/ticketCount — optional so this keeps
@@ -233,6 +238,7 @@ export async function sendTicketEmail(params: {
       subject,
       text,
       html,
+      fromName: senderNameFor(params.event),
       attachments: pdfAttachment
         ? [{ filename: "entrada-nailfest.pdf", content: pdfAttachment, contentType: "application/pdf" }]
         : undefined,

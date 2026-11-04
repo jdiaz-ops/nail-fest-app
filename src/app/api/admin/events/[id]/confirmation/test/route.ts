@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth/guard";
 import { emailProvider } from "@/lib/email";
+import { senderNameFor } from "@/lib/brand";
 import { getOrgSettings } from "@/lib/settings";
 import { sampleTicketPdf } from "@/lib/ticketPdfSample";
 import { sampleConfirmation } from "@/lib/confirmationSample";
@@ -53,6 +54,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         subject: `[Prueba] ${email.subject}`,
         text: email.text,
         html: email.html,
+        // From the name its event's emails come from, as the real one.
+        fromName: senderNameFor(event),
         attachments: pdf ? [{ filename: "entrada-nailfest.pdf", content: pdf, contentType: "application/pdf" }] : undefined,
       });
     }

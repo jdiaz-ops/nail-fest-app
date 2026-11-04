@@ -59,6 +59,19 @@ export function coverName(name: string): string {
 
 /** What the congress is, in a line, as its checkout and its «¡Asistiré!» card say it: «Congreso virtual en vivo · Zoom» (the
  * team, 2026-11-03: no «100%»), «Presencial y virtual», or its city. */
+/** The congress's pillars, as its page tells them under the group photo — and its «¡Asistiré!» image and the header of
+ * its emails (the team, 2026-11-04). */
+export const PILLARS = "Mentalidad · Dinero · Marketing";
+
+/** The cover's pill (2026-10-28): when — «4 de julio 2027», as the team writes it there (no «de» before the year) — and
+ * what it is: «Congreso virtual en vivo» (the team, 2026-11-03: no «100%», no platform). Its emails' header says the
+ * same (2026-11-04). */
+export function coverPill(event: { format: string; venueName?: string | null; city: string | null }, when: Pick<EventWhen, "compact">): { date: string; note: string } {
+  const place = event.venueName || event.city;
+  const kind = event.format === "VIRTUAL" ? "Congreso virtual" : event.format === "HYBRID" ? `Presencial${place ? ` en ${place}` : ""} y virtual` : (place ?? "");
+  return { date: when.compact.replace(/ de (\d{4})$/, " $1"), note: [kind, event.format === "VIRTUAL" ? "en vivo" : ""].filter(Boolean).join(" ") };
+}
+
 export function kindLine(event: { format: string; city: string | null }): string {
   return event.format === "VIRTUAL" ? "Congreso virtual en vivo · Zoom" : event.format === "HYBRID" ? "Presencial y virtual" : (event.city ?? "");
 }

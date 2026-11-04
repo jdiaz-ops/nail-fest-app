@@ -4,10 +4,10 @@ import { publicEventName } from "@/lib/eventDisplayName";
 import { parseLandingBlocks } from "@/lib/landingBlocks/types";
 import { asistireShortLink } from "@/lib/imparables/asistire";
 import { sponsorLogosOf } from "@/lib/imparables/blocks";
-import { coverName, eventWhen, kindLine } from "@/lib/imparables/schedule";
+import { coverName, eventWhen, kindLine, PILLARS } from "@/lib/imparables/schedule";
 import { ImpPageTop } from "./ImpArt";
 import ImpAsistire from "./ImpAsistire";
-import { MAX_SPONSORS, PILLARS } from "./asistireArt";
+import { MAX_SPONSORS } from "./asistireArt";
 import { cinzel, manrope } from "./fonts";
 
 // «Asistiré»'s page (2026-10-30), in the checkout's chrome: the image maker

@@ -4,7 +4,7 @@ import { imparablesBody, imparablesEventEmail, type ImparablesEventEmailFrame } 
 const file = (name: string, n: number) => ({ name, file: `https://nailfest.lat/imparables/kit/${n}.jpg`, mini: `https://nailfest.lat/imparables/kit/mini/${n}.jpg` });
 const frame: ImparablesEventEmailFrame = {
   eventName: "Manicuristas Imparables",
-  headerLine: "Domingo 4 de julio de 2027 · En vivo por Zoom",
+  cover: { date: "4 de julio 2027", note: "Congreso virtual en vivo" },
   share: { line: "Hoy está a $90.000 y luego sube a $120.000: compartirle esto es un buen regalo.", url: "https://wa.me/?text=hola" },
   helpUrl: "https://wa.me/573001234567",
   images: { header: "https://nailfest.lat/imparables/correo-cabecera.png", logo: "https://nailfest.lat/logo.png", asistire: "https://nailfest.lat/imparables/asistire-muestra-4-julio.jpg" },
@@ -25,7 +25,12 @@ describe("Manicuristas Imparables' design for its event's emails", () => {
   it("frames the email as the team wrote it: the cover with the day, the gold band, its text, the footer", () => {
     const { subject, html, text } = imparablesEventEmail(frame, mail);
     expect(subject).toBe("Faltan 7 días");
-    expect(html).toContain("Domingo 4 de julio de 2027 · En vivo por Zoom");
+    // Under the mark: the pillars, the day and what it is (the team, 2026-11-04).
+    expect(html).toContain("MENTALIDAD · DINERO · MARKETING");
+    expect(html).toContain("4 de julio 2027");
+    expect(html).toContain("Congreso virtual en vivo");
+    expect(html.indexOf("MENTALIDAD · DINERO · MARKETING")).toBeLessThan(html.indexOf("4 de julio 2027"));
+    expect(html).not.toContain("En vivo por Zoom");
     expect(html).toContain("FALTAN 7 DÍAS");
     expect(html).toContain("Laura, ya casi es domingo");
     expect(html).toContain("Nos vemos en vivo.");

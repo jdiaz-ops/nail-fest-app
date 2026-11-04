@@ -11,6 +11,18 @@ export const INSTAGRAM_HANDLE = "@nailfest_co";
  * the team, 2026-11-04), never on a Nail Fest event's. */
 export const IMPARABLES_INSTAGRAM_HANDLE = "@manicuristas_imparables";
 
+/** Who the emails come from, in the inbox: Nail Fest, and Manicuristas Imparables for the congress's (the team,
+ * 2026-11-04: «solo a este, los eventos Nail Fest presenciales quedan iguales»). */
+export const NAIL_FEST_SENDER_NAME = "Nail Fest";
+export const IMPARABLES_SENDER_NAME = "Manicuristas Imparables";
+
+/** The name an event's emails come from: the one set in its «Correos del evento», or else its brand's. */
+export function senderNameFor(event: { theme?: string | null; emailSenderName?: string | null } | null | undefined): string {
+  const set = event?.emailSenderName?.trim();
+  if (set) return set;
+  return event?.theme === "IMPARABLES" ? IMPARABLES_SENDER_NAME : NAIL_FEST_SENDER_NAME;
+}
+
 /** Purely cosmetic — the phone a person submitted is stored/sent as raw
  * E.164 ("+573001234567", see RegistrationForm's phoneCountry.dialCode +
  * localPhone concat), so this just re-groups it for a confirmation pill:

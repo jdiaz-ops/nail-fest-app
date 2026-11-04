@@ -2,6 +2,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 import type { Payment, TicketType } from "@prisma/client";
 import { db } from "@/lib/db";
 import { emailProvider } from "@/lib/email";
+import { senderNameFor } from "@/lib/brand";
 import { getOrgSettings } from "@/lib/settings";
 import { buildCheckoutUrl, wompiReference, wompiWidgetParams } from "@/lib/payments/wompi";
 import { publicEventName } from "@/lib/eventDisplayName";
@@ -241,7 +242,7 @@ async function helpLink(): Promise<string | null> {
 /** Heidy's own welcome to each Élite (the team, 2026-10-31: on), in plain text. Never fails the payment it follows. */
 async function sendEliteWelcome(registrationId: string): Promise<void> {
   try {
-    const registration = await db.registration.findUnique({ where: { id: registrationId }, include: { person: true } });
+    const registration = await db.registration.findUnique({ where: { id: registrationId }, include: { person: true, event: true } });
     if (!registration) return;
     const [orgSettings, help] = await Promise.all([getOrgSettings(), helpLink()]);
     await emailProvider.sendTransactional({
@@ -249,6 +250,7 @@ async function sendEliteWelcome(registrationId: string): Promise<void> {
       subject: TIER_EMAIL.welcomeElite.subject,
       text: TIER_EMAIL.welcomeElite.text(registration.person.firstName?.trim() ?? "", help),
       replyTo: orgSettings.replyToEmail ?? undefined,
+      fromName: senderNameFor(registration.event),
     });
   } catch (err) {
     console.error("sendEliteWelcome failed", registrationId, err);
@@ -258,7 +260,7 @@ async function sendEliteWelcome(registrationId: string): Promise<void> {
 /** «Ya eres Imparable Círculo»: the level she moved up to, and what comes next with it. Never fails the payment. */
 async function sendUpgraded(registrationId: string, target: Tier): Promise<void> {
   try {
-    const registration = await db.registration.findUnique({ where: { id: registrationId }, include: { person: true } });
+    const registration = await db.registration.findUnique({ where: { id: registrationId }, include: { person: true, event: true } });
     if (!registration) return;
     const [orgSettings, help] = await Promise.all([getOrgSettings(), helpLink()]);
     const firstName = registration.person.firstName?.trim() ?? "";
@@ -278,6 +280,7 @@ async function sendUpgraded(registrationId: string, target: Tier): Promise<void>
       subject: fill(TIER_EMAIL.upgraded.subject, { nivel: target.name }),
       text,
       replyTo: orgSettings.replyToEmail ?? undefined,
+      fromName: senderNameFor(registration.event),
     });
   } catch (err) {
     console.error("sendUpgraded failed", registrationId, err);

@@ -52,12 +52,31 @@ export interface EmailFrame {
   title: string;
   /** What the inbox shows under the subject. */
   preheader: string;
-  header: { image: string; alt: string; line: string };
+  /** The mark (an image), and under it the pillars, the day and what it is (coverHeader). */
+  header: { image: string; alt: string } & CoverHeader;
   /** The gold band under the cover: «✓ CUPO CONFIRMADO», «FALTAN 7 DÍAS»; none when empty. */
   band?: string | null;
   /** The email's own rows (<tr>…</tr>), in order. */
   rows: string[];
   footer: { logo: string; siteUrl: string; host: string; why: string };
+}
+
+export interface CoverHeader {
+  /** «Mentalidad · Dinero · Marketing» */
+  pillars: string;
+  /** «4 de julio 2027» */
+  date: string;
+  /** «Congreso virtual en vivo» */
+  note: string;
+}
+
+/** Under the mark on the cover (the team, 2026-11-04): the pillars, small and spaced; the day, big; what it is. */
+export function coverHeader(h: CoverHeader): string {
+  return `<div style="padding:0 24px 28px;">
+${h.pillars ? `<div style="${sans(12, 800, C.GOLD, "letter-spacing:0.22em;line-height:1.5;")}">${esc(h.pillars.toLocaleUpperCase("es"))}</div>` : ""}
+<div style="margin-top:16px;${serif(26, 800, C.CREAM)}">${esc(h.date)}</div>
+${h.note ? `<div style="margin-top:6px;${sans(14.5, 600, C.CREAM_SOFT)}">${esc(h.note)}</div>` : ""}
+</div>`;
 }
 
 /** The whole email: the cover with the day, the band, its rows and the footer. */
@@ -85,7 +104,7 @@ ${table(
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background:${C.BONE};border-radius:20px;overflow:hidden;border-collapse:separate;">
 <tr><td align="center" style="padding:0;background:${C.CHOCOLATE};">
 <img src="${esc(f.header.image)}" width="600" alt="${esc(f.header.alt)}" style="display:block;width:100%;max-width:600px;height:auto;border:0;">
-<div style="padding:0 24px 26px;${sans(14, 700, C.CREAM_SOFT)}">${esc(f.header.line)}</div>
+${coverHeader(f.header)}
 </td></tr>
 ${f.band?.trim() ? `<tr><td align="center" style="padding:9px 20px;background:${C.GOLD};${sans(12.5, 800, C.INK, "letter-spacing:0.16em;")}">${esc(f.band.trim().toLocaleUpperCase("es"))}</td></tr>` : ""}
 ${f.rows.join("\n")}
