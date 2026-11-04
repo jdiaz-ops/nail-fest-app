@@ -66,8 +66,7 @@ ${button(c.diploma.url, "Descargar mi diploma")}`,
             `${title("¿Cómo te fue?", C.CREAM)}
 ${line("Tu opinión nos ayuda a que la próxima edición sea aún mejor. Toca las estrellas y cuéntanos: te toma un minuto.", C.CREAM_SOFT)}
 <div style="margin:0 0 18px;">${stars(c.review.url)}</div>
-${button(c.review.url, "Dejar mi reseña")}
-<div style="margin:14px auto 0;max-width:420px;${sans(13, 400, C.CREAM_SOFT, "line-height:1.5;")}">Por dejarla tienes acceso anticipado a la próxima edición.</div>`,
+${button(c.review.url, "Dejar mi reseña")}`,
             `background:${C.CHOCOLATE};`
           ),
         ]
@@ -93,7 +92,7 @@ ${button(c.review.url, "Dejar mi reseña")}
     `Gracias por ser parte de ${c.eventName}. Lo que viviste el domingo no se queda ahí: aquí tienes todo para seguir.`,
     `LAS GRABACIONES\nLa grabación de cada charla, para verla las veces que quieras hasta el ${c.recordings.until}: ${c.recordings.url}`,
     ...(c.diploma ? [`TU DIPLOMA\nTu diploma digital de participación, con tu nombre: ${c.diploma.url}`] : []),
-    ...(c.review ? [`¿CÓMO TE FUE?\nTu opinión nos ayuda a que la próxima edición sea aún mejor. Déjanos tu reseña: ${c.review.url}\nPor dejarla tienes acceso anticipado a la próxima edición.`] : []),
+    ...(c.review ? [`¿CÓMO TE FUE?\nTu opinión nos ayuda a que la próxima edición sea aún mejor. Déjanos tu reseña: ${c.review.url}`] : []),
     ...(c.helpUrl ? [`¿Dudas? Escríbenos por WhatsApp: ${c.helpUrl}`] : []),
     `Organiza Nail Fest · ${c.site.host}\nRecibes este correo porque compraste tu entrada a ${c.eventName}.`,
   ].join("\n\n");

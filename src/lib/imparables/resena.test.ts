@@ -11,7 +11,8 @@ describe("Manicuristas Imparables' review page", () => {
   it("speaks of a virtual congress: no door, no scan, no fair", () => {
     const all = Object.values(IMPARABLES_REVIEW_TEXTS).join(" ");
     expect(all).not.toMatch(/puerta|escane|marcas que encontraste|demostraciones/i);
-    expect(IMPARABLES_REVIEW_TEXTS.rewardTitle).toBe("Acceso anticipado a la próxima edición");
+    // No reward box (the team, 2026-11-04): its texts empty, so the box doesn't show.
+    expect([IMPARABLES_REVIEW_TEXTS.rewardEyebrow, IMPARABLES_REVIEW_TEXTS.rewardTitle, IMPARABLES_REVIEW_TEXTS.rewardText]).toEqual(["", "", ""]);
     expect(reviewNotYet("domingo 4 de julio")).toBe("Tu reseña se abre al terminar el congreso, el domingo 4 de julio.");
   });
 });
