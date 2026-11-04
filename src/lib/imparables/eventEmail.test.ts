@@ -48,6 +48,11 @@ describe("Manicuristas Imparables' design for its event's emails", () => {
     expect(html).toContain('href="https://nailfest.lat/asistire/reg_1.firma/marco"');
     expect(html).toContain('href="https://nailfest.lat/asistire/reg_1.firma/kit"');
     for (let n = 1; n <= 3; n++) expect(html).toContain(`href="https://nailfest.lat/imparables/kit/${n}.jpg"`);
+    // Six wallpapers: three to a row.
+    const six = imparablesEventEmail({ ...frame, kit: { wallpapers: [1, 2, 3, 4, 5, 6].map((n) => file(`Fondo ${n}`, n)) } }, mail).html;
+    const kit = six.slice(six.indexOf("Tu kit Imparable"), six.indexOf("Ver todo mi kit"));
+    expect(kit.match(/<tr><td style="padding:0 5px;">/g)).toHaveLength(2);
+    for (let n = 1; n <= 6; n++) expect(kit).toContain(`kit/mini/${n}.jpg`);
     expect(html).not.toMatch(/plantilla/i);
     expect(html).toContain('href="https://wa.me/?text=hola"');
     expect(text).toContain("TU KIT IMPARABLE");

@@ -2,7 +2,7 @@ import { htmlToPlainText } from "@/lib/email/templates";
 import { leadingEmoji, paragraphLines, topBlocks } from "@/lib/nailfest/eventEmail";
 import { TICKET_TAG } from "@/lib/nailfest/eventTickets";
 import type { KitLink } from "./confirmationEmail";
-import { button, C, emailDocument, esc, sans, serif, table } from "./emailFrame";
+import { button, C, emailDocument, esc, kitRows, sans, serif, table } from "./emailFrame";
 import { PILLARS } from "./schedule";
 
 // Manicuristas Imparables' design for its event's emails («Correos del evento», the team's boceto, 2026-11-04), chosen
@@ -166,15 +166,6 @@ export function imparablesBody(bodyHtml: string, banner: string | null = null): 
   return parts.join("\n");
 }
 
-/** A row of the kit's pictures, each one opening its file to save it. */
-const kitRow = (files: KitLink[]) =>
-  `<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto 10px;"><tr>${files
-    .map(
-      (f) =>
-        `<td style="padding:0 5px;"><a href="${esc(f.file)}" style="text-decoration:none;"><img src="${esc(f.mini)}" width="80" height="142" alt="${esc(f.name)}" style="display:block;width:80px;height:142px;border:0;border-radius:10px;"></a></td>`
-    )
-    .join("")}</tr></table>`;
-
 export function imparablesEventEmail(frame: ImparablesEventEmailFrame, mail: ImparablesEventEmailContent): { subject: string; text: string; html: string } {
   const section = (inner: string, style = "") => `<tr><td class="px" align="center" style="padding:28px 32px 30px;${style}">${inner}</td></tr>`;
   const title = (text: string, color: string = C.INK) => `<div style="${serif(21, 800, color, "line-height:1.25;")}">${esc(text)}</div>`;
@@ -199,7 +190,7 @@ ${button(mail.asistire, "Crear mi imagen")}`,
           section(
             `${title("Tu kit Imparable")}
 ${line("Fondos de pantalla para tu celular y el marco del congreso para tu foto de perfil. Toca el fondo que quieras para guardarlo.")}
-${kitRow(frame.kit.wallpapers)}
+${kitRows(frame.kit.wallpapers)}
 <div style="margin:8px 0 0;">${button(mail.kit.pageUrl, "Ver todo mi kit")}</div>
 <div style="margin:22px auto 14px;max-width:420px;${sans(15, 400, C.WARM, "line-height:1.55;")}">Y pon tu foto en el marco del congreso para tu perfil de WhatsApp e Instagram.</div>
 ${button(mail.kit.frameUrl, "Hacer mi foto de perfil", "outline")}`,

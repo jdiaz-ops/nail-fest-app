@@ -1,4 +1,4 @@
-import { coverHeader } from "./emailFrame";
+import { coverHeader, kitRows } from "./emailFrame";
 import { PILLARS } from "./schedule";
 
 // Manicuristas Imparables' own confirmation email (2026-10-29), as in the
@@ -82,14 +82,6 @@ const table = (inner: string, style = "") =>
   `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;${style}">${inner}</table>`;
 const sans = (size: number, weight = 400, color = INK, extra = "") => `font-family:${SANS};font-size:${size}px;font-weight:${weight};color:${color};${extra}`;
 const serif = (size: number, weight = 900, color = INK, extra = "") => `font-family:${SERIF};font-size:${size}px;font-weight:${weight};color:${color};line-height:1.15;${extra}`;
-/** A row of the kit's pictures, each one opening its file to save it. */
-const kitRow = (files: KitLink[]) =>
-  `<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto 10px;"><tr>${files
-    .map(
-      (f) =>
-        `<td style="padding:0 5px;"><a href="${esc(f.file)}" style="text-decoration:none;"><img src="${esc(f.mini)}" width="80" height="142" alt="${esc(f.name)}" style="display:block;width:80px;height:142px;border:0;border-radius:10px;"></a></td>`
-    )
-    .join("")}</tr></table>`;
 const eyebrow = (text: string) => `<div style="${sans(12, 800, BRONZE_DEEP, "letter-spacing:0.14em;text-transform:uppercase;")}">${esc(text)}</div>`;
 /** A numbered chip shaped like a nail, as La Mesa's sections. */
 const nail = (n: number) =>
@@ -242,7 +234,7 @@ ${
     ? `<tr><td class="px" align="center" style="padding:28px 32px 30px;background:${CARD};border-top:1px solid ${LINE};">
 <div style="${serif(21, 800, INK, "line-height:1.25;")}">Tu kit Imparable</div>
 <div style="margin:10px auto 18px;max-width:420px;${sans(15, 400, WARM, "line-height:1.55;")}">Fondos de pantalla para tu celular y el marco del congreso para tu foto de perfil. Toca el fondo que quieras para guardarlo.</div>
-${kitRow(c.kit.wallpapers)}
+${kitRows(c.kit.wallpapers)}
 <a href="${esc(c.kit.pageUrl)}" style="display:inline-block;margin:8px 0 0;padding:14px 24px;border-radius:14px;background:${GOLD};text-decoration:none;${sans(15.5, 800, INK)}">Ver todo mi kit</a>
 <div style="margin:22px auto 14px;max-width:420px;${sans(15, 400, WARM, "line-height:1.55;")}">Y pon tu foto en el marco del congreso para tu perfil de WhatsApp e Instagram.</div>
 <a href="${esc(c.kit.frameUrl)}" style="display:inline-block;padding:12px 22px;border-radius:14px;border:2px solid ${GOLD};text-decoration:none;${sans(15, 800, INK)}">Hacer mi foto de perfil</a>

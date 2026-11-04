@@ -36,6 +36,22 @@ export function button(url: string, label: string, kind: "gold" | "outline" = "g
   return `<a href="${esc(url)}" style="display:inline-block;${look}border-radius:14px;text-decoration:none;${sans(15.5, 800, C.INK)}">${esc(label)}</a>`;
 }
 
+/** The kit's pictures, three to a row (six wallpapers since 2026-11-04), each one opening its file to save it. */
+export function kitRows(files: { name: string; file: string; mini: string }[]): string {
+  const rows: string[] = [];
+  for (let i = 0; i < files.length; i += 3) {
+    const cells = files
+      .slice(i, i + 3)
+      .map(
+        (f) =>
+          `<td style="padding:0 5px;"><a href="${esc(f.file)}" style="text-decoration:none;"><img src="${esc(f.mini)}" width="80" height="142" alt="${esc(f.name)}" style="display:block;width:80px;height:142px;border:0;border-radius:10px;"></a></td>`
+      )
+      .join("");
+    rows.push(`<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto 10px;"><tr>${cells}</tr></table>`);
+  }
+  return rows.join("\n");
+}
+
 /** Five stars, each one opening `url` with its number of stars (?estrellas=1…5). */
 export function stars(url: string, color: string = C.GOLD): string {
   const join = url.includes("?") ? "&" : "?";
