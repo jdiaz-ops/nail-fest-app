@@ -3,15 +3,16 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-// On or off: Nail Fest's design for all of this event's emails (2026-10-30,
-// Event.broadcastDesign) — from their next send, the scheduled ones too.
-export default function BroadcastDesignSwitch({ eventId, on, nextPreview }: { eventId: string; on: boolean; nextPreview: string | null }) {
+// On or off: its design for all of this event's emails — Nail Fest's
+// (2026-10-30), or Manicuristas Imparables' (2026-11-04) — from their next
+// send, the scheduled ones too (Event.broadcastDesign).
+export default function BroadcastDesignSwitch({ eventId, name, on, nextPreview }: { eventId: string; name: string; on: boolean; nextPreview: string | null }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   async function send(next: boolean) {
-    if (next && !confirm("Desde ahora, todos los correos de este evento salen con el diseño Nail Fest, también los que ya están programados. ¿Encenderlo?")) return;
+    if (next && !confirm(`Desde ahora, todos los correos de este evento salen con el diseño ${name}, también los que ya están programados. ¿Encenderlo?`)) return;
     setBusy(true);
     setMessage(null);
     const res = await fetch(`/api/admin/events/${eventId}/broadcast-design`, {
@@ -30,7 +31,7 @@ export default function BroadcastDesignSwitch({ eventId, on, nextPreview }: { ev
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", background: "#fff", border: "1px solid #e3e1dc", borderRadius: 12, padding: "12px 16px", margin: "0 0 18px" }}>
-      <strong style={{ fontSize: 14 }}>Diseño Nail Fest</strong>
+      <strong style={{ fontSize: 14 }}>Diseño {name}</strong>
       <span
         style={{
           fontSize: 12,

@@ -45,6 +45,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       designBand: data.designBand?.trim() || null,
       designAsistire: data.designAsistire,
       designColega: data.designColega,
+      designKit: data.designKit,
       onlyCheckedIn: data.onlyCheckedIn,
       onlyNotCheckedIn: data.onlyNotCheckedIn,
       scheduleKind: data.scheduleKind,

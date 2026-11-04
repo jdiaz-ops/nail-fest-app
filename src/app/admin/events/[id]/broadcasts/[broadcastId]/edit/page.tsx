@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { requirePageUser } from "@/lib/auth/guard";
 import { eventBroadcastAudienceCounts } from "@/lib/broadcastRecipients";
 import EventBroadcastComposer from "../../../../EventBroadcastComposer";
-import { usesNailFestEventEmail } from "@/lib/nailfest/eventEmailFrame";
+import { activeEventEmailDesign } from "@/lib/eventEmailDesign";
 
 export const dynamic = "force-dynamic";
 
@@ -57,7 +57,8 @@ export default async function EditEventBroadcastPage({
       <EventBroadcastComposer
         eventId={params.id}
         eventFormat={event.format}
-        designOn={usesNailFestEventEmail(event)}
+        designOn={activeEventEmailDesign(event) !== null}
+        design={activeEventEmailDesign(event)}
         ticketTypes={ticketTypeCounts}
         allBuyers={counts.all}
         editing={{
@@ -69,6 +70,7 @@ export default async function EditEventBroadcastPage({
           designBand: broadcast.designBand,
           designAsistire: broadcast.designAsistire,
           designColega: broadcast.designColega,
+          designKit: broadcast.designKit,
           onlyCheckedIn: broadcast.onlyCheckedIn,
           onlyNotCheckedIn: broadcast.onlyNotCheckedIn,
           scheduleKind: broadcast.scheduleKind,

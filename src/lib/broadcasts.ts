@@ -10,6 +10,9 @@ import { buildUnsubscribeUrl } from "@/lib/unsubscribe";
 import { renderTicketPdfBuffer } from "@/lib/ticketPdf";
 import { nailFestEventEmail } from "@/lib/nailfest/eventEmail";
 import { asistireFor, bannerOf, nailFestEventEmailFrame, usesNailFestEventEmail } from "@/lib/nailfest/eventEmailFrame";
+import { activeEventEmailDesign, IMPARABLES_EMAIL_DESIGN } from "@/lib/eventEmailDesign";
+import { imparablesEventEmail } from "@/lib/imparables/eventEmail";
+import { imparablesBlocksFor, imparablesEventEmailFrame } from "@/lib/imparables/eventEmailFrame";
 import { orderTickets, TICKET_TAG, ticketCards, withTickets } from "@/lib/nailfest/eventTickets";
 import { confirmationCodeFor } from "@/lib/ticket";
 import { getOrgSettings } from "@/lib/settings";
@@ -90,8 +93,10 @@ export async function sendEventBroadcast(
   const orgSettings = broadcast.attachTicketPdf ? await getOrgSettings() : null;
   // Its event's design, when it chose one (Event.broadcastDesign, 2026-10-30): the event's part and the email's banner
   // to leave out, once.
+  // Nail Fest's for its events at a place, or Manicuristas Imparables' for the congress (2026-11-04, lib/eventEmailDesign.ts).
   const frame = usesNailFestEventEmail(broadcast.event) ? await nailFestEventEmailFrame(broadcast.event) : null;
-  const banner = frame ? await bannerOf(broadcast.bodyHtml) : null;
+  const imparablesFrame = activeEventEmailDesign(broadcast.event) === IMPARABLES_EMAIL_DESIGN ? await imparablesEventEmailFrame(broadcast.event) : null;
+  const banner = frame || imparablesFrame ? await bannerOf(broadcast.bodyHtml) : null;
 
   let sent = 0;
   let skippedNoConsent = 0;
@@ -227,7 +232,17 @@ export async function sendEventBroadcast(
                 pdfAttached: Boolean(pdfAttachment),
               }
             : null;
-          const content = frame
+          const content = imparablesFrame
+            ? imparablesEventEmail(imparablesFrame, {
+                subject: broadcast.subject,
+                bodyHtml: withReviewLink,
+                band: broadcast.designBand,
+                // Her «Asistiré» link and her kit's, as the email's blocks ask.
+                ...imparablesBlocksFor(registration.id, { asistire: broadcast.designAsistire, kit: broadcast.designKit }),
+                colega: broadcast.designColega,
+                banner,
+              })
+            : frame
             ? nailFestEventEmail(frame, {
                 subject: broadcast.subject,
                 bodyHtml: withReviewLink,

@@ -18,6 +18,8 @@ export const eventBroadcastBodySchema = z
     // Its modules in that design: her «Asistiré» card and «¿Vas con una colega?».
     designAsistire: z.boolean().optional().default(true),
     designColega: z.boolean().optional().default(true),
+    // Manicuristas Imparables' design: her kit (wallpapers, story templates, her profile frame).
+    designKit: z.boolean().optional().default(true),
     // Only registrants scanned at the door (the review ask) — see lib/reviews.ts.
     onlyCheckedIn: z.boolean().optional().default(false),
     // Only registrants nobody has scanned yet ("te estamos esperando").

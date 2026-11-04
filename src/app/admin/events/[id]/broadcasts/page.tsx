@@ -9,8 +9,7 @@ import { getEmailBroadcastStats } from "@/lib/broadcasts";
 import { requirePageUser } from "@/lib/auth/guard";
 import ResumeBroadcastButton from "@/components/ResumeBroadcastButton";
 import { isBroadcastStuck } from "@/lib/broadcastProgress";
-import { hasNailFestAsistire } from "@/lib/nailfest/asistire";
-import { NAIL_FEST_DESIGN } from "@/lib/nailfest/confirmation";
+import { activeEventEmailDesign, eventEmailDesignName, eventEmailDesignOf } from "@/lib/eventEmailDesign";
 import BroadcastDesignSwitch from "./BroadcastDesignSwitch";
 
 export const dynamic = "force-dynamic";
@@ -70,8 +69,10 @@ export default async function EventBroadcastsPage({ params }: { params: { id: st
   if (!event) notFound();
 
   const stats = await Promise.all(broadcasts.map((b) => getEmailBroadcastStats(b.id)));
-  // Nail Fest's design for its emails (2026-10-30), for one of its events at a place: the switch, and each email in it.
-  const designable = hasNailFestAsistire(event);
+  // Its design for its emails: Nail Fest's (2026-10-30) for one of its events at a place, Manicuristas Imparables'
+  // (2026-11-04) for the congress — the switch, and each email in it.
+  const design = eventEmailDesignOf(event);
+  const designable = design !== null;
   const preview = (id: string) => `/api/admin/events/${event.id}/broadcasts/${id}/preview`;
   const next = designable
     ? broadcasts
@@ -93,7 +94,9 @@ export default async function EventBroadcastsPage({ params }: { params: { id: st
         post-evento. Para correos generales a toda la base, ve a CRM → Broadcasts.
       </p>
 
-      {designable && <BroadcastDesignSwitch eventId={event.id} on={event.broadcastDesign === NAIL_FEST_DESIGN} nextPreview={next ? preview(next.id) : null} />}
+      {design && (
+        <BroadcastDesignSwitch eventId={event.id} name={eventEmailDesignName(design)} on={activeEventEmailDesign(event) !== null} nextPreview={next ? preview(next.id) : null} />
+      )}
 
       <div className="admin-table-wrap" style={{ border: "1px solid #e3e1dc", borderRadius: 10 }}>
         <table style={{ borderCollapse: "collapse", fontSize: 13 }}>

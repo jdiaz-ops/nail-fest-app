@@ -53,8 +53,8 @@ export interface EmailFrame {
   /** What the inbox shows under the subject. */
   preheader: string;
   header: { image: string; alt: string; line: string };
-  /** The gold band under the cover: «✓ CUPO CONFIRMADO», «GRACIAS POR SER IMPARABLE». */
-  band: string;
+  /** The gold band under the cover: «✓ CUPO CONFIRMADO», «FALTAN 7 DÍAS»; none when empty. */
+  band?: string | null;
   /** The email's own rows (<tr>…</tr>), in order. */
   rows: string[];
   footer: { logo: string; siteUrl: string; host: string; why: string };
@@ -87,7 +87,7 @@ ${table(
 <img src="${esc(f.header.image)}" width="600" alt="${esc(f.header.alt)}" style="display:block;width:100%;max-width:600px;height:auto;border:0;">
 <div style="padding:0 24px 26px;${sans(14, 700, C.CREAM_SOFT)}">${esc(f.header.line)}</div>
 </td></tr>
-<tr><td align="center" style="padding:9px 20px;background:${C.GOLD};${sans(12.5, 800, C.INK, "letter-spacing:0.16em;")}">${esc(f.band)}</td></tr>
+${f.band?.trim() ? `<tr><td align="center" style="padding:9px 20px;background:${C.GOLD};${sans(12.5, 800, C.INK, "letter-spacing:0.16em;")}">${esc(f.band.trim().toLocaleUpperCase("es"))}</td></tr>` : ""}
 ${f.rows.join("\n")}
 <tr><td class="px" align="center" style="padding:16px 32px 26px;${sans(12, 400, C.SOFT, "line-height:1.6;")}">
 <img src="${esc(f.footer.logo)}" width="38" height="30" alt="Nail Fest" style="display:block;margin:0 auto 8px;border:0;width:38px;height:30px;">

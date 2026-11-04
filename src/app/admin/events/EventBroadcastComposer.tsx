@@ -25,6 +25,7 @@ type EditingBroadcast = {
   designBand: string | null;
   designAsistire: boolean;
   designColega: boolean;
+  designKit?: boolean;
   onlyCheckedIn: boolean;
   onlyNotCheckedIn: boolean;
   scheduleKind: ScheduleKind;
@@ -60,6 +61,7 @@ export default function EventBroadcastComposer({
   eventId,
   eventFormat,
   designOn = false,
+  design = null,
   ticketTypes,
   allBuyers,
   initial,
@@ -74,6 +76,9 @@ export default function EventBroadcastComposer({
   // The event's emails go in Nail Fest's design (Event.broadcastDesign,
   // 2026-10-30): a band to write, and how it looks, as it's written.
   designOn?: boolean;
+  // Which design: Nail Fest's, or Manicuristas Imparables' (2026-11-04),
+  // which adds her kit to the modules and says them its own way.
+  design?: "NAIL_FEST" | "IMPARABLES" | null;
   // count = confirmed registrations; checkedIn = how many of them were
   // already scanned at the door (the ones not scanned yet are the rest).
   ticketTypes: { id: string; name: string; count: number; checkedIn: number }[];
@@ -93,6 +98,7 @@ export default function EventBroadcastComposer({
     designBand?: string | null;
     designAsistire?: boolean;
     designColega?: boolean;
+    designKit?: boolean;
     onlyCheckedIn?: boolean;
     onlyNotCheckedIn?: boolean;
   };
@@ -116,6 +122,9 @@ export default function EventBroadcastComposer({
   // Its modules in the design: her «Asistiré» card and «¿Vas con una colega?» (2026-10-30, on by default).
   const [designAsistire, setDesignAsistire] = useState(editing?.designAsistire ?? initial?.designAsistire ?? true);
   const [designColega, setDesignColega] = useState(editing?.designColega ?? initial?.designColega ?? true);
+  // Manicuristas Imparables' design: her kit, on by default too (2026-11-04).
+  const [designKit, setDesignKit] = useState(editing?.designKit ?? initial?.designKit ?? true);
+  const imparables = design === "IMPARABLES";
   // «Así se ve»: the email in the design, a moment after each change.
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
   useEffect(() => {
@@ -124,14 +133,14 @@ export default function EventBroadcastComposer({
       fetch(`/api/admin/events/${eventId}/broadcasts/preview`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subject, bodyHtml, band: designBand, asistire: designAsistire, colega: designColega, pdf: attachTicketPdf }),
+        body: JSON.stringify({ subject, bodyHtml, band: designBand, asistire: designAsistire, colega: designColega, kit: designKit, pdf: attachTicketPdf }),
       })
         .then((res) => (res.ok ? res.json() : null))
         .then((body) => body?.html && setPreviewHtml(body.html))
         .catch(() => {});
     }, 900);
     return () => clearTimeout(timer);
-  }, [designOn, eventId, subject, bodyHtml, designBand, designAsistire, designColega, attachTicketPdf]);
+  }, [designOn, eventId, subject, bodyHtml, designBand, designAsistire, designColega, designKit, attachTicketPdf]);
   const [checkIn, setCheckIn] = useState<CheckIn>(checkInFrom(editing ?? initial));
   const [scheduleKind, setScheduleKind] = useState<ScheduleKind>(editing?.scheduleKind ?? "IMMEDIATE");
   const [scheduledAtLocal, setScheduledAtLocal] = useState(
@@ -163,6 +172,7 @@ export default function EventBroadcastComposer({
         band: designBand,
         asistire: designAsistire,
         colega: designColega,
+        kit: designKit,
         attachTicketPdf,
         to: testTo.split(",").map((s) => s.trim()).filter(Boolean),
       }),
@@ -188,6 +198,7 @@ export default function EventBroadcastComposer({
       designBand: designBand.trim() || null,
       designAsistire,
       designColega,
+      designKit,
       onlyCheckedIn: checkIn === "checkedIn",
       onlyNotCheckedIn: checkIn === "notCheckedIn",
       scheduleKind,
@@ -259,7 +270,9 @@ export default function EventBroadcastComposer({
           <label htmlFor="eb-band">Franja (opcional)</label>
           <input id="eb-band" value={designBand} maxLength={60} onChange={(e) => setDesignBand(e.target.value)} placeholder="Falta 1 semana" />
           <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>
-            La franja turquesa bajo el encabezado del diseño Nail Fest, tal como la escribas. Vacía, no sale.
+            {imparables
+              ? "La franja dorada bajo la portada del diseño Imparables, en mayúsculas. Vacía, no sale."
+              : "La franja turquesa bajo el encabezado del diseño Nail Fest, tal como la escribas. Vacía, no sale."}
           </p>
         </div>
       )}
@@ -271,9 +284,15 @@ export default function EventBroadcastComposer({
             <input type="checkbox" checked={designAsistire} onChange={(e) => setDesignAsistire(e.target.checked)} style={{ width: "auto", margin: 0, flex: "none" }} />
             <span>«¡Cuéntale a todos que vas!» — su imagen «Asistiré»</span>
           </label>
+          {imparables && (
+            <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, fontWeight: 400, color: "var(--ink)" }}>
+              <input type="checkbox" checked={designKit} onChange={(e) => setDesignKit(e.target.checked)} style={{ width: "auto", margin: 0, flex: "none" }} />
+              <span>«Tu kit Imparable» — fondos de pantalla, plantillas de historias y su foto de perfil</span>
+            </label>
+          )}
           <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, fontWeight: 400, color: "var(--ink)" }}>
             <input type="checkbox" checked={designColega} onChange={(e) => setDesignColega(e.target.checked)} style={{ width: "auto", margin: 0, flex: "none" }} />
-            <span>«¿Vas con una colega?» — compartir por WhatsApp</span>
+            <span>{imparables ? "«¿Conoces a una colega que lo necesita?» — compartir por WhatsApp" : "«¿Vas con una colega?» — compartir por WhatsApp"}</span>
           </label>
         </div>
       )}
@@ -305,29 +324,37 @@ export default function EventBroadcastComposer({
             >
               + Insertar enlace de reseña
             </button>
-            <button
-              type="button"
-              onClick={() => editorRef.current?.insertAtCursor("{{BOLETA}}")}
-              style={{ fontSize: 12, padding: "4px 10px", borderRadius: 999, border: "1px solid #e3e1dc", background: "#fff", cursor: "pointer" }}
-            >
-              + Insertar boleta
-            </button>
+            {!imparables && (
+              <button
+                type="button"
+                onClick={() => editorRef.current?.insertAtCursor("{{BOLETA}}")}
+                style={{ fontSize: 12, padding: "4px 10px", borderRadius: 999, border: "1px solid #e3e1dc", background: "#fff", cursor: "pointer" }}
+              >
+                + Insertar boleta
+              </button>
+            )}
           </div>
           <p style={{ fontSize: 11, color: "#8a8478", margin: "4px 0 0" }}>
-            Cada destinataria recibe su propio enlace para calificar el evento (solo abre para quien fue escaneada en puerta). Combínalo con «Solo quienes ya hicieron check-in».
+            {imparables
+              ? "Cada destinataria recibe su propio enlace para calificar el congreso: se abre al terminar, para toda compradora con su pago confirmado."
+              : "Cada destinataria recibe su propio enlace para calificar el evento (solo abre para quien fue escaneada en puerta). Combínalo con «Solo quienes ya hicieron check-in»."}
           </p>
-          <p style={{ fontSize: 11, color: "#8a8478", margin: "2px 0 0" }}>
-            {"{{BOLETA}}"}: en ese lugar, cada persona ve su boleta con su código QR, y la de su acompañante si tiene. Ponla en una línea sola.
-          </p>
+          {!imparables && (
+            <p style={{ fontSize: 11, color: "#8a8478", margin: "2px 0 0" }}>
+              {"{{BOLETA}}"}: en ese lugar, cada persona ve su boleta con su código QR, y la de su acompañante si tiene. Ponla en una línea sola.
+            </p>
+          )}
         </div>
         <RichTextEditor ref={editorRef} value={bodyHtml} onChange={setBodyHtml} />
       </div>
 
       {designOn && (
         <div className="field">
-          <label>Así se ve, con el diseño Nail Fest</label>
+          <label>Así se ve, con el diseño {imparables ? "Imparables" : "Nail Fest"}</label>
           <p style={{ fontSize: 12, color: "#5b5f6b", margin: "0 0 6px" }}>
-            Se actualiza mientras escribes. Las líneas que empiezan con emoji quedan alineadas, las cortas que terminan en «:» como subtítulos, los ⚠️ en un recuadro, y lo que va después de una línea horizontal, en su propia tarjeta.
+            {imparables
+              ? "Se actualiza mientras escribes. Los títulos van con la letra del congreso, las líneas que empiezan con emoji quedan alineadas, las cortas que terminan en «:» como subtítulos, los ⚠️ en un recuadro y un enlace solo en su línea, como botón dorado."
+              : "Se actualiza mientras escribes. Las líneas que empiezan con emoji quedan alineadas, las cortas que terminan en «:» como subtítulos, los ⚠️ en un recuadro, y lo que va después de una línea horizontal, en su propia tarjeta."}
           </p>
           {previewHtml ? (
             <iframe

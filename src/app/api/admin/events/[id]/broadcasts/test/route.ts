@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { emailProvider } from "@/lib/email";
 import { sanitizeEventDescription } from "@/lib/sanitizeHtml";
 import { requireUser } from "@/lib/auth/guard";
-import { nailFestEventEmailSample, usesNailFestEventEmail } from "@/lib/nailfest/eventEmailFrame";
+import { activeEventEmailDesign, eventEmailSample } from "@/lib/eventEmailDesign";
 import { sampleTickets, ticketCards, withTickets } from "@/lib/nailfest/eventTickets";
 import { publicEventName } from "@/lib/eventDisplayName";
 import { PDF_ATTACHMENT_NAME, sampleTicketPdf } from "@/lib/ticketPdfSample";
@@ -23,6 +23,7 @@ const bodySchema = z.object({
   band: z.string().max(60).nullable().optional(),
   asistire: z.boolean().optional(),
   colega: z.boolean().optional(),
+  kit: z.boolean().optional(),
   attachTicketPdf: z.boolean().optional(),
 });
 
@@ -34,15 +35,16 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (!parsed.success) {
     return NextResponse.json({ error: "invalid_body", issues: parsed.error.issues }, { status: 400 });
   }
-  const { subject, bodyHtml, to, band, asistire, colega, attachTicketPdf } = parsed.data;
+  const { subject, bodyHtml, to, band, asistire, colega, kit, attachTicketPdf } = parsed.data;
   const event = await db.event.findUnique({ where: { id: params.id } });
 
   let html: string;
   let text = subject;
-  if (event && usesNailFestEventEmail(event)) {
-    const email = await nailFestEventEmailSample(event, { subject, bodyHtml, band: band ?? null, asistire, colega, pdf: Boolean(attachTicketPdf) });
-    html = email.html;
-    text = email.text;
+  // In its design when it's on (lib/eventEmailDesign.ts): Nail Fest's, or Manicuristas Imparables'.
+  const designed = event && activeEventEmailDesign(event) ? await eventEmailSample(event, { subject, bodyHtml, band: band ?? null, asistire, colega, kit, pdf: Boolean(attachTicketPdf) }) : null;
+  if (designed) {
+    html = designed.html;
+    text = designed.text;
   } else {
     // No real registrant to pull a link from in a test send — a clearly
     // fake example instead of leaving the raw {{ZOOM_LINK}} tag visible,

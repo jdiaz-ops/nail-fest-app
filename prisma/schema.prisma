@@ -1018,6 +1018,9 @@ model EmailBroadcast {
   // «¿Vas con una colega?», each on or off per email.
   designAsistire        Boolean               @default(true)
   designColega          Boolean               @default(true)
+  // Manicuristas Imparables' design (2026-11-04): her kit — wallpapers, story
+  // templates and her profile frame — after its message. On by default.
+  designKit             Boolean               @default(true)
   // Event broadcasts only: send to the registrants who were scanned at the
   // door (Registration.checkedInCount > 0) instead of everyone CONFIRMED —
   // the "ask attendees for a review" send, see lib/reviews.ts.

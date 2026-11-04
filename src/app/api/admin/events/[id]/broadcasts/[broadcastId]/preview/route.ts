@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth/guard";
-import { hasNailFestAsistire } from "@/lib/nailfest/asistire";
-import { nailFestEventEmailSample } from "@/lib/nailfest/eventEmailFrame";
+import { eventEmailSample } from "@/lib/eventEmailDesign";
 
 export const dynamic = "force-dynamic";
 
@@ -13,14 +12,16 @@ export async function GET(_req: Request, { params }: { params: { id: string; bro
   const auth = await requireUser(["ADMIN"]);
   if ("response" in auth) return auth.response;
   const broadcast = await db.emailBroadcast.findFirst({ where: { id: params.broadcastId, eventId: params.id }, include: { event: true } });
-  if (!broadcast?.event || !broadcast.bodyHtml || !hasNailFestAsistire(broadcast.event)) return NextResponse.json({ error: "not_found" }, { status: 404 });
-  const email = await nailFestEventEmailSample(broadcast.event, {
+  if (!broadcast?.event || !broadcast.bodyHtml) return NextResponse.json({ error: "not_found" }, { status: 404 });
+  const email = await eventEmailSample(broadcast.event, {
     subject: broadcast.subject,
     bodyHtml: broadcast.bodyHtml,
     band: broadcast.designBand,
     asistire: broadcast.designAsistire,
     colega: broadcast.designColega,
+    kit: broadcast.designKit,
     pdf: broadcast.attachTicketPdf,
   });
+  if (!email) return NextResponse.json({ error: "not_found" }, { status: 404 });
   return new NextResponse(email.html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } });
 }
