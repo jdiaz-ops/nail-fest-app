@@ -37,8 +37,8 @@ export interface ImparablesEventEmailContent {
   band: string | null;
   /** Her page to make her «Asistiré» image; no block without it (or when the email leaves it out). */
   asistire: string | null;
-  /** Her kit, with her profile frame's page; no block without it (or when the email leaves it out). */
-  kit: { frameUrl: string } | null;
+  /** Her kit: its page and her profile frame's; no block without it (or when the email leaves it out). */
+  kit: { frameUrl: string; pageUrl: string } | null;
   /** Whether it invites a colleague. */
   colega: boolean;
   /** The email's banner to leave out: the src of the wide image it opens with. */
@@ -199,7 +199,8 @@ ${button(mail.asistire, "Crear mi imagen")}`,
 ${line("Fondos para tu celular y plantillas para tus historias. Toca la que quieras para guardarla.")}
 ${kitRow(frame.kit.wallpapers)}
 ${kitRow(frame.kit.stories)}
-<div style="margin:16px auto 14px;max-width:420px;${sans(15, 400, C.WARM, "line-height:1.55;")}">Y pon tu foto en el marco del congreso para tu perfil de WhatsApp e Instagram.</div>
+<div style="margin:8px 0 0;">${button(mail.kit.pageUrl, "Ver todo mi kit")}</div>
+<div style="margin:22px auto 14px;max-width:420px;${sans(15, 400, C.WARM, "line-height:1.55;")}">Y pon tu foto en el marco del congreso para tu perfil de WhatsApp e Instagram.</div>
 ${button(mail.kit.frameUrl, "Hacer mi foto de perfil", "outline")}`,
             `background:${C.CARD};border-top:1px solid ${C.LINE};`
           ),
@@ -242,6 +243,7 @@ ${button(frame.share.url, "Compartir por WhatsApp")}`,
             ...frame.kit.wallpapers.map((f) => `Fondo de pantalla «${f.name}»: ${f.file}`),
             ...frame.kit.stories.map((f) => `Plantilla de historia «${f.name}»: ${f.file}`),
             `Tu foto de perfil con el marco del congreso: ${mail.kit.frameUrl}`,
+            `Todo tu kit: ${mail.kit.pageUrl}`,
           ].join("\n"),
         ]
       : []),
