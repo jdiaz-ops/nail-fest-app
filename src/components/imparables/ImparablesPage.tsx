@@ -439,7 +439,7 @@ export default function ImparablesPage({
         <div className="imp-rays" aria-hidden="true" />
         <div className="imp-hero-in">
           <Tiara />
-          <ImpTitle pre={pre} big={big} />
+          <ImpTitle pre={pre} big={big} pillars={pillars} />
           {version?.title && <h2 className="imp-v-title">{version.title}</h2>}
           {version?.subtitle ? (
             <p className="imp-tag">{version.subtitle}</p>
@@ -454,7 +454,7 @@ export default function ImparablesPage({
             <span className="imp-pill-date">{pillDate}</span>
             {pillNote && <span className="imp-pill-note">{pillNote}</span>}
           </p>
-          {(cover || version?.imageUrl || pillars) && (
+          {(cover || version?.imageUrl) && (
             // On a computer, the column beside the words (2026-10-29); on a
             // phone it changes nothing.
             <div className="imp-hero-pic">
@@ -466,8 +466,6 @@ export default function ImparablesPage({
                   <img src={version?.imageUrl || cover!.url} alt={version?.imageUrl ? "" : cover!.caption || [line.names, line.also].filter(Boolean).join(", ")} />
                 </figure>
               )}
-              {/* «Mentalidad · Dinero · Marketing», under the group photo (2026-10-28). */}
-              {pillars && <div className="imp-pillars" dangerouslySetInnerHTML={{ __html: pillars }} />}
             </div>
           )}
           {cta}

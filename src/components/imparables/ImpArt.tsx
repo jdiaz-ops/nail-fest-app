@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { LandingTone } from "@/lib/landingBlocks/types";
+import { PILLARS } from "@/lib/imparables/schedule";
 
 // The drawn pieces of Manicuristas Imparables' page: the tiara over the
 // name, the line icons, and the silhouette a panelist shows until her photo
@@ -20,7 +21,20 @@ export function Tiara({ className = "imp-tiara" }: { className?: string } = {}) 
 /** Manicuristas Imparables' mark, as its cover draws it (the team, 2026-11-04: «el logo del hero»): the tiara, then
  * «MANICURISTAS» small over «IMPARABLES» big. Its size and its colors come from where it's put (globals.css .imp-logo):
  * a heading where it names the page. */
-export function ImpLogo({ pre, big, className = "", heading = false }: { pre: string; big: string; className?: string; heading?: boolean }) {
+export function ImpLogo({
+  pre,
+  big,
+  pillars = "",
+  className = "",
+  heading = false,
+}: {
+  pre: string;
+  big: string;
+  /** «Mentalidad · Dinero · Marketing», under the name (the team, 2026-11-04: «en todos»). */
+  pillars?: string;
+  className?: string;
+  heading?: boolean;
+}) {
   const Name = heading ? "h1" : "p";
   return (
     <div className={`imp-logo ${className}`.trim()}>
@@ -29,6 +43,7 @@ export function ImpLogo({ pre, big, className = "", heading = false }: { pre: st
         {pre && <span className="imp-logo-pre">{pre} </span>}
         <span className="imp-logo-big">{big}</span>
       </Name>
+      {pillars && <p className="imp-logo-pillars">{pillars}</p>}
     </div>
   );
 }
@@ -40,7 +55,7 @@ export function ImpPageTop({ pre, big, heading = true, children }: { pre: string
   return (
     <header className="imp-mc-top">
       <div className="imp-rays" aria-hidden="true" />
-      <ImpLogo pre={pre} big={big} className="imp-mc-logo" heading={heading} />
+      <ImpLogo pre={pre} big={big} pillars={PILLARS} className="imp-mc-logo" heading={heading} />
       {children}
     </header>
   );

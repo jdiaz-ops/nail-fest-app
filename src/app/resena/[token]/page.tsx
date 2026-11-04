@@ -11,7 +11,7 @@ import { viewerCanSeeSamples } from "@/lib/reviewsViewer";
 import { congressTimes, dayWords, readRecordings } from "@/lib/imparables/grabaciones";
 import { congresoRegistrationId, congresoSampleEventId } from "@/lib/imparables/miCongreso";
 import { IMPARABLES_REVIEW_TEXTS, reviewNotYet, starsFrom } from "@/lib/imparables/resena";
-import { coverName } from "@/lib/imparables/schedule";
+import { coverName, PILLARS } from "@/lib/imparables/schedule";
 import { cinzel, manrope } from "@/components/imparables/fonts";
 import { ImpLogo } from "@/components/imparables/ImpArt";
 import ReviewForm from "./ReviewForm";
@@ -58,7 +58,7 @@ export default async function ReviewPage({ params, searchParams }: { params: { t
     if (event?.theme !== "IMPARABLES") return undefined;
     const words = nameOf(event).split(/\s+/);
     const big = words.pop() ?? "";
-    return <ImpLogo pre={words.join(" ")} big={big} className="rv-imp-logo" />;
+    return <ImpLogo pre={words.join(" ")} big={big} pillars={PILLARS} className="rv-imp-logo" />;
   };
 
   const sampleEventId = (() => {

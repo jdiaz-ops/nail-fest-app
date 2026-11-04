@@ -3954,6 +3954,21 @@ body:has(.imp) {
   margin: 4px 0 0;
   font-weight: inherit;
 }
+.imp-name-h {
+  margin: 0;
+  font: inherit;
+}
+/* Its pillars, under the name (the team, 2026-11-04): the display face, spaced, in the text's color. */
+.imp-name-pillars {
+  margin: 10px 0 0;
+  font-family: var(--imp-display), Georgia, serif;
+  font-weight: 700;
+  font-size: clamp(11px, 3.1vw, 16px);
+  letter-spacing: 0.2em;
+  text-indent: 0.2em;
+  text-transform: uppercase;
+  color: var(--imp-texto);
+}
 /* «Manicuristas», bigger and bolder since 2026-10-28: it was getting lost over «Imparables». */
 .imp-pre {
   display: block;
@@ -3996,8 +4011,8 @@ body:has(.imp) {
   }
 }
 /* Under the name, the last line of the event's tagline, any bold words in
-   bronze (2026-10-28). Its headline is off the cover, and its pillars go
-   under the group photo (.imp-pillars) — see lib/imparables/tagline.ts. */
+   bronze (2026-10-28). Its pillars are part of the name since 2026-11-04
+   (.imp-name-pillars) — see lib/imparables/tagline.ts. */
 /* The headline over the line (back since 2026-10-31): bigger, in the cover's ink. */
 .imp-tag > p:not(:last-child) {
   margin: 0 0 8px;
@@ -4041,19 +4056,6 @@ body:has(.imp) {
 .imp-pill-note {
   font-size: 14px;
   font-weight: 700;
-}
-
-/* «Mentalidad · Dinero · Marketing», under the group photo (2026-10-28):
-   spaced capitals in the titles' face, like «Manicuristas» */
-.imp-pillars p {
-  margin: 8px 0 0;
-  font-family: var(--imp-display), Georgia, serif;
-  font-weight: 700;
-  font-size: 12px;
-  letter-spacing: 0.2em;
-  text-indent: 0.2em;
-  text-transform: uppercase;
-  color: var(--imp-texto);
 }
 
 /* The cover's group photo, and who is in it */
@@ -7760,11 +7762,6 @@ body:has(.imp.nf) {
   .imp-tag {
     max-width: 680px;
   }
-  .imp-pillars p {
-    font-size: 16px;
-    letter-spacing: 0.3em;
-    text-indent: 0.3em;
-  }
   .imp-tag > p:not(:last-child) {
     max-width: 26em;
     margin: 0 auto 10px;
@@ -7935,6 +7932,12 @@ body:has(.imp.nf) {
     margin-bottom: min(30px, 3vh);
     text-align: center;
   }
+  .imp-hero .imp-name-pillars {
+    margin-top: 0;
+    font-size: clamp(16px, min(1.5vw, 2.6vh), 24px);
+    letter-spacing: 0.3em;
+    text-indent: 0.3em;
+  }
   .imp-hero .imp-pre {
     font-size: clamp(26px, min(2.6vw, 4.6vh), 40px);
     line-height: 1.2;
@@ -8056,9 +8059,6 @@ body:has(.imp.nf) {
     -webkit-mask-composite: source-in;
     mask-image: linear-gradient(180deg, #000 68%, transparent 98%), linear-gradient(90deg, transparent 0, #000 7%, #000 93%, transparent 100%);
     mask-composite: intersect;
-  }
-  .imp-pillars p {
-    margin-top: 12px;
   }
 
   .imp-sec {
@@ -9101,6 +9101,17 @@ body:has(.imp.nf) {
   text-indent: 0.24em;
   text-transform: uppercase;
 }
+.imp-logo-pillars {
+  margin: calc(var(--logo) * 0.2) 0 0;
+  font-family: var(--imp-display), Georgia, serif;
+  font-weight: 700;
+  font-size: max(8.5px, calc(var(--logo) * 0.2));
+  line-height: 1.3;
+  letter-spacing: 0.16em;
+  text-indent: 0.16em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
 .imp-logo-big {
   margin-top: calc(var(--logo) * 0.07);
   font-weight: 900;
@@ -9132,6 +9143,9 @@ body:has(.imp.nf) {
 }
 .imp-mc-logo .imp-logo-big {
   color: var(--imp-titulo);
+}
+.imp-mc-logo .imp-logo-pillars {
+  color: var(--imp-texto);
 }
 .imp-mc-wait {
   position: relative;
@@ -9615,6 +9629,12 @@ body:has(.imp.nf) {
 }
 .rv-imp-logo .imp-logo-big {
   color: #d2b486;
+}
+.rv-imp-logo .imp-logo-pillars {
+  /* As wide as the name, small as it is here. */
+  letter-spacing: 0.06em;
+  text-indent: 0.06em;
+  color: #e6dacb;
 }
 
 /* «Tu kit Imparable» (2026-11-04, app/asistire/[token]/kit): her profile frame in a card, and the wallpapers and the
