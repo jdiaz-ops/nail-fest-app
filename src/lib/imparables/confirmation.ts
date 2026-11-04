@@ -40,7 +40,7 @@ export function calendarEventOf(event: Pick<Event, "id" | "slug" | "name" | "pub
   };
 }
 
-/** «Compartir por WhatsApp»'s message when the event has none of its own: «Mira este congreso para manicuristas: Manicuristas Imparables, 27 de junio, en vivo por Zoom.» */
+/** «Compartir por WhatsApp»'s message when the event has none of its own: «Mira este congreso para manicuristas: Manicuristas Imparables, 4 de julio, en vivo por Zoom.» */
 export function defaultShareText(event: Event, timezone: string): string {
   return `Mira este congreso para manicuristas: ${coverName(publicEventName(event))}, ${eventWhen(event, timezone).short}, en vivo por Zoom.`;
 }
@@ -92,7 +92,7 @@ async function confirmationOf(
       // The event's own message («Confirmación del evento»), else the default; the page's link after it.
       url: `https://wa.me/?text=${encodeURIComponent(`${shareText?.trim() || defaultShareText(event, tz)} ${page.toString()}`)}`,
     },
-    asistire: { url: her.asistire, image: `${base}/imparables/asistire-muestra.jpg` },
+    asistire: { url: her.asistire, image: `${base}/imparables/asistire-muestra-4-julio.jpg` },
     helpUrl: digits.length >= 8 ? `https://wa.me/${digits}` : null,
     speakers: speakers.filter((p) => p.photoUrl).map((p) => ({ name: p.name.trim().split(/\s+/)[0]!, photoUrl: absolute(p.photoUrl) })),
     images: { header: `${base}/imparables/correo-cabecera.png`, logo: `${base}/logo.png` },

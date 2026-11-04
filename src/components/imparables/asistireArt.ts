@@ -12,7 +12,7 @@ export interface AsistireTexts {
   pre: string;
   /** «Imparables» */
   big: string;
-  /** «Domingo 27 de junio de 2027» */
+  /** «Domingo 4 de julio de 2027» */
   date: string;
   /** «Congreso virtual en vivo · Zoom» */
   kind: string;

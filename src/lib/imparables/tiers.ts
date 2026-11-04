@@ -138,14 +138,14 @@ export const GUARANTEE = {
   line: "escucha la primera charla y, si no es para ti, te devolvemos el 100 % ese mismo día.",
   question: "¿Y si no me gusta?",
   answer:
-    "Entra el 27 de junio, escucha la primera charla y, si a las 9:15 a. m. sientes que esto no es para ti, escríbenos por WhatsApp antes del mediodía de ese día y te devolvemos el 100 % de lo que pagaste, sin preguntas. Aplica para los tres niveles.",
+    "Entra el 4 de julio, escucha la primera charla y, si a las 9:15 a. m. sientes que esto no es para ti, escríbenos por WhatsApp antes del mediodía de ese día y te devolvemos el 100 % de lo que pagaste, sin preguntas. Aplica para los tres niveles.",
   /** «¿Puedo pedir reembolso?» on these versions: the same, with this guarantee instead of the 30 minutes. */
   refund: [
     "Sí, en estos casos:",
-    "• Garantía Imparable: el 27 de junio escucha la primera charla y, si a las 9:15 a. m. sientes que no es para ti, escríbenos por WhatsApp antes del mediodía y te devolvemos el 100 %.",
+    "• Garantía Imparable: el 4 de julio escucha la primera charla y, si a las 9:15 a. m. sientes que no es para ti, escríbenos por WhatsApp antes del mediodía y te devolvemos el 100 %.",
     "• Si te arrepientes dentro de los 5 días hábiles siguientes a tu compra, también te devolvemos el 100 %, siempre que el congreso no haya empezado.",
     "• Si Nail Fest cambia la fecha o cancela el congreso, tú eliges: te devolvemos todo o usas tu boleta en la nueva fecha.",
-    "Fuera de estos casos no hacemos devoluciones, pero puedes pasarle tu boleta a otra persona escribiéndonos hasta el 25 de junio, y si no puedes verlo en vivo tienes la repetición.",
+    "Fuera de estos casos no hacemos devoluciones, pero puedes pasarle tu boleta a otra persona escribiéndonos hasta el 2 de julio, y si no puedes verlo en vivo tienes la repetición.",
     "Para pedirlo, escríbenos por WhatsApp con el correo de tu compra; el dinero vuelve por el mismo medio de pago en máximo 30 días.",
   ].join("\n"),
 };
@@ -164,7 +164,7 @@ export const UPGRADE_PAGE = {
   title: "Mejora tu boleta",
   button: "Pasarme a {nivel}",
   pay: "Pagas solo la diferencia: {diferencia}",
-  top: "Ya tienes el nivel más alto. Nos vemos el 27 de junio.",
+  top: "Ya tienes el nivel más alto. Nos vemos el 4 de julio.",
   usd: "Pagaste en dólares: para pasarte de nivel escríbenos por WhatsApp y lo hacemos contigo.",
   tickets: "Tu compra tiene más de una boleta: para pasarte de nivel escríbenos por WhatsApp y lo hacemos contigo.",
   eliteSoldOut: "Élite está agotada.",
@@ -202,7 +202,7 @@ export const TIER_EMAIL = {
         "En mayo te escribimos con las fechas de las sesiones.",
         help ? `Si tienes cualquier duda, escríbenos por WhatsApp: ${help}` : "",
         "",
-        "Nos vemos el 27 de junio.",
+        "Nos vemos el 4 de julio.",
         "",
         "Heidy Aristizábal",
       ]

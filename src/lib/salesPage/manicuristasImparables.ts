@@ -24,7 +24,7 @@ import type { SalesPageContent } from "./types";
 // see docs/PAYMENTS_SETUP.md). Add both back once those exist.
 export const manicuristasImparablesSalesPage: SalesPageContent = {
   hero: {
-    eyebrow: "Congreso virtual Nail Fest · 27 y 28 de junio de 2027",
+    eyebrow: "Congreso virtual Nail Fest · 4 y 5 de julio de 2027",
     headline: "De manicurista que espera clientas a dueña de un negocio que las atrae",
     subheadline:
       "2 días en vivo, 100% virtuales, donde vas a construir en tiempo real la manicurista profesional que ya eres capaz de ser — con las herramientas que hoy te faltan.",
@@ -65,7 +65,7 @@ export const manicuristasImparablesSalesPage: SalesPageContent = {
     timezoneNote: "Horarios en hora Colombia. El cronograma final con la duración exacta de cada bloque se confirma antes del evento.",
     days: [
       {
-        label: "Día 1 — domingo 27 de junio",
+        label: "Día 1 — domingo 4 de julio",
         blocks: [
           { time: "10:00 a.m.", topic: "De manicurista a marca: cómo construir tu identidad en redes", speaker: "Jimenails" },
           { time: "12:00 p.m.", topic: "Cobra lo que vales: pricing sin miedo", speaker: "Alesandro" },
@@ -73,7 +73,7 @@ export const manicuristasImparablesSalesPage: SalesPageContent = {
         ],
       },
       {
-        label: "Día 2 — lunes 28 de junio",
+        label: "Día 2 — lunes 5 de julio",
         blocks: [
           { time: "10:00 a.m.", topic: "Clientas que vuelven: experiencia y fidelización", speaker: "Cristina Sierra" },
           { time: "12:00 p.m.", topic: "Preguntas en vivo con todo el panel de expertas", speaker: "Panel completo" },

@@ -14,13 +14,13 @@ export interface ImparablesConfirmation {
   /** Her first name as it's said; "" when there's none. */
   firstName: string;
   eventName: string;
-  /** "Domingo 27 de junio de 2027" */
+  /** "Domingo 4 de julio de 2027" */
   date: string;
   /** "8:00 a. m. a 7:00 p. m.", when every day keeps the same hours. */
   hours: string | null;
   /** "hora Colombia" */
   zone: string;
-  /** "27 de junio": the day her Zoom link arrives. */
+  /** "4 de julio": the day her Zoom link arrives. */
   day: string;
   /** "8:00 a. m." */
   start: string | null;

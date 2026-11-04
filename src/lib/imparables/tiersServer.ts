@@ -271,7 +271,7 @@ async function sendUpgraded(registrationId: string, target: Tier): Promise<void>
       ...(next ? ["", next] : []),
       ...(help ? ["", `¿Dudas? Escríbenos por WhatsApp: ${help}`] : []),
       "",
-      "Nos vemos el 27 de junio.",
+      "Nos vemos el 4 de julio.",
     ].join("\n");
     await emailProvider.sendTransactional({
       to: registration.person.email,

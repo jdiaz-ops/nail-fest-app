@@ -19,7 +19,7 @@ export const BOLETA = {
   pay: ["Tarjeta", "PSE", "Nequi", "Pago seguro con Wompi"],
 };
 
-/** "2027-06-27" → "27 · 06 · 2027": the stub's date. */
+/** "2027-07-04" → "04 · 07 · 2027": the stub's date. */
 export function stubDate(day: string | undefined): string {
   const [year, month, date] = (day ?? "").split("-");
   return year && month && date ? `${date} · ${month} · ${year}` : "";

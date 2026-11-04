@@ -74,7 +74,7 @@ export const TRANSFORMATION = {
     {
       question: "¿Cómo me va a servir dentro de tres meses?",
       answer:
-        "Sales con tu ruta escrita: lo que cambias, cuándo y cómo sabrás que funcionó. La página «Mi ruta» del cuaderno se llena el mismo 27 de junio y es lo que vas a revisar a los 90 días.",
+        "Sales con tu ruta escrita: lo que cambias, cuándo y cómo sabrás que funcionó. La página «Mi ruta» del cuaderno se llena el mismo 4 de julio y es lo que vas a revisar a los 90 días.",
     },
     {
       question: "¿Qué me llevo exactamente?",

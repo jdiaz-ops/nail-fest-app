@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
     title: `${name} · Nail Fest`,
     robots: { index: false, follow: false },
     ...(base ? { metadataBase: new URL(base) } : {}),
-    openGraph: { title: name, images: [{ url: "/imparables/og-27-junio-hueso.jpg", width: 1200, height: 630 }] },
+    openGraph: { title: name, images: [{ url: "/imparables/og-4-julio-hueso.jpg", width: 1200, height: 630 }] },
   };
 }
 

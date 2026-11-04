@@ -1,5 +1,5 @@
-// When Manicuristas Imparables happens, the way its page says it: "Domingo 27
-// de junio de 2027 · 8:00 a. m. a 7:00 p. m. · hora Colombia" (one day since
+// When Manicuristas Imparables happens, the way its page says it: "Domingo 4
+// de julio de 2027 · 8:00 a. m. a 6:30 p. m. · hora Colombia" (one day since
 // 2026-10-29; two read "Domingo 27 y lunes 28 de junio de 2027"), from the
 // event's own days (Event.scheduleDays, else startsAt–endsAt), and
 // the instant of each line of its program, so a visitor in another country
@@ -13,7 +13,7 @@ const WEEKDAYS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes
 const MONTHS = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
 
 interface LocalTime {
-  /** "2027-06-27" */
+  /** "2027-07-04" */
   date: string;
   year: number;
   month: number; // 0–11
@@ -64,17 +64,17 @@ export function kindLine(event: { format: string; city: string | null }): string
 }
 
 export interface EventWhen {
-  /** "Domingo 27 de junio de 2027" (two days: "Domingo 27 y lunes 28 de junio de 2027") */
+  /** "Domingo 4 de julio de 2027" (two days: "Domingo 27 y lunes 28 de junio de 2027") */
   dates: string;
-  /** "Domingo 27 de junio": `dates` without the year — the closing's line (2026-10-29). */
+  /** "Domingo 4 de julio": `dates` without the year — the closing's line (2026-10-29). */
   named: string;
-  /** "8:00 a. m. a 7:00 p. m." when every day keeps the same hours, else null. */
+  /** "8:00 a. m. a 6:30 p. m." when every day keeps the same hours, else null. */
   hours: string | null;
-  /** "27 de junio" */
+  /** "4 de julio" */
   short: string;
-  /** "27 de junio de 2027": the cover's, as short as it gets in plain Spanish. */
+  /** "4 de julio de 2027": the cover's, as short as it gets in plain Spanish. */
   compact: string;
-  /** Each day's date where it happens ("2027-06-27"), in order: the program's days. */
+  /** Each day's date where it happens ("2027-07-04"), in order: the program's days. */
   days: string[];
   /** The first day's opening and closing instants when every day keeps the same hours: the cover shows them in a visitor's own hour. */
   span: { opensAt: string; closesAt: string } | null;

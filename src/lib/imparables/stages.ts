@@ -186,7 +186,7 @@ function together(text: string): string {
 /** The line under the cover's and the closing's buttons (and the checkout's price) — its note only in the doubts
  * (2026-10-29):
  *   «Etapa Creyente · 200 cupos a $90.000 o hasta el 18 de abril · luego $120.000»,
- *   «Precio full · $150.000 · hasta el 27 de junio» —
+ *   «Precio full · $150.000 · hasta el 4 de julio» —
  * and, under 30% of its cap left, «Quedan 41 cupos a $90.000 · luego $120.000». */
 export function stageLine(sales: Pick<SalesState, "current" | "next" | "remaining">, timezone: string): string | null {
   const { current: stage, next, remaining } = sales;

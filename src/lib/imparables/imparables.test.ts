@@ -71,9 +71,9 @@ describe("getActiveStage: the first stage whose date hasn't come and whose cap i
     expect(state.countdown).toEqual({ to: STARTS, label: "El congreso empieza en" });
   });
 
-  it("on 27 June after 8:00 it's still the full price — and the sale is closed", () => {
-    expect(sales(stages(), "2027-06-27T07:59:00-05:00").current?.slug).toBe("full");
-    const state = sales(stages(), "2027-06-27T08:30:00-05:00");
+  it("on 4 July (the congress, since 2026-11-04) after 8:00 it's still the full price — and the sale is closed", () => {
+    expect(sales(stages(), "2027-07-04T07:59:00-05:00").current?.slug).toBe("full");
+    const state = sales(stages(), "2027-07-04T08:30:00-05:00");
     expect(state.active?.slug).toBe("full");
     expect([state.mode, state.current, state.countdown]).toEqual(["closed", null, null]);
   });
@@ -114,7 +114,7 @@ describe("what the page says about the stages", () => {
       "Etapa Creyente · 200 cupos a $90.000 o hasta el 18 de abril · luego $120.000"
     );
     expect(line(sales(stages([90]), "2027-04-20T10:00:00-05:00"))).toBe("Etapa Decidida · 300 cupos a $120.000 o hasta el 30 de mayo · luego $150.000");
-    expect(line(sales(stages([90, 120]), "2027-06-01T10:00:00-05:00"))).toBe("Precio full · $150.000 · hasta el 27 de junio");
+    expect(line(sales(stages([90, 120]), "2027-06-01T10:00:00-05:00"))).toBe("Precio full · $150.000 · hasta el 4 de julio");
   });
 
   it("the places left only under 30% of the cap", () => {
@@ -144,7 +144,7 @@ describe("what the page says about the stages", () => {
     // The full price has no cap: no bar, its line.
     const full = sales(stages([90, 120]), "2027-06-01T10:00:00-05:00");
     expect(stageProgress(full)).toBeNull();
-    expect(plain(stageTerms(full, TZ))).toBe("Precio full · $150.000 · hasta el 27 de junio");
+    expect(plain(stageTerms(full, TZ))).toBe("Precio full · $150.000 · hasta el 4 de julio");
   });
 
   it("«¿Por qué sube el precio?» tells every stage as the team wrote it", () => {
@@ -524,7 +524,7 @@ describe("the template", () => {
     expect(refund).toContain(guarantee);
     for (const line of refund.split("\n")) expect(line.length).toBeLessThan(200);
     // Nothing promised in the old policy went missing.
-    for (const part of ["5 días hábiles", "25 de junio", "repetición por 30 días", "nueva fecha", "WhatsApp", "máximo 30 días", "no hacemos devoluciones"]) expect(refund).toContain(part);
+    for (const part of ["5 días hábiles", "2 de julio", "repetición por 30 días", "nueva fecha", "WhatsApp", "máximo 30 días", "no hacemos devoluciones"]) expect(refund).toContain(part);
   });
 
   it("speaks plain Spanish: no «speakers» nor «Nail artist» on the page", () => {
@@ -572,7 +572,7 @@ describe("the template", () => {
       ["decidida", "Etapa Decidida", 120_000, 300],
       ["full", "Precio full", 150_000, null],
     ]);
-    expect(IMPARABLES_STAGES.map((s) => s.closesAt)).toEqual(["2027-04-18T23:59:00-05:00", "2027-05-30T23:59:00-05:00", "2027-06-27T08:00:00-05:00"]);
+    expect(IMPARABLES_STAGES.map((s) => s.closesAt)).toEqual(["2027-04-18T23:59:00-05:00", "2027-05-30T23:59:00-05:00", "2027-07-04T08:00:00-05:00"]);
     expect(IMPARABLES_STAGES.map((s) => s.note)).toEqual(["cierre de Nail Fest Cali", null, null]);
   });
 

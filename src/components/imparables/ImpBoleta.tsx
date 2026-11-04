@@ -19,9 +19,9 @@ export default function ImpBoleta({
 }: {
   /** "Manicuristas Imparables" */
   eventName: string;
-  /** "Domingo 27 de junio 2027" */
+  /** "Domingo 4 de julio 2027" */
   date: string;
-  /** "27 · 06 · 2027" */
+  /** "04 · 07 · 2027" */
   stub: string;
   price: number;
   struck: number | null;

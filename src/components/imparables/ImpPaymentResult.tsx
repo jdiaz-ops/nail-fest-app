@@ -111,7 +111,7 @@ export default function ImpPaymentResult({
                 <p>Sube una foto tuya y te armamos tu imagen «Asistiré» para historias y publicaciones.</p>
                 <a href={data.asistire} aria-hidden="true" tabIndex={-1}>
                   {/* eslint-disable-next-line @next/next/no-img-element -- a fixed picture of the empty template */}
-                  <img src="/imparables/asistire-muestra.jpg" width={150} height={266} alt="" />
+                  <img src="/imparables/asistire-muestra-4-julio.jpg" width={150} height={266} alt="" />
                 </a>
                 <a className="imp-pago-btn" href={data.asistire}>
                   Crear mi imagen

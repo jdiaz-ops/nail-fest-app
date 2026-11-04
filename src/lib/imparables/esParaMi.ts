@@ -11,7 +11,7 @@ export const ES_PARA_MI = {
     "Sabes que naciste para más, lleves dos o diez años en la mesa.",
   ],
   /** Under the card. */
-  closing: "Si dijiste «esa soy yo», el 27 de junio es tuyo.",
+  closing: "Si dijiste «esa soy yo», el 4 de julio es tuyo.",
 };
 
 /** The gold strip over everything, before the cover, that says what it is and who it's for at once (the team's boceto,

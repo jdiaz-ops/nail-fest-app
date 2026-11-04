@@ -148,7 +148,7 @@ export const IMPARABLES_REFUND = [
   "• Garantía de 30 minutos: si en la primera media hora sientes que no es para ti, te devolvemos el 100%.",
   "• Si te arrepientes dentro de los 5 días hábiles siguientes a tu compra, también te devolvemos el 100%, siempre que el congreso no haya empezado.",
   "• Si Nail Fest cambia la fecha o cancela el congreso, tú eliges: te devolvemos todo o usas tu boleta en la nueva fecha.",
-  "Fuera de estos casos no hacemos devoluciones, pero puedes pasarle tu boleta a otra persona escribiéndonos hasta el 25 de junio, y si no puedes verlo en vivo tienes la repetición por 30 días.",
+  "Fuera de estos casos no hacemos devoluciones, pero puedes pasarle tu boleta a otra persona escribiéndonos hasta el 2 de julio, y si no puedes verlo en vivo tienes la repetición por 30 días.",
   "Para pedirlo, escríbenos por WhatsApp con el correo de tu compra; el dinero vuelve por el mismo medio de pago en máximo 30 días.",
 ].join("\n");
 
@@ -400,7 +400,7 @@ export const IMPARABLES_BLOCKS: LandingBlock[] = [
       {
         question: "¿Cuál es el horario?",
         answer:
-          "Domingo 27 de junio de 2027, de 8:00 a. m. a 7:00 p. m., hora Colombia, con una hora de almuerzo y pausas activas. Si estás en otro país, ajusta la hora a tu zona.",
+          "Domingo 4 de julio de 2027, de 8:00 a. m. a 6:30 p. m., hora Colombia, con una hora de almuerzo y pausas activas. Si estás en otro país, ajusta la hora a tu zona.",
       },
       {
         question: "¿Sirve si estoy fuera de Colombia?",
@@ -454,7 +454,7 @@ export const IMPARABLES_FIELDS = {
 export const IMPARABLES_STAGES: { slug: string; name: string; price: number; cap: number | null; closesAt: string; note: string | null }[] = [
   { slug: "creyente", name: "Etapa Creyente", price: 90_000, cap: 200, closesAt: "2027-04-18T23:59:00-05:00", note: "cierre de Nail Fest Cali" },
   { slug: "decidida", name: "Etapa Decidida", price: 120_000, cap: 300, closesAt: "2027-05-30T23:59:00-05:00", note: null },
-  { slug: "full", name: "Precio full", price: 150_000, cap: null, closesAt: "2027-06-27T08:00:00-05:00", note: null },
+  { slug: "full", name: "Precio full", price: 150_000, cap: null, closesAt: "2027-07-04T08:00:00-05:00", note: null },
 ];
 /** How many tickets of each stage can go out at all — not its cap: a number that won't be the limit, to lower once
  * Zoom's capacity is known. */

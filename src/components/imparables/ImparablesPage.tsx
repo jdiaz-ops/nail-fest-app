@@ -162,7 +162,7 @@ export default function ImparablesPage({
   const big = words.pop() ?? event.displayName;
   const pre = words.join(" ");
   // The pill right before the group photo (2026-10-28): when, big — written
-  // the way the team writes it there, «27 de junio 2027» (2026-10-29: no «de»
+  // the way the team writes it there, «4 de julio 2027» (2026-10-29: no «de»
   // before the year only) — and under it, smaller, what it is: «Congreso virtual
   // en vivo» (the team, 2026-11-03: no «100%», no platform). No hours.
   const place = event.venueName || event.city;
