@@ -1,9 +1,12 @@
 import type { Event } from "@prisma/client";
 import { getOrgSettings } from "@/lib/settings";
 import { publicEventName } from "@/lib/eventDisplayName";
+import { parseLandingBlocks } from "@/lib/landingBlocks/types";
 import { asistireShortLink } from "@/lib/imparables/asistire";
+import { sponsorLogosOf } from "@/lib/imparables/blocks";
 import { coverName, eventWhen, kindLine } from "@/lib/imparables/schedule";
 import ImpAsistire from "./ImpAsistire";
+import { MAX_SPONSORS, PILLARS } from "./asistireArt";
 import { cinzel, manrope } from "./fonts";
 
 // «Asistiré»'s page (2026-10-30), in the checkout's chrome: the image maker
@@ -16,6 +19,10 @@ export default async function AsistireScreen({ event, waiting = false, token }: 
   const pre = words.join(" ");
   const orgSettings = await getOrgSettings();
   const link = asistireShortLink();
+  // The brands under «Con el apoyo de», as the cover reads them: from their section even while it's hidden.
+  const sponsors = sponsorLogosOf(parseLandingBlocks(event.landingBlocks))
+    .slice(0, MAX_SPONSORS)
+    .map((item) => ({ name: item.handle.trim(), url: item.url.trim() }));
 
   return (
     <main className={`imp ${cinzel.variable} ${manrope.variable}`}>
@@ -37,7 +44,7 @@ export default async function AsistireScreen({ event, waiting = false, token }: 
             </div>
           ) : (
             <ImpAsistire
-              texts={{ pre, big, date: eventWhen(event, orgSettings.timezone).dates, kind: kindLine(event), link: link.text }}
+              texts={{ pre, big, date: eventWhen(event, orgSettings.timezone).dates, kind: kindLine(event), link: link.text, tagline: PILLARS, sponsors }}
               fonts={{ display: cinzel.style.fontFamily, body: manrope.style.fontFamily }}
               linkHref={link.href}
               track={token}

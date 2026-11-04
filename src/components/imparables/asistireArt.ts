@@ -1,9 +1,11 @@
 // Manicuristas Imparables' «Asistiré» image (2026-10-30): the boceto the team
 // chose («Portada»), drawn on a canvas in her own browser, so her photo never
-// leaves her phone. The cover's bone and bronze rays, the name, her photo in
-// a gold arch, «¡ASISTIRÉ!» on a gold stamp, the day, and where to book. Two
-// sizes: a story (1080×1920) and a publication (1080×1350). Every position
-// below is the boceto's own, measured.
+// leaves her phone. The cover's bone and bronze rays, the name and under it
+// its pillars, her photo in a gold arch, «¡ASISTIRÉ!» on a gold stamp, the
+// day, where to book, who organizes it and, last, the brands that support it
+// (the team, 2026-11-04). Two sizes: a story (1080×1920) and a publication
+// (1080×1350). Every position below is the boceto's own, measured — moved,
+// since 2026-11-04, to make room for the pillars and the brands.
 
 export type AsistireFormat = "historia" | "publicacion";
 
@@ -18,7 +20,23 @@ export interface AsistireTexts {
   kind: string;
   /** «nailfest.lat/imparables» */
   link: string;
+  /** «Mentalidad · Dinero · Marketing», under the name (the team, 2026-11-04); «»: none. */
+  tagline: string;
+  /** The brands that support it, at most four, in a row under «Con el apoyo de» (the team, 2026-11-04); none: no row. */
+  sponsors: AsistireSponsor[];
 }
+
+export interface AsistireSponsor {
+  /** Its name: drawn in place of its logo when the logo can't be. */
+  name: string;
+  /** Its logo, as uploaded. */
+  url: string;
+}
+
+/** The congress's pillars, as its page tells them under the group photo. */
+export const PILLARS = "Mentalidad · Dinero · Marketing";
+/** As many brands as fit the row. */
+export const MAX_SPONSORS = 4;
 
 /** The two faces' CSS families, as next/font names them (fonts.ts). */
 export interface AsistireFonts {
@@ -79,6 +97,7 @@ interface Layout {
   tiara: Box;
   pre: Line & { spacing: number };
   big: Line;
+  tagline: Line & { spacing: number };
   arch: Box & { round: number; foot: number };
   frame: Box & { round: number; foot: number };
   stamp: { top: number; height: number; padX: number; radius: number; size: number; textTop: number; spacing: number };
@@ -87,6 +106,8 @@ interface Layout {
   kind: Line;
   pill: Line & { padX: number };
   signature: Line & { spacing: number; gap: number };
+  /** The brands: a thin line, «CON EL APOYO DE», and their logos, each at most `maxW` wide. */
+  sponsors: { rule: { top: number; w: number }; label: Line & { spacing: number }; logos: { top: number; height: number; maxW: number; gap: number } };
 }
 
 export const LAYOUTS: Record<AsistireFormat, Layout> = {
@@ -94,9 +115,10 @@ export const LAYOUTS: Record<AsistireFormat, Layout> = {
     width: 1080,
     height: 1920,
     glow: { rx: 864, ry: 768 },
-    tiara: { x: 425, y: 176, w: 230, h: 63 },
-    pre: { top: 253, height: 48, size: 48, spacing: 10.56 },
-    big: { top: 311, height: 140, size: 140 },
+    tiara: { x: 425, y: 146, w: 230, h: 63 },
+    pre: { top: 223, height: 48, size: 48, spacing: 10.56 },
+    big: { top: 281, height: 140, size: 140 },
+    tagline: { top: 425, height: 36, size: 27, spacing: 5.4 },
     arch: { x: 240, y: 513, w: 600, h: 760, round: 300, foot: 26 },
     frame: { x: 222, y: 495, w: 636, h: 796, round: 318, foot: 40 },
     stamp: { top: 1195, height: 146, padX: 58, radius: 22, size: 98, textTop: 1217, spacing: 3.92 },
@@ -104,18 +126,24 @@ export const LAYOUTS: Record<AsistireFormat, Layout> = {
       { x: 138, y: 1250, w: 70, h: 62 },
       { x: 890, y: 1120, w: 46, h: 40 },
     ],
-    date: { top: 1405, height: 65, size: 48 },
-    kind: { top: 1484, height: 46, size: 34 },
-    pill: { top: 1580, height: 96, size: 32, padX: 46 },
-    signature: { top: 1712, height: 40, size: 22, spacing: 3.52, gap: 14 },
+    date: { top: 1400, height: 65, size: 48 },
+    kind: { top: 1476, height: 46, size: 34 },
+    pill: { top: 1556, height: 96, size: 32, padX: 46 },
+    signature: { top: 1684, height: 40, size: 22, spacing: 3.52, gap: 14 },
+    sponsors: {
+      rule: { top: 1752, w: 400 },
+      label: { top: 1770, height: 26, size: 18, spacing: 3.6 },
+      logos: { top: 1812, height: 50, maxW: 190, gap: 40 },
+    },
   },
   publicacion: {
     width: 1080,
     height: 1350,
     glow: { rx: 864, ry: 540 },
-    tiara: { x: 452, y: 70, w: 176, h: 48 },
-    pre: { top: 128, height: 36, size: 36, spacing: 7.92 },
-    big: { top: 172, height: 106, size: 106 },
+    tiara: { x: 452, y: 44, w: 176, h: 48 },
+    pre: { top: 102, height: 36, size: 36, spacing: 7.92 },
+    big: { top: 146, height: 106, size: 106 },
+    tagline: { top: 255, height: 28, size: 21, spacing: 4.2 },
     arch: { x: 320, y: 322, w: 440, h: 540, round: 220, foot: 22 },
     frame: { x: 306, y: 308, w: 468, h: 568, round: 234, foot: 34 },
     stamp: { top: 802, height: 109, padX: 42, radius: 18, size: 74, textTop: 818, spacing: 2.96 },
@@ -123,10 +151,15 @@ export const LAYOUTS: Record<AsistireFormat, Layout> = {
       { x: 214, y: 842, w: 54, h: 48 },
       { x: 806, y: 740, w: 36, h: 32 },
     ],
-    date: { top: 955, height: 52, size: 38 },
-    kind: { top: 1017, height: 38, size: 28 },
-    pill: { top: 1089, height: 76, size: 26, padX: 38 },
-    signature: { top: 1191, height: 32, size: 18, spacing: 2.88, gap: 14 },
+    date: { top: 950, height: 52, size: 38 },
+    kind: { top: 1008, height: 38, size: 28 },
+    pill: { top: 1070, height: 76, size: 26, padX: 38 },
+    signature: { top: 1164, height: 32, size: 18, spacing: 2.88, gap: 12 },
+    sponsors: {
+      rule: { top: 1214, w: 320 },
+      label: { top: 1228, height: 20, size: 14, spacing: 2.8 },
+      logos: { top: 1260, height: 38, maxW: 150, gap: 32 },
+    },
   },
 };
 
@@ -160,12 +193,19 @@ export interface AsistireLayers {
   over: HTMLCanvasElement;
 }
 
-export function asistireLayers(format: AsistireFormat, texts: AsistireTexts, fonts: AsistireFonts, logo: HTMLImageElement | null): AsistireLayers {
+/** `sponsorLogos`: each brand's logo, loaded (null: its name instead), in the order of `texts.sponsors`. */
+export function asistireLayers(
+  format: AsistireFormat,
+  texts: AsistireTexts,
+  fonts: AsistireFonts,
+  logo: HTMLImageElement | null,
+  sponsorLogos: (HTMLImageElement | null)[] = [],
+): AsistireLayers {
   const L = LAYOUTS[format];
   const under = blank(L.width, L.height);
   const over = blank(L.width, L.height);
   drawUnder(under.getContext("2d")!, L, texts, fonts);
-  drawOver(over.getContext("2d")!, L, texts, fonts, logo);
+  drawOver(over.getContext("2d")!, L, texts, fonts, logo, sponsorLogos);
   return { format, under, over };
 }
 
@@ -374,6 +414,17 @@ function drawUnder(ctx: CanvasRenderingContext2D, L: Layout, t: AsistireTexts, f
   ctx.textAlign = "center";
   ctx.fillText(word, cx, baseline(ctx, L.big.top, L.big.height, size));
 
+  // Its pillars, as the page sets them: the display face, spaced, in black.
+  const tagline = t.tagline.trim().toUpperCase();
+  if (tagline) {
+    ctx.fillStyle = C.ink;
+    ctx.font = `700 ${L.tagline.size}px ${f.display}`;
+    const room = L.width - 120;
+    const wide = spaced(ctx, tagline, 0, 0, L.tagline.spacing, false);
+    if (wide > room) ctx.font = `700 ${Math.floor((L.tagline.size * room) / wide)}px ${f.display}`;
+    spaced(ctx, tagline, cx, baseline(ctx, L.tagline.top, L.tagline.height, L.tagline.size), wide > room ? (L.tagline.spacing * room) / wide : L.tagline.spacing);
+  }
+
   // The thin gold line around the arch, then the arch, gold-edged, with its shadow.
   const fr = L.frame;
   ctx.beginPath();
@@ -393,7 +444,7 @@ function drawUnder(ctx: CanvasRenderingContext2D, L: Layout, t: AsistireTexts, f
   ctx.restore();
 }
 
-function drawOver(ctx: CanvasRenderingContext2D, L: Layout, t: AsistireTexts, f: AsistireFonts, logo: HTMLImageElement | null) {
+function drawOver(ctx: CanvasRenderingContext2D, L: Layout, t: AsistireTexts, f: AsistireFonts, logo: HTMLImageElement | null, sponsorLogos: (HTMLImageElement | null)[]) {
   const cx = L.width / 2;
   for (const b of L.sparkles) drawSparkle(ctx, b);
   drawStamp(ctx, L, f);
@@ -408,6 +459,7 @@ function drawOver(ctx: CanvasRenderingContext2D, L: Layout, t: AsistireTexts, f:
 
   drawPill(ctx, L, t, f);
   drawSignature(ctx, L, f, logo);
+  drawSponsors(ctx, L, t, f, sponsorLogos);
 }
 
 /** «¡ASISTIRÉ!» on gold, tilted, over the arch's foot. */
@@ -490,6 +542,81 @@ function drawSignature(ctx: CanvasRenderingContext2D, L: Layout, f: AsistireFont
   const x = L.width / 2 - (label + (logoW ? s.gap + logoW : 0)) / 2;
   spaced(ctx, "ORGANIZA", x + (label - s.spacing) / 2, baseline(ctx, s.top, s.height, s.size), s.spacing);
   if (logo && logoW) ctx.drawImage(tinted(logo, logoW, s.height, "rgba(20,20,20,0.9)"), x + label + s.gap, s.top, logoW, s.height);
+}
+
+/** «CON EL APOYO DE» and the brands' logos in a row under it, in grays as the cover shows them — a brand whose logo
+ * didn't load, by its name. */
+function drawSponsors(ctx: CanvasRenderingContext2D, L: Layout, t: AsistireTexts, f: AsistireFonts, logos: (HTMLImageElement | null)[]) {
+  const s = L.sponsors;
+  const cx = L.width / 2;
+  const nameSize = Math.round(s.logos.height * 0.44);
+  const brands = t.sponsors
+    .slice(0, MAX_SPONSORS)
+    .map((sponsor, i) => {
+      const img = logos[i];
+      if (img?.naturalWidth) {
+        const ratio = img.naturalWidth / img.naturalHeight;
+        const w = Math.min(s.logos.maxW, ratio * s.logos.height);
+        // Drawn at twice its size, for a sharp downscale.
+        const logo = grayed(img, w * 2, (w / ratio) * 2);
+        if (logo) return { name: "", logo, w, h: w / ratio };
+      }
+      const name = sponsor.name.trim();
+      ctx.font = `800 ${nameSize}px ${f.body}`;
+      return { name, logo: null, w: Math.min(s.logos.maxW, ctx.measureText(name).width), h: s.logos.height };
+    })
+    .filter((brand) => brand.logo || brand.name);
+  if (!brands.length) return;
+
+  ctx.fillStyle = C.line;
+  ctx.fillRect(cx - s.rule.w / 2, s.rule.top, s.rule.w, 2);
+  ctx.fillStyle = C.warm;
+  ctx.font = `800 ${s.label.size}px ${f.body}`;
+  spaced(ctx, "CON EL APOYO DE", cx, baseline(ctx, s.label.top, s.label.height, s.label.size), s.label.spacing);
+
+  // The row, smaller all of it if it wouldn't fit the width.
+  const row = brands.reduce((sum, brand) => sum + brand.w, 0) + s.logos.gap * (brands.length - 1);
+  const k = Math.min(1, (L.width - 120) / row);
+  let x = cx - (row * k) / 2;
+  const middle = s.logos.top + s.logos.height / 2;
+  for (const brand of brands) {
+    const w = brand.w * k;
+    const h = brand.h * k;
+    if (brand.logo) {
+      ctx.save();
+      ctx.globalAlpha = 0.78;
+      ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(brand.logo, x, middle - h / 2, w, h);
+      ctx.restore();
+    } else {
+      ctx.fillStyle = C.warm;
+      const size = fitted(ctx, 800, nameSize * k, f.body, brand.name, w);
+      ctx.textAlign = "center";
+      ctx.fillText(brand.name, x + w / 2, baseline(ctx, middle - s.logos.height / 2, s.logos.height, size));
+    }
+    x += w + s.logos.gap * k;
+  }
+}
+
+/** An image in grays (the cover's logos: «grayscale(1)»), drawn at w × h; null for one the browser won't let us read —
+ * drawn, it would keep her image from being saved. */
+function grayed(img: HTMLImageElement, w: number, h: number): HTMLCanvasElement | null {
+  const canvas = blank(Math.max(1, Math.round(w)), Math.max(1, Math.round(h)));
+  const ctx = canvas.getContext("2d")!;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  try {
+    const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const d = pixels.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const gray = 0.2126 * d[i]! + 0.7152 * d[i + 1]! + 0.0722 * d[i + 2]!;
+      d[i] = d[i + 1] = d[i + 2] = gray;
+    }
+    ctx.putImageData(pixels, 0, 0);
+  } catch {
+    return null;
+  }
+  return canvas;
 }
 
 /** An image in one color, keeping its shape. */

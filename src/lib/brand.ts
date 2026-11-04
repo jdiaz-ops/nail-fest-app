@@ -7,6 +7,9 @@ import { COUNTRY_CODES } from "@/lib/countryCodes";
 // copies of that same moment.
 export const INSTAGRAM_URL = "https://www.instagram.com/nailfest_co";
 export const INSTAGRAM_HANDLE = "@nailfest_co";
+/** Manicuristas Imparables' own Instagram: only on its own pages (its «Asistiré» asks to tag it beside Nail Fest's,
+ * the team, 2026-11-04), never on a Nail Fest event's. */
+export const IMPARABLES_INSTAGRAM_HANDLE = "@manicuristas_imparables";
 
 /** Purely cosmetic — the phone a person submitted is stored/sent as raw
  * E.164 ("+573001234567", see RegistrationForm's phoneCountry.dialCode +

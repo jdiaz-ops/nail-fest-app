@@ -32,3 +32,35 @@ describe("her photo in the arch", () => {
     expect(clampPlacement(box, tall, FIRST_PLACEMENT)).toEqual(FIRST_PLACEMENT);
   });
 });
+
+describe("the image's parts, top to bottom", () => {
+  it("keeps the name, its pillars, the arch, the day, the signature and the brands in order and inside, in both sizes", () => {
+    for (const format of ["historia", "publicacion"] as const) {
+      const L = LAYOUTS[format];
+      const s = L.sponsors;
+      const tops = [
+        L.tiara.y,
+        L.pre.top,
+        L.big.top,
+        L.tagline.top,
+        L.frame.y,
+        L.date.top,
+        L.kind.top,
+        L.pill.top,
+        L.signature.top,
+        s.rule.top,
+        s.label.top,
+        s.logos.top,
+      ];
+      expect([...tops].sort((a, b) => a - b)).toEqual(tops);
+      // Nothing runs into the next part.
+      expect(L.big.top + L.big.height).toBeLessThanOrEqual(L.tagline.top);
+      expect(L.tagline.top + L.tagline.height).toBeLessThanOrEqual(L.frame.y);
+      expect(L.pill.top + L.pill.height).toBeLessThan(L.signature.top);
+      expect(L.signature.top + L.signature.height).toBeLessThan(s.rule.top);
+      expect(s.label.top + s.label.height).toBeLessThan(s.logos.top);
+      // And a margin under the brands.
+      expect(s.logos.top + s.logos.height).toBeLessThanOrEqual(L.height - 40);
+    }
+  });
+});

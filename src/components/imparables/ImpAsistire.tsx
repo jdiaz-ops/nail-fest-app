@@ -17,13 +17,15 @@ import {
   type Placement,
 } from "./asistireArt";
 import * as nailFest from "../nailfest/asistireArt";
-import { INSTAGRAM_HANDLE } from "@/lib/brand";
+import { IMPARABLES_INSTAGRAM_HANDLE, INSTAGRAM_HANDLE } from "@/lib/brand";
 
 // «Asistiré» (2026-10-30), as in the boceto the team approved: her photo in,
 // her image out — a story or a publication to share, and the link to book.
 // Three steps on one page: she uploads her photo, adjusts it (dragging,
-// pinching or with the slider) and shares or downloads the image. All of it
-// happens in her browser (asistireArt.ts): her photo isn't sent anywhere.
+// pinching or with the slider) and downloads the image — no «Compartir»
+// since 2026-11-04 (the team): download it, post it and tag both accounts.
+// All of it happens in her browser (asistireArt.ts): her photo isn't sent
+// anywhere.
 // The same steps make Nail Fest's image for its events at a place
 // (design="NAIL_FEST", 2026-10-30; ../nailfest/asistireArt.ts).
 
@@ -39,7 +41,9 @@ type Props = {
 interface Art {
   size: (format: AsistireFormat) => { width: number; height: number };
   photoBox: (format: AsistireFormat) => { x: number; y: number; w: number; h: number };
-  layers: (format: AsistireFormat, logo: HTMLImageElement | null) => AsistireLayers;
+  layers: (format: AsistireFormat, logo: HTMLImageElement | null, images: (HTMLImageElement | null)[]) => AsistireLayers;
+  /** Other images it's drawn with (the brands' logos), to load first. */
+  images: string[];
   draw: (ctx: CanvasRenderingContext2D, layers: AsistireLayers, photo: HTMLCanvasElement | null, placement: Placement) => void;
   /** The faces it's drawn with, to load first. */
   faces: string[];
@@ -53,6 +57,7 @@ function artOf(props: Props): Art {
       size: (format) => nailFest.LAYOUTS[format],
       photoBox: nailFest.photoBox,
       layers: (format, logo) => nailFest.asistireLayers(format, texts, fonts, logo),
+      images: [],
       draw: (ctx, layers, photo, placement) => nailFest.drawAsistire(ctx, layers, photo, placement, fonts),
       faces: [`900 90px ${fonts.display}`, `700 45px ${fonts.body}`, `600 39px ${fonts.body}`, `800 36px ${fonts.body}`, `400 33px ${fonts.body}`],
     };
@@ -61,9 +66,10 @@ function artOf(props: Props): Art {
   return {
     size: (format) => LAYOUTS[format],
     photoBox,
-    layers: (format, logo) => asistireLayers(format, texts, fonts, logo),
+    layers: (format, logo, images) => asistireLayers(format, texts, fonts, logo, images),
+    images: texts.sponsors.map((sponsor) => sponsor.url),
     draw: (ctx, layers, photo, placement) => drawAsistire(ctx, layers, photo, placement, fonts),
-    faces: [`800 48px ${fonts.display}`, `900 98px ${fonts.display}`, `600 32px ${fonts.body}`, `800 32px ${fonts.body}`],
+    faces: [`700 27px ${fonts.display}`, `800 48px ${fonts.display}`, `900 98px ${fonts.display}`, `600 32px ${fonts.body}`, `800 32px ${fonts.body}`],
   };
 }
 
@@ -73,6 +79,20 @@ const FORMATS: { id: AsistireFormat; name: string; ratio: string }[] = [
   { id: "historia", name: "Historia", ratio: "9:16" },
   { id: "publicacion", name: "Publicación", ratio: "4:5" },
 ];
+
+/** An image from another site, loaded so the canvas can still be saved with it drawn in; null if it won't load. */
+async function loadImage(url: string): Promise<HTMLImageElement | null> {
+  if (!url) return null;
+  const img = new Image();
+  img.crossOrigin = "anonymous";
+  img.src = url;
+  try {
+    await img.decode();
+    return img.naturalWidth ? img : null;
+  } catch {
+    return null;
+  }
+}
 
 /** Her photo, upright, at most 2048 px on its longer side. */
 async function readPhoto(file: File): Promise<HTMLCanvasElement> {
@@ -101,6 +121,7 @@ export default function ImpAsistire(props: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const layersRef = useRef<AsistireLayers | null>(null);
   const logoRef = useRef<HTMLImageElement | null>(null);
+  const imagesRef = useRef<(HTMLImageElement | null)[]>([]);
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const [ready, setReady] = useState(false);
   const [step, setStep] = useState<Step>("subir");
@@ -110,17 +131,20 @@ export default function ImpAsistire(props: Props) {
   const [moved, setMoved] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<{ url: string; file: File; canShare: boolean } | null>(null);
+  const [result, setResult] = useState<{ url: string; file: File } | null>(null);
   const [copied, setCopied] = useState(false);
 
-  // The faces and the logo first: the image is drawn with them.
+  // The faces, the logo and the brands' logos first: the image is drawn with them.
   useEffect(() => {
     let gone = false;
     const logo = new Image();
     logo.src = "/logo.png";
-    Promise.allSettled([...art.faces.map((face) => document.fonts.load(face)), logo.decode()]).then(() => {
+    const images = Promise.all(art.images.map(loadImage));
+    Promise.allSettled([...art.faces.map((face) => document.fonts.load(face)), logo.decode(), images]).then(async () => {
       if (gone) return;
       logoRef.current = logo.naturalWidth ? logo : null;
+      imagesRef.current = await images;
+      layersRef.current = null;
       setReady(true);
     });
     return () => {
@@ -131,7 +155,7 @@ export default function ImpAsistire(props: Props) {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!ready || !canvas) return;
-    if (layersRef.current?.format !== format) layersRef.current = art.layers(format, logoRef.current);
+    if (layersRef.current?.format !== format) layersRef.current = art.layers(format, logoRef.current, imagesRef.current);
     art.draw(canvas.getContext("2d")!, layersRef.current, photo, placement);
   }, [ready, format, photo, placement, art, step]);
 
@@ -245,21 +269,10 @@ export default function ImpAsistire(props: Props) {
     }
     const file = new File([blob], `asistire-${format}.jpg`, { type: "image/jpeg" });
     setError(null);
-    setResult({ url: URL.createObjectURL(blob), file, canShare: !!navigator.canShare?.({ files: [file] }) });
+    setResult({ url: URL.createObjectURL(blob), file });
     setStep("lista");
     count("CREATED");
     window.scrollTo({ top: 0 });
-  }
-
-  async function share() {
-    if (!result) return;
-    try {
-      await navigator.share({ files: [result.file] });
-      count("DOWNLOADED");
-    } catch (err) {
-      if (err instanceof DOMException && err.name === "AbortError") return;
-      setError("No se pudo abrir «Compartir». Descarga la imagen y súbela desde tu galería.");
-    }
   }
 
   async function copy() {
@@ -399,17 +412,18 @@ export default function ImpAsistire(props: Props) {
       )}
 
       {step === "lista" && result && props.design !== "NAIL_FEST" && (
+        // Manicuristas Imparables' (the team, 2026-11-04): her image to download — no «Compartir» — and both accounts
+        // to tag.
         <>
-          {result.canShare && (
-            <button type="button" className="imp-co-btn" onClick={share}>
-              <Share />
-              Compartir
-            </button>
-          )}
-          <a className={result.canShare ? "imp-as-btn2" : "imp-co-btn"} href={result.url} download={result.file.name} onClick={() => count("DOWNLOADED")}>
+          <a className="imp-co-btn" href={result.url} download={result.file.name} onClick={() => count("DOWNLOADED")}>
             <Download />
             Descargar imagen
           </a>
+          <p className="imp-as-redes">
+            Publícala en tu historia, en tu feed o en tu estado de WhatsApp y etiqueta a <b>{IMPARABLES_INSTAGRAM_HANDLE}</b> y{" "}
+            <b>{INSTAGRAM_HANDLE}</b>.
+            {onIPhone() && <small>En iPhone, mantén el dedo sobre la imagen y toca «Guardar en Fotos».</small>}
+          </p>
           <div className="imp-as-link">
             <strong>Pon el enlace en tu historia</strong>
             <div className="imp-as-copy">
@@ -503,15 +517,6 @@ function Lock() {
     <Icon>
       <rect x="5" y="11" width="14" height="10" rx="2" />
       <path d="M8 11V8a4 4 0 0 1 8 0v3" />
-    </Icon>
-  );
-}
-
-function Share() {
-  return (
-    <Icon>
-      <path d="M12 3v12M7 8l5-5 5 5" />
-      <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" />
     </Icon>
   );
 }
