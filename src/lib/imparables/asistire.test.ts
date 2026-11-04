@@ -12,6 +12,7 @@ import {
   asistireShortTarget,
   asistireToken,
   asistireUrl,
+  kitUrl,
   marcoUrl,
 } from "./asistire";
 
@@ -35,6 +36,10 @@ describe("her «Asistiré» link", () => {
     expect(signature).toMatch(/^[\w-]{43}$/);
     process.env.APP_SECRET_KEY = "another-secret";
     expect(asistireToken("cmreg123").split(".")[1]).not.toBe(signature);
+  });
+
+  it("opens her kit's page too, with /kit", () => {
+    expect(kitUrl("https://nailfest.lat/asistire/cmreg123.abc")).toBe("https://nailfest.lat/asistire/cmreg123.abc/kit");
   });
 
   it("opens her profile frame too, with /marco", () => {

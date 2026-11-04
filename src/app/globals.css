@@ -9530,3 +9530,107 @@ body:has(.imp.nf) {
 .rv-imp .rv-cta:hover:not(:disabled) {
   background: #b8925a;
 }
+
+/* «Tu kit Imparable» (2026-11-04, app/asistire/[token]/kit): her profile frame in a card, and the wallpapers and the
+   story templates, three to a row, each one opening its file. On the recordings page's ground and type (.imp-mc). */
+.imp-kit-frame {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 18px;
+  margin-top: 14px;
+  padding: 18px;
+  border: 1px solid var(--imp-tarjeta-borde);
+  border-radius: 20px;
+  background: var(--imp-tarjeta);
+  box-shadow: 0 22px 40px -30px rgba(59, 36, 24, 0.7);
+  color: var(--imp-texto) !important;
+  text-decoration: none;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.imp-kit-frame:hover,
+.imp-kit-frame:focus-visible {
+  border-color: var(--imp-acento);
+  transform: translateY(-1px);
+}
+.imp-kit-frame img {
+  display: block;
+  width: 108px;
+  height: 108px;
+  border-radius: 50%;
+  box-shadow: 0 12px 24px -14px rgba(59, 36, 24, 0.8);
+}
+.imp-kit-frame-t {
+  display: grid;
+  gap: 4px;
+}
+.imp-kit-frame-t b {
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.3;
+}
+.imp-kit-frame-t span {
+  font-size: 14.5px;
+  line-height: 1.45;
+  color: var(--imp-texto-2);
+}
+.imp-kit-frame-t em {
+  margin-top: 4px;
+  font-size: 14.5px;
+  font-style: normal;
+  font-weight: 800;
+  color: var(--imp-acento);
+}
+.imp-kit-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.imp-kit-thumb {
+  display: block;
+  color: var(--imp-texto) !important;
+  text-decoration: none;
+}
+.imp-kit-thumb img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 9 / 16;
+  object-fit: cover;
+  border: 1px solid var(--imp-tarjeta-borde);
+  border-radius: 14px;
+  box-shadow: 0 14px 26px -18px rgba(59, 36, 24, 0.75);
+  transition: transform 0.15s ease;
+}
+.imp-kit-thumb:hover img,
+.imp-kit-thumb:focus-visible img {
+  transform: translateY(-2px);
+}
+.imp-kit-thumb span {
+  display: block;
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+@media (min-width: 640px) {
+  .imp-kit-grid {
+    gap: 20px;
+  }
+}
+@media (max-width: 380px) {
+  .imp-kit-frame {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .imp-kit-frame,
+  .imp-kit-thumb img {
+    transition: none;
+  }
+}

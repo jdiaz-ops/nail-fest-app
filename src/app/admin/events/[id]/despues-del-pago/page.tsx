@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { requirePageUser } from "@/lib/auth/guard";
 import { getOrgSettings } from "@/lib/settings";
 import { savedConfirmationMode } from "@/lib/confirmationSample";
-import { asistireSampleUrl, marcoUrl } from "@/lib/imparables/asistire";
+import { asistireSampleUrl, kitUrl, marcoUrl } from "@/lib/imparables/asistire";
 import { KIT } from "@/lib/imparables/kit";
 import { congresoSamplePath, congresoSampleToken, diplomaPath } from "@/lib/imparables/miCongreso";
 import TestSendBox from "../../TestSendBox";
@@ -21,8 +21,8 @@ const SENT_NOW = {
 // way she sees it, in tabs — the payment's page (and its answers while PSE
 // confirms, or when the bank says no), her confirmation email (and a test of
 // it to the team's inbox), and Manicuristas Imparables' «Asistiré» image to
-// try with any photo, her profile frame, her recordings page, her diploma and
-// the closing email with its WhatsApp (2026-11-04).
+// try with any photo, her kit's page, her profile frame, her recordings page,
+// her diploma and the closing email with its WhatsApp (2026-11-04).
 // Each tab is the real page in the team's preview (?vista= on /pago, the
 // sample links): sample data, nothing saved or sent to anyone. ADMIN-only,
 // like the rest of Configuración.
@@ -94,6 +94,12 @@ export default async function AfterPaymentPage({ params, searchParams }: { param
             label: "Imagen «Asistiré»",
             src: asistireSampleUrl(event.id),
             note: "Se abre desde la página de pago y desde el correo. Pruébala con cualquier foto: no se guarda nada.",
+          },
+          {
+            id: "kit",
+            label: "Tu kit Imparable",
+            src: kitUrl(asistireSampleUrl(event.id)),
+            note: "La página de su kit, con un enlace solo suyo: su foto de perfil con el marco, los fondos de pantalla y las plantillas de historias.",
           },
           {
             id: "marco",

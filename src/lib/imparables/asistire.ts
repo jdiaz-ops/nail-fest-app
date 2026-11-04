@@ -47,6 +47,11 @@ export function marcoUrl(asistireLink: string): string {
   return `${asistireLink.replace(/\/+$/, "")}/marco`;
 }
 
+/** Her kit's page («Tu kit Imparable», 2026-11-04): the same link, with /kit. */
+export function kitUrl(asistireLink: string): string {
+  return `${asistireLink.replace(/\/+$/, "")}/kit`;
+}
+
 // The team's sample of an event's page (2026-10-30): the same image maker,
 // with no purchase behind it — for the confirmation's test emails, its
 // preview and «Después del pago». Signed like hers, so it opens on any
