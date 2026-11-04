@@ -5,6 +5,8 @@ import { requirePageUser } from "@/lib/auth/guard";
 import { getOrgSettings } from "@/lib/settings";
 import { savedConfirmationMode } from "@/lib/confirmationSample";
 import { asistireSampleUrl } from "@/lib/imparables/asistire";
+import { KIT } from "@/lib/imparables/kit";
+import { congresoSamplePath, congresoSampleToken, diplomaPath } from "@/lib/imparables/miCongreso";
 import TestSendBox from "../../TestSendBox";
 
 export const dynamic = "force-dynamic";
@@ -19,9 +21,10 @@ const SENT_NOW = {
 // way she sees it, in tabs — the payment's page (and its answers while PSE
 // confirms, or when the bank says no), her confirmation email (and a test of
 // it to the team's inbox), and Manicuristas Imparables' «Asistiré» image to
-// try with any photo. Each tab is the real page in the team's preview
-// (?vista= on /pago, the image's sample link): sample data, nothing saved or
-// sent to anyone. ADMIN-only, like the rest of Configuración.
+// try with any photo, her page «Tu congreso» and her diploma (2026-11-04).
+// Each tab is the real page in the team's preview (?vista= on /pago, the
+// sample links): sample data, nothing saved or sent to anyone. ADMIN-only,
+// like the rest of Configuración.
 export default async function AfterPaymentPage({ params, searchParams }: { params: { id: string }; searchParams: { vista?: string } }) {
   await requirePageUser(["ADMIN"]);
   const [event, orgSettings] = await Promise.all([db.event.findUnique({ where: { id: params.id } }), getOrgSettings()]);
@@ -45,6 +48,18 @@ export default async function AfterPaymentPage({ params, searchParams }: { param
             label: "Imagen «Asistiré»",
             src: asistireSampleUrl(event.id),
             note: "Se abre desde la página de pago y desde el correo. Pruébala con cualquier foto: no se guarda nada.",
+          },
+          {
+            id: "congreso",
+            label: "Tu congreso",
+            src: congresoSamplePath(event.id),
+            note: "Su página personal, con un enlace solo suyo: el kit digital, las grabaciones y el diploma. Todavía no se le envía a nadie.",
+          },
+          {
+            id: "diploma",
+            label: "Diploma",
+            src: diplomaPath(congresoSampleToken(event.id)),
+            note: "Le aparece en «Tu congreso» al terminar el congreso, con su nombre como lo escribió al comprar y el código de su boleta.",
           },
         ]
       : []),
@@ -92,6 +107,12 @@ export default async function AfterPaymentPage({ params, searchParams }: { param
         <a href={active.src} target="_blank" rel="noreferrer">
           Abrir en otra pestaña ↗
         </a>
+        {active.id === "congreso" && (
+          <>
+            {" · "}
+            <Link href={`/admin/events/${event.id}/grabaciones`}>Pegar los enlaces de las grabaciones</Link>
+          </>
+        )}
       </p>
 
       {active.id === "correo" ? (
@@ -111,6 +132,17 @@ export default async function AfterPaymentPage({ params, searchParams }: { param
             style={{ display: "block", width: "100%", maxWidth: 660, height: 1100, marginTop: 16, border: "1px solid #e3e1dc", borderRadius: 12, background: "#fff" }}
           />
         </>
+      ) : active.id === "diploma" ? (
+        // The PDF itself where the browser shows PDFs; where it doesn't (a phone), its picture and the link.
+        <object
+          data={active.src}
+          type="application/pdf"
+          aria-label="Diploma de muestra"
+          style={{ display: "block", width: "100%", maxWidth: 980, height: 720, border: "1px solid #e3e1dc", borderRadius: 12, background: "#fff" }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element -- the kit's fixed picture of the diploma */}
+          <img src={KIT.diplomaPreview} alt="Diploma de muestra, a nombre de Ana María Rodríguez" style={{ display: "block", width: "100%", height: "auto", borderRadius: 12 }} />
+        </object>
       ) : (
         // A phone's screen: most buyers pay on one.
         <div style={{ width: 410, maxWidth: "100%", padding: 10, borderRadius: 48, background: "#141414", boxShadow: "0 18px 40px rgba(0,0,0,0.18)" }}>

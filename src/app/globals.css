@@ -9063,3 +9063,472 @@ body:has(.imp.nf) {
     font-size: 34px;
   }
 }
+
+/* «Tu congreso» (2026-11-04): each buyer's page — her kit, the recordings and her diploma — in the checkout's chrome:
+   a chocolate welcome, then the parts on bone, one under the other in a column a phone reads well. */
+.imp-mc {
+  padding-bottom: 56px;
+}
+.imp-mc-sample {
+  margin: 0;
+  padding: 10px 16px;
+  background: var(--imp-estrella);
+  border-bottom: 1px solid var(--imp-borde-claro);
+  color: var(--imp-chocolate);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.45;
+  text-align: center;
+}
+.imp-mc-hero {
+  padding: 36px 16px 30px;
+  text-align: center;
+}
+.imp-mc-hero > * {
+  max-width: 640px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.imp-mc-tiara {
+  display: block;
+  width: 116px;
+  height: auto;
+  margin-bottom: 12px;
+  color: var(--imp-oro);
+}
+.imp-mc-kicker {
+  margin-top: 0;
+  margin-bottom: 0;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--imp-acento);
+}
+.imp-mc-h1 {
+  margin-top: 8px;
+  margin-bottom: 0;
+  font-family: var(--imp-display), Georgia, serif;
+  font-weight: 800;
+  font-size: 32px;
+  line-height: 1.1;
+  color: var(--imp-texto);
+  text-wrap: balance;
+}
+.imp-mc-lead {
+  margin-top: 14px;
+  margin-bottom: 0;
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--imp-texto-2);
+}
+.imp-mc-when {
+  margin-top: 14px;
+  margin-bottom: 0;
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--imp-texto-3);
+}
+.imp-mc-when b {
+  font-weight: 800;
+  color: var(--imp-resalte);
+}
+.imp-mc-hero .imp-co-btn {
+  max-width: 420px;
+  margin-top: 20px;
+}
+.imp-mc-nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 22px;
+}
+.imp-mc-nav a {
+  padding: 8px 16px;
+  border: 1px solid var(--imp-tarjeta-borde);
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--imp-texto) !important;
+  text-decoration: none;
+}
+.imp-mc-nav a:hover,
+.imp-mc-nav a:focus-visible {
+  border-color: var(--imp-acento);
+}
+.imp-mc-sec {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 36px 16px 8px;
+  scroll-margin-top: 8px;
+}
+.imp-mc-sec + .imp-mc-sec {
+  margin-top: 28px;
+  border-top: 1px solid var(--imp-linea);
+}
+.imp-mc-h2 {
+  margin: 0;
+  font-family: var(--imp-display), Georgia, serif;
+  font-weight: 800;
+  font-size: 26px;
+  line-height: 1.15;
+  color: var(--imp-texto);
+}
+.imp-mc-sub {
+  margin: 8px 0 0;
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--imp-texto-2);
+}
+.imp-mc-sub a,
+.imp-mc-note a,
+.imp-mc-help a {
+  color: var(--imp-acento) !important;
+  font-weight: 700;
+}
+.imp-mc-h3 {
+  margin: 30px 0 0;
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--imp-texto);
+}
+.imp-mc-note {
+  margin: 4px 0 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--imp-texto-3);
+}
+.imp-mc-feature {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 16px 18px;
+  border: 1px solid var(--imp-tarjeta-borde);
+  border-radius: 16px;
+  background: var(--imp-tarjeta);
+  color: var(--imp-texto) !important;
+  text-decoration: none;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.imp-mc-feature:hover,
+.imp-mc-feature:focus-visible {
+  border-color: var(--imp-acento);
+  transform: translateY(-1px);
+}
+.imp-mc-feature b {
+  display: block;
+  font-size: 16px;
+  font-weight: 800;
+}
+.imp-mc-feature span span {
+  display: block;
+  margin-top: 2px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--imp-texto-2);
+}
+.imp-mc-feature i {
+  font-style: normal;
+  font-size: 22px;
+  color: var(--imp-acento);
+}
+.imp-mc-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.imp-mc-thumb {
+  display: block;
+  color: var(--imp-texto) !important;
+  text-decoration: none;
+}
+.imp-mc-thumb img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 9 / 16;
+  object-fit: cover;
+  border: 1px solid var(--imp-tarjeta-borde);
+  border-radius: 12px;
+  box-shadow: 0 10px 22px -16px rgba(59, 36, 24, 0.7);
+  transition: transform 0.15s ease;
+}
+.imp-mc-thumb:hover img,
+.imp-mc-thumb:focus-visible img {
+  transform: translateY(-2px);
+}
+.imp-mc-thumb span {
+  display: block;
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.imp-mc-stickers {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 12px;
+  border-radius: 16px;
+  background: var(--imp-caja);
+  list-style: none;
+}
+.imp-mc-stickers img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.imp-mc-btn2 {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 12px 18px;
+  border: 1.5px solid var(--imp-acento);
+  border-radius: 12px;
+  background: transparent;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--imp-texto) !important;
+  text-decoration: none;
+  cursor: pointer;
+}
+.imp-mc-videos {
+  display: grid;
+  gap: 24px;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.imp-mc-video {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 14px;
+  background: var(--imp-negro);
+}
+.imp-mc-video iframe,
+.imp-mc-video button {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+.imp-mc-video button {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background-color: var(--imp-negro);
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  cursor: pointer;
+}
+.imp-mc-play {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--imp-oro);
+  color: var(--imp-negro);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+.imp-mc-play svg {
+  width: 28px;
+  height: 28px;
+  margin-left: 4px;
+}
+.imp-mc-video button:hover .imp-mc-play,
+.imp-mc-video button:focus-visible .imp-mc-play {
+  transform: scale(1.06);
+  background: var(--imp-oro-hover);
+}
+/* A talk whose video isn't up yet: its line, with «Muy pronto». */
+.imp-mc-soon {
+  justify-self: start;
+  margin-top: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--imp-caja);
+  color: var(--imp-texto-3);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 800;
+}
+.imp-mc .imp-co-btn {
+  text-decoration: none;
+  color: var(--imp-negro) !important;
+}
+.imp-mc-vt {
+  margin: 10px 0 0;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.3;
+  color: var(--imp-texto);
+}
+.imp-mc-vs {
+  margin: 2px 0 0;
+  font-size: 14px;
+  color: var(--imp-texto-2);
+}
+.imp-mc-list {
+  margin: 16px 0 0;
+  padding: 0;
+  border-top: 1px solid var(--imp-linea);
+  list-style: none;
+}
+.imp-mc-list li {
+  display: grid;
+  gap: 2px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--imp-linea);
+}
+.imp-mc-list b {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--imp-texto);
+}
+.imp-mc-list span {
+  font-size: 14px;
+  color: var(--imp-texto-2);
+}
+.imp-mc-preview {
+  margin: 16px 0 0;
+}
+.imp-mc-preview img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 16px 30px -20px rgba(59, 36, 24, 0.8);
+}
+.imp-mc-preview figcaption {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--imp-texto-3);
+  text-align: center;
+}
+.imp-mc-sec .imp-co-btn {
+  max-width: 420px;
+  margin-top: 18px;
+}
+.imp-mc-link {
+  display: inline-block;
+  margin-top: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--imp-acento) !important;
+}
+.imp-mc-help {
+  max-width: 720px;
+  margin: 40px auto 0;
+  padding: 0 16px;
+  font-size: 14px;
+  color: var(--imp-texto-3);
+  text-align: center;
+}
+@media (min-width: 640px) {
+  .imp-mc-hero {
+    padding: 48px 24px 36px;
+  }
+  .imp-mc-h1 {
+    font-size: 38px;
+  }
+  .imp-mc-sec {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+  .imp-mc-stickers {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+  .imp-mc-videos {
+    grid-template-columns: 1fr 1fr;
+    gap: 28px 20px;
+  }
+}
+
+/* Her profile frame (2026-11-04): the photo in its round frame as it will show, the size, and the buttons. */
+.imp-mf {
+  display: grid;
+  gap: 16px;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 28px 16px 56px;
+}
+.imp-mf-vista {
+  justify-self: center;
+  width: min(100%, 400px);
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 50%;
+  box-shadow: 0 18px 40px -22px rgba(59, 36, 24, 0.85);
+}
+.imp-mf-vista canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: grab;
+}
+.imp-mf-vista canvas:active {
+  cursor: grabbing;
+}
+.imp-mf-vista canvas:focus-visible {
+  outline: 3px solid var(--imp-acento);
+  outline-offset: -3px;
+}
+.imp-mf-zoom {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--imp-texto-2);
+}
+.imp-mf-zoom input {
+  width: 100%;
+  accent-color: var(--imp-bronce);
+}
+.imp-mf-end {
+  display: grid;
+  gap: 10px;
+}
+.imp-mf-end .imp-mc-btn2 {
+  margin-top: 0;
+}
+.imp-mf-file {
+  position: relative;
+  overflow: hidden;
+}
+.imp-mf-file input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.imp-mf-error {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #a3251f;
+}
+@media (prefers-reduced-motion: reduce) {
+  .imp-mc-feature,
+  .imp-mc-thumb img,
+  .imp-mc-play {
+    transition: none;
+  }
+}

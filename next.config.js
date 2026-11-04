@@ -51,9 +51,11 @@ const nextConfig = {
     // app/api/correo/titulo draws the event's name and days with in Nail
     // Fest's emails, and the ticket PDF's faces and logo (lib/ticketPdf.ts) —
     // a PDF is drawn wherever a ticket is sent, the payment's page included,
-    // so they ship with every route.
+    // so they ship with every route. Manicuristas Imparables' diploma
+    // (lib/imparables/diploma.ts, 2026-11-04) is drawn by its API route with
+    // the faces and the logo in diplomaAssets.
     outputFileTracingIncludes: {
-      "/api/**": ["./node_modules/pdfkit/**/*"],
+      "/api/**": ["./node_modules/pdfkit/**/*", "./src/lib/imparables/diplomaAssets/*"],
       "/**": ["./src/lib/nailfest/fonts/*", "./src/lib/ticketPdfAssets/*"],
     },
   },

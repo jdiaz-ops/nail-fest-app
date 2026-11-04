@@ -313,6 +313,11 @@ model Event {
   // for it. [eventSlug]/page.tsx picks the render path from this flag —
   // description/salesPageContent/landingBlocks never render together.
   useLandingBlocks          Boolean     @default(false)
+  // Manicuristas Imparables' recordings (2026-11-04): one YouTube link per talk, pasted in the admin
+  // («Grabaciones»), played on each buyer's own page («Tu congreso») from the congress's end to the
+  // last day — { until: "2027-08-03" | null, items: [{ title, speaker, url }] }; see
+  // lib/imparables/grabaciones.ts. Null: none yet.
+  recordings                Json?
   createdAt                 DateTime    @default(now())
   updatedAt                 DateTime    @updatedAt
 
