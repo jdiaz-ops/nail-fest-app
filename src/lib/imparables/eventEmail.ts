@@ -40,7 +40,7 @@ export interface ImparablesEventEmailContent {
   /** Her page to make her «Asistiré» image; no block without it (or when the email leaves it out). */
   asistire: string | null;
   /** Her kit: its page and her profile frame's; no block without it (or when the email leaves it out). */
-  kit: { frameUrl: string; pageUrl: string } | null;
+  kit: { pageUrl: string } | null;
   /** Whether it invites a colleague. */
   colega: boolean;
   /** The email's banner to leave out: the src of the wide image it opens with. */
@@ -191,9 +191,7 @@ ${button(mail.asistire, "Crear mi imagen")}`,
             `${title("Tu kit Imparable")}
 ${line("Fondos de pantalla para tu celular y el marco del congreso para tu foto de perfil. Toca el fondo que quieras para guardarlo.")}
 ${kitRows(frame.kit.wallpapers)}
-<div style="margin:8px 0 0;">${button(mail.kit.pageUrl, "Ver todo mi kit")}</div>
-<div style="margin:22px auto 14px;max-width:420px;${sans(15, 400, C.WARM, "line-height:1.55;")}">Y pon tu foto en el marco del congreso para tu perfil de WhatsApp e Instagram.</div>
-${button(mail.kit.frameUrl, "Hacer mi foto de perfil", "outline")}`,
+<div style="margin:8px 0 0;">${button(mail.kit.pageUrl, "Ver todo mi kit")}</div>`,
             `background:${C.CARD};border-top:1px solid ${C.LINE};`
           ),
         ]
@@ -233,7 +231,6 @@ ${button(frame.share.url, "Compartir por WhatsApp")}`,
           [
             "TU KIT IMPARABLE",
             ...frame.kit.wallpapers.map((f) => `Fondo de pantalla «${f.name}»: ${f.file}`),
-            `Tu foto de perfil con el marco del congreso: ${mail.kit.frameUrl}`,
             `Todo tu kit: ${mail.kit.pageUrl}`,
           ].join("\n"),
         ]

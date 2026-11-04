@@ -16,7 +16,7 @@ const mail = {
   bodyHtml: "<h1>Laura, ya casi es domingo</h1><p>Nos vemos en vivo.</p>",
   band: "Faltan 7 días",
   asistire: "https://nailfest.lat/asistire/reg_1.firma",
-  kit: { frameUrl: "https://nailfest.lat/asistire/reg_1.firma/marco", pageUrl: "https://nailfest.lat/asistire/reg_1.firma/kit" },
+  kit: { pageUrl: "https://nailfest.lat/asistire/reg_1.firma/kit" },
   colega: true,
   banner: null,
 };
@@ -45,7 +45,7 @@ describe("Manicuristas Imparables' design for its event's emails", () => {
     expect(at("Tu kit Imparable")).toBeGreaterThan(at("¡Cuéntale a todos que vas!"));
     expect(at("¿Conoces a una colega que lo necesita?")).toBeGreaterThan(at("Tu kit Imparable"));
     expect(html).toContain('href="https://nailfest.lat/asistire/reg_1.firma"');
-    expect(html).toContain('href="https://nailfest.lat/asistire/reg_1.firma/marco"');
+    expect(html).not.toContain("Hacer mi foto de perfil");
     expect(html).toContain('href="https://nailfest.lat/asistire/reg_1.firma/kit"');
     for (let n = 1; n <= 3; n++) expect(html).toContain(`href="https://nailfest.lat/imparables/kit/${n}.jpg"`);
     // Six wallpapers: three to a row.
@@ -56,7 +56,7 @@ describe("Manicuristas Imparables' design for its event's emails", () => {
     expect(html).not.toMatch(/plantilla/i);
     expect(html).toContain('href="https://wa.me/?text=hola"');
     expect(text).toContain("TU KIT IMPARABLE");
-    expect(text).toContain("Tu foto de perfil con el marco del congreso: https://nailfest.lat/asistire/reg_1.firma/marco");
+    expect(text).not.toContain("/marco");
   });
 
   it("leaves out what the email switches off, and the band when it has none", () => {

@@ -6,7 +6,7 @@ import { utcToZonedInputValue } from "@/lib/dateFormat";
 import { parseLandingBlocks } from "@/lib/landingBlocks/types";
 import { sayName } from "@/lib/mesa/email";
 import { ZOOM_ACCESS_REMINDER_MINUTES_BEFORE } from "@/lib/zoomAccessReminder";
-import { asistireSampleUrl, asistireUrl, kitUrl, marcoUrl } from "./asistire";
+import { asistireSampleUrl, asistireUrl, kitUrl } from "./asistire";
 import { KIT } from "./kit";
 import { castOf } from "./blocks";
 import { getActiveStage, purchaseOf } from "./pricing";
@@ -99,7 +99,6 @@ async function confirmationOf(
     kit: her.asistire
       ? {
           wallpapers: KIT.wallpapers.map((f) => ({ name: f.name, file: absolute(f.file), mini: absolute(f.mini) })),
-          frameUrl: marcoUrl(her.asistire),
           pageUrl: kitUrl(her.asistire),
         }
       : null,

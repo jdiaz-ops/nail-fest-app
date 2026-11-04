@@ -43,8 +43,8 @@ export interface ImparablesConfirmation {
   /** Her page to make her «Asistiré» image (lib/imparables/asistire.ts), and a picture of the empty template. */
   asistire: { url: string; image: string } | null;
   /** Her digital kit (lib/imparables/kit.ts, the team 2026-11-04: before the congress, by email): the wallpapers —
-   * each one's name, its file and its small copy —, her kit's page and her page to make her profile photo. */
-  kit?: { wallpapers: KitLink[]; frameUrl: string; pageUrl: string } | null;
+   * each one's name, its file and its small copy — and her kit's page, where her profile photo is too. */
+  kit?: { wallpapers: KitLink[]; pageUrl: string } | null;
   /** The team's WhatsApp, when there's one. */
   helpUrl: string | null;
   speakers: { name: string; photoUrl: string }[];
@@ -236,8 +236,6 @@ ${
 <div style="margin:10px auto 18px;max-width:420px;${sans(15, 400, WARM, "line-height:1.55;")}">Fondos de pantalla para tu celular y el marco del congreso para tu foto de perfil. Toca el fondo que quieras para guardarlo.</div>
 ${kitRows(c.kit.wallpapers)}
 <a href="${esc(c.kit.pageUrl)}" style="display:inline-block;margin:8px 0 0;padding:14px 24px;border-radius:14px;background:${GOLD};text-decoration:none;${sans(15.5, 800, INK)}">Ver todo mi kit</a>
-<div style="margin:22px auto 14px;max-width:420px;${sans(15, 400, WARM, "line-height:1.55;")}">Y pon tu foto en el marco del congreso para tu perfil de WhatsApp e Instagram.</div>
-<a href="${esc(c.kit.frameUrl)}" style="display:inline-block;padding:12px 22px;border-radius:14px;border:2px solid ${GOLD};text-decoration:none;${sans(15, 800, INK)}">Hacer mi foto de perfil</a>
 </td></tr>`
     : ""
 }
@@ -289,7 +287,6 @@ Recibes este correo porque compraste tu entrada a ${esc(c.eventName)}.
           [
             "TU KIT IMPARABLE",
             ...c.kit.wallpapers.map((f) => `Fondo de pantalla «${f.name}»: ${f.file}`),
-            `Tu foto de perfil con el marco del congreso: ${c.kit.frameUrl}`,
             `Todo tu kit: ${c.kit.pageUrl}`,
           ].join("\n"),
         ]

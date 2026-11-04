@@ -5,7 +5,7 @@ import { publicEventName } from "@/lib/eventDisplayName";
 import { sanitizeEventDescription } from "@/lib/sanitizeHtml";
 import { REVIEW_LINK_TAG } from "@/lib/reviews";
 import { bannerOf } from "@/lib/nailfest/eventEmailFrame";
-import { asistireSampleUrl, asistireUrl, kitUrl, marcoUrl } from "./asistire";
+import { asistireSampleUrl, asistireUrl, kitUrl } from "./asistire";
 import { defaultShareText } from "./confirmation";
 import { shareLine } from "./confirmationEmail";
 import { imparablesEventEmail, type ImparablesEventEmailFrame } from "./eventEmail";
@@ -52,14 +52,14 @@ export async function imparablesEventEmailFrame(event: Event): Promise<Imparable
 }
 
 /** Her «Asistiré» link and her kit's, for one of these emails, as its blocks ask; none if it can't be signed. */
-export function imparablesBlocksFor(registrationId: string, blocks: { asistire: boolean; kit: boolean }): { asistire: string | null; kit: { frameUrl: string; pageUrl: string } | null } {
+export function imparablesBlocksFor(registrationId: string, blocks: { asistire: boolean; kit: boolean }): { asistire: string | null; kit: { pageUrl: string } | null } {
   let link: string | null = null;
   try {
     link = asistireUrl(registrationId);
   } catch {
     link = null;
   }
-  return { asistire: blocks.asistire ? link : null, kit: blocks.kit && link ? { frameUrl: marcoUrl(link), pageUrl: kitUrl(link) } : null };
+  return { asistire: blocks.asistire ? link : null, kit: blocks.kit && link ? { pageUrl: kitUrl(link) } : null };
 }
 
 /** One of its emails in the design with sample data — the event's sample links —, for the composer's preview, «Ver con
@@ -82,7 +82,7 @@ export async function imparablesEventEmailSample(
     bodyHtml: body,
     band: mail.band,
     asistire: mail.asistire === false ? null : sample,
-    kit: mail.kit === false ? null : { frameUrl: marcoUrl(sample), pageUrl: kitUrl(sample) },
+    kit: mail.kit === false ? null : { pageUrl: kitUrl(sample) },
     colega: mail.colega !== false,
     banner: await bannerOf(body),
   });
