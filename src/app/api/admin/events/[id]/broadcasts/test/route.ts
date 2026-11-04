@@ -83,5 +83,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   );
   const sent = results.filter((r) => r.status === "fulfilled").length;
   const failed = results.length - sent;
-  return NextResponse.json({ ok: failed === 0, sent, failed });
+  // Why, when it couldn't: for the composer to say it (2026-11-04).
+  const reason = results.find((r): r is PromiseRejectedResult => r.status === "rejected")?.reason;
+  if (reason) console.error("broadcast test send failed", reason);
+  return NextResponse.json({ ok: failed === 0, sent, failed, ...(reason ? { error: reason instanceof Error ? reason.message : String(reason) } : {}) });
 }

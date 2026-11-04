@@ -156,7 +156,7 @@ export default function EventBroadcastComposer({
   const [offsetUnit, setOffsetUnit] = useState<"minutos" | "horas" | "días">(initialOffset?.unit ?? "horas");
   const [testTo, setTestTo] = useState("");
   const [testSending, setTestSending] = useState(false);
-  const [testMessage, setTestMessage] = useState<string | null>(null);
+  const [testMessage, setTestMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -164,27 +164,36 @@ export default function EventBroadcastComposer({
   const notCheckedInCount = Math.max(0, audience.count - audience.checkedIn);
   const recipientCount = checkIn === "checkedIn" ? audience.checkedIn : checkIn === "notCheckedIn" ? notCheckedInCount : audience.count;
 
+  // «Enviar prueba» says what's missing or what went wrong — it used to do nothing without a subject (the team,
+  // 2026-11-04: «le doy clic a enviar prueba y nada»).
   async function handleSendTest() {
-    if (!testTo.trim() || !subject.trim() || !bodyHtml.trim()) return;
+    const to = testTo.split(",").map((s) => s.trim()).filter(Boolean);
+    const missing = [!subject.trim() && "el asunto", !bodyHtml.trim() && "el mensaje"].filter(Boolean);
+    if (!to.length) {
+      setTestMessage({ ok: false, text: "Escribe el correo al que te enviamos la prueba." });
+      return;
+    }
+    if (missing.length) {
+      setTestMessage({ ok: false, text: `Para enviar la prueba, escribe ${missing.join(" y ")}.` });
+      return;
+    }
     setTestSending(true);
     setTestMessage(null);
-    const res = await fetch(`/api/admin/events/${eventId}/broadcasts/test`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        subject,
-        bodyHtml,
-        band: designBand,
-        asistire: designAsistire,
-        colega: designColega,
-        kit: designKit,
-        attachTicketPdf,
-        to: testTo.split(",").map((s) => s.trim()).filter(Boolean),
-      }),
-    });
-    const body = await res.json().catch(() => ({}));
-    setTestSending(false);
-    setTestMessage(res.ok && body.ok ? "Correo de prueba enviado." : "No se pudo enviar la prueba.");
+    try {
+      const res = await fetch(`/api/admin/events/${eventId}/broadcasts/test`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subject, bodyHtml, band: designBand, asistire: designAsistire, colega: designColega, kit: designKit, attachTicketPdf, to }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (res.ok && body.ok) setTestMessage({ ok: true, text: `Correo de prueba enviado a ${to.join(", ")}.` });
+      else if (res.status === 400) setTestMessage({ ok: false, text: "Revisa los correos: alguno no es válido (hasta 10, separados por coma)." });
+      else setTestMessage({ ok: false, text: `No se pudo enviar la prueba${body.error ? `: ${body.error}` : "."}` });
+    } catch {
+      setTestMessage({ ok: false, text: "No se pudo enviar la prueba: revisa tu conexión e intenta de nuevo." });
+    } finally {
+      setTestSending(false);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -402,7 +411,11 @@ export default function EventBroadcastComposer({
             {testSending ? "Enviando…" : "Enviar prueba"}
           </button>
         </div>
-        {testMessage && <p style={{ fontSize: 12, color: "#5b5f6b", margin: "4px 0 0" }}>{testMessage}</p>}
+        {testMessage && (
+          <p role="status" style={{ fontSize: 13, fontWeight: 600, color: testMessage.ok ? "#1f7a4d" : "#c2185b", margin: "6px 0 0" }}>
+            {testMessage.text}
+          </p>
+        )}
       </div>
 
       <div className="field">
