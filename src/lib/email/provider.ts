@@ -38,6 +38,14 @@ export interface EmailProvider {
 // the env var was already hand-written with a display name — unless the
 // email names its own sender (an event's, «Manicuristas Imparables»,
 // 2026-11-04): then that name, on the same address.
+/** The address an event's emails go out from (SES_FROM_TRANSACTIONAL, or Resend's), without its name; null if unset —
+ * to show beside the sender's name in «Correos del evento». */
+export function transactionalFromAddress(): string | null {
+  const raw = (process.env.EMAIL_PROVIDER === "resend" ? process.env.RESEND_FROM_TRANSACTIONAL : process.env.SES_FROM_TRANSACTIONAL) ?? "";
+  const address = raw.includes("<") ? raw.slice(raw.lastIndexOf("<") + 1, raw.lastIndexOf(">")) : raw;
+  return address.trim() || null;
+}
+
 export function friendlyFrom(email: string, name?: string): string {
   // Nothing that could break the header out of its name.
   const own = (name ?? "").replace(/[\r\n"<>\\]/g, "").trim();

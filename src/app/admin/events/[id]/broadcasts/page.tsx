@@ -12,7 +12,8 @@ import { isBroadcastStuck } from "@/lib/broadcastProgress";
 import { activeEventEmailDesign, eventEmailDesignName, eventEmailDesignOf } from "@/lib/eventEmailDesign";
 import { IMPARABLES_SENDER_NAME, NAIL_FEST_SENDER_NAME, senderNameFor } from "@/lib/brand";
 import BroadcastDesignSwitch from "./BroadcastDesignSwitch";
-import SenderNameField from "./SenderNameField";
+import SenderNameField from "../../SenderNameField";
+import { transactionalFromAddress } from "@/lib/email/provider";
 
 export const dynamic = "force-dynamic";
 
@@ -57,13 +58,6 @@ function Bar({ label, count, total, color, title }: { label: string; count: numb
 // marketing que ya existe en /admin/crm/broadcasts.
 // ADMIN-only — see EventModuleShell's own comment on why this is gated
 // again here, not just hidden from its nav.
-/** The address an event's emails go out from (SES_FROM_TRANSACTIONAL or Resend's), without its name; null if unset. */
-function fromAddress(): string | null {
-  const raw = (process.env.EMAIL_PROVIDER === "resend" ? process.env.RESEND_FROM_TRANSACTIONAL : process.env.SES_FROM_TRANSACTIONAL) ?? "";
-  const address = raw.includes("<") ? raw.slice(raw.lastIndexOf("<") + 1, raw.lastIndexOf(">")) : raw;
-  return address.trim() || null;
-}
-
 export default async function EventBroadcastsPage({ params }: { params: { id: string } }) {
   await requirePageUser(["ADMIN"]);
   const [event, orgSettings, broadcasts] = await Promise.all([
@@ -108,7 +102,7 @@ export default async function EventBroadcastsPage({ params }: { params: { id: st
         eventId={event.id}
         name={senderNameFor(event)}
         fallback={event.theme === "IMPARABLES" ? IMPARABLES_SENDER_NAME : NAIL_FEST_SENDER_NAME}
-        address={fromAddress()}
+        address={transactionalFromAddress()}
       />
 
       {design && (

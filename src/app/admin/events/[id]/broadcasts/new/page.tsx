@@ -4,6 +4,8 @@ import { requirePageUser } from "@/lib/auth/guard";
 import { eventBroadcastAudienceCounts } from "@/lib/broadcastRecipients";
 import EventBroadcastComposer from "../../../EventBroadcastComposer";
 import { activeEventEmailDesign } from "@/lib/eventEmailDesign";
+import { IMPARABLES_SENDER_NAME, NAIL_FEST_SENDER_NAME, senderNameFor } from "@/lib/brand";
+import { transactionalFromAddress } from "@/lib/email/provider";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +44,11 @@ export default async function NewEventBroadcastPage({
       <EventBroadcastComposer
         eventId={params.id}
         eventFormat={event.format}
+        sender={{
+          name: senderNameFor(event),
+          fallback: event.theme === "IMPARABLES" ? IMPARABLES_SENDER_NAME : NAIL_FEST_SENDER_NAME,
+          address: transactionalFromAddress(),
+        }}
         designOn={activeEventEmailDesign(event) !== null}
         design={activeEventEmailDesign(event)}
         ticketTypes={ticketTypeCounts}

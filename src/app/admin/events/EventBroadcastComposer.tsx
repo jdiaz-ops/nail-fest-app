@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { EventFormat } from "@prisma/client";
 import RichTextEditor, { type RichTextEditorHandle } from "@/components/RichTextEditor";
+import SenderNameField from "./SenderNameField";
 
 type ScheduleKind = "IMMEDIATE" | "AT_DATETIME" | "BEFORE_EVENT_START" | "AFTER_EVENT_END";
 
@@ -66,8 +67,12 @@ export default function EventBroadcastComposer({
   allBuyers,
   initial,
   editing,
+  sender,
 }: {
   eventId: string;
+  // Who its emails come from (Event.emailSenderName, 2026-11-04): shown and changeable right above the subject — the
+  // event's, for all its emails. None: not shown.
+  sender?: { name: string; fallback: string; address: string | null };
   // Only VIRTUAL/HYBRID events have a Zoom link to insert — see the
   // "Insertar link de Zoom" button below. Optional so an older/other
   // caller without it just never shows that button (same as before it
@@ -259,6 +264,8 @@ export default function EventBroadcastComposer({
             " El check-in se revisa en el momento del envío: un correo programado solo le llega a quien siga en ese grupo cuando salga."}
         </p>
       </div>
+
+      {sender && <SenderNameField eventId={eventId} {...sender} />}
 
       <div className="field">
         <label>Asunto</label>

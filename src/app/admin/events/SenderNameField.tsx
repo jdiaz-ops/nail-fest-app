@@ -43,6 +43,12 @@ export default function SenderNameField({ eventId, name, fallback, address }: { 
           maxLength={80}
           placeholder={fallback}
           onChange={(e) => setValue(e.target.value)}
+          // Inside «Nuevo correo»'s form, Enter would send the email: here it only saves the name.
+          onKeyDown={(e) => {
+            if (e.key !== "Enter") return;
+            e.preventDefault();
+            if (changed && !busy) void save();
+          }}
           style={{ flex: 1, minWidth: 220, padding: "8px 10px", fontSize: 14 }}
         />
         <button type="button" className="primary" disabled={busy || !changed} onClick={() => void save()} style={{ width: "auto", padding: "8px 16px", fontSize: 13.5 }}>
