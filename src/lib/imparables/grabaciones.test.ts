@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { emptyAgendaRow, type AgendaRow, type LandingBlock } from "@/lib/landingBlocks/types";
-import { addDays, congressTimes, dayWords, readRecordings, talksOf, youtubeId } from "./grabaciones";
+import { addDays, congressTimes, dayWords, instagramUrl, peopleOf, readRecordings, talksOf, whoIs, youtubeId } from "./grabaciones";
 
 describe("youtubeId", () => {
   it("reads the video in every way YouTube gives its link", () => {
@@ -34,13 +34,13 @@ describe("readRecordings", () => {
     expect(
       readRecordings({
         until: "2027-08-10",
-        items: [{ title: " Cobra lo que vales ", speaker: "Jimena", url: "https://youtu.be/dQw4w9WgXcQ" }, { title: "", speaker: "", url: "" }, null, { title: "Panel" }],
+        items: [{ title: " Cobra lo que vales ", speaker: "Jimena", url: "https://youtu.be/dQw4w9WgXcQ", handle: " @jimena " }, { title: "", speaker: "", url: "" }, null, { title: "Panel" }],
       })
     ).toEqual({
       until: "2027-08-10",
       items: [
-        { title: "Cobra lo que vales", speaker: "Jimena", url: "https://youtu.be/dQw4w9WgXcQ" },
-        { title: "Panel", speaker: "", url: "" },
+        { title: "Cobra lo que vales", speaker: "Jimena", url: "https://youtu.be/dQw4w9WgXcQ", handle: "@jimena" },
+        { title: "Panel", speaker: "", url: "", handle: "" },
       ],
     });
     expect(readRecordings({ until: "10 de agosto", items: [] }).until).toBeNull();
@@ -66,9 +66,56 @@ describe("talksOf", () => {
       },
     ];
     expect(talksOf(blocks)).toEqual([
-      { title: "Cobra lo que vales", speaker: "Jimena Montalban", url: "" },
-      { title: "Panel «El día que decidí cambiar»", speaker: "Maris", url: "" },
+      { title: "Cobra lo que vales", speaker: "Jimena Montalban", url: "", handle: "" },
+      { title: "Panel «El día que decidí cambiar»", speaker: "Maris", url: "", handle: "" },
     ]);
+  });
+
+  it("brings each one's Instagram: her row's, or else the one the page's people have for her", () => {
+    const blocks: LandingBlock[] = [
+      { type: "people", items: [{ name: "Jimena Montalban", handle: "@jimenamontalban", tag: "", photoUrl: "/imparables/jimena.jpg", tone: "pink" }] },
+      {
+        type: "agenda",
+        rows: [
+          row({ topic: "Cobra lo que vales", instructor: "Jimena Montalban" }),
+          row({ topic: "Panel «El día que decidí cambiar»", instructor: "Maris", handles: "@maris_nails_oficial", photoUrl: "/imparables/maris.jpg" }),
+        ],
+      },
+    ];
+    expect(talksOf(blocks).map((talk) => talk.handle)).toEqual(["@jimenamontalban", "@maris_nails_oficial"]);
+  });
+});
+
+describe("who gives each talk", () => {
+  const blocks: LandingBlock[] = [
+    {
+      type: "people",
+      items: [
+        { name: "Jimena Montalban", handle: "jimenamontalban", tag: "", photoUrl: "/imparables/jimena.jpg", tone: "pink" },
+        { name: "Paula Chacón", handle: "@pau.chacon", tag: "", photoUrl: "/imparables/pau.jpg", tone: "teal" },
+        { name: "Paula Ríos", handle: "@paurios", tag: "", photoUrl: "", tone: "peach" },
+      ],
+    },
+    { type: "agenda", rows: [{ ...emptyAgendaRow("session"), topic: "Panel", instructor: "Maris", handles: "@maris_nails_oficial", photoUrl: "/imparables/maris.jpg" }] },
+  ];
+  const people = peopleOf(blocks);
+
+  it("finds her by her whole name, with or without accents, or by her first name when only one has it", () => {
+    expect(whoIs(people, "Jimena Montalban")).toEqual({ handle: "@jimenamontalban", photoUrl: "/imparables/jimena.jpg" });
+    expect(whoIs(people, "paula chacon")).toEqual({ handle: "@pau.chacon", photoUrl: "/imparables/pau.jpg" });
+    expect(whoIs(people, "Jimena")).toEqual({ handle: "@jimenamontalban", photoUrl: "/imparables/jimena.jpg" });
+    expect(whoIs(people, "Maris")).toEqual({ handle: "@maris_nails_oficial", photoUrl: "/imparables/maris.jpg" });
+    // Two Paulas: not by her first name.
+    expect(whoIs(people, "Paula")).toBeNull();
+    expect(whoIs(people, "Nadie")).toBeNull();
+    expect(whoIs(people, "")).toBeNull();
+  });
+
+  it("opens her Instagram from her handle", () => {
+    expect(instagramUrl("@jimenamontalban")).toBe("https://www.instagram.com/jimenamontalban/");
+    expect(instagramUrl("pau.chacon")).toBe("https://www.instagram.com/pau.chacon/");
+    expect(instagramUrl("")).toBe("");
+    expect(instagramUrl(undefined)).toBe("");
   });
 });
 

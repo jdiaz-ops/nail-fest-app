@@ -4,8 +4,8 @@ import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth/guard";
 import { youtubeId } from "@/lib/imparables/grabaciones";
 
-// Saves Manicuristas Imparables' recordings (the admin's «Grabaciones», 2026-11-04): each talk's title, who gives it
-// and its YouTube link — or none yet — and the last day they can be watched (null: 30 days after the congress). A link
+// Saves Manicuristas Imparables' recordings (the admin's «Grabaciones», 2026-11-04): each talk's title, who gives it,
+// her Instagram and its YouTube link — or none yet — and the last day they can be watched (null: 30 days after the congress). A link
 // that isn't a YouTube video is refused, saying which row, so a buyer never meets a broken video. ADMIN only.
 const bodySchema = z.object({
   until: z
@@ -18,6 +18,7 @@ const bodySchema = z.object({
         title: z.string().max(200),
         speaker: z.string().max(200),
         url: z.string().max(500),
+        handle: z.string().max(100).optional(),
       })
     )
     .max(40),
@@ -32,7 +33,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     return NextResponse.json({ error: "invalid_body", issues: parsed.error.issues }, { status: 400 });
   }
   const items = parsed.data.items
-    .map((item) => ({ title: item.title.trim(), speaker: item.speaker.trim(), url: item.url.trim() }))
+    .map((item) => ({ title: item.title.trim(), speaker: item.speaker.trim(), url: item.url.trim(), handle: (item.handle ?? "").trim() }))
     .filter((item) => item.title || item.speaker || item.url);
   const wrong = items.findIndex((item) => item.url && !youtubeId(item.url));
   if (wrong !== -1) {

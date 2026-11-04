@@ -1,5 +1,5 @@
 import { zonedTimeToUtc } from "@/lib/dateFormat";
-import type { LandingBlock } from "@/lib/landingBlocks/types";
+import { instagramHandles, type LandingBlock } from "@/lib/landingBlocks/types";
 import { eventWhen } from "./schedule";
 
 // Manicuristas Imparables' recordings (the team, 2026-11-04: «pienso subirlas cada una individualmente en privado a
@@ -16,6 +16,8 @@ export interface RecordingItem {
   speaker: string;
   /** The link as pasted: https://youtu.be/…, «» while it isn't up yet. */
   url: string;
+  /** Her Instagram, «@jimenamontalban» (the team, 2026-11-04); «»: the one the page has for her, if any. */
+  handle?: string;
 }
 
 export interface Recordings {
@@ -37,7 +39,7 @@ export function readRecordings(value: unknown): Recordings {
   const items = Array.isArray(saved.items)
     ? saved.items
         .map((item) => (item && typeof item === "object" ? (item as Record<string, unknown>) : {}))
-        .map((item) => ({ title: text(item.title, 200), speaker: text(item.speaker, 200), url: text(item.url, 500) }))
+        .map((item) => ({ title: text(item.title, 200), speaker: text(item.speaker, 200), url: text(item.url, 500), handle: text(item.handle, 100) }))
         .filter((item) => item.title || item.speaker || item.url)
     : [];
   return { until, items };
@@ -64,12 +66,66 @@ export function youtubeId(url: string): string | null {
   return null;
 }
 
-/** The talks in the event's program, to start the list: each one someone gives — not the breaks, lunch, the welcome or the closing. */
+/** The talks in the event's program, to start the list: each one someone gives — not the breaks, lunch, the welcome or
+ * the closing —, with her Instagram as the page has it. */
 export function talksOf(blocks: LandingBlock[]): RecordingItem[] {
+  const people = peopleOf(blocks);
   return blocks
     .flatMap((block) => (block.type === "agenda" ? block.rows : []))
     .filter((row) => row.kind === "session" && row.instructor.trim() && !/pausa|almuerzo|bienvenida|cierre/i.test(row.topic))
-    .map((row) => ({ title: row.topic.trim(), speaker: row.instructor.trim(), url: "" }));
+    .map((row) => {
+      const own = instagramHandles(row.handles)[0];
+      return { title: row.topic.trim(), speaker: row.instructor.trim(), url: "", handle: own ? `@${own}` : (whoIs(people, row.instructor)?.handle ?? "") };
+    });
+}
+
+export interface Person {
+  /** «@jimenamontalban», or «». */
+  handle: string;
+  /** Her photo on the page, or «». */
+  photoUrl: string;
+}
+
+const key = (name: string) =>
+  name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+
+/** Everyone the page names — its speakers, its panelists, who gives each talk of its program — with her Instagram and
+ * her photo, by name. */
+export function peopleOf(blocks: LandingBlock[]): Map<string, Person> {
+  const people = new Map<string, Person>();
+  const add = (name: string, handle: string, photoUrl: string) => {
+    if (!name.trim()) return;
+    const first = instagramHandles(handle)[0];
+    const known = people.get(key(name));
+    people.set(key(name), { handle: known?.handle || (first ? `@${first}` : ""), photoUrl: known?.photoUrl || photoUrl.trim() });
+  };
+  for (const block of blocks) {
+    if (block.type === "people") for (const item of block.items) add(item.name, item.handle, item.photoUrl);
+    if (block.type === "agenda") for (const row of block.rows) if (row.kind === "session") add(row.instructor, row.handles, row.photoUrl);
+  }
+  return people;
+}
+
+/** Who gives a talk, by her name as the list says it: the whole name, or else her first name when only one person has it. */
+export function whoIs(people: Map<string, Person>, speaker: string): Person | null {
+  const wanted = key(speaker);
+  if (!wanted) return null;
+  const exact = people.get(wanted);
+  if (exact) return exact;
+  const first = wanted.split(" ")[0]!;
+  const same = [...people.entries()].filter(([name]) => name.split(" ")[0] === first);
+  return same.length === 1 ? same[0]![1] : null;
+}
+
+/** «@jimenamontalban» → https://www.instagram.com/jimenamontalban/; «» for anything that isn't a handle. */
+export function instagramUrl(handle: string | undefined): string {
+  const name = instagramHandles(handle ?? "")[0];
+  return name ? `https://www.instagram.com/${name}/` : "";
 }
 
 /** "2027-07-04" and 30 → "2027-08-03" */

@@ -9190,18 +9190,29 @@ body:has(.imp.nf) {
   text-decoration: none;
   cursor: pointer;
 }
+/* Each talk, a card (the team, 2026-11-04: «hagamos las tarjetas más bonitas»): its video — or a chocolate cover with
+   the tiara until it's up —, its tag, its title, and who gives it with her photo and her Instagram. */
 .imp-mc-videos {
   display: grid;
-  gap: 24px;
-  margin: 18px 0 0;
+  gap: 20px;
+  margin: 20px 0 0;
   padding: 0;
   list-style: none;
 }
-.imp-mc-video {
+.imp-mc-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--imp-tarjeta-borde);
+  border-radius: 20px;
+  background: var(--imp-tarjeta);
+  box-shadow: 0 22px 40px -30px rgba(59, 36, 24, 0.7);
+}
+.imp-mc-video,
+.imp-mc-cover {
   position: relative;
   aspect-ratio: 16 / 9;
   overflow: hidden;
-  border-radius: 14px;
   background: var(--imp-negro);
 }
 .imp-mc-video iframe,
@@ -9222,75 +9233,135 @@ body:has(.imp.nf) {
   background-repeat: no-repeat;
   cursor: pointer;
 }
+/* A soft shade at the foot of the picture, so the card's colors meet it. */
+.imp-mc-video button::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(20, 20, 20, 0) 55%, rgba(20, 20, 20, 0.38) 100%);
+  pointer-events: none;
+}
 .imp-mc-play {
+  position: relative;
+  z-index: 1;
   display: grid;
   place-items: center;
-  width: 64px;
-  height: 64px;
+  width: 60px;
+  height: 60px;
+  border: 2px solid var(--imp-oro-claro);
   border-radius: 50%;
-  background: var(--imp-oro);
-  color: var(--imp-negro);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-  transition: transform 0.15s ease, background-color 0.15s ease;
+  background: rgba(20, 20, 20, 0.55);
+  color: #fff;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.35);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  transition: transform 0.15s ease, background-color 0.15s ease, color 0.15s ease;
 }
 .imp-mc-play svg {
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   margin-left: 4px;
 }
 .imp-mc-video button:hover .imp-mc-play,
 .imp-mc-video button:focus-visible .imp-mc-play {
   transform: scale(1.06);
-  background: var(--imp-oro-hover);
+  background: var(--imp-oro);
+  color: var(--imp-negro);
 }
-/* A talk whose video isn't up yet: its line, with «Muy pronto». */
-.imp-mc-soon {
-  justify-self: start;
-  margin-top: 4px;
-  padding: 3px 10px;
-  border-radius: 999px;
-  background: var(--imp-caja);
-  color: var(--imp-texto-3);
-  font-size: 12px;
-  font-style: normal;
+.imp-mc-video button:focus-visible {
+  outline: 3px solid var(--imp-oro);
+  outline-offset: -3px;
+}
+.imp-mc-cover {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  padding: 16px;
+  background: radial-gradient(ellipse at 50% 120%, var(--imp-chocolate-medio) 0%, var(--imp-chocolate) 55%, #24150d 100%);
+  color: var(--imp-crema-suave);
+  font-size: 13px;
   font-weight: 800;
+  letter-spacing: 0.14em;
+  text-align: center;
+  text-transform: uppercase;
 }
-.imp-mc .imp-co-btn {
-  text-decoration: none;
-  color: var(--imp-negro) !important;
+.imp-mc-cover-tiara {
+  width: 96px;
+  height: auto;
+  color: var(--imp-oro);
+}
+.imp-mc-card-in {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 18px 18px;
+}
+.imp-mc-tag {
+  margin: 0;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--imp-acento);
 }
 .imp-mc-vt {
-  margin: 10px 0 0;
-  font-size: 16px;
+  margin: 0;
+  font-size: 17px;
   font-weight: 800;
   line-height: 1.3;
   color: var(--imp-texto);
+  text-wrap: balance;
 }
-.imp-mc-vs {
-  margin: 2px 0 0;
-  font-size: 14px;
-  color: var(--imp-texto-2);
+.imp-mc-who {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 14px;
 }
-.imp-mc-list {
-  margin: 16px 0 0;
-  padding: 0;
-  border-top: 1px solid var(--imp-linea);
-  list-style: none;
+.imp-mc-who img,
+.imp-mc-who-i {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border: 2px solid var(--imp-oro);
+  border-radius: 50%;
+  object-fit: cover;
 }
-.imp-mc-list li {
+.imp-mc-who-i {
   display: grid;
-  gap: 2px;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--imp-linea);
+  place-items: center;
+  background: var(--imp-chocolate);
+  color: var(--imp-oro-claro);
+  font-size: 14px;
+  font-weight: 800;
 }
-.imp-mc-list b {
-  font-size: 15px;
+.imp-mc-who-t {
+  display: grid;
+  min-width: 0;
+  line-height: 1.25;
+}
+.imp-mc-who-t b {
+  font-size: 14.5px;
   font-weight: 800;
   color: var(--imp-texto);
 }
-.imp-mc-list span {
-  font-size: 14px;
-  color: var(--imp-texto-2);
+.imp-mc-who-t a {
+  justify-self: start;
+  overflow: hidden;
+  max-width: 100%;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--imp-acento) !important;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.imp-mc-who-t a:hover,
+.imp-mc-who-t a:focus-visible {
+  text-decoration: underline;
 }
 .imp-mc-help {
   max-width: 720px;
@@ -9313,7 +9384,7 @@ body:has(.imp.nf) {
   }
   .imp-mc-videos {
     grid-template-columns: 1fr 1fr;
-    gap: 28px 20px;
+    gap: 24px 20px;
   }
 }
 

@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { youtubeId, type RecordingItem } from "@/lib/imparables/grabaciones";
 
-// The rows of «Grabaciones»: each talk's title, who gives it and its YouTube link — checked as it's pasted, with the
-// video's picture once it's a real one —, rows to add or take out, the last day, and the save.
+// The rows of «Grabaciones»: each talk's title, who gives it, her Instagram (from the page, to correct) and its YouTube
+// link — checked as it's pasted, with the video's picture once it's a real one —, rows to add or take out, the last
+// day, and the save.
 export default function RecordingsForm({
   eventId,
   initialItems,
@@ -105,7 +106,7 @@ export default function RecordingsForm({
                 {id ? "" : i + 1}
               </div>
               <div style={{ display: "grid", gap: 8 }}>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 8 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 8 }}>
                   <label style={cell}>
                     Charla
                     <input value={item.title} onChange={(e) => change(i, "title", e.target.value)} placeholder="Cómo cobrar lo que vales" />
@@ -113,6 +114,10 @@ export default function RecordingsForm({
                   <label style={cell}>
                     Quién la da
                     <input value={item.speaker} onChange={(e) => change(i, "speaker", e.target.value)} placeholder="Nombre de la conferencista" />
+                  </label>
+                  <label style={cell}>
+                    Su Instagram
+                    <input value={item.handle ?? ""} onChange={(e) => change(i, "handle", e.target.value)} placeholder="@usuario" />
                   </label>
                 </div>
                 <label style={cell}>
@@ -155,7 +160,7 @@ export default function RecordingsForm({
       </ol>
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, margin: "12px 0 20px" }}>
-        <button type="button" className="secondary" onClick={() => setItems((rows) => [...rows, { title: "", speaker: "", url: "" }])} style={{ width: "auto", padding: "8px 16px" }}>
+        <button type="button" className="secondary" onClick={() => setItems((rows) => [...rows, { title: "", speaker: "", url: "", handle: "" }])} style={{ width: "auto", padding: "8px 16px" }}>
           + Agregar otra grabación
         </button>
         {missing.length > 0 && (

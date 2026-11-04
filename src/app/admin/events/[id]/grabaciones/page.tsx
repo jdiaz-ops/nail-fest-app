@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { requirePageUser } from "@/lib/auth/guard";
 import { getOrgSettings } from "@/lib/settings";
 import { parseLandingBlocks } from "@/lib/landingBlocks/types";
-import { congressTimes, dayWords, readRecordings, talksOf } from "@/lib/imparables/grabaciones";
+import { congressTimes, dayWords, peopleOf, readRecordings, talksOf, whoIs } from "@/lib/imparables/grabaciones";
 import { congresoSamplePath } from "@/lib/imparables/miCongreso";
 import RecordingsForm from "./RecordingsForm";
 
@@ -19,7 +19,11 @@ export default async function RecordingsPage({ params }: { params: { id: string 
   const [event, orgSettings] = await Promise.all([db.event.findUnique({ where: { id: params.id } }), getOrgSettings()]);
   if (!event || event.theme !== "IMPARABLES") notFound();
   const saved = readRecordings(event.recordings);
-  const talks = talksOf(parseLandingBlocks(event.landingBlocks).filter((block) => !block.hidden));
+  const blocks = parseLandingBlocks(event.landingBlocks);
+  const talks = talksOf(blocks.filter((block) => !block.hidden));
+  // Rows saved without her Instagram show the one the page has for her, as her page does (the team can correct it).
+  const people = peopleOf(blocks);
+  const items = saved.items.map((item) => ({ ...item, handle: item.handle || whoIs(people, item.speaker)?.handle || "" }));
   const times = congressTimes(event, { ...saved, until: null }, orgSettings.timezone);
 
   return (
@@ -52,13 +56,13 @@ export default async function RecordingsPage({ params }: { params: { id: string 
 
       <RecordingsForm
         eventId={event.id}
-        initialItems={saved.items.length ? saved.items : talks}
+        initialItems={items.length ? items : talks}
         talks={talks}
         initialUntil={saved.until}
         defaultUntil={times.recordingsUntil}
         defaultUntilWords={dayWords(times.recordingsUntil)}
         opensWords={dayWords(times.lastDay)}
-        fromProgram={!saved.items.length}
+        fromProgram={!items.length}
       />
     </div>
   );
