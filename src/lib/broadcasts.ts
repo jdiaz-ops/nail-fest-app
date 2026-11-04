@@ -9,6 +9,7 @@ import { senderNameFor } from "@/lib/brand";
 import { broadcastEmail, broadcastEmailHtml } from "@/lib/email/templates";
 import { buildUnsubscribeUrl } from "@/lib/unsubscribe";
 import { renderTicketPdfBuffer } from "@/lib/ticketPdf";
+import { ticketBannerFor } from "@/lib/imparables/promo";
 import { nailFestEventEmail } from "@/lib/nailfest/eventEmail";
 import { asistireFor, bannerOf, nailFestEventEmailFrame, usesNailFestEventEmail } from "@/lib/nailfest/eventEmailFrame";
 import { activeEventEmailDesign, IMPARABLES_EMAIL_DESIGN } from "@/lib/eventEmailDesign";
@@ -92,6 +93,8 @@ export async function sendEventBroadcast(
   // ticket types even within "all buyers", so each PDF needs its own
   // ticketTypeName looked up by that recipient's own registration.
   const orgSettings = broadcast.attachTicketPdf ? await getOrgSettings() : null;
+  // Manicuristas Imparables' banner on those tickets, when its event's carry it (lib/imparables/promo.ts).
+  const imparablesBanner = orgSettings && broadcast.event ? await ticketBannerFor(broadcast.event) : null;
   // Its event's design, when it chose one (Event.broadcastDesign, 2026-10-30): the event's part and the email's banner
   // to leave out, once.
   // Nail Fest's for its events at a place, or Manicuristas Imparables' for the congress (2026-11-04, lib/eventEmailDesign.ts).
@@ -214,6 +217,7 @@ export async function sendEventBroadcast(
                   qrToken: registration.qrToken,
                   timezone: orgSettings.timezone,
                   language: orgSettings.language,
+                  imparables: imparablesBanner,
                 }).catch((err) => {
                   console.error("broadcast ticket PDF render failed", person.email, err);
                   return null;

@@ -14,7 +14,7 @@ vi.mock("@/lib/db", () => ({ db }));
 vi.mock("@/lib/email", () => ({ emailProvider: { sendTransactional } }));
 vi.mock("@/lib/confirmationSample", () => ({ sampleConfirmation }));
 vi.mock("@/lib/settings", () => ({ getOrgSettings }));
-vi.mock("@/lib/ticketPdf", () => ({ renderTicketPdfBuffer }));
+vi.mock("@/lib/ticketPdf", () => ({ renderTicketPdfBuffer, SAMPLE_QR_TOKEN: "VISTA-PREVIA-NO-ES-UNA-ENTRADA-REAL" }));
 vi.mock("@/lib/eventDisplayName", () => ({ publicEventName: (e: { name: string }) => e.name }));
 
 import { POST } from "./route";

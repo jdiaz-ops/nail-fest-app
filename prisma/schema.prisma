@@ -290,6 +290,10 @@ model Event {
   // The name all its emails come from (the team, 2026-11-04: set in «Correos del evento»). Null: its brand's —
   // «Manicuristas Imparables» for the congress, «Nail Fest» for every other event (lib/brand.ts senderNameFor).
   emailSenderName           String?
+  // Manicuristas Imparables' banner at the bottom of its tickets' PDF (the team, 2026-11-04): on for the events the
+  // team turns it on for, in «Después de la inscripción»; it shows only while the congress's sales are open
+  // (lib/imparables/promo.ts). Off: the ticket as always.
+  imparablesTicketBanner    Boolean     @default(false)
   // A richer, structured alternative to `description` for an event that
   // wants a real sales-script landing (hero/story/value-stack table/
   // schedule/speakers/FAQ/etc. — see lib/salesPage/types.ts) instead of

@@ -57,7 +57,8 @@ const nextConfig = {
     // logos from public/imparables/marcas (others are fetched).
     outputFileTracingIncludes: {
       "/api/**": ["./node_modules/pdfkit/**/*", "./src/lib/imparables/diplomaAssets/*", "./public/imparables/marcas/*"],
-      "/**": ["./src/lib/nailfest/fonts/*", "./src/lib/ticketPdfAssets/*"],
+      // The ticket's PDF renders from pages too, with Manicuristas Imparables' banner in the congress's faces.
+      "/**": ["./src/lib/nailfest/fonts/*", "./src/lib/ticketPdfAssets/*", "./src/lib/imparables/diplomaAssets/Cinzel-*.ttf", "./src/lib/imparables/diplomaAssets/Manrope-ExtraBold.ttf"],
     },
   },
   // Keep "[" and "]" out of the client chunk file names. Next names each

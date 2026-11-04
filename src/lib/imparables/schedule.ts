@@ -57,11 +57,14 @@ export function coverName(name: string): string {
   return base || name.trim();
 }
 
-/** What the congress is, in a line, as its checkout and its «¡Asistiré!» card say it: «Congreso virtual en vivo · Zoom» (the
- * team, 2026-11-03: no «100%»), «Presencial y virtual», or its city. */
 /** The congress's pillars, as its page tells them under the group photo — and its «¡Asistiré!» image and the header of
  * its emails (the team, 2026-11-04). */
 export const PILLARS = "Mentalidad · Dinero · Marketing";
+
+/** The cover's promise, in its two sentences, and what she learns — as the landing has them; the banners outside its
+ * pages say them too (lib/imparables/promo.ts). */
+export const COVER_HOOK = ["Empezaron desde abajo, con tus mismos miedos.", "Hoy tienen el negocio que sueñas."] as const;
+export const COVER_PROMISE = "Aprende cómo lo hicieron y replica sus estrategias para ganar.";
 
 /** The cover's pill (2026-10-28): when — «4 de julio 2027», as the team writes it there (no «de» before the year) — and
  * what it is: «Congreso virtual en vivo» (the team, 2026-11-03: no «100%», no platform). Its emails' header says the
@@ -72,6 +75,8 @@ export function coverPill(event: { format: string; venueName?: string | null; ci
   return { date: when.compact.replace(/ de (\d{4})$/, " $1"), note: [kind, event.format === "VIRTUAL" ? "en vivo" : ""].filter(Boolean).join(" ") };
 }
 
+/** What the congress is, in a line, as its checkout and its «¡Asistiré!» card say it: «Congreso virtual en vivo · Zoom» (the
+ * team, 2026-11-03: no «100%»), «Presencial y virtual», or its city. */
 export function kindLine(event: { format: string; city: string | null }): string {
   return event.format === "VIRTUAL" ? "Congreso virtual en vivo · Zoom" : event.format === "HYBRID" ? "Presencial y virtual" : (event.city ?? "");
 }

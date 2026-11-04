@@ -5,6 +5,7 @@ import { senderNameFor } from "@/lib/brand";
 import { confirmationEmail } from "@/lib/email/templates";
 import { renderConfirmationFromTemplate, renderSubjectFromTemplate } from "@/lib/confirmationTemplate";
 import { renderTicketPdfBuffer } from "@/lib/ticketPdf";
+import { ticketBannerFor } from "@/lib/imparables/promo";
 import { getOrgSettings } from "@/lib/settings";
 import { confirmationCodeFor, ticketHolderName, ticketsFor } from "@/lib/ticket";
 import { publicEventName } from "@/lib/eventDisplayName";
@@ -57,6 +58,10 @@ export async function sendTicketEmail(params: {
     // above; without one, its brand's, by its theme.
     emailSenderName?: string | null;
     theme?: string | null;
+    // Its tickets carry Manicuristas Imparables' banner (Event.imparablesTicketBanner, 2026-11-04) — optional for the
+    // same reason as the ones above; without it (or its slug), the ticket as always.
+    slug?: string;
+    imparablesTicketBanner?: boolean | null;
   };
   qrToken: string;
   // Registration.id/ticketTypeId/ticketCount — optional so this keeps
@@ -231,6 +236,7 @@ export async function sendTicketEmail(params: {
           qrToken: params.qrToken,
           timezone: orgSettings.timezone,
           language: orgSettings.language,
+          imparables: params.event.slug ? await ticketBannerFor({ ...params.event, slug: params.event.slug }) : null,
         })
       : null;
     const sent = await emailProvider.sendTransactional({
