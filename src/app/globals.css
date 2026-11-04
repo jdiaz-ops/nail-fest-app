@@ -3958,9 +3958,14 @@ body:has(.imp) {
   margin: 0;
   font: inherit;
 }
+/* «MANICURISTAS», «IMPARABLES» and the pillars a touch closer together (the team, 2026-11-04: «un tris más pegado»):
+   the big word up by a little of its own size, the pillars up under it. */
+.imp-name .imp-title {
+  margin-top: -0.05em;
+}
 /* Its pillars, under the name (the team, 2026-11-04): the display face, spaced, in the text's color. */
 .imp-name-pillars {
-  margin: 10px 0 0;
+  margin: 2px 0 0;
   font-family: var(--imp-display), Georgia, serif;
   font-weight: 700;
   font-size: clamp(11px, 3.1vw, 16px);
@@ -6847,6 +6852,8 @@ select.imp-co-in {
   font: inherit;
   font-size: 18px;
   font-weight: 800;
+  /* A link drawn as this button too («Descargar mi foto»): no underline. */
+  text-decoration: none;
   cursor: pointer;
   box-shadow: 0 10px 24px -12px rgba(59, 36, 24, 0.6);
   transition: transform 0.15s ease, background-color 0.15s ease;
@@ -7933,7 +7940,7 @@ body:has(.imp.nf) {
     text-align: center;
   }
   .imp-hero .imp-name-pillars {
-    margin-top: 0;
+    margin-top: -10px;
     font-size: clamp(16px, min(1.5vw, 2.6vh), 24px);
     letter-spacing: 0.3em;
     text-indent: 0.3em;
