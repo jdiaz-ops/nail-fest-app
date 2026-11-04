@@ -13,6 +13,7 @@ import { congresoRegistrationId, congresoSampleEventId } from "@/lib/imparables/
 import { IMPARABLES_REVIEW_TEXTS, reviewNotYet, starsFrom } from "@/lib/imparables/resena";
 import { coverName } from "@/lib/imparables/schedule";
 import { cinzel, manrope } from "@/components/imparables/fonts";
+import { ImpLogo } from "@/components/imparables/ImpArt";
 import ReviewForm from "./ReviewForm";
 import ReviewThanks from "./ReviewThanks";
 import ReviewHero from "./ReviewHero";
@@ -52,6 +53,13 @@ export default async function ReviewPage({ params, searchParams }: { params: { t
 
   // The congress's name as its cover says it: «Manicuristas Imparables», without the day its admin name carries.
   const nameOf = (event: Event) => (event.theme === "IMPARABLES" ? coverName(publicEventName(event)) : publicEventName(event));
+  // Its own mark in the header, in place of Nail Fest's (the team, 2026-11-04).
+  const logoOf = (event: Event | null | undefined) => {
+    if (event?.theme !== "IMPARABLES") return undefined;
+    const words = nameOf(event).split(/\s+/);
+    const big = words.pop() ?? "";
+    return <ImpLogo pre={words.join(" ")} big={big} className="rv-imp-logo" />;
+  };
 
   const sampleEventId = (() => {
     const id = congresoRegistrationId(params.token);
@@ -61,7 +69,7 @@ export default async function ReviewPage({ params, searchParams }: { params: { t
     const event = await db.event.findUnique({ where: { id: sampleEventId } });
     if (event?.theme === "IMPARABLES") {
       const texts = textsFor(event, { nombre: "Laura", evento: nameOf(event), premios: "", fecha: "" });
-      const brand = { brandName: orgSettings.name, displayClassName: cinzel.className, eventImageUrl: event.imageUrl ?? null };
+      const brand = { brandName: orgSettings.name, displayClassName: cinzel.className, eventImageUrl: event.imageUrl ?? null, logo: logoOf(event) };
       return themed(
         event,
         searchParams.vista === "gracias" ? (
@@ -86,7 +94,7 @@ export default async function ReviewPage({ params, searchParams }: { params: { t
     return themed(
       eligibility.event,
       <div className="rv-page">
-        <ReviewHero brandName={orgSettings.name} eyebrow={rawTexts.formEyebrow} imageUrl={imp ? (eligibility.event?.imageUrl ?? null) : null}>
+        <ReviewHero brandName={orgSettings.name} eyebrow={rawTexts.formEyebrow} imageUrl={imp ? (eligibility.event?.imageUrl ?? null) : null} logo={logoOf(eligibility.event)}>
           <h1 className={`rv-title ${imp ? cinzel.className : fraunces.className}`}>Tu reseña</h1>
           <p className="rv-intro">{text}</p>
         </ReviewHero>
@@ -107,7 +115,7 @@ export default async function ReviewPage({ params, searchParams }: { params: { t
     : null;
   // The placeholders filled for this attendee, once, server-side.
   const texts = textsFor(event, { nombre: eligibility.person.firstName, evento: eventName, premios: raffle ? `${raffle.prizeCount} ${raffle.prizeLabel}` : "", fecha: raffle?.closesLabel ?? "" });
-  const brand = { brandName: orgSettings.name, displayClassName: imp ? cinzel.className : fraunces.className, eventImageUrl: event.imageUrl ?? null };
+  const brand = { brandName: orgSettings.name, displayClassName: imp ? cinzel.className : fraunces.className, eventImageUrl: event.imageUrl ?? null, logo: logoOf(event) };
 
   if (preview) {
     const base = `/resena/${encodeURIComponent(params.token)}`;

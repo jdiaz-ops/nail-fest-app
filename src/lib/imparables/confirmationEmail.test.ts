@@ -73,20 +73,21 @@ describe("Manicuristas Imparables' confirmation email", () => {
     expect(text).toContain("imagen «Asistiré» para historias y publicaciones: https://nailfest.lat/asistire/reg_1.firma");
   });
 
-  it("brings her kit before the congress: wallpapers and story templates to save, and her profile frame", () => {
+  it("brings her kit before the congress: wallpapers to save — no story templates — and her profile frame", () => {
     const file = (name: string, n: number) => ({ name, file: `https://nailfest.lat/imparables/kit/${n}.jpg`, mini: `https://nailfest.lat/imparables/kit/mini/${n}.jpg` });
     const kit = {
       wallpapers: [file("Imparable", 1), file("Cobro lo que valgo", 2), file("Agenda llena", 3)],
-      stories: [file("Antes", 4), file("El día", 5), file("Después", 6)],
       frameUrl: "https://nailfest.lat/asistire/reg_1.firma/marco",
       pageUrl: "https://nailfest.lat/asistire/reg_1.firma/kit",
     };
     const { html, text } = imparablesConfirmationEmail(base({ kit }));
     expect(html).toContain("Tu kit Imparable");
-    for (let n = 1; n <= 6; n++) {
+    for (let n = 1; n <= 3; n++) {
       expect(html).toContain(`href="https://nailfest.lat/imparables/kit/${n}.jpg"`);
       expect(html).toContain(`src="https://nailfest.lat/imparables/kit/mini/${n}.jpg"`);
     }
+    expect(html).not.toMatch(/plantilla/i);
+    expect(text).not.toMatch(/plantilla/i);
     expect(html).toContain('href="https://nailfest.lat/asistire/reg_1.firma/marco"');
     expect(html).toContain('href="https://nailfest.lat/asistire/reg_1.firma/kit"');
     expect(html).toContain("Ver todo mi kit");

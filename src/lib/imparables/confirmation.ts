@@ -98,7 +98,6 @@ async function confirmationOf(
     kit: her.asistire
       ? {
           wallpapers: KIT.wallpapers.map((f) => ({ name: f.name, file: absolute(f.file), mini: absolute(f.mini) })),
-          stories: KIT.stories.map((f) => ({ name: f.name, file: absolute(f.file), mini: absolute(f.mini) })),
           frameUrl: marcoUrl(her.asistire),
           pageUrl: kitUrl(her.asistire),
         }

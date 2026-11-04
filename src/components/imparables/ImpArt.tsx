@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { LandingTone } from "@/lib/landingBlocks/types";
 
 // The drawn pieces of Manicuristas Imparables' page: the tiara over the
@@ -13,6 +14,34 @@ export function Tiara({ className = "imp-tiara" }: { className?: string } = {}) 
       <path d="M30 46 Q95 12 160 46" fill="none" stroke="currentColor" strokeWidth="1.2" opacity=".7" />
       <polygon points="95,8 99.4,19 111,19.6 101.9,26.8 105,38 95,31.6 85,38 88.1,26.8 79,19.6 90.6,19" fill="currentColor" />
     </svg>
+  );
+}
+
+/** Manicuristas Imparables' mark, as its cover draws it (the team, 2026-11-04: «el logo del hero»): the tiara, then
+ * «MANICURISTAS» small over «IMPARABLES» big. Its size and its colors come from where it's put (globals.css .imp-logo):
+ * a heading where it names the page. */
+export function ImpLogo({ pre, big, className = "", heading = false }: { pre: string; big: string; className?: string; heading?: boolean }) {
+  const Name = heading ? "h1" : "p";
+  return (
+    <div className={`imp-logo ${className}`.trim()}>
+      <Tiara className="imp-logo-tiara" />
+      <Name className="imp-logo-name">
+        {pre && <span className="imp-logo-pre">{pre} </span>}
+        <span className="imp-logo-big">{big}</span>
+      </Name>
+    </div>
+  );
+}
+
+/** The top of the pages she gets after paying — her recordings, her kit (the team, 2026-11-04): no bar and no welcome,
+ * the cover's rays and its mark; under it, whatever the page needs to say first. */
+export function ImpPageTop({ pre, big, children }: { pre: string; big: string; children?: ReactNode }) {
+  return (
+    <header className="imp-mc-top">
+      <div className="imp-rays" aria-hidden="true" />
+      <ImpLogo pre={pre} big={big} className="imp-mc-logo" heading />
+      {children}
+    </header>
   );
 }
 

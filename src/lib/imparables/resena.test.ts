@@ -13,6 +13,8 @@ describe("Manicuristas Imparables' review page", () => {
     expect(all).not.toMatch(/puerta|escane|marcas que encontraste|demostraciones/i);
     // No reward box (the team, 2026-11-04): its texts empty, so the box doesn't show.
     expect([IMPARABLES_REVIEW_TEXTS.rewardEyebrow, IMPARABLES_REVIEW_TEXTS.rewardTitle, IMPARABLES_REVIEW_TEXTS.rewardText]).toEqual(["", "", ""]);
+    // No note under the button either (the team, 2026-11-04).
+    expect(IMPARABLES_REVIEW_TEXTS.formFootnote).toBe("");
     expect(reviewNotYet("domingo 4 de julio")).toBe("Tu reseña se abre al terminar el congreso, el domingo 4 de julio.");
   });
 });

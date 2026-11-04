@@ -287,7 +287,7 @@ export default function EventBroadcastComposer({
           {imparables && (
             <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, fontWeight: 400, color: "var(--ink)" }}>
               <input type="checkbox" checked={designKit} onChange={(e) => setDesignKit(e.target.checked)} style={{ width: "auto", margin: 0, flex: "none" }} />
-              <span>«Tu kit Imparable» — fondos de pantalla, plantillas de historias y su foto de perfil</span>
+              <span>«Tu kit Imparable» — fondos de pantalla y su foto de perfil</span>
             </label>
           )}
           <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6, fontWeight: 400, color: "var(--ink)" }}>

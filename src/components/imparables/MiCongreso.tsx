@@ -4,24 +4,20 @@ import { getOrgSettings } from "@/lib/settings";
 import { publicEventName } from "@/lib/eventDisplayName";
 import { parseLandingBlocks } from "@/lib/landingBlocks/types";
 import { congressTimes, dayWords, instagramUrl, peopleOf, readRecordings, talksOf, whoIs, youtubeId } from "@/lib/imparables/grabaciones";
-import { coverName, eventWhen } from "@/lib/imparables/schedule";
-import { Tiara } from "./ImpArt";
+import { coverName } from "@/lib/imparables/schedule";
+import { ImpPageTop, Tiara } from "./ImpArt";
 import ImpVideo from "./ImpVideo";
 import { cinzel, manrope } from "./fonts";
 
-// «Grabaciones» in the admin (the team, 2026-11-04): each buyer's page for Manicuristas Imparables, in the checkout's
-// chrome — hello, the day and its hours, and the recording of every talk, from the congress's end to its last day;
-// until then, when they open. Only the recordings (the team, 2026-11-04): her diploma has a link of its own, for the
-// emails (/api/diploma/[token]), and her kit and her «¡Asistiré!» image go by email before the congress. While her
-// payment is being confirmed, a note to come back. The team's sample shows the recordings, with sample data
+// «Grabaciones» in the admin (the team, 2026-11-04): each buyer's page for Manicuristas Imparables — the congress's
+// mark as its cover draws it, and the recording of every talk, from the congress's end to its last day; until then,
+// when they open. No bar, no welcome, no day (the team, 2026-11-04): only the recordings. Her diploma has a link of its
+// own, for the emails (/api/diploma/[token]), and her kit and her «¡Asistiré!» image go by email before the congress.
+// While her payment is being confirmed, a note to come back. The team's sample shows the recordings, with sample data
 // (app/mi-congreso/[token]).
 
 type Props = {
   event: Event;
-  /** «Ana María», her first name as it's said; «» when it can't be. */
-  firstName: string;
-  /** Her own link into the Zoom, when it has one. */
-  zoomUrl?: string | null;
   sample?: boolean;
   waiting?: boolean;
 };
@@ -56,7 +52,7 @@ function Speaker({ name, handle, photoUrl }: { name: string; handle: string; pho
   );
 }
 
-export default async function MiCongreso({ event, firstName, zoomUrl, sample = false, waiting = false }: Props) {
+export default async function MiCongreso({ event, sample = false, waiting = false }: Props) {
   const [orgSettings, whatsapp] = await Promise.all([
     getOrgSettings(),
     db.whatsAppConnection.findFirst({ orderBy: { createdAt: "desc" }, select: { displayPhoneNumber: true } }),
@@ -66,7 +62,6 @@ export default async function MiCongreso({ event, firstName, zoomUrl, sample = f
   const words = coverName(publicEventName(event)).split(/\s+/);
   const big = words.pop() ?? "";
   const pre = words.join(" ");
-  const when = eventWhen(event, orgSettings.timezone);
   const recordings = readRecordings(event.recordings);
   const times = congressTimes(event, recordings, orgSettings.timezone);
   const now = Date.now();
@@ -92,14 +87,6 @@ export default async function MiCongreso({ event, firstName, zoomUrl, sample = f
   return (
     <main className={`imp ${cinzel.variable} ${manrope.variable}`}>
       <div className="imp-co">
-        <header className="imp-co-top">
-          <span />
-          <a className="imp-co-mark" href={`/${event.slug}`}>
-            {pre && <span>{pre} </span>}
-            <b>{big}</b>
-          </a>
-          <span />
-        </header>
         <div className="imp-co-main imp-mc">
           {sample && (
             <p className="imp-mc-sample">
@@ -107,27 +94,9 @@ export default async function MiCongreso({ event, firstName, zoomUrl, sample = f
             </p>
           )}
 
-          <section className="imp-mc-hero imp-co-dark">
-            <Tiara className="imp-mc-tiara" />
-            <p className="imp-mc-kicker">Tu congreso</p>
-            <h1 className="imp-mc-h1">{firstName ? `Hola, ${firstName}` : "Hola, Imparable"}</h1>
-            {waiting ? (
-              <p className="imp-mc-lead">Tu página se activa apenas se confirme tu pago. Vuelve a abrir este enlace en unos minutos.</p>
-            ) : (
-              <>
-                <p className="imp-mc-lead">Aquí está la grabación de cada charla. Este enlace es solo tuyo: guárdalo.</p>
-                <p className="imp-mc-when">
-                  <b>{when.dates}</b>
-                  {when.hours ? ` · ${when.hours}, hora Colombia` : ""}
-                </p>
-                {zoomUrl && !over && (
-                  <a className="imp-co-btn" href={zoomUrl}>
-                    Entrar al congreso en Zoom
-                  </a>
-                )}
-              </>
-            )}
-          </section>
+          <ImpPageTop pre={pre} big={big}>
+            {waiting && <p className="imp-mc-wait">Tu página se activa apenas se confirme tu pago. Vuelve a abrir este enlace en unos minutos.</p>}
+          </ImpPageTop>
 
           {!waiting && (
             <>

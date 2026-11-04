@@ -9,6 +9,7 @@ const base = (over: Partial<ImparablesClosing> = {}): ImparablesClosing => ({
   diploma: { url: "https://nailfest.lat/api/diploma/reg_1.firma?descargar" },
   review: { url: "https://nailfest.lat/resena/qr_1" },
   helpUrl: "https://wa.me/573001234567",
+  sponsors: [],
   images: { header: "https://nailfest.lat/imparables/correo-cabecera.png", logo: "https://nailfest.lat/logo.png" },
   site: { url: "https://nailfest.lat", host: "nailfest.lat" },
   ...over,
@@ -28,6 +29,26 @@ describe("Manicuristas Imparables' closing email", () => {
     expect(html).toContain('href="https://nailfest.lat/resena/qr_1"');
     expect(text).toContain("hasta el martes 3 de agosto: https://nailfest.lat/mi-congreso/reg_1.firma");
     expect(text).toContain("Déjanos tu reseña: https://nailfest.lat/resena/qr_1");
+  });
+
+  it("says who organizes it and, under it, the brands that support it, at its top", () => {
+    const sponsors = [
+      { name: "Marca uno", url: "https://nailfest.lat/imparables/marcas/marca-1.png" },
+      { name: "Marca dos", url: "https://blob.example/marca-2.png" },
+    ];
+    const { html, text } = imparablesClosingEmail(base({ sponsors }));
+    expect(html).toContain("ORGANIZA");
+    expect(html).toContain("CON EL APOYO DE");
+    expect(html).toContain('src="https://nailfest.lat/imparables/marcas/marca-1.png"');
+    expect(html).toContain('alt="Marca dos"');
+    // Above her thanks.
+    expect(html.indexOf("CON EL APOYO DE")).toBeLessThan(html.indexOf("¡Gracias, Laura!"));
+    expect(text).toContain("Con el apoyo de Marca uno y Marca dos");
+
+    const alone = imparablesClosingEmail(base());
+    expect(alone.html).toContain("ORGANIZA");
+    expect(alone.html).not.toContain("CON EL APOYO DE");
+    expect(alone.text).not.toContain("Con el apoyo de");
   });
 
   it("opens her review already rated from each of the five stars", () => {

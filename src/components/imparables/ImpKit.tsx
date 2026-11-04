@@ -1,48 +1,17 @@
 import type { Event } from "@prisma/client";
 import { publicEventName } from "@/lib/eventDisplayName";
-import { KIT, type KitFile } from "@/lib/imparables/kit";
+import { KIT } from "@/lib/imparables/kit";
 import { coverName } from "@/lib/imparables/schedule";
-import { Tiara } from "./ImpArt";
+import { ImpPageTop } from "./ImpArt";
 import { cinzel, manrope } from "./fonts";
 
 // «Tu kit Imparable» (the team, 2026-11-04: «necesito la pestaña individual de Tu kit Imparable… para ver cómo es la
-// landing de esto»): her kit's own page, in the checkout's chrome — hello; her profile photo in the congress's frame;
-// the wallpapers for her phone and the templates for her stories, each one opening its file to save it. Her kit, not
-// her recordings (those have their page). Opened from her «Asistiré» link, with /kit (app/asistire/[token]/kit); the
-// team's sample shows it with sample data.
+// landing de esto»): her kit's own page — the congress's mark as its cover draws it (no bar, no welcome: the team,
+// 2026-11-04), her profile photo in the congress's frame, and the wallpapers for her phone, each one with its own
+// «Descargar». No story templates (the team, 2026-11-04). Her kit, not her recordings (those have their page). Opened
+// from her «Asistiré» link, with /kit (app/asistire/[token]/kit); the team's sample shows the same page.
 
-function Thumbs({ files }: { files: KitFile[] }) {
-  return (
-    <ul className="imp-kit-grid">
-      {files.map((file) => (
-        <li key={file.file}>
-          <a className="imp-kit-thumb" href={file.file} target="_blank" rel="noreferrer">
-            {/* eslint-disable-next-line @next/next/no-img-element -- fixed kit files */}
-            <img src={file.mini} alt={file.name} width={360} height={640} loading="lazy" />
-            <span>{file.name}</span>
-          </a>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-export default function ImpKit({
-  event,
-  firstName,
-  frameUrl,
-  helpUrl,
-  sample = false,
-}: {
-  event: Event;
-  /** «Ana María», her first name as it's said; «» when it can't be. */
-  firstName: string;
-  /** Her profile frame's page. */
-  frameUrl: string;
-  /** The team's WhatsApp, when there's one. */
-  helpUrl: string | null;
-  sample?: boolean;
-}) {
+export default function ImpKit({ event, frameUrl, helpUrl }: { event: Event; /** Her profile frame's page. */ frameUrl: string; /** The team's WhatsApp, when there's one. */ helpUrl: string | null }) {
   const words = coverName(publicEventName(event)).split(/\s+/);
   const big = words.pop() ?? "";
   const pre = words.join(" ");
@@ -50,27 +19,8 @@ export default function ImpKit({
   return (
     <main className={`imp ${cinzel.variable} ${manrope.variable}`}>
       <div className="imp-co">
-        <header className="imp-co-top">
-          {/* No way back on the pages she gets after paying (the team, 2026-11-04): the mark opens the congress's page. */}
-          <span />
-          <a className="imp-co-mark" href={`/${event.slug}`}>
-            {pre && <span>{pre} </span>}
-            <b>{big}</b>
-          </a>
-          <span />
-        </header>
         <div className="imp-co-main imp-mc">
-          {sample && <p className="imp-mc-sample">Muestra para el equipo: así ve su kit cada compradora, con datos de ejemplo.</p>}
-
-          <section className="imp-mc-hero imp-co-dark">
-            <Tiara className="imp-mc-tiara" />
-            <p className="imp-mc-kicker">Tu kit Imparable</p>
-            <h1 className="imp-mc-h1">{firstName ? `Hola, ${firstName}` : "Hola, Imparable"}</h1>
-            <p className="imp-mc-lead">
-              Para que se note que vas: tu foto de perfil con el marco del congreso, fondos para tu celular y plantillas para tus historias. Úsalo antes,
-              durante y después del congreso.
-            </p>
-          </section>
+          <ImpPageTop pre={pre} big={big} />
 
           <section className="imp-mc-sec" aria-labelledby="imp-kit-foto">
             <h2 className="imp-mc-h2" id="imp-kit-foto">
@@ -91,16 +41,27 @@ export default function ImpKit({
             <h2 className="imp-mc-h2" id="imp-kit-fondos">
               Fondos de pantalla
             </h2>
-            <p className="imp-mc-sub">Ábrelo, mantenlo presionado y toca «Guardar». Luego ponlo de fondo en tu celular.</p>
-            <Thumbs files={KIT.wallpapers} />
-          </section>
-
-          <section className="imp-mc-sec" aria-labelledby="imp-kit-historias">
-            <h2 className="imp-mc-h2" id="imp-kit-historias">
-              Plantillas para tus historias
-            </h2>
-            <p className="imp-mc-sub">Guárdala, súbela a tu historia de Instagram o a tu estado de WhatsApp y escribe encima.</p>
-            <Thumbs files={KIT.stories} />
+            <p className="imp-mc-sub">Descarga el que quieras y ponlo de fondo en tu celular.</p>
+            <ul className="imp-kit-grid">
+              {KIT.wallpapers.map((file) => (
+                <li key={file.file}>
+                  <a className="imp-kit-thumb" href={file.file} target="_blank" rel="noreferrer">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- fixed kit files */}
+                    <img src={file.mini} alt={file.name} width={360} height={640} loading="lazy" />
+                    <span>{file.name}</span>
+                  </a>
+                  {/* Each one by itself (the team, 2026-11-04): it saves that file. */}
+                  <a className="imp-kit-dl" href={file.file} download={file.file.split("/").pop()} aria-label={`Descargar «${file.name}»`}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M12 3v12M7 10l5 5 5-5" />
+                      <path d="M5 21h14" />
+                    </svg>
+                    Descargar
+                  </a>
+                </li>
+              ))}
+            </ul>
+            <p className="imp-mc-note imp-kit-iphone">En iPhone también puedes abrirlo, mantener el dedo sobre la imagen y tocar «Guardar en Fotos».</p>
           </section>
 
           {helpUrl && (

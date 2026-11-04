@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import type { ReviewPageTexts } from "@/lib/reviewPageTexts";
 import ReviewHero from "./ReviewHero";
 
@@ -12,6 +13,7 @@ export default function ReviewThanks({
   brandName,
   displayClassName,
   eventImageUrl,
+  logo,
   token,
   raffleOptIn,
   raffle,
@@ -22,6 +24,8 @@ export default function ReviewThanks({
   brandName: string;
   displayClassName: string;
   eventImageUrl: string | null;
+  /** The header's mark in place of Nail Fest's (ReviewHero). */
+  logo?: ReactNode;
   token: string;
   raffleOptIn: boolean;
   raffle: { prizeCount: number; prizeLabel: string; closesLabel: string; open: boolean } | null;
@@ -35,7 +39,7 @@ export default function ReviewThanks({
 
   return (
     <div className="rv-page">
-      <ReviewHero brandName={brandName} eyebrow={texts.formEyebrow} imageUrl={eventImageUrl}>
+      <ReviewHero brandName={brandName} eyebrow={texts.formEyebrow} imageUrl={eventImageUrl} logo={logo}>
         <div className="rv-check-circle" aria-hidden="true">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
             <path d="M20 6 9 17l-5-5" />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import type { ReviewPageTexts } from "@/lib/reviewPageTexts";
 import ReviewHero from "./ReviewHero";
@@ -20,6 +20,7 @@ export default function ReviewForm({
   brandName,
   displayClassName,
   eventImageUrl,
+  logo,
   token,
   raffle,
   preview = false,
@@ -29,6 +30,8 @@ export default function ReviewForm({
   brandName: string;
   displayClassName: string;
   eventImageUrl: string | null;
+  /** The header's mark in place of Nail Fest's (ReviewHero). */
+  logo?: ReactNode;
   token: string;
   raffle: { prizeCount: number; prizeLabel: string; closesLabel: string; open: boolean } | null;
   preview?: boolean;
@@ -107,7 +110,7 @@ export default function ReviewForm({
 
   return (
     <div className="rv-page">
-      <ReviewHero brandName={brandName} eyebrow={texts.formEyebrow} imageUrl={eventImageUrl}>
+      <ReviewHero brandName={brandName} eyebrow={texts.formEyebrow} imageUrl={eventImageUrl} logo={logo}>
         <span className="rv-seal">
           {check}
           <span>{texts.seal}</span>

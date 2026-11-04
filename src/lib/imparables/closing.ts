@@ -2,8 +2,10 @@ import type { Event } from "@prisma/client";
 import { db } from "@/lib/db";
 import { getOrgSettings } from "@/lib/settings";
 import { publicEventName } from "@/lib/eventDisplayName";
+import { parseLandingBlocks } from "@/lib/landingBlocks/types";
 import { sayName } from "@/lib/mesa/email";
 import { reviewUrl } from "@/lib/reviews";
+import { sponsorLogosOf } from "./blocks";
 import { closingSubject, imparablesClosingEmail, type ImparablesClosing } from "./closingEmail";
 import { congressTimes, dayWords, readRecordings } from "./grabaciones";
 import { congresoSamplePath, congresoSampleToken, congresoUrl, diplomaPath, diplomaUrl } from "./miCongreso";
@@ -31,6 +33,10 @@ async function closingOf(event: Event, her: { firstName: string; recordings: str
     diploma: her.diploma ? { url: her.diploma } : null,
     review: her.review ? { url: her.review } : null,
     helpUrl: digits.length >= 8 ? `https://wa.me/${digits}` : null,
+    // The brands under «Con el apoyo de», as the cover reads them: from their section even while it's hidden.
+    sponsors: sponsorLogosOf(parseLandingBlocks(event.landingBlocks))
+      .slice(0, 4)
+      .map((item) => ({ name: item.handle.trim(), url: new URL(item.url.trim(), `${base}/`).toString() })),
     images: { header: `${base}/imparables/correo-cabecera.png`, logo: `${base}/logo.png` },
     site: { url: base, host: new URL(base).host.replace(/^www\./, "") },
   };

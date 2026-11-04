@@ -99,7 +99,7 @@ export default async function AfterPaymentPage({ params, searchParams }: { param
             id: "kit",
             label: "Tu kit Imparable",
             src: kitUrl(asistireSampleUrl(event.id)),
-            note: "La página de su kit, con un enlace solo suyo: su foto de perfil con el marco, los fondos de pantalla y las plantillas de historias.",
+            note: "La página de su kit, con un enlace solo suyo: su foto de perfil con el marco y los fondos de pantalla, cada uno con su botón para descargarlo.",
           },
           {
             id: "marco",

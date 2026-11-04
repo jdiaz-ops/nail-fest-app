@@ -1,7 +1,5 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { sayName } from "@/lib/mesa/email";
-import { SAMPLE_NAME } from "@/lib/imparables/diplomaText";
 import { findCongreso } from "@/lib/imparables/miCongreso";
 import MiCongreso from "@/components/imparables/MiCongreso";
 
@@ -20,21 +18,7 @@ export default async function MiCongresoPage({ params }: { params: { token: stri
   const access = await findCongreso(params.token);
   if (!access) notFound();
   if (access.kind === "sample") {
-    return (
-      <MiCongreso
-        event={access.event}
-        firstName={SAMPLE_NAME.firstName}
-        sample
-      />
-    );
+    return <MiCongreso event={access.event} sample />;
   }
-  const { person } = access.registration;
-  return (
-    <MiCongreso
-      event={access.event}
-      firstName={sayName(person.firstName)}
-      zoomUrl={access.registration.zoomJoinUrl}
-      waiting={access.waiting}
-    />
-  );
+  return <MiCongreso event={access.event} waiting={access.waiting} />;
 }

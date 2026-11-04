@@ -37,9 +37,9 @@ export interface ImparablesConfirmation {
   share: { line: string; url: string };
   /** Her page to make her «Asistiré» image (lib/imparables/asistire.ts), and a picture of the empty template. */
   asistire: { url: string; image: string } | null;
-  /** Her digital kit (lib/imparables/kit.ts, the team 2026-11-04: before the congress, by email): the wallpapers and
-   * the story templates — each one's name, its file and its small copy —, and her page to make her profile photo. */
-  kit?: { wallpapers: KitLink[]; stories: KitLink[]; frameUrl: string; pageUrl: string } | null;
+  /** Her digital kit (lib/imparables/kit.ts, the team 2026-11-04: before the congress, by email): the wallpapers —
+   * each one's name, its file and its small copy —, her kit's page and her page to make her profile photo. */
+  kit?: { wallpapers: KitLink[]; frameUrl: string; pageUrl: string } | null;
   /** The team's WhatsApp, when there's one. */
   helpUrl: string | null;
   speakers: { name: string; photoUrl: string }[];
@@ -236,9 +236,8 @@ ${
   c.kit
     ? `<tr><td class="px" align="center" style="padding:28px 32px 30px;background:${CARD};border-top:1px solid ${LINE};">
 <div style="${serif(21, 800, INK, "line-height:1.25;")}">Tu kit Imparable</div>
-<div style="margin:10px auto 18px;max-width:420px;${sans(15, 400, WARM, "line-height:1.55;")}">Fondos para tu celular y plantillas para tus historias. Toca la que quieras para guardarla.</div>
+<div style="margin:10px auto 18px;max-width:420px;${sans(15, 400, WARM, "line-height:1.55;")}">Fondos de pantalla para tu celular. Toca el que quieras para guardarlo.</div>
 ${kitRow(c.kit.wallpapers)}
-${kitRow(c.kit.stories)}
 <a href="${esc(c.kit.pageUrl)}" style="display:inline-block;margin:8px 0 0;padding:14px 24px;border-radius:14px;background:${GOLD};text-decoration:none;${sans(15.5, 800, INK)}">Ver todo mi kit</a>
 <div style="margin:22px auto 14px;max-width:420px;${sans(15, 400, WARM, "line-height:1.55;")}">Y pon tu foto en el marco del congreso para tu perfil de WhatsApp e Instagram.</div>
 <a href="${esc(c.kit.frameUrl)}" style="display:inline-block;padding:12px 22px;border-radius:14px;border:2px solid ${GOLD};text-decoration:none;${sans(15, 800, INK)}">Hacer mi foto de perfil</a>
@@ -293,7 +292,6 @@ Recibes este correo porque compraste tu entrada a ${esc(c.eventName)}.
           [
             "TU KIT IMPARABLE",
             ...c.kit.wallpapers.map((f) => `Fondo de pantalla «${f.name}»: ${f.file}`),
-            ...c.kit.stories.map((f) => `Plantilla de historia «${f.name}»: ${f.file}`),
             `Tu foto de perfil con el marco del congreso: ${c.kit.frameUrl}`,
             `Todo tu kit: ${c.kit.pageUrl}`,
           ].join("\n"),

@@ -8,7 +8,7 @@ const frame: ImparablesEventEmailFrame = {
   share: { line: "Hoy está a $90.000 y luego sube a $120.000: compartirle esto es un buen regalo.", url: "https://wa.me/?text=hola" },
   helpUrl: "https://wa.me/573001234567",
   images: { header: "https://nailfest.lat/imparables/correo-cabecera.png", logo: "https://nailfest.lat/logo.png", asistire: "https://nailfest.lat/imparables/asistire-muestra-4-julio.jpg" },
-  kit: { wallpapers: [file("Imparable", 1), file("Cobro", 2), file("Agenda", 3)], stories: [file("Antes", 4), file("El día", 5), file("Después", 6)] },
+  kit: { wallpapers: [file("Imparable", 1), file("Cobro", 2), file("Agenda", 3)] },
   site: { url: "https://nailfest.lat", host: "nailfest.lat" },
 };
 const mail = {
@@ -42,7 +42,8 @@ describe("Manicuristas Imparables' design for its event's emails", () => {
     expect(html).toContain('href="https://nailfest.lat/asistire/reg_1.firma"');
     expect(html).toContain('href="https://nailfest.lat/asistire/reg_1.firma/marco"');
     expect(html).toContain('href="https://nailfest.lat/asistire/reg_1.firma/kit"');
-    for (let n = 1; n <= 6; n++) expect(html).toContain(`href="https://nailfest.lat/imparables/kit/${n}.jpg"`);
+    for (let n = 1; n <= 3; n++) expect(html).toContain(`href="https://nailfest.lat/imparables/kit/${n}.jpg"`);
+    expect(html).not.toMatch(/plantilla/i);
     expect(html).toContain('href="https://wa.me/?text=hola"');
     expect(text).toContain("TU KIT IMPARABLE");
     expect(text).toContain("Tu foto de perfil con el marco del congreso: https://nailfest.lat/asistire/reg_1.firma/marco");

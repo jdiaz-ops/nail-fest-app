@@ -46,7 +46,7 @@ export async function imparablesEventEmailFrame(event: Event): Promise<Imparable
     },
     helpUrl: digits.length >= 8 ? `https://wa.me/${digits}` : null,
     images: { header: `${base}/imparables/correo-cabecera.png`, logo: `${base}/logo.png`, asistire: `${base}/imparables/asistire-muestra-4-julio.jpg` },
-    kit: { wallpapers: KIT.wallpapers.map(link), stories: KIT.stories.map(link) },
+    kit: { wallpapers: KIT.wallpapers.map(link) },
     site: { url: base, host: new URL(base).host.replace(/^www\./, "") },
   };
 }
