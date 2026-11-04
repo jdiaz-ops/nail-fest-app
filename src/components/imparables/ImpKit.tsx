@@ -51,10 +51,8 @@ export default function ImpKit({
     <main className={`imp ${cinzel.variable} ${manrope.variable}`}>
       <div className="imp-co">
         <header className="imp-co-top">
-          <a className="imp-co-back" href={`/${event.slug}`}>
-            <span aria-hidden="true">←</span>
-            <span className="imp-co-back-t">Volver</span>
-          </a>
+          {/* No way back on the pages she gets after paying (the team, 2026-11-04): the mark opens the congress's page. */}
+          <span />
           <a className="imp-co-mark" href={`/${event.slug}`}>
             {pre && <span>{pre} </span>}
             <b>{big}</b>
