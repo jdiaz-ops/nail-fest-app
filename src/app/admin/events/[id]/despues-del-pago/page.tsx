@@ -60,13 +60,13 @@ export default async function AfterPaymentPage({ params, searchParams }: { param
             id: "grabaciones",
             label: "Grabaciones",
             src: congresoSamplePath(event.id),
-            note: "Su página de grabaciones, con un enlace solo suyo: la grabación de cada charla y su diploma. Todavía no se le envía a nadie.",
+            note: "Su página de grabaciones, con un enlace solo suyo: la grabación de cada charla, desde que termina el congreso. Todavía no se le envía a nadie.",
           },
           {
             id: "diploma",
             label: "Diploma",
             src: diplomaPath(congresoSampleToken(event.id)),
-            note: "Se descarga desde su página de grabaciones al terminar el congreso, con su nombre como lo escribió al comprar y el código de su boleta.",
+            note: "Con un enlace propio para los correos: se descarga al terminar el congreso, con su nombre como lo escribió al comprar y el código de su boleta.",
           },
         ]
       : []),

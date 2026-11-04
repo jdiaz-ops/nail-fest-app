@@ -4,34 +4,29 @@ import { getOrgSettings } from "@/lib/settings";
 import { publicEventName } from "@/lib/eventDisplayName";
 import { parseLandingBlocks } from "@/lib/landingBlocks/types";
 import { congressTimes, dayWords, readRecordings, talksOf, youtubeId } from "@/lib/imparables/grabaciones";
-import { KIT } from "@/lib/imparables/kit";
-import { diplomaPath } from "@/lib/imparables/miCongreso";
 import { coverName, eventWhen } from "@/lib/imparables/schedule";
 import { Tiara } from "./ImpArt";
 import ImpVideo from "./ImpVideo";
 import { cinzel, manrope } from "./fonts";
 
-// «Grabaciones» in the admin, «Tu congreso» for her (the team, 2026-11-04): each buyer's page for Manicuristas
-// Imparables, in the checkout's chrome — hello, the day and its hours; the recording of every talk, from the
-// congress's end to its last day; and the link to download her diploma with her name, once it's over. Until then each
-// part says when it opens. Her kit and her «¡Asistiré!» image aren't here: she gets them by email before the congress
-// (the team, 2026-11-04). While her payment is being confirmed, a note to come back. The team's sample shows every
-// part, with sample data (app/mi-congreso/[token]).
+// «Grabaciones» in the admin (the team, 2026-11-04): each buyer's page for Manicuristas Imparables, in the checkout's
+// chrome — hello, the day and its hours, and the recording of every talk, from the congress's end to its last day;
+// until then, when they open. Only the recordings (the team, 2026-11-04): her diploma has a link of its own, for the
+// emails (/api/diploma/[token]), and her kit and her «¡Asistiré!» image go by email before the congress. While her
+// payment is being confirmed, a note to come back. The team's sample shows the recordings, with sample data
+// (app/mi-congreso/[token]).
 
 type Props = {
   event: Event;
-  token: string;
   /** «Ana María», her first name as it's said; «» when it can't be. */
   firstName: string;
-  /** The name on her diploma; «» when we don't have it. */
-  diplomaName: string;
   /** Her own link into the Zoom, when it has one. */
   zoomUrl?: string | null;
   sample?: boolean;
   waiting?: boolean;
 };
 
-export default async function MiCongreso({ event, token, firstName, diplomaName, zoomUrl, sample = false, waiting = false }: Props) {
+export default async function MiCongreso({ event, firstName, zoomUrl, sample = false, waiting = false }: Props) {
   const [orgSettings, whatsapp] = await Promise.all([
     getOrgSettings(),
     db.whatsAppConnection.findFirst({ orderBy: { createdAt: "desc" }, select: { displayPhoneNumber: true } }),
@@ -49,7 +44,6 @@ export default async function MiCongreso({ event, token, firstName, diplomaName,
   const closed = !sample && now >= times.recordingsClose.getTime();
   const talks = recordings.items.length ? recordings.items : talksOf(parseLandingBlocks(event.landingBlocks).filter((block) => !block.hidden));
   const someVideo = talks.some((talk) => youtubeId(talk.url));
-  const diploma = diplomaPath(token);
 
   return (
     <main className={`imp ${cinzel.variable} ${manrope.variable}`}>
@@ -65,8 +59,7 @@ export default async function MiCongreso({ event, token, firstName, diplomaName,
         <div className="imp-co-main imp-mc">
           {sample && (
             <p className="imp-mc-sample">
-              Muestra para el equipo: así ve su página cada compradora, con datos de ejemplo. A ella, las grabaciones y el diploma le aparecen al terminar el
-              congreso.
+              Muestra para el equipo: así ve su página cada compradora, con datos de ejemplo. A ella, las grabaciones le aparecen al terminar el congreso.
             </p>
           )}
 
@@ -78,7 +71,7 @@ export default async function MiCongreso({ event, token, firstName, diplomaName,
               <p className="imp-mc-lead">Tu página se activa apenas se confirme tu pago. Vuelve a abrir este enlace en unos minutos.</p>
             ) : (
               <>
-                <p className="imp-mc-lead">Aquí están la grabación de cada charla y tu diploma. Este enlace es solo tuyo: guárdalo.</p>
+                <p className="imp-mc-lead">Aquí está la grabación de cada charla. Este enlace es solo tuyo: guárdalo.</p>
                 <p className="imp-mc-when">
                   <b>{when.dates}</b>
                   {when.hours ? ` · ${when.hours}, hora Colombia` : ""}
@@ -88,10 +81,6 @@ export default async function MiCongreso({ event, token, firstName, diplomaName,
                     Entrar al congreso en Zoom
                   </a>
                 )}
-                <nav className="imp-mc-nav" aria-label="En esta página">
-                  <a href="#grabaciones">Grabaciones</a>
-                  <a href="#diploma">Diploma</a>
-                </nav>
               </>
             )}
           </section>
@@ -154,55 +143,6 @@ export default async function MiCongreso({ event, token, firstName, diplomaName,
                       ))}
                     </ol>
                   </>
-                )}
-              </section>
-
-              <section className="imp-mc-sec" id="diploma" aria-labelledby="imp-mc-dip">
-                <h2 className="imp-mc-h2" id="imp-mc-dip">
-                  Tu diploma
-                </h2>
-                {!over ? (
-                  <>
-                    <p className="imp-mc-sub">Tu diploma digital con tu nombre aparece aquí al terminar el congreso, el {dayWords(times.lastDay)}.</p>
-                    <figure className="imp-mc-preview">
-                      {/* eslint-disable-next-line @next/next/no-img-element -- fixed sample image */}
-                      <img src={KIT.diplomaPreview} alt="El diploma de Manicuristas Imparables, con un nombre de ejemplo" width={1200} height={849} loading="lazy" />
-                      <figcaption>Así se verá, con tu nombre.</figcaption>
-                    </figure>
-                  </>
-                ) : diplomaName ? (
-                  <>
-                    <p className="imp-mc-sub">
-                      Tu diploma de participación, a nombre de <b>{diplomaName}</b>. Descárgalo, imprímelo o compártelo.
-                    </p>
-                    <a className="imp-co-btn" href={`${diploma}?descargar`}>
-                      Descargar mi diploma (PDF)
-                    </a>
-                    <a className="imp-mc-link" href={diploma} target="_blank" rel="noreferrer">
-                      Verlo antes de descargarlo
-                    </a>
-                    {helpUrl && (
-                      <p className="imp-mc-note">
-                        ¿Tu nombre está mal escrito?{" "}
-                        <a href={helpUrl} target="_blank" rel="noreferrer">
-                          Escríbenos por WhatsApp
-                        </a>{" "}
-                        y lo corregimos.
-                      </p>
-                    )}
-                  </>
-                ) : (
-                  <p className="imp-mc-sub">
-                    No tenemos tu nombre completo para el diploma.{" "}
-                    {helpUrl ? (
-                      <a href={helpUrl} target="_blank" rel="noreferrer">
-                        Escríbenos por WhatsApp
-                      </a>
-                    ) : (
-                      "Escríbenos"
-                    )}{" "}
-                    y te lo hacemos.
-                  </p>
                 )}
               </section>
             </>

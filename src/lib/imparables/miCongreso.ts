@@ -2,12 +2,12 @@ import { createHmac, timingSafeEqual } from "crypto";
 import type { Event, Person, Registration } from "@prisma/client";
 import { db } from "@/lib/db";
 
-// «Tu congreso» (the team, 2026-11-04): each buyer's own page for Manicuristas Imparables — her digital kit, the
-// recording of every talk and her diploma (app/mi-congreso/[token]). How each one gets in: like «Asistiré»
-// (asistire.ts), her link is her registration's id, signed — with a word of its own, so one link never opens the
-// other page. No account and no password: the link is her key, it opens only her page, and only once her payment is
-// confirmed. The team's sample opens the same page for an event, with no purchase behind it («Después del pago»).
-// Nothing sends these links yet: they go out only when the team says so.
+// Each buyer's own links for Manicuristas Imparables (the team, 2026-11-04): her recordings page («Grabaciones» in the
+// admin, app/mi-congreso/[token]) and her diploma (/api/diploma/[token]), each one on its own. How each one gets in:
+// like «Asistiré» (asistire.ts), her key is her registration's id, signed — with a word of its own, so this key never
+// opens her «Asistiré» page nor the other way round. No account and no password: the link opens only what's hers, and
+// only once her payment is confirmed. The team's sample opens the same pages for an event, with no purchase behind it
+// («Después del pago»). Nothing sends these links yet: they go out only when the team says so.
 
 function signature(id: string): string {
   const secret = process.env.APP_SECRET_KEY;
@@ -46,9 +46,14 @@ export function congresoUrl(registrationId: string): string {
   return `${baseUrl()}${congresoPath(registrationId)}`;
 }
 
-/** Her diploma's PDF, for her page's token. */
+/** Her diploma's PDF — a link of its own, for the emails, with the same key as her recordings page. */
 export function diplomaPath(token: string): string {
   return `/api/diploma/${token}`;
+}
+
+/** Her diploma's full address, for a message: it downloads it. */
+export function diplomaUrl(registrationId: string): string {
+  return `${baseUrl()}${diplomaPath(congresoToken(registrationId))}?descargar`;
 }
 
 // The team's sample, the same way as «Asistiré»'s.

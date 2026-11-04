@@ -4,7 +4,18 @@ const db = vi.hoisted(() => ({ event: { findUnique: vi.fn() }, registration: { f
 vi.mock("@/lib/db", () => ({ db }));
 
 import { asistireToken } from "./asistire";
-import { congresoPath, congresoRegistrationId, congresoSampleEventId, congresoSamplePath, congresoSampleToken, congresoToken, congresoUrl, diplomaPath, findCongreso } from "./miCongreso";
+import {
+  congresoPath,
+  congresoRegistrationId,
+  congresoSampleEventId,
+  congresoSamplePath,
+  congresoSampleToken,
+  congresoToken,
+  congresoUrl,
+  diplomaPath,
+  diplomaUrl,
+  findCongreso,
+} from "./miCongreso";
 
 beforeEach(() => {
   process.env.APP_SECRET_KEY = "test-secret";
@@ -39,6 +50,8 @@ describe("her «Tu congreso» link", () => {
     expect(congresoUrl("cmreg123")).toBe(`https://nailfest.lat${congresoPath("cmreg123")}`);
     expect(congresoPath("cmreg123")).toMatch(/^\/mi-congreso\/cmreg123\.[\w-]{43}$/);
     expect(diplomaPath("abc.def")).toBe("/api/diploma/abc.def");
+    // Her diploma on its own, for the emails: it downloads.
+    expect(diplomaUrl("cmreg123")).toBe(`https://nailfest.lat/api/diploma/${congresoToken("cmreg123")}?descargar`);
   });
 
   it("has the team's sample for an event", () => {
