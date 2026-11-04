@@ -105,7 +105,7 @@ async function confirmationOf(
       : null,
     helpUrl: digits.length >= 8 ? `https://wa.me/${digits}` : null,
     speakers: speakers.filter((p) => p.photoUrl).map((p) => ({ name: p.name.trim().split(/\s+/)[0]!, photoUrl: absolute(p.photoUrl) })),
-    images: { header: `${base}/imparables/correo-cabecera.png`, logo: `${base}/logo.png` },
+    images: { header: `${base}/imparables/correo-cabecera.png`, logo: `${base}/imparables/logo-negro.png` },
     site: { url: base, host: new URL(base).host.replace(/^www\./, "") },
   };
 }

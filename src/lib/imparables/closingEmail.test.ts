@@ -44,6 +44,9 @@ describe("Manicuristas Imparables' closing email", () => {
     // Above her thanks.
     expect(html.indexOf("CON EL APOYO DE")).toBeLessThan(html.indexOf("¡Gracias, Laura!"));
     expect(text).toContain("Con el apoyo de Marca uno y Marca dos");
+    // Under the logos, a thin gold line, as on the cover.
+    expect(html.indexOf("border-top:1px solid #c9a46a", html.indexOf('alt="Marca dos"'))).toBeGreaterThan(-1);
+    expect(html.indexOf("border-top:1px solid #c9a46a", html.indexOf('alt="Marca dos"'))).toBeLessThan(html.indexOf("¡Gracias, Laura!"));
 
     const alone = imparablesClosingEmail(base());
     expect(alone.html).toContain("ORGANIZA");

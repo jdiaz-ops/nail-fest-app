@@ -45,8 +45,9 @@ export function imparablesClosingEmail(c: ImparablesClosing): { subject: string;
   const title = (text: string, color: string = C.INK) => `<div style="${serif(21, 800, color, "line-height:1.25;")}">${esc(text)}</div>`;
   const line = (text: string, color: string = C.WARM) => `<div style="margin:10px auto 18px;max-width:420px;${sans(15, 400, color, "line-height:1.55;")}">${text}</div>`;
 
-  // «ORGANIZA» and Nail Fest's logo; under them, a thin line, «CON EL APOYO DE» and the brands' logos in a row, each
-  // one fitted to 110 × 30 (the cover's «Organiza» and «Con el apoyo de»).
+  // «ORGANIZA» and Nail Fest's logo, in black as on the cover (the team, 2026-11-04); under them, a thin line, «CON EL
+  // APOYO DE», the brands' logos in a row, each one fitted to 110 × 30, and under them a thin gold line, as on the
+  // cover (the team, 2026-11-04).
   const brands = c.sponsors.filter((sponsor) => sponsor.url).slice(0, 4);
   const organiza = `<tr><td class="px" align="center" style="padding:26px 32px 0;">
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto;"><tr>
@@ -62,7 +63,8 @@ export function imparablesClosingEmail(c: ImparablesClosing): { subject: string;
             (brand) =>
               `<td align="center" valign="middle" style="padding:6px 10px;"><img src="${esc(brand.url)}" width="110" alt="${esc(brand.name)}" style="display:block;border:0;width:auto;height:auto;max-width:110px;max-height:30px;"></td>`
           )
-          .join("")}</tr></table>`
+          .join("")}</tr></table>
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:14px auto 0;width:100%;max-width:320px;"><tr><td style="border-top:1px solid ${C.GOLD};font-size:0;line-height:0;height:1px;">&nbsp;</td></tr></table>`
       : ""
   }
 </td></tr>`;

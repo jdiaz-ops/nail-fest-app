@@ -37,7 +37,7 @@ async function closingOf(event: Event, her: { firstName: string; recordings: str
     sponsors: sponsorLogosOf(parseLandingBlocks(event.landingBlocks))
       .slice(0, 4)
       .map((item) => ({ name: item.handle.trim(), url: new URL(item.url.trim(), `${base}/`).toString() })),
-    images: { header: `${base}/imparables/correo-cabecera.png`, logo: `${base}/logo.png` },
+    images: { header: `${base}/imparables/correo-cabecera.png`, logo: `${base}/imparables/logo-negro.png` },
     site: { url: base, host: new URL(base).host.replace(/^www\./, "") },
   };
 }
