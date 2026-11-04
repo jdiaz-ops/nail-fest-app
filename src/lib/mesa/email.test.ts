@@ -184,3 +184,53 @@ describe("the vote links", () => {
     expect(readVoteToken(voteToken(null, "cpiece1", 0))).toEqual({ personId: null, pieceId: "cpiece1", option: 0 });
   });
 });
+
+describe("each edition's blocks, in its order (2026-11-04)", () => {
+  const sections = (html: string) => [...html.matchAll(/<td class="px" style="padding:28px;background:[^"]*">(?:.|\n)*?(Mito o verdad|El termómetro|El truco|El Consultorio)/g)].map((m) => m[1]);
+
+  it("without an order (frozen before it existed), the template's", () => {
+    const { html } = mesaEmail(snapshot(), laura, { baseUrl: BASE });
+    expect(sections(html)).toEqual(["Mito o verdad", "El termómetro", "El truco"]);
+  });
+
+  it("the order the team gave it, numbered as they come, «En esta mesa» and the text too", () => {
+    const consultorio = { featured: null, waiting: [] };
+    const email = mesaEmail(snapshot({ consultorio, order: ["CONSULTORIO", "OFICIO", "IMPARABLES", "JUEGO", "TERMOMETRO"] }), laura, { baseUrl: BASE });
+    expect(sections(email.html)).toEqual(["El Consultorio", "El truco", "Mito o verdad", "El termómetro"]);
+    const toc = email.html.slice(email.html.indexOf("En esta mesa"), email.html.indexOf("En esta mesa") + 3000);
+    expect(toc.indexOf("El Consultorio")).toBeLessThan(toc.indexOf("El truco"));
+    expect(toc.indexOf("El truco")).toBeLessThan(toc.indexOf("Mito o verdad"));
+    expect(email.text.indexOf("1. EL CONSULTORIO")).toBeGreaterThan(-1);
+    expect(email.text.indexOf("2. EL TRUCO")).toBeGreaterThan(email.text.indexOf("1. EL CONSULTORIO"));
+    expect(email.text.indexOf("3. MITO O VERDAD")).toBeGreaterThan(email.text.indexOf("2. EL TRUCO"));
+    // No banner without the congress on sale.
+    expect(email.html).not.toContain("Manicuristas Imparables");
+  });
+
+  it("Manicuristas Imparables' banner where the order puts it: the day, the promise, a button, all of it its page", () => {
+    const email = mesaEmail(
+      snapshot({ order: ["JUEGO", "IMPARABLES", "TERMOMETRO", "OFICIO", "CONSULTORIO"], imparables: { slug: "imparables", date: "4 de julio 2027", note: "Congreso virtual en vivo" } }),
+      laura,
+      { baseUrl: BASE },
+    );
+    const html = email.html;
+    const at = html.indexOf("Nuevo de Nail Fest");
+    expect(at).toBeGreaterThan(html.indexOf("Toca tu respuesta"));
+    expect(at).toBeLessThan(html.indexOf("¿Cuántas clientas atiendes un sábado?"));
+    expect(html).toContain("4 de julio 2027 · Congreso virtual en vivo");
+    expect(html).toContain("MENTALIDAD · DINERO · MARKETING");
+    expect(html).toContain("Hoy tienen el negocio que&nbsp;sueñas.");
+    expect(html).toContain(`${BASE}/imparables/correo-marca-clara.png`);
+    expect(html).toContain(`${BASE}/imparables/correo-grupo.jpg`);
+    const links = [...html.slice(at, html.indexOf("</table>", html.indexOf("correo-grupo.jpg"))).matchAll(/href="([^"]+)"/g)].map((m) => m[1]!.replace(/&amp;/g, "&"));
+    expect(links.length).toBeGreaterThanOrEqual(4);
+    for (const link of links) {
+      expect(link).toBe(`${BASE}/imparables?utm_source=email&utm_medium=la_mesa&utm_campaign=la-mesa-1&utm_content=banner_imparables`);
+    }
+    // No prices, and it's not a numbered section.
+    expect(html.slice(at, at + 4000)).not.toMatch(/\$\s?\d/);
+    expect(email.text).toContain("NUEVO DE NAIL FEST: MANICURISTAS IMPARABLES");
+    expect(email.text).toContain("2. EL TERMÓMETRO");
+  });
+});
+

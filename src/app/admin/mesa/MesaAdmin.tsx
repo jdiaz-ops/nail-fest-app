@@ -16,12 +16,15 @@ import {
   type MesaSectionKey,
 } from "@/lib/mesa/sections";
 import { CardTitle, cardStyle, mutedText, Pill, primaryButtonStyle, secondaryButtonStyle } from "@/app/admin/cuponera/ui";
+import { blockOf, moveBlock, shownBlocks, type MesaBlock } from "@/lib/mesa/layout";
 
 // La Mesa in the admin (2026-10-25), as in the approved mockup: the next
 // editions and what each still needs; the bank, section by section, with
 // Claude's ideas — «Aprobar» or «Otra idea», and «Editar» for a word — and
 // the approved ones in the order they go out; El termómetro's questions;
-// each edition's subject line. A ready edition's template is looked at
+// each edition's subject line; each edition's blocks in the order they go
+// — «Subir», «Bajar» — and Manicuristas Imparables' banner in the ones
+// that carry it (2026-11-04). A ready edition's template is looked at
 // («Ver el correo») and tested («Enviarme una prueba»); La Mesa only builds
 // the template, nothing is sent from here. What the readers of a sent
 // edition answered, at the end.
@@ -320,6 +323,9 @@ export default function MesaAdmin({
     });
   const askIdeas = (section: MesaPieceSection) =>
     run(`ask:${section}`, () => call("/api/admin/mesa/ideas", { method: "POST", body: JSON.stringify({ section, topic: topics[section] ?? "" }) }));
+  // An edition's blocks: one up or down, the banner on or off (lib/mesa/layout.ts).
+  const saveLayout = (edition: MesaEditionView, change: { blocks?: MesaBlock[]; imparables?: boolean }) =>
+    run(`layout:${edition.number}`, () => call("/api/admin/mesa/orden", { method: "PATCH", body: JSON.stringify({ edition: edition.number, ...change }) }), "editions");
   const askSubjects = (edition: number) => run(`subjects:${edition}`, () => call("/api/admin/mesa/asuntos", { method: "POST", body: JSON.stringify({ edition }) }));
   const saveSettings = (body: Record<string, string>, after: () => void) =>
     run(
@@ -571,6 +577,9 @@ export default function MesaAdmin({
   );
 
   const editionBox = (edition: MesaEditionView, index: number) => {
+    const shown = shownBlocks(edition.blocks, { consultorio: data.consultorioOn, imparables: edition.imparables });
+    // Until it starts going out.
+    const movable = !edition.send || edition.send.status === "QUEUED";
     const missingPieces = edition.slots.filter((s) => !s.pieceId).length;
     const subjectOk = edition.subject !== null && !edition.subject.outdated;
     const left = missingPieces + (subjectOk ? 0 : 1);
@@ -603,19 +612,76 @@ export default function MesaAdmin({
           </b>
           {pill}
         </div>
-        {edition.slots.map((slot) => (
-          <div key={slot.section} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderTop: "1px solid #f3f1ec", fontSize: 13 }}>
-            {nail(MESA_SECTIONS[slot.section].color)}
-            <span style={{ flex: 1 }}>{MESA_SECTIONS[slot.section].name}</span>
-            {slot.pieceId ? (
-              <em style={{ fontStyle: "normal", fontSize: 12, fontWeight: 700, color: "#0d6e4f" }}>✓ Lista</em>
-            ) : (
-              <button type="button" style={{ ...linkButton, fontSize: 12, fontWeight: 700, color: "#a5471a" }} onClick={() => setTab(slot.section)}>
-                {slot.section === "TERMOMETRO" ? "Falta la pregunta" : "Falta"}
-              </button>
-            )}
+        {/* Its blocks, in the order they go in its email; until it goes out, each one up or down. */}
+        {shown.map((block, i) => {
+          const slot = edition.slots.find((s) => blockOf(s.section) === block);
+          return (
+            <div key={block} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderTop: "1px solid #f3f1ec", fontSize: 13 }}>
+              {block === "IMPARABLES" ? (
+                <span style={{ width: 10, textAlign: "center", fontSize: 11, color: "#8c6a3e" }} aria-hidden="true">
+                  ★
+                </span>
+              ) : (
+                nail(block === "CONSULTORIO" ? MESA_COMMUNITY.consultorio.color : MESA_SECTIONS[slot!.section].color)
+              )}
+              <span style={{ flex: 1 }} title={block === "IMPARABLES" ? "Banner de Manicuristas Imparables" : undefined}>
+                {block === "IMPARABLES" ? "Banner Imparables" : block === "CONSULTORIO" ? MESA_COMMUNITY.consultorio.name : MESA_SECTIONS[slot!.section].name}
+              </span>
+              {block === "IMPARABLES" ? (
+                !data.imparablesOpen ? (
+                  <em style={{ fontStyle: "normal", fontSize: 12, fontWeight: 700, color: "#a5471a" }} title="Sale cuando haya venta de Manicuristas Imparables abierta">
+                    No sale: venta cerrada
+                  </em>
+                ) : (
+                  movable && (
+                    <button type="button" style={{ ...linkButton, fontSize: 12 }} disabled={busy !== null} onClick={() => saveLayout(edition, { imparables: false })}>
+                      Quitar
+                    </button>
+                  )
+                )
+              ) : block === "CONSULTORIO" ? (
+                <em style={{ fontStyle: "normal", fontSize: 12, fontWeight: 700, color: "#8a8478" }}>Sale solo</em>
+              ) : slot?.pieceId ? (
+                <em style={{ fontStyle: "normal", fontSize: 12, fontWeight: 700, color: "#0d6e4f" }}>✓ Lista</em>
+              ) : (
+                <button type="button" style={{ ...linkButton, fontSize: 12, fontWeight: 700, color: "#a5471a" }} onClick={() => slot && setTab(slot.section)}>
+                  {block === "TERMOMETRO" ? "Falta la pregunta" : "Falta"}
+                </button>
+              )}
+              {movable && shown.length > 1 && (
+                <span style={{ display: "inline-flex", gap: 2 }}>
+                  <button
+                    type="button"
+                    title="Subir"
+                    aria-label={`Subir ${block === "IMPARABLES" ? "el banner" : "esta sección"} en la edición ${edition.number}`}
+                    style={{ ...linkButton, textDecoration: "none", fontSize: 14, padding: "0 3px" }}
+                    disabled={busy !== null || i === 0}
+                    onClick={() => saveLayout(edition, { blocks: moveBlock(edition.blocks, block, "up", shown) })}
+                  >
+                    ↑
+                  </button>
+                  <button
+                    type="button"
+                    title="Bajar"
+                    aria-label={`Bajar ${block === "IMPARABLES" ? "el banner" : "esta sección"} en la edición ${edition.number}`}
+                    style={{ ...linkButton, textDecoration: "none", fontSize: 14, padding: "0 3px" }}
+                    disabled={busy !== null || i === shown.length - 1}
+                    onClick={() => saveLayout(edition, { blocks: moveBlock(edition.blocks, block, "down", shown) })}
+                  >
+                    ↓
+                  </button>
+                </span>
+              )}
+            </div>
+          );
+        })}
+        {movable && !edition.imparables && data.imparablesOpen && (
+          <div style={{ padding: "6px 0", borderTop: "1px solid #f3f1ec" }}>
+            <button type="button" style={{ ...linkButton, fontSize: 12.5, fontWeight: 700, color: "#8c6a3e", textDecoration: "none" }} disabled={busy !== null} onClick={() => saveLayout(edition, { imparables: true })}>
+              + Agregar banner Manicuristas Imparables
+            </button>
           </div>
-        ))}
+        )}
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderTop: "1px solid #f3f1ec", fontSize: 13 }}>
           <span style={{ width: 10, textAlign: "center", fontSize: 11 }}>✉</span>
           <span style={{ flex: 1 }}>Asunto</span>
@@ -813,13 +879,24 @@ export default function MesaAdmin({
         >
           Próximas ediciones
         </CardTitle>
-        <p style={{ ...mutedText, marginTop: 0 }}>Rotan solas: una para jugar y una para el oficio. El termómetro sale en todas.</p>
+        <p style={{ ...mutedText, marginTop: 0 }}>
+          Rotan solas: una para jugar y una para el oficio. El termómetro sale en todas. Con las flechas cambias el orden de los bloques de cada edición; el saludo va
+          siempre arriba y el cierre abajo.
+        </p>
         {alert("editions")}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 12, marginTop: 14 }}>{data.editions.map(editionBox)}</div>
         {testPanel()}
         <div style={{ display: "grid", gap: 4, marginTop: 12, fontSize: 12.5, color: "#5b5f6b" }}>
           <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
             {nail(MESA_COMMUNITY.consultorio.color, 9, 12)} El Consultorio sale solo, con las preguntas de la comunidad, mientras sea público.
+          </span>
+          <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ width: 9, textAlign: "center", fontSize: 10, color: "#8c6a3e" }} aria-hidden="true">
+              ★
+            </span>{" "}
+            {data.imparablesOpen
+              ? `El banner de Manicuristas Imparables (${data.imparablesOpen}) se agrega en cada edición y sale mientras su venta esté abierta.`
+              : "El banner de Manicuristas Imparables sale cuando haya una venta abierta."}
           </span>
           <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
             {nail(MESA_COMMUNITY.galeria.color, 9, 12)} La galería se suma cuando la comunidad pueda mandar sus fotos.

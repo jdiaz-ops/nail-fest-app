@@ -3008,6 +3008,17 @@ model MesaVote {
   @@index([personId])
 }
 
+// One edition's blocks (the team, 2026-11-04): the order its sections, El
+// Consultorio and Manicuristas Imparables' banner go in, and whether that
+// banner goes in it. No row: the template's order, no banner
+// (lib/mesa/layout.ts).
+model MesaEditionLayout {
+  edition    Int      @id
+  blocks     String[]
+  imparables Boolean  @default(false)
+  updatedAt  DateTime @updatedAt
+}
+
 // One row ("singleton"): edition 1's day (a Thursday); the rest follow
 // every 14 days. A missing row is just the default (lib/mesa/data.ts).
 model MesaSettings {

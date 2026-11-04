@@ -1,11 +1,15 @@
 import { INSTAGRAM_HANDLE, INSTAGRAM_URL } from "@/lib/brand";
 import { MESA_COMMUNITY, MESA_SECTIONS, NAME_TOKEN, contentOf, type MesaPieceSection } from "./sections";
+import { blockOf, blockOrder, type MesaBlock } from "./layout";
+import { COVER_HOOK, COVER_PROMISE, PILLARS } from "@/lib/imparables/schedule";
 
 // La Mesa's email (2026-10-25), as in the approved template: the masthead,
 // the hello with the edition's intro, what's on the table, then the section
 // to play with, El termómetro (last time's results and this time's
-// question), the one for the trade and El Consultorio when it's public; the
-// doors and the legal line close it. Built from one frozen edition
+// question), the one for the trade and El Consultorio when it's public —
+// since 2026-11-04 in the order the team gives each edition, Manicuristas
+// Imparables' banner among them when it carries it (lib/mesa/layout.ts) —;
+// the doors and the legal line close it. Built from one frozen edition
 // (MesaEditionSnapshot, lib/mesa/sends.ts) and one person; tables and inline
 // styles, so it reads the same in Gmail, Outlook and the phone's mail app.
 // Nothing here touches the database.
@@ -58,6 +62,17 @@ export interface MesaEditionSnapshot {
   doors: { consultorio: boolean; instructoras: boolean; cuponera: boolean };
   /** A reply reaches the team (a Reply-To is set). */
   replies: boolean;
+  /** Its blocks' order (lib/mesa/layout.ts); an edition frozen before it existed, the template's. */
+  order?: MesaBlock[];
+  /** Manicuristas Imparables' banner: the congress on sale, when the edition carries it. */
+  imparables?: MesaImparablesBlock | null;
+}
+
+/** The congress the banner opens — its page, /<slug> — and its day: «4 de julio 2027», «Congreso virtual en vivo». */
+export interface MesaImparablesBlock {
+  slug: string;
+  date: string;
+  note: string;
 }
 
 export interface MesaRecipient {
@@ -277,22 +292,29 @@ export function mesaEmail(snapshot: MesaEditionSnapshot, to: MesaRecipient, opts
   const intro = personalize(snapshot.intro, name);
   const campaign = `la-mesa-${snapshot.edition}`;
   /** A page of the site, tagged as coming from this edition. */
-  const site = (path: string) => {
+  const site = (path: string, content?: string) => {
     const url = new URL(path, opts.baseUrl);
     url.searchParams.set("utm_source", "email");
     url.searchParams.set("utm_medium", "la_mesa");
     url.searchParams.set("utm_campaign", campaign);
+    if (content) url.searchParams.set("utm_content", content);
     return url.toString();
   };
   const host = new URL(opts.baseUrl).host.replace(/^www\./, "");
 
   const html: string[] = [];
   const text: string[] = [];
-  const keys: (MesaPieceSection | "CONSULTORIO")[] = [...snapshot.pieces.map((p) => p.section), ...(snapshot.consultorio ? (["CONSULTORIO"] as const) : [])];
+  // The edition's blocks, in its order, the ones it has; the sections among them («En esta mesa», the nails).
+  const pieceOf = new Map(snapshot.pieces.map((piece) => [blockOf(piece.section), piece]));
+  const sequence = blockOrder(snapshot.order).filter((block) =>
+    block === "CONSULTORIO" ? Boolean(snapshot.consultorio) : block === "IMPARABLES" ? Boolean(snapshot.imparables) : pieceOf.has(block),
+  );
+  const keys: (MesaPieceSection | "CONSULTORIO")[] = sequence.flatMap((block) =>
+    block === "IMPARABLES" ? [] : block === "CONSULTORIO" ? (["CONSULTORIO"] as const) : [pieceOf.get(block)!.section],
+  );
 
   // Each section, numbered as it comes.
-  snapshot.pieces.forEach((piece, index) => {
-    const n = index + 1;
+  const renderPiece = (piece: MesaSnapshotPiece, n: number) => {
     const look = LOOK[piece.section];
     switch (piece.section) {
       case "MITO": {
@@ -418,10 +440,10 @@ ${heading("Cómo evitarlo")}${table(steps)}`,
         return;
       }
     }
-  });
+  };
 
-  if (snapshot.consultorio) {
-    const n = snapshot.pieces.length + 1;
+  const renderConsultorio = (n: number) => {
+    if (!snapshot.consultorio) return;
     const look = LOOK.CONSULTORIO;
     const { featured, waiting } = snapshot.consultorio;
     const parts: string[] = [];
@@ -466,6 +488,40 @@ ${answer}
     lines.push(`Haz tu pregunta: ${site("/consultorio/preguntar")}`);
     html.push(section("CONSULTORIO", n, parts.join("\n")));
     text.push(`${n}. EL CONSULTORIO\n${lines.join("\n")}`);
+  };
+
+  // Manicuristas Imparables' banner (the team's boceto E1, 2026-11-04): the landing's cover — the day, the mark, its
+  // pillars, its promise, a button and the group photo. No prices; all of it opens the congress's page.
+  const renderImparables = () => {
+    const promo = snapshot.imparables;
+    if (!promo) return;
+    const href = esc(site(`/${promo.slug}`, "banner_imparables"));
+    const day = `${promo.date} · ${promo.note}`;
+    const image = (file: string) => esc(new URL(`/imparables/${file}`, opts.baseUrl).toString());
+    html.push(`<tr><td class="px" style="padding:26px 28px 28px;background:#ffffff;">
+<div style="${font(12, 800, "#8c6a3e", "letter-spacing:0.12em;text-transform:uppercase;margin:0 0 10px;")}">Nuevo de Nail Fest</div>
+${table(
+  `<tr><td align="center" style="padding:24px 14px 0;"><a href="${href}" style="display:inline-block;padding:6px 13px;border:1px solid #dcd2c3;border-radius:999px;background:#f7f3ec;text-decoration:none;white-space:nowrap;${font(12.5, 800, "#141414")}">${esc(day)}</a></td></tr>
+<tr><td align="center" style="padding:18px 22px 0;"><a href="${href}" style="display:block;text-decoration:none;"><img src="${image("correo-marca-clara.png")}" width="300" alt="Manicuristas Imparables" style="display:block;margin:0 auto;width:300px;max-width:100%;height:auto;border:0;"></a></td></tr>
+<tr><td align="center" style="padding:10px 22px 0;${font(11, 800, "#141414", "letter-spacing:0.16em;line-height:1.5;white-space:nowrap;")}">${esc(PILLARS.toUpperCase())}</td></tr>
+<tr><td align="center" style="padding:18px 26px 0;"><a href="${href}" style="display:block;text-decoration:none;">
+${COVER_HOOK.map((line) => `<div style="${font(20, 800, "#141414", "line-height:1.35;")}">${esc(line).replace(/ (\S+)$/, "&nbsp;$1")}</div>`).join("\n")}
+<div style="${font(15, 600, "#6e5230", "line-height:1.5;margin-top:10px;")}">${esc(COVER_PROMISE)}</div>
+</a></td></tr>
+<tr><td align="center" style="padding:20px 22px 8px;"><a href="${href}" style="display:inline-block;padding:14px 26px;border-radius:14px;background:#c9a46a;text-decoration:none;${font(15.5, 800, "#141414")}">Descubre el congreso &rarr;</a></td></tr>
+<tr><td style="padding:0;"><a href="${href}" style="display:block;"><img src="${image("correo-grupo.jpg")}" width="544" alt="Las conferencistas de Manicuristas Imparables" style="display:block;width:100%;max-width:544px;height:auto;border:0;"></a></td></tr>`,
+  "background:#ede8e1;border:1px solid #dcd2c3;border-radius:18px;overflow:hidden;",
+)}
+</td></tr>`);
+    text.push(`NUEVO DE NAIL FEST: MANICURISTAS IMPARABLES\n${day}\n${COVER_HOOK.join(" ")}\n${COVER_PROMISE}\nDescubre el congreso: ${site(`/${promo.slug}`, "banner_imparables")}`);
+  };
+
+  // The blocks, in the edition's order; the sections numbered as they come.
+  let n = 0;
+  for (const block of sequence) {
+    if (block === "IMPARABLES") renderImparables();
+    else if (block === "CONSULTORIO") renderConsultorio(++n);
+    else renderPiece(pieceOf.get(block)!, ++n);
   }
 
   // ── Around the sections ──

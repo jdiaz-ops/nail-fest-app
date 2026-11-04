@@ -23,6 +23,8 @@ import {
   type MesaSectionKey,
 } from "./sections";
 import { cityTally, tally } from "./votes";
+import { blockOrder, isMesaBlock, type MesaBlock } from "./layout";
+import { imparablesPromo } from "@/lib/imparables/promo";
 
 // La Mesa in the admin (2026-10-25): the bank of pieces — Claude's ideas
 // waiting for the team, the approved ones in the order they go out — the
@@ -135,6 +137,10 @@ export interface MesaEditionView {
   subjectIdeas: MesaPieceView[];
   /** Scheduled, going out or sent. */
   send: MesaSendView | null;
+  /** Its blocks in the order they go, all of them (lib/mesa/layout.ts), and whether it carries Manicuristas
+   * Imparables' banner. */
+  blocks: MesaBlock[];
+  imparables: boolean;
 }
 
 /** A sent edition: how it went and what they answered. */
@@ -162,6 +168,11 @@ export interface MesaAdminData {
   sent: MesaSentView[];
   /** Claude's key is there (Vercel's or the admin's). */
   keyReady: boolean;
+  /** El Consultorio goes in the editions (it's public). */
+  consultorioOn: boolean;
+  /** The Manicuristas Imparables congress on sale, «4 de julio 2027 · Congreso virtual en vivo»; null with none (the
+   * banner shows nowhere). */
+  imparablesOpen: string | null;
 }
 
 const bySection = <T>(make: () => T) => Object.fromEntries(MESA_PIECE_SECTIONS.map((s) => [s, make()])) as Record<MesaPieceSection, T>;
@@ -223,13 +234,15 @@ export async function editionPieces(edition: number, now: Date = new Date()): Pr
 }
 
 export async function getMesaAdminData(now: Date = new Date()): Promise<MesaAdminData> {
-  const [first, all, sends, ideaRows, subjectRows, librarySettings] = await Promise.all([
+  const [first, all, sends, ideaRows, subjectRows, librarySettings, layouts, promo] = await Promise.all([
     getFirstEditionOn(),
     queues(),
     mesaSends(),
     db.mesaPiece.findMany({ where: { status: "IDEA", section: { not: "ASUNTO" } }, orderBy: { createdAt: "desc" } }),
     db.mesaPiece.findMany({ where: { section: "ASUNTO", status: { in: ["IDEA", "APPROVED"] } }, orderBy: { createdAt: "desc" } }),
     getLibrarySettings(),
+    db.mesaEditionLayout.findMany(),
+    imparablesPromo(now),
   ]);
   const next = nextEdition(first, bogotaDay(now));
   const held = new Set(sends.keys());
@@ -272,6 +285,7 @@ export async function getMesaAdminData(now: Date = new Date()): Promise<MesaAdmi
         .filter((s) => s.edition === number && s.status === "IDEA" && (contentOf("ASUNTO", s.content)?.pieceIds ?? []).join("|") === ids.join("|"))
         .map((s) => view(s, first)),
       send,
+      ...layoutOf(layouts.find((l) => l.edition === number)),
     });
   }
 
@@ -283,7 +297,33 @@ export async function getMesaAdminData(now: Date = new Date()): Promise<MesaAdmi
     approved,
     sent: await sentEditions(first),
     keyReady: claudeKeyOf(librarySettings) !== null,
+    consultorioOn: librarySettings.consultorioPublished,
+    imparablesOpen: promo ? `${promo.date} · ${promo.note}` : null,
   };
+}
+
+// ── Each edition's blocks ───────────────────────────────────────────────────
+
+/** An edition's blocks and banner, as stored; the template's and none without a row. */
+function layoutOf(row: { blocks: string[]; imparables: boolean } | null | undefined): { blocks: MesaBlock[]; imparables: boolean } {
+  return { blocks: blockOrder(row?.blocks), imparables: row?.imparables ?? false };
+}
+
+/** Edition n's blocks: the order they go in, and whether Manicuristas Imparables' banner goes in it. */
+export async function editionLayout(edition: number): Promise<{ blocks: MesaBlock[]; imparables: boolean }> {
+  return layoutOf(await db.mesaEditionLayout.findUnique({ where: { edition } }));
+}
+
+/** «Subir», «Bajar», the banner on or off: until the edition starts going out (then it is as it went). */
+export async function saveEditionLayout(edition: number, change: { blocks?: unknown[]; imparables?: boolean }): Promise<void> {
+  if (!Number.isInteger(edition) || edition < 1) throw new MesaError("Esa edición no existe.");
+  const send = await sendOf(edition);
+  if (send && send.status !== "QUEUED") throw new MesaError(`La edición ${edition} ya salió: su orden queda como salió.`);
+  if (change.blocks && !change.blocks.every(isMesaBlock)) throw new MesaError("Ese orden no se entiende.");
+  const current = await editionLayout(edition);
+  const blocks = change.blocks ? blockOrder(change.blocks) : current.blocks;
+  const imparables = change.imparables ?? current.imparables;
+  await db.mesaEditionLayout.upsert({ where: { edition }, create: { edition, blocks, imparables }, update: { blocks, imparables } });
 }
 
 /** The editions that went out (or are going out), the newest first: opens and answers. */

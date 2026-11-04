@@ -6,7 +6,8 @@ import { getCuponeraSettings } from "@/lib/cuponera/settings";
 import { getLibrarySettings } from "@/lib/library/settings";
 import { getOrgSettings } from "@/lib/settings";
 import { buildUnsubscribeUrl } from "@/lib/unsubscribe";
-import { MesaError, editionPieces, getFirstEditionOn } from "./data";
+import { MesaError, editionLayout, editionPieces, getFirstEditionOn } from "./data";
+import { imparablesPromo } from "@/lib/imparables/promo";
 import { mesaEmail, type MesaConsultorioBlock, type MesaEditionSnapshot, type MesaRecipient, type MesaTermometroResults } from "./email";
 import { MESA_SECTIONS, contentOf, editionDate, longDate, tinyDate } from "./sections";
 import { cityTally, tally, voteToken, voteUrl } from "./votes";
@@ -98,8 +99,10 @@ async function lastResults(edition: number): Promise<{ results: MesaTermometroRe
 }
 
 /** Everything edition n's email carries, as of now: its pieces, its subject
- * line, last time's results, El Consultorio and the doors that are public.
- * Throws (MesaError) while a piece or the subject is missing. */
+ * line, last time's results, El Consultorio and the doors that are public,
+ * its blocks' order and Manicuristas Imparables' banner when it carries it
+ * and the congress is on sale (2026-11-04). Throws (MesaError) while a piece
+ * or the subject is missing. */
 export async function buildMesaSnapshot(edition: number, now: Date = new Date()): Promise<MesaEditionSnapshot> {
   const [first, slots, subjectRow] = await Promise.all([
     getFirstEditionOn(),
@@ -112,7 +115,8 @@ export async function buildMesaSnapshot(edition: number, now: Date = new Date())
   if (!subject) throw new MesaError(`Elige el asunto de la edición ${edition}.`);
   if (subject.pieceIds.join("|") !== slots.map((s) => s.piece!.id).join("|")) throw new MesaError(`Cambiaron las piezas de la edición ${edition}: elige un asunto nuevo.`);
 
-  const [last, library, cuponera, org] = await Promise.all([lastResults(edition), getLibrarySettings(), getCuponeraSettings(), getOrgSettings()]);
+  const [last, library, cuponera, org, layout] = await Promise.all([lastResults(edition), getLibrarySettings(), getCuponeraSettings(), getOrgSettings(), editionLayout(edition)]);
+  const promo = layout.imparables ? await imparablesPromo(now) : null;
   const day = editionDate(first, edition);
   return {
     edition,
@@ -127,6 +131,8 @@ export async function buildMesaSnapshot(edition: number, now: Date = new Date())
     consultorio: library.consultorioPublished ? await consultorioBlock(now) : null,
     doors: { consultorio: library.consultorioPublished, instructoras: library.instructorsPublished, cuponera: cuponera.published },
     replies: Boolean(org.replyToEmail),
+    order: layout.blocks,
+    imparables: promo,
   };
 }
 
