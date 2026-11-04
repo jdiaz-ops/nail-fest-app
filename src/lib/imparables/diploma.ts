@@ -1,4 +1,5 @@
 import { readFileSync } from "fs";
+import { readFile } from "fs/promises";
 import path from "path";
 import PDFDocument from "pdfkit";
 import { listNames } from "./blocks";
@@ -7,8 +8,10 @@ import type { DiplomaData } from "./diplomaText";
 // Manicuristas Imparables' digital diploma (the team, 2026-11-04; the ticket's «Diploma digital con tu nombre»):
 // one A4 page, landscape, to save, print or share — the congress's tiara, «Manicuristas Imparables» as on its cover,
 // «Diploma de participación», her name, what it was and when, its speakers, Nail Fest as who organizes it and the
-// diploma's number (her ticket's code). Bone and chocolate with gold, in the page's faces (Cinzel, Manrope), so it
-// prints well at home. Served from her page («Tu congreso», /api/diploma/[token]) once the congress is over.
+// diploma's number (her ticket's code), and between them the brands that support it (the team, 2026-11-04: «4 espacios
+// y logo de las 4 marcas que apoyan»), the cover's «Con el apoyo de». Bone and chocolate with gold, in the page's faces
+// (Cinzel, Manrope), so it prints well at home. Served from her page («Tu congreso», /api/diploma/[token]) once the
+// congress is over.
 
 // The page's colors (globals.css, --imp-*).
 const C = {
@@ -50,8 +53,36 @@ function loadAssets(): Assets | null {
   return assets;
 }
 
-export function renderDiplomaPdf(data: DiplomaData): Promise<Buffer> {
+const PUBLIC_DIR = path.join(process.cwd(), "public");
+const baseUrl = () => (process.env.APP_BASE_URL || "https://nailfest.lat").replace(/\/+$/, "");
+
+/** A brand's logo: from this site's own files (public/…) or from where it was uploaded — only a PNG or a JPEG, what a
+ * PDF takes; null when it can't be read (its name goes in its place). */
+export async function logoOf(url: string): Promise<Buffer | null> {
+  let bytes: Buffer | null = null;
+  if (url.startsWith("/") && !url.startsWith("//")) {
+    const file = path.join(PUBLIC_DIR, decodeURIComponent(url.split(/[?#]/)[0]!));
+    if (!file.startsWith(PUBLIC_DIR + path.sep)) return null;
+    // On the server only the brands' folder ships with the function (next.config.js); any other file of the site, from the site.
+    bytes = await readFile(file).catch(() => null);
+  }
+  if (!bytes) {
+    try {
+      const res = await fetch(new URL(url, baseUrl()), { signal: AbortSignal.timeout(5000) });
+      if (res.ok) bytes = Buffer.from(await res.arrayBuffer());
+    } catch {
+      bytes = null;
+    }
+  }
+  if (!bytes) return null;
+  const png = bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+  const jpeg = bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  return png || jpeg ? bytes : null;
+}
+
+export async function renderDiplomaPdf(data: DiplomaData): Promise<Buffer> {
   const found = loadAssets();
+  const logos = await Promise.all(data.sponsors.map((sponsor) => logoOf(sponsor.url)));
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({
       size: "A4",
@@ -208,28 +239,53 @@ export function renderDiplomaPdf(data: DiplomaData): Promise<Buffer> {
       paragraph([{ text: `Con las charlas de ${listNames(data.speakers)}.`, font: F.medium }], 9.5, C.soft, 600, said + 27, 14.5);
     }
 
-    // A gold seal between who organizes it and the diploma's number: the tiara's star and the day.
-    const sealY = 498;
-    doc.circle(W / 2, sealY, 33).lineWidth(1.4).stroke(C.gold);
-    doc.circle(W / 2, sealY, 28.5).lineWidth(0.6).stroke(C.gold);
+    // A gold seal under the speakers: the tiara's star and the day.
+    const sealY = 434;
+    doc.circle(W / 2, sealY, 27).lineWidth(1.2).stroke(C.gold);
+    doc.circle(W / 2, sealY, 23.5).lineWidth(0.5).stroke(C.gold);
     doc.save();
-    doc.translate(W / 2 - 95 * 0.7, sealY - 10 - 23 * 0.7).scale(0.7);
+    doc.translate(W / 2 - 95 * 0.54, sealY - 9 - 23 * 0.54).scale(0.54);
     doc.polygon(...star).fill(gold(80, 8, 110, 38));
     doc.restore();
-    if (data.stamp) centered(data.stamp, F.bold, 6, C.bronzeDark, sealY + 13.5, 0.6);
+    if (data.stamp) centered(data.stamp, F.bold, 5.4, C.bronzeDark, sealY + 11.5, 0.3);
 
-    // Who organizes it, and the diploma's number.
-    const footer = 474;
-    doc.font(F.heavy).fontSize(7.5).fillColor(C.soft).text("ORGANIZA", 92, footer, { lineBreak: false, characterSpacing: 2.4 });
-    if (found) doc.image(found.logo, 92, footer + 14, { height: 44 });
+    // The footer, in three: who organizes it, the brands that support it, and the diploma's number.
+    const footer = 480;
+    const label = (text: string, x: number) =>
+      doc.font(F.heavy).fontSize(7.5).fillColor(C.soft).text(text, x, footer, { lineBreak: false, characterSpacing: 2.4 });
+    label("ORGANIZA", 92);
+    if (found) doc.image(found.logo, 92, footer + 14, { height: 42 });
     else doc.font(F.heavy).fontSize(18).fillColor(C.chocolate).text("Nail Fest", 92, footer + 18, { lineBreak: false });
-    const label = "DIPLOMA Nº";
-    const labelW = width(label, F.heavy, 7.5, 2.4);
-    doc
-      .font(F.heavy)
-      .fontSize(7.5)
-      .fillColor(C.soft)
-      .text(label, W - 92 - labelW, footer, { lineBreak: false, characterSpacing: 2.4 });
+
+    const sponsors = data.sponsors.map((sponsor, i) => ({ ...sponsor, logo: logos[i] ?? null })).filter((sponsor) => sponsor.logo || sponsor.name);
+    if (sponsors.length) {
+      const slotW = 92;
+      const slotH = 34;
+      const gap = 20;
+      const rowW = sponsors.length * slotW + (sponsors.length - 1) * gap;
+      const supportW = width("CON EL APOYO DE", F.heavy, 7.5, 2.4);
+      label("CON EL APOYO DE", (W - supportW) / 2 + 1.2);
+      sponsors.forEach((sponsor, i) => {
+        const x = (W - rowW) / 2 + i * (slotW + gap);
+        const y = footer + 18;
+        if (sponsor.logo) {
+          try {
+            doc.image(sponsor.logo, x, y, { fit: [slotW, slotH], align: "center", valign: "center" });
+            return;
+          } catch (err) {
+            console.error("diploma: a brand's logo couldn't be drawn — its name instead", sponsor.url, err);
+          }
+        }
+        doc
+          .font(F.bold)
+          .fontSize(10)
+          .fillColor(C.medio)
+          .text(sponsor.name, x, y + slotH / 2 - ascent(F.bold, 10) / 2 - 1, { width: slotW, align: "center", lineBreak: false });
+      });
+    }
+
+    const numberLabel = "DIPLOMA Nº";
+    label(numberLabel, W - 92 - width(numberLabel, F.heavy, 7.5, 2.4));
     const codeW = width(data.code, F.bold, 13, 1.5);
     doc
       .font(F.bold)

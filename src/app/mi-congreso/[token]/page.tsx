@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { sayName } from "@/lib/mesa/email";
-import { asistireSampleUrl, asistireUrl } from "@/lib/imparables/asistire";
 import { diplomaName, SAMPLE_DIPLOMA, SAMPLE_NAME } from "@/lib/imparables/diplomaText";
 import { findCongreso } from "@/lib/imparables/miCongreso";
 import MiCongreso from "@/components/imparables/MiCongreso";
@@ -13,8 +12,8 @@ export const metadata: Metadata = {
   robots: { index: false },
 };
 
-// «Tu congreso» (the team, 2026-11-04): each buyer's own page for Manicuristas Imparables — her kit, the recordings
-// and her diploma (components/imparables/MiCongreso.tsx). Her link is signed (lib/imparables/miCongreso.ts): it
+// «Grabaciones» in the admin, «Tu congreso» for her (the team, 2026-11-04): each buyer's own page for Manicuristas
+// Imparables — the recordings and her diploma (components/imparables/MiCongreso.tsx). Her link is signed (lib/imparables/miCongreso.ts): it
 // opens her page once her purchase is confirmed, a note to come back while it's being confirmed, and nothing for
 // anyone else. The team's sample link opens the same page for its event, with sample data.
 export default async function MiCongresoPage({ params }: { params: { token: string } }) {
@@ -27,7 +26,6 @@ export default async function MiCongresoPage({ params }: { params: { token: stri
         token={params.token}
         firstName={SAMPLE_NAME.firstName}
         diplomaName={SAMPLE_DIPLOMA.name}
-        asistireHref={asistireSampleUrl(access.event.id)}
         sample
       />
     );
@@ -39,7 +37,6 @@ export default async function MiCongresoPage({ params }: { params: { token: stri
       token={params.token}
       firstName={sayName(person.firstName)}
       diplomaName={diplomaName(person.firstName, person.lastName)}
-      asistireHref={asistireUrl(access.registration.id)}
       zoomUrl={access.registration.zoomJoinUrl}
       waiting={access.waiting}
     />

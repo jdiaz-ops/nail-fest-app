@@ -12,8 +12,8 @@ export const dynamic = "force-dynamic";
 
 // «Grabaciones» (the team, 2026-11-04: «pienso subirlas cada una individualmente en privado a YouTube y poder
 // copiar/pegar el link ahí»): one row per talk — the program's talks the first time —, its YouTube link pasted, and
-// the last day they can be watched. Each buyer sees them on her own page («Tu congreso»), from the congress's end to
-// that day; the sample shows them as she will. ADMIN only, like the rest of Configuración.
+// the last day they can be watched. Each buyer sees them on her own recordings page (app/mi-congreso/[token]), from
+// the congress's end to that day; the sample shows them as she will. ADMIN only, like the rest of Configuración.
 export default async function RecordingsPage({ params }: { params: { id: string } }) {
   await requirePageUser(["ADMIN"]);
   const [event, orgSettings] = await Promise.all([db.event.findUnique({ where: { id: params.id } }), getOrgSettings()]);
@@ -26,8 +26,8 @@ export default async function RecordingsPage({ params }: { params: { id: string 
     <div>
       <h2 style={{ fontSize: 18, marginBottom: 4 }}>Grabaciones</h2>
       <p style={{ color: "#5b5f6b", marginTop: 0, maxWidth: 700 }}>
-        Pega aquí el enlace de YouTube de cada charla. Cada compradora las ve en su página personal, «Tu congreso», desde que termina el congreso hasta la
-        fecha de abajo. Nadie más puede verlas desde aquí.{" "}
+        Pega aquí el enlace de YouTube de cada charla. Cada compradora las ve en su página de grabaciones, con un enlace solo suyo, desde que termina el
+        congreso hasta la fecha de abajo. Nadie más puede verlas desde aquí.{" "}
         <Link href={congresoSamplePath(event.id)} target="_blank">
           Ver la página de muestra ↗
         </Link>
@@ -41,11 +41,12 @@ export default async function RecordingsPage({ params }: { params: { id: string 
             En «Visibilidad», elige <strong>«No listado»</strong>. No «Privado»: un video privado solo lo ven las cuentas de Google que invites una por una
             (máximo 50), y a las demás les sale «Video privado».
           </li>
+          <li>En «Mostrar más», deja marcada «Permitir inserción» (viene marcada): así el video se ve dentro de su página.</li>
           <li>Copia el enlace del video (youtu.be/…) y pégalo en su fila. Guarda.</li>
         </ol>
         <p style={{ fontSize: 13, color: "#5b5f6b", margin: "8px 0 0" }}>
-          Un video «No listado» no aparece en YouTube ni en búsquedas: solo lo ve quien tiene el enlace, y el enlace solo está dentro de la página personal de
-          cada compradora. Cuando pase la fecha de cierre, la página deja de mostrarlos; si quieres cerrarlos del todo, pásalos a «Privado» en YouTube.
+          Un video «No listado» no aparece en YouTube ni en búsquedas: solo lo ve quien tiene el enlace, y el enlace solo está dentro de la página de
+          grabaciones de cada compradora. Cuando pase la fecha de cierre, la página deja de mostrarlos; si quieres cerrarlos del todo, pásalos a «Privado» en YouTube.
         </p>
       </details>
 

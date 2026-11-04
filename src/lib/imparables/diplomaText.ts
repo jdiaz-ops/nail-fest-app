@@ -1,7 +1,7 @@
 import type { Event } from "@prisma/client";
 import { publicEventName } from "@/lib/eventDisplayName";
 import { parseLandingBlocks } from "@/lib/landingBlocks/types";
-import { castOf } from "./blocks";
+import { castOf, sponsorLogosOf } from "./blocks";
 import { stubDate } from "./boleta";
 import { FRANJA } from "./esParaMi";
 import { coverName, eventWhen } from "./schedule";
@@ -28,7 +28,12 @@ export interface DiplomaData {
   code: string;
   /** The day in the seal, «04 · 07 · 2027». */
   stamp: string;
+  /** The brands that support it (the cover's «Con el apoyo de»), up to four: each one's name and its logo's address. */
+  sponsors: { name: string; url: string }[];
 }
+
+/** How many brands the diploma has room for (the team, 2026-11-04: «4 espacios y logo de las 4 marcas que apoyan»). */
+export const DIPLOMA_SPONSORS = 4;
 
 /** The sample buyer of the team's preview («Después del pago»), and her diploma's name and number. */
 export const SAMPLE_NAME = { firstName: "Ana María", lastName: "Rodríguez" };
@@ -41,7 +46,8 @@ export function diplomaDataOf(event: Pick<Event, "name" | "publicName" | "starts
   const eventName = coverName(publicEventName(event as Event));
   const words = eventName.split(/\s+/);
   const big = words.pop() ?? "";
-  const { speakers } = castOf(parseLandingBlocks(event.landingBlocks).filter((block) => !block.hidden));
+  const blocks = parseLandingBlocks(event.landingBlocks);
+  const { speakers } = castOf(blocks.filter((block) => !block.hidden));
   const when = eventWhen(event, timezone);
   return {
     name,
@@ -53,6 +59,10 @@ export function diplomaDataOf(event: Pick<Event, "name" | "publicName" | "starts
     speakers: speakers.map((speaker) => speaker.name.trim()).filter(Boolean),
     code,
     stamp: stubDate(when.days[when.days.length - 1]),
+    // From their section even while it's hidden, as the cover reads them.
+    sponsors: sponsorLogosOf(blocks)
+      .slice(0, DIPLOMA_SPONSORS)
+      .map((item) => ({ name: item.handle.trim(), url: item.url.trim() })),
   };
 }
 

@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { requirePageUser } from "@/lib/auth/guard";
 import { getOrgSettings } from "@/lib/settings";
 import { savedConfirmationMode } from "@/lib/confirmationSample";
-import { asistireSampleUrl } from "@/lib/imparables/asistire";
+import { asistireSampleUrl, marcoUrl } from "@/lib/imparables/asistire";
 import { KIT } from "@/lib/imparables/kit";
 import { congresoSamplePath, congresoSampleToken, diplomaPath } from "@/lib/imparables/miCongreso";
 import TestSendBox from "../../TestSendBox";
@@ -21,7 +21,8 @@ const SENT_NOW = {
 // way she sees it, in tabs — the payment's page (and its answers while PSE
 // confirms, or when the bank says no), her confirmation email (and a test of
 // it to the team's inbox), and Manicuristas Imparables' «Asistiré» image to
-// try with any photo, her page «Tu congreso» and her diploma (2026-11-04).
+// try with any photo, her profile frame, her recordings page and her diploma
+// (2026-11-04).
 // Each tab is the real page in the team's preview (?vista= on /pago, the
 // sample links): sample data, nothing saved or sent to anyone. ADMIN-only,
 // like the rest of Configuración.
@@ -50,16 +51,22 @@ export default async function AfterPaymentPage({ params, searchParams }: { param
             note: "Se abre desde la página de pago y desde el correo. Pruébala con cualquier foto: no se guarda nada.",
           },
           {
-            id: "congreso",
-            label: "Tu congreso",
+            id: "marco",
+            label: "Foto de perfil",
+            src: marcoUrl(asistireSampleUrl(event.id)),
+            note: "Parte de su kit: se abre desde el correo de confirmación, en «Tu kit Imparable». Pruébala con cualquier foto: no se guarda nada.",
+          },
+          {
+            id: "grabaciones",
+            label: "Grabaciones",
             src: congresoSamplePath(event.id),
-            note: "Su página personal, con un enlace solo suyo: el kit digital, las grabaciones y el diploma. Todavía no se le envía a nadie.",
+            note: "Su página de grabaciones, con un enlace solo suyo: la grabación de cada charla y su diploma. Todavía no se le envía a nadie.",
           },
           {
             id: "diploma",
             label: "Diploma",
             src: diplomaPath(congresoSampleToken(event.id)),
-            note: "Le aparece en «Tu congreso» al terminar el congreso, con su nombre como lo escribió al comprar y el código de su boleta.",
+            note: "Se descarga desde su página de grabaciones al terminar el congreso, con su nombre como lo escribió al comprar y el código de su boleta.",
           },
         ]
       : []),
@@ -107,7 +114,7 @@ export default async function AfterPaymentPage({ params, searchParams }: { param
         <a href={active.src} target="_blank" rel="noreferrer">
           Abrir en otra pestaña ↗
         </a>
-        {active.id === "congreso" && (
+        {active.id === "grabaciones" && (
           <>
             {" · "}
             <Link href={`/admin/events/${event.id}/grabaciones`}>Pegar los enlaces de las grabaciones</Link>

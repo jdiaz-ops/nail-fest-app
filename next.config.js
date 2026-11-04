@@ -53,9 +53,10 @@ const nextConfig = {
     // a PDF is drawn wherever a ticket is sent, the payment's page included,
     // so they ship with every route. Manicuristas Imparables' diploma
     // (lib/imparables/diploma.ts, 2026-11-04) is drawn by its API route with
-    // the faces and the logo in diplomaAssets.
+    // the faces and the logo in diplomaAssets, and the supporting brands'
+    // logos from public/imparables/marcas (others are fetched).
     outputFileTracingIncludes: {
-      "/api/**": ["./node_modules/pdfkit/**/*", "./src/lib/imparables/diplomaAssets/*"],
+      "/api/**": ["./node_modules/pdfkit/**/*", "./src/lib/imparables/diplomaAssets/*", "./public/imparables/marcas/*"],
       "/**": ["./src/lib/nailfest/fonts/*", "./src/lib/ticketPdfAssets/*"],
     },
   },

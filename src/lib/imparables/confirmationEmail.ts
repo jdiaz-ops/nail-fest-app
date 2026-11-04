@@ -37,11 +37,20 @@ export interface ImparablesConfirmation {
   share: { line: string; url: string };
   /** Her page to make her «Asistiré» image (lib/imparables/asistire.ts), and a picture of the empty template. */
   asistire: { url: string; image: string } | null;
+  /** Her digital kit (lib/imparables/kit.ts, the team 2026-11-04: before the congress, by email): the wallpapers and
+   * the story templates — each one's name, its file and its small copy —, and her page to make her profile photo. */
+  kit?: { wallpapers: KitLink[]; stories: KitLink[]; frameUrl: string } | null;
   /** The team's WhatsApp, when there's one. */
   helpUrl: string | null;
   speakers: { name: string; photoUrl: string }[];
   images: { header: string; logo: string };
   site: { url: string; host: string };
+}
+
+export interface KitLink {
+  name: string;
+  file: string;
+  mini: string;
 }
 
 // The page's colors (globals.css, --imp-*).
@@ -68,6 +77,14 @@ const table = (inner: string, style = "") =>
   `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;${style}">${inner}</table>`;
 const sans = (size: number, weight = 400, color = INK, extra = "") => `font-family:${SANS};font-size:${size}px;font-weight:${weight};color:${color};${extra}`;
 const serif = (size: number, weight = 900, color = INK, extra = "") => `font-family:${SERIF};font-size:${size}px;font-weight:${weight};color:${color};line-height:1.15;${extra}`;
+/** A row of the kit's pictures, each one opening its file to save it. */
+const kitRow = (files: KitLink[]) =>
+  `<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto 10px;"><tr>${files
+    .map(
+      (f) =>
+        `<td style="padding:0 5px;"><a href="${esc(f.file)}" style="text-decoration:none;"><img src="${esc(f.mini)}" width="80" height="142" alt="${esc(f.name)}" style="display:block;width:80px;height:142px;border:0;border-radius:10px;"></a></td>`
+    )
+    .join("")}</tr></table>`;
 const eyebrow = (text: string) => `<div style="${sans(12, 800, BRONZE_DEEP, "letter-spacing:0.14em;text-transform:uppercase;")}">${esc(text)}</div>`;
 /** A numbered chip shaped like a nail, as La Mesa's sections. */
 const nail = (n: number) =>
@@ -215,6 +232,18 @@ ${
 </td></tr>`
     : ""
 }
+${
+  c.kit
+    ? `<tr><td class="px" align="center" style="padding:28px 32px 30px;background:${CARD};border-top:1px solid ${LINE};">
+<div style="${serif(21, 800, INK, "line-height:1.25;")}">Tu kit Imparable</div>
+<div style="margin:10px auto 18px;max-width:420px;${sans(15, 400, WARM, "line-height:1.55;")}">Fondos para tu celular y plantillas para tus historias. Toca la que quieras para guardarla.</div>
+${kitRow(c.kit.wallpapers)}
+${kitRow(c.kit.stories)}
+<div style="margin:16px auto 14px;max-width:420px;${sans(15, 400, WARM, "line-height:1.55;")}">Y pon tu foto en el marco del congreso para tu perfil de WhatsApp e Instagram.</div>
+<a href="${esc(c.kit.frameUrl)}" style="display:inline-block;padding:12px 22px;border-radius:14px;border:2px solid ${GOLD};text-decoration:none;${sans(15, 800, INK)}">Hacer mi foto de perfil</a>
+</td></tr>`
+    : ""
+}
 <tr><td class="px" align="center" style="padding:28px 32px 30px;background:${CHOCOLATE};">
 <div style="${serif(21, 800, CREAM, "line-height:1.25;")}">¿Conoces a una colega que lo necesita?</div>
 <div style="margin:10px auto 18px;max-width:420px;${sans(15, 400, CREAM_SOFT, "line-height:1.55;")}">${esc(c.share.line)}</div>
@@ -258,6 +287,16 @@ Recibes este correo porque compraste tu entrada a ${esc(c.eventName)}.
     ["¿QUÉ PASA AHORA?", ...steps.map(([title, body], i) => `${i + 1}. ${title}${title.endsWith(".") ? "" : "."} ${body}`)].join("\n"),
     ...(c.speakers.length ? [`QUIÉNES TE ESPERAN\n${c.speakers.map((p) => p.name).join(", ")}.`] : []),
     ...(c.asistire ? [`¡CUÉNTALE A TODOS QUE VAS!\nSube una foto tuya y te armamos tu imagen «Asistiré» para historias y publicaciones: ${c.asistire.url}`] : []),
+    ...(c.kit
+      ? [
+          [
+            "TU KIT IMPARABLE",
+            ...c.kit.wallpapers.map((f) => `Fondo de pantalla «${f.name}»: ${f.file}`),
+            ...c.kit.stories.map((f) => `Plantilla de historia «${f.name}»: ${f.file}`),
+            `Tu foto de perfil con el marco del congreso: ${c.kit.frameUrl}`,
+          ].join("\n"),
+        ]
+      : []),
     `¿CONOCES A UNA COLEGA QUE LO NECESITA?\n${c.share.line}\n${c.share.url}`,
     ...(c.helpUrl ? [`¿Dudas? Escríbenos por WhatsApp: ${c.helpUrl}`] : []),
     `Organiza Nail Fest · ${c.site.host}\nRecibes este correo porque compraste tu entrada a ${c.eventName}.`,

@@ -4,18 +4,19 @@ import { getOrgSettings } from "@/lib/settings";
 import { publicEventName } from "@/lib/eventDisplayName";
 import { parseLandingBlocks } from "@/lib/landingBlocks/types";
 import { congressTimes, dayWords, readRecordings, talksOf, youtubeId } from "@/lib/imparables/grabaciones";
-import { KIT, type KitFile } from "@/lib/imparables/kit";
+import { KIT } from "@/lib/imparables/kit";
 import { diplomaPath } from "@/lib/imparables/miCongreso";
 import { coverName, eventWhen } from "@/lib/imparables/schedule";
 import { Tiara } from "./ImpArt";
 import ImpVideo from "./ImpVideo";
 import { cinzel, manrope } from "./fonts";
 
-// «Tu congreso» (the team, 2026-11-04): each buyer's page for Manicuristas Imparables, in the checkout's chrome —
-// hello, the day and its hours; her digital kit, ready from the start (her «¡Asistiré!» image, the profile frame,
-// wallpapers, story templates and stickers); the recording of every talk, from the congress's end to its last day; and
-// her diploma with her name, once it's over. Until then each part says when it opens. While her payment is being
-// confirmed, a note to come back. The team's sample shows every part, with sample data (app/mi-congreso/[token]).
+// «Grabaciones» in the admin, «Tu congreso» for her (the team, 2026-11-04): each buyer's page for Manicuristas
+// Imparables, in the checkout's chrome — hello, the day and its hours; the recording of every talk, from the
+// congress's end to its last day; and the link to download her diploma with her name, once it's over. Until then each
+// part says when it opens. Her kit and her «¡Asistiré!» image aren't here: she gets them by email before the congress
+// (the team, 2026-11-04). While her payment is being confirmed, a note to come back. The team's sample shows every
+// part, with sample data (app/mi-congreso/[token]).
 
 type Props = {
   event: Event;
@@ -24,31 +25,13 @@ type Props = {
   firstName: string;
   /** The name on her diploma; «» when we don't have it. */
   diplomaName: string;
-  /** Her «¡Asistiré!» page. */
-  asistireHref: string;
   /** Her own link into the Zoom, when it has one. */
   zoomUrl?: string | null;
   sample?: boolean;
   waiting?: boolean;
 };
 
-function Thumbs({ files }: { files: KitFile[] }) {
-  return (
-    <ul className="imp-mc-grid">
-      {files.map((file) => (
-        <li key={file.file}>
-          <a className="imp-mc-thumb" href={file.file} target="_blank" rel="noreferrer">
-            {/* eslint-disable-next-line @next/next/no-img-element -- fixed kit files */}
-            <img src={file.mini} alt={file.name} width={360} height={640} loading="lazy" />
-            <span>{file.name}</span>
-          </a>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-export default async function MiCongreso({ event, token, firstName, diplomaName, asistireHref, zoomUrl, sample = false, waiting = false }: Props) {
+export default async function MiCongreso({ event, token, firstName, diplomaName, zoomUrl, sample = false, waiting = false }: Props) {
   const [orgSettings, whatsapp] = await Promise.all([
     getOrgSettings(),
     db.whatsAppConnection.findFirst({ orderBy: { createdAt: "desc" }, select: { displayPhoneNumber: true } }),
@@ -95,9 +78,7 @@ export default async function MiCongreso({ event, token, firstName, diplomaName,
               <p className="imp-mc-lead">Tu página se activa apenas se confirme tu pago. Vuelve a abrir este enlace en unos minutos.</p>
             ) : (
               <>
-                <p className="imp-mc-lead">
-                  Aquí tienes todo lo de tu boleta: tu kit digital, la grabación de cada charla y tu diploma. Este enlace es solo tuyo: guárdalo.
-                </p>
+                <p className="imp-mc-lead">Aquí están la grabación de cada charla y tu diploma. Este enlace es solo tuyo: guárdalo.</p>
                 <p className="imp-mc-when">
                   <b>{when.dates}</b>
                   {when.hours ? ` · ${when.hours}, hora Colombia` : ""}
@@ -108,7 +89,6 @@ export default async function MiCongreso({ event, token, firstName, diplomaName,
                   </a>
                 )}
                 <nav className="imp-mc-nav" aria-label="En esta página">
-                  <a href="#kit">Kit digital</a>
                   <a href="#grabaciones">Grabaciones</a>
                   <a href="#diploma">Diploma</a>
                 </nav>
@@ -118,54 +98,6 @@ export default async function MiCongreso({ event, token, firstName, diplomaName,
 
           {!waiting && (
             <>
-              <section className="imp-mc-sec" id="kit" aria-labelledby="imp-mc-kit">
-                <h2 className="imp-mc-h2" id="imp-mc-kit">
-                  Tu kit digital
-                </h2>
-                <p className="imp-mc-sub">Para que se note que eres imparable: antes, durante y después del congreso.</p>
-
-                <a className="imp-mc-feature" href={asistireHref}>
-                  <span>
-                    <b>Tu imagen «¡Asistiré!»</b>
-                    <span>Tu foto en la portada del congreso, para tus historias y publicaciones.</span>
-                  </span>
-                  <i aria-hidden="true">→</i>
-                </a>
-                <a className="imp-mc-feature" href={`/mi-congreso/${token}/marco`}>
-                  <span>
-                    <b>Marco para tu foto de perfil</b>
-                    <span>Pon tu foto en el marco Imparable y úsala en WhatsApp e Instagram.</span>
-                  </span>
-                  <i aria-hidden="true">→</i>
-                </a>
-
-                <h3 className="imp-mc-h3">Fondos de pantalla</h3>
-                <p className="imp-mc-note">Ábrelo, mantenlo presionado y toca «Guardar». Luego ponlo de fondo en tu celular.</p>
-                <Thumbs files={KIT.wallpapers} />
-
-                <h3 className="imp-mc-h3">Plantillas para tus historias</h3>
-                <p className="imp-mc-note">Guárdala, súbela a tu historia de Instagram o a tu estado de WhatsApp y escribe encima.</p>
-                <Thumbs files={KIT.stories} />
-
-                <h3 className="imp-mc-h3">Stickers para WhatsApp</h3>
-                <p className="imp-mc-note">
-                  Guárdalos en tu celular. En WhatsApp, abre un chat, toca el ícono de stickers, luego «Crear» y elige el sticker.
-                </p>
-                <ul className="imp-mc-stickers">
-                  {KIT.stickers.map((sticker) => (
-                    <li key={sticker.file}>
-                      <a href={sticker.file} target="_blank" rel="noreferrer">
-                        {/* eslint-disable-next-line @next/next/no-img-element -- fixed kit files */}
-                        <img src={sticker.mini} alt={sticker.name} width={200} height={200} loading="lazy" />
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-                <a className="imp-mc-btn2" href={KIT.stickersZip} download>
-                  Descargar los {KIT.stickers.length} stickers (.zip)
-                </a>
-              </section>
-
               <section className="imp-mc-sec" id="grabaciones" aria-labelledby="imp-mc-rec">
                 <h2 className="imp-mc-h2" id="imp-mc-rec">
                   Grabaciones

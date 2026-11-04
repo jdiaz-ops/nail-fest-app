@@ -42,6 +42,11 @@ export function asistireUrl(registrationId: string): string {
   return `${baseUrl()}/asistire/${asistireToken(registrationId)}`;
 }
 
+/** Her profile frame (the kit's, 2026-11-04): the same link, with /marco. */
+export function marcoUrl(asistireLink: string): string {
+  return `${asistireLink.replace(/\/+$/, "")}/marco`;
+}
+
 // The team's sample of an event's page (2026-10-30): the same image maker,
 // with no purchase behind it — for the confirmation's test emails, its
 // preview and «Después del pago». Signed like hers, so it opens on any

@@ -1,9 +1,10 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { db } from "@/lib/db";
 import { publicEventName } from "@/lib/eventDisplayName";
 import { getOrgSettings } from "@/lib/settings";
+import { asistireRegistrationId, asistireSampleEventId } from "@/lib/imparables/asistire";
 import { KIT } from "@/lib/imparables/kit";
-import { findCongreso } from "@/lib/imparables/miCongreso";
 import { coverName, eventWhen } from "@/lib/imparables/schedule";
 import ImpMarco from "@/components/imparables/ImpMarco";
 import { cinzel, manrope } from "@/components/imparables/fonts";
@@ -15,27 +16,33 @@ export const metadata: Metadata = {
   robots: { index: false },
 };
 
-// The profile frame of her kit (components/imparables/ImpMarco.tsx), from her page («Tu congreso»): the same signed
-// link opens it, once her payment is confirmed; the team's sample too.
+// The profile frame of Manicuristas Imparables' kit (components/imparables/ImpMarco.tsx), which she gets by email before
+// the congress with her «Asistiré» image (the team, 2026-11-04): it hangs from her «Asistiré» link — the same signed
+// link, with /marco —, and opens once her purchase is confirmed; the team's sample link opens it too.
 export default async function MarcoPage({ params }: { params: { token: string } }) {
-  const access = await findCongreso(params.token);
-  if (!access || (access.kind === "buyer" && access.waiting)) notFound();
-  const { event } = access;
+  const registrationId = asistireRegistrationId(params.token);
+  if (!registrationId) notFound();
+  const sampleEventId = asistireSampleEventId(registrationId);
+  const event = sampleEventId
+    ? await db.event.findUnique({ where: { id: sampleEventId } })
+    : await db.registration
+        .findUnique({ where: { id: registrationId }, include: { event: true } })
+        .then((registration) => (registration?.status === "CONFIRMED" ? registration.event : null));
+  if (!event || event.theme !== "IMPARABLES") notFound();
   const { timezone } = await getOrgSettings();
   const words = coverName(publicEventName(event)).split(/\s+/);
   const big = words.pop() ?? "";
   const pre = words.join(" ");
-  const back = `/mi-congreso/${params.token}`;
 
   return (
     <main className={`imp ${cinzel.variable} ${manrope.variable}`}>
       <div className="imp-co">
         <header className="imp-co-top">
-          <a className="imp-co-back" href={back}>
+          <a className="imp-co-back" href={`/${event.slug}`}>
             <span aria-hidden="true">←</span>
-            <span className="imp-co-back-t">Tu congreso</span>
+            <span className="imp-co-back-t">Volver</span>
           </a>
-          <a className="imp-co-mark" href={back}>
+          <a className="imp-co-mark" href={`/${event.slug}`}>
             {pre && <span>{pre} </span>}
             <b>{big}</b>
           </a>

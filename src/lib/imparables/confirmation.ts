@@ -6,7 +6,8 @@ import { utcToZonedInputValue } from "@/lib/dateFormat";
 import { parseLandingBlocks } from "@/lib/landingBlocks/types";
 import { sayName } from "@/lib/mesa/email";
 import { ZOOM_ACCESS_REMINDER_MINUTES_BEFORE } from "@/lib/zoomAccessReminder";
-import { asistireSampleUrl, asistireUrl } from "./asistire";
+import { asistireSampleUrl, asistireUrl, marcoUrl } from "./asistire";
+import { KIT } from "./kit";
 import { castOf } from "./blocks";
 import { getActiveStage, purchaseOf } from "./pricing";
 import { clock, coverName, eventWhen } from "./schedule";
@@ -93,6 +94,14 @@ async function confirmationOf(
       url: `https://wa.me/?text=${encodeURIComponent(`${shareText?.trim() || defaultShareText(event, tz)} ${page.toString()}`)}`,
     },
     asistire: { url: her.asistire, image: `${base}/imparables/asistire-muestra-4-julio.jpg` },
+    // Her kit, by email before the congress (the team, 2026-11-04); the profile frame opens from her «Asistiré» link.
+    kit: her.asistire
+      ? {
+          wallpapers: KIT.wallpapers.map((f) => ({ name: f.name, file: absolute(f.file), mini: absolute(f.mini) })),
+          stories: KIT.stories.map((f) => ({ name: f.name, file: absolute(f.file), mini: absolute(f.mini) })),
+          frameUrl: marcoUrl(her.asistire),
+        }
+      : null,
     helpUrl: digits.length >= 8 ? `https://wa.me/${digits}` : null,
     speakers: speakers.filter((p) => p.photoUrl).map((p) => ({ name: p.name.trim().split(/\s+/)[0]!, photoUrl: absolute(p.photoUrl) })),
     images: { header: `${base}/imparables/correo-cabecera.png`, logo: `${base}/logo.png` },
