@@ -1,6 +1,8 @@
 // Reseñas — attendees rate an event (1–5 stars, comment, up to three
 // photos) through the same signed qrToken their ticket link carries:
-// /resena/<token>. Only someone scanned at the door may review; nothing
+// /resena/<token>. Only someone scanned at the door may review (at
+// Manicuristas Imparables, a virtual congress, every confirmed buyer once it's
+// over, 2026-11-04); nothing
 // is public until an admin approves it; a review shows with name, city and
 // photos only when the person ticked publishConsent (stored with its
 // timestamp). The same module serves the public blocks (landing / home),
@@ -33,7 +35,7 @@ export function reviewUrl(qrToken: string): string {
 // ── Eligibility ──────────────────────────────────────────────────────────
 
 export type ReviewEligibility =
-  | { ok: false; reason: "invalid_token" | "not_found" | "not_confirmed" | "not_attended" }
+  | { ok: false; reason: "invalid_token" | "not_found" | "not_confirmed" | "not_attended" | "not_yet"; event?: Event }
   | {
       ok: true;
       registration: Registration;
@@ -79,7 +81,13 @@ export async function reviewEligibilityForToken(token: string): Promise<ReviewEl
   });
   if (!registration) return { ok: false, reason: "not_found" };
   if (registration.status !== "CONFIRMED") return { ok: false, reason: "not_confirmed" };
-  if (!(await registrationAttended(registration))) return { ok: false, reason: "not_attended" };
+  if (registration.event.theme === "IMPARABLES") {
+    // Manicuristas Imparables is a virtual congress (the team, 2026-11-04): no door to be scanned at — every buyer
+    // whose payment is confirmed may review it, once it's over.
+    if (Date.now() < (registration.event.endsAt ?? registration.event.startsAt).getTime()) return { ok: false, reason: "not_yet", event: registration.event };
+  } else if (!(await registrationAttended(registration))) {
+    return { ok: false, reason: "not_attended" };
+  }
   const { person, event, review, ...rest } = registration;
   return { ok: true, registration: rest as Registration, person, event, existing: review, raffle: raffleView(event.reviewRaffle) };
 }
@@ -123,7 +131,7 @@ export function reviewPhotoFolder(registrationId: string): string {
   return `reviews/${registrationId}`;
 }
 
-export type ReviewError = "invalid_token" | "not_found" | "not_confirmed" | "not_attended" | "invalid_rating" | "already_reviewed" | "too_many_photos" | "bad_photo";
+export type ReviewError = "invalid_token" | "not_found" | "not_confirmed" | "not_attended" | "not_yet" | "invalid_rating" | "already_reviewed" | "too_many_photos" | "bad_photo";
 export type SubmitReviewResult = { ok: true; review: Review } | { ok: false; error: ReviewError };
 
 export async function submitReview(token: string, input: ReviewInput): Promise<SubmitReviewResult> {

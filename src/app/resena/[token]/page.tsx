@@ -1,15 +1,21 @@
 import type { Metadata } from "next";
+import type { Event } from "@prisma/client";
 import { fraunces800and900 as fraunces } from "@/fonts";
+import { db } from "@/lib/db";
 import { getOrgSettings } from "@/lib/settings";
 import { formatDateInTz } from "@/lib/dateFormat";
 import { publicEventName } from "@/lib/eventDisplayName";
 import { reviewEligibilityForToken } from "@/lib/reviews";
 import { fillReviewText, getReviewPageTexts, type ReviewPageTexts } from "@/lib/reviewPageTexts";
 import { viewerCanSeeSamples } from "@/lib/reviewsViewer";
+import { congressTimes, dayWords, readRecordings } from "@/lib/imparables/grabaciones";
+import { congresoRegistrationId, congresoSampleEventId } from "@/lib/imparables/miCongreso";
+import { IMPARABLES_REVIEW_TEXTS, reviewNotYet, starsFrom } from "@/lib/imparables/resena";
+import { coverName } from "@/lib/imparables/schedule";
+import { cinzel, manrope } from "@/components/imparables/fonts";
 import ReviewForm from "./ReviewForm";
 import ReviewThanks from "./ReviewThanks";
 import ReviewHero from "./ReviewHero";
-
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Tu reseña · Nail Fest", robots: { index: false, follow: false } };
@@ -24,24 +30,73 @@ export const metadata: Metadata = { title: "Tu reseña · Nail Fest", robots: { 
 // only, renders that state whatever the registration's real one, with a
 // banner, so the team can see the page as an attendee does. The form in
 // that mode sends nothing (ReviewForm `preview`).
-export default async function ReviewPage({ params, searchParams }: { params: { token: string }; searchParams: { vista?: string } }) {
-  const [eligibility, orgSettings, rawTexts] = await Promise.all([reviewEligibilityForToken(params.token), getOrgSettings(), getReviewPageTexts()]);
+//
+// Manicuristas Imparables (2026-11-04, lib/imparables/resena.ts): the same
+// page in the congress's colors and faces (globals.css .rv-imp), a few lines
+// said for a virtual congress, no Instagram card; ?estrellas=1…5 (the closing
+// email's stars) starts the form rated; and the team's sample link (the
+// event's signed «muestra», from its closing email's sample and «Después del
+// pago») shows the form — or ?vista=gracias, the thanks — with sample data,
+// sending nothing, for anyone who has it.
+export default async function ReviewPage({ params, searchParams }: { params: { token: string }; searchParams: { vista?: string; estrellas?: string } }) {
+  const [orgSettings, rawTexts] = await Promise.all([getOrgSettings(), getReviewPageTexts()]);
+  const initialRating = starsFrom(searchParams.estrellas);
+
+  // The congress's colors around whatever the page shows for its event.
+  const themed = (event: Pick<Event, "theme"> | null | undefined, page: React.ReactNode) =>
+    event?.theme === "IMPARABLES" ? <div className={`rv-imp ${cinzel.variable} ${manrope.variable}`}>{page}</div> : page;
+  const textsFor = (event: Pick<Event, "theme"> | null | undefined, vars: Record<string, string | null>) => {
+    const raw = event?.theme === "IMPARABLES" ? { ...rawTexts, ...IMPARABLES_REVIEW_TEXTS } : rawTexts;
+    return Object.fromEntries(Object.entries(raw).map(([k, v]) => [k, fillReviewText(v, vars)])) as ReviewPageTexts;
+  };
+
+  // The congress's name as its cover says it: «Manicuristas Imparables», without the day its admin name carries.
+  const nameOf = (event: Event) => (event.theme === "IMPARABLES" ? coverName(publicEventName(event)) : publicEventName(event));
+
+  const sampleEventId = (() => {
+    const id = congresoRegistrationId(params.token);
+    return id ? congresoSampleEventId(id) : null;
+  })();
+  if (sampleEventId) {
+    const event = await db.event.findUnique({ where: { id: sampleEventId } });
+    if (event?.theme === "IMPARABLES") {
+      const texts = textsFor(event, { nombre: "Laura", evento: nameOf(event), premios: "", fecha: "" });
+      const brand = { brandName: orgSettings.name, displayClassName: cinzel.className, eventImageUrl: event.imageUrl ?? null };
+      return themed(
+        event,
+        searchParams.vista === "gracias" ? (
+          <ReviewThanks {...brand} texts={texts} token={params.token} raffleOptIn={false} raffle={null} hasPhoto={false} instagramCard={false} />
+        ) : (
+          <ReviewForm {...brand} texts={texts} token={params.token} raffle={null} preview initialRating={initialRating} />
+        )
+      );
+    }
+  }
+
+  const eligibility = await reviewEligibilityForToken(params.token);
   const wanted = searchParams.vista === "formulario" || searchParams.vista === "gracias" ? searchParams.vista : null;
   const preview = wanted && (await viewerCanSeeSamples()) ? wanted : null;
 
   if (!eligibility.ok) {
-    const text = eligibility.reason === "not_attended" ? rawTexts.notAttended : eligibility.reason === "not_confirmed" ? rawTexts.notConfirmed : rawTexts.invalidLink;
-    return (
+    let text = eligibility.reason === "not_attended" ? rawTexts.notAttended : eligibility.reason === "not_confirmed" ? rawTexts.notConfirmed : rawTexts.invalidLink;
+    if (eligibility.reason === "not_yet" && eligibility.event) {
+      text = reviewNotYet(dayWords(congressTimes(eligibility.event, readRecordings(eligibility.event.recordings), orgSettings.timezone).lastDay));
+    }
+    const imp = eligibility.event?.theme === "IMPARABLES";
+    return themed(
+      eligibility.event,
       <div className="rv-page">
-        <ReviewHero brandName={orgSettings.name} eyebrow={rawTexts.formEyebrow} imageUrl={null}>
-          <h1 className={`rv-title ${fraunces.className}`}>Tu reseña</h1>
+        <ReviewHero brandName={orgSettings.name} eyebrow={rawTexts.formEyebrow} imageUrl={imp ? (eligibility.event?.imageUrl ?? null) : null}>
+          <h1 className={`rv-title ${imp ? cinzel.className : fraunces.className}`}>Tu reseña</h1>
           <p className="rv-intro">{text}</p>
         </ReviewHero>
       </div>
     );
   }
 
-  const eventName = publicEventName(eligibility.event);
+  const event = eligibility.event;
+  const imp = event.theme === "IMPARABLES";
+  const eventName = nameOf(event);
   const raffle = eligibility.raffle
     ? {
         prizeCount: eligibility.raffle.prizeCount,
@@ -51,9 +106,8 @@ export default async function ReviewPage({ params, searchParams }: { params: { t
       }
     : null;
   // The placeholders filled for this attendee, once, server-side.
-  const vars = { nombre: eligibility.person.firstName, evento: eventName, premios: raffle ? `${raffle.prizeCount} ${raffle.prizeLabel}` : "", fecha: raffle?.closesLabel ?? "" };
-  const texts = Object.fromEntries(Object.entries(rawTexts).map(([k, v]) => [k, fillReviewText(v, vars)])) as ReviewPageTexts;
-  const brand = { brandName: orgSettings.name, displayClassName: fraunces.className, eventImageUrl: eligibility.event.imageUrl ?? null };
+  const texts = textsFor(event, { nombre: eligibility.person.firstName, evento: eventName, premios: raffle ? `${raffle.prizeCount} ${raffle.prizeLabel}` : "", fecha: raffle?.closesLabel ?? "" });
+  const brand = { brandName: orgSettings.name, displayClassName: imp ? cinzel.className : fraunces.className, eventImageUrl: event.imageUrl ?? null };
 
   if (preview) {
     const base = `/resena/${encodeURIComponent(params.token)}`;
@@ -62,7 +116,8 @@ export default async function ReviewPage({ params, searchParams }: { params: { t
         {label}
       </a>
     );
-    return (
+    return themed(
+      event,
       <>
         <div style={{ background: "#0b2e2c", color: "#fff", padding: "10px 16px", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", fontSize: 12.5 }}>
           <span style={{ fontWeight: 800 }}>Vista previa del equipo</span>
@@ -74,22 +129,41 @@ export default async function ReviewPage({ params, searchParams }: { params: { t
           <a href="/admin/resenas/textos" style={{ color: "#fff", fontWeight: 700 }}>
             Editar los textos
           </a>
-          <a href={`/admin/events/${eligibility.event.id}/resenas`} style={{ color: "#fff", fontWeight: 700 }}>
+          <a href={`/admin/events/${event.id}/resenas`} style={{ color: "#fff", fontWeight: 700 }}>
             Volver al admin
           </a>
         </div>
         {preview === "gracias" ? (
-          <ReviewThanks {...brand} texts={texts} token={params.token} raffleOptIn={eligibility.existing?.raffleOptIn ?? Boolean(raffle?.open)} raffle={raffle} hasPhoto={eligibility.existing ? eligibility.existing.photos.length > 0 : true} />
+          <ReviewThanks
+            {...brand}
+            texts={texts}
+            token={params.token}
+            raffleOptIn={eligibility.existing?.raffleOptIn ?? Boolean(raffle?.open)}
+            raffle={raffle}
+            hasPhoto={eligibility.existing ? eligibility.existing.photos.length > 0 : true}
+            instagramCard={!imp}
+          />
         ) : (
-          <ReviewForm {...brand} texts={texts} token={params.token} raffle={raffle} preview />
+          <ReviewForm {...brand} texts={texts} token={params.token} raffle={raffle} preview initialRating={initialRating} />
         )}
       </>
     );
   }
 
   if (eligibility.existing) {
-    return <ReviewThanks {...brand} texts={texts} token={params.token} raffleOptIn={eligibility.existing.raffleOptIn} raffle={raffle} hasPhoto={eligibility.existing.photos.length > 0} />;
+    return themed(
+      event,
+      <ReviewThanks
+        {...brand}
+        texts={texts}
+        token={params.token}
+        raffleOptIn={eligibility.existing.raffleOptIn}
+        raffle={raffle}
+        hasPhoto={eligibility.existing.photos.length > 0}
+        instagramCard={!imp}
+      />
+    );
   }
 
-  return <ReviewForm {...brand} texts={texts} token={params.token} raffle={raffle} />;
+  return themed(event, <ReviewForm {...brand} texts={texts} token={params.token} raffle={raffle} initialRating={initialRating} />);
 }

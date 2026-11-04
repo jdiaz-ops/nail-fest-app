@@ -21,11 +21,56 @@ const SENT_NOW = {
 // way she sees it, in tabs — the payment's page (and its answers while PSE
 // confirms, or when the bank says no), her confirmation email (and a test of
 // it to the team's inbox), and Manicuristas Imparables' «Asistiré» image to
-// try with any photo, her profile frame, her recordings page and her diploma
-// (2026-11-04).
+// try with any photo, her profile frame, her recordings page, her diploma and
+// the closing email with its WhatsApp (2026-11-04).
 // Each tab is the real page in the team's preview (?vista= on /pago, the
 // sample links): sample data, nothing saved or sent to anyone. ADMIN-only,
 // like the rest of Configuración.
+// The closing's WhatsApp (the team, 2026-11-04): a template to create in Meta — its text, with her name, the last day of
+// the recordings and her review link, and two buttons that open her recordings and her diploma with her own key. It's
+// sent once Meta approves it; until then this is its draft, to copy.
+const CLOSING_TEMPLATE = {
+  name: "imparables_cierre",
+  body: "¡Hola, {{1}}! Gracias por ser parte de Manicuristas Imparables.\n\nYa puedes ver la grabación de cada charla hasta el {{2}} y descargar tu diploma con tu nombre.\n\n¿Cómo te fue? Déjanos tu reseña aquí: {{3}}",
+  variables: ["{{1}}: su nombre", "{{2}}: el último día de las grabaciones («martes 3 de agosto»)", "{{3}}: su enlace de reseña"],
+  buttons: [
+    { label: "Ver mis grabaciones", url: "https://nailfest.lat/mi-congreso/{{1}}" },
+    { label: "Descargar mi diploma", url: "https://nailfest.lat/api/diploma/{{1}}" },
+  ],
+};
+
+function ClosingWhatsApp() {
+  const box = { margin: 0, padding: "12px 14px", border: "1px solid #e3e1dc", borderRadius: 10, background: "#faf9f7", fontSize: 13.5, lineHeight: 1.5, whiteSpace: "pre-wrap" as const };
+  return (
+    <section style={{ marginTop: 24, maxWidth: 660 }}>
+      <h3 style={{ fontSize: 16, margin: "0 0 4px" }}>WhatsApp de cierre</h3>
+      <p style={{ fontSize: 13, color: "#5b5f6b", margin: "0 0 12px" }}>
+        Es una plantilla que hay que crear en Meta (WhatsApp Manager → Plantillas) y esperar a que la aprueben. Este es su borrador para copiar. Se envía
+        cuando esté aprobada; no se le envía nada a nadie todavía.
+      </p>
+      <p style={{ fontSize: 13, margin: "0 0 4px" }}>
+        <strong>Nombre:</strong> {CLOSING_TEMPLATE.name} · <strong>Idioma:</strong> español · <strong>Categoría:</strong> Utilidad (Meta puede cambiarla)
+      </p>
+      <p style={{ fontSize: 13, fontWeight: 700, margin: "12px 0 4px" }}>Texto</p>
+      <pre style={box}>{CLOSING_TEMPLATE.body}</pre>
+      <ul style={{ fontSize: 13, color: "#5b5f6b", margin: "8px 0 0", paddingLeft: 18 }}>
+        {CLOSING_TEMPLATE.variables.map((v) => (
+          <li key={v}>{v}</li>
+        ))}
+      </ul>
+      <p style={{ fontSize: 13, fontWeight: 700, margin: "12px 0 4px" }}>Botones (tipo «Visitar sitio web», URL dinámica)</p>
+      <ul style={{ fontSize: 13, margin: 0, paddingLeft: 18 }}>
+        {CLOSING_TEMPLATE.buttons.map((b) => (
+          <li key={b.label}>
+            <strong>{b.label}</strong>: {b.url}
+          </li>
+        ))}
+      </ul>
+      <p style={{ fontSize: 12.5, color: "#5b5f6b", margin: "8px 0 0" }}>En cada botón, el {"{{1}}"} se llena con la clave personal de cada compradora.</p>
+    </section>
+  );
+}
+
 export default async function AfterPaymentPage({ params, searchParams }: { params: { id: string }; searchParams: { vista?: string } }) {
   await requirePageUser(["ADMIN"]);
   const [event, orgSettings] = await Promise.all([db.event.findUnique({ where: { id: params.id } }), getOrgSettings()]);
@@ -66,7 +111,19 @@ export default async function AfterPaymentPage({ params, searchParams }: { param
             id: "diploma",
             label: "Diploma",
             src: diplomaPath(congresoSampleToken(event.id)),
-            note: "Con un enlace propio para los correos: se descarga al terminar el congreso, con su nombre como lo escribió al comprar y el código de su boleta.",
+            note: "Con un enlace propio para los correos: se descarga al terminar el congreso, con su nombre como lo escribió al comprar.",
+          },
+          {
+            id: "resena",
+            label: "Reseña",
+            src: `/resena/${congresoSampleToken(event.id)}`,
+            note: "Se abre desde el correo de cierre, al terminar el congreso: la puede dejar toda compradora con su pago confirmado. Aquí no se envía nada.",
+          },
+          {
+            id: "cierre",
+            label: "Correo de cierre",
+            src: `/api/admin/events/${event.id}/cierre/preview`,
+            note: "Después del congreso, cuando las grabaciones estén subidas: sus grabaciones, su diploma y su reseña, cada enlace suyo. Todavía no se le envía a nadie.",
           },
         ]
       : []),
@@ -138,6 +195,16 @@ export default async function AfterPaymentPage({ params, searchParams }: { param
             title="Correo de confirmación"
             style={{ display: "block", width: "100%", maxWidth: 660, height: 1100, marginTop: 16, border: "1px solid #e3e1dc", borderRadius: 12, background: "#fff" }}
           />
+        </>
+      ) : active.id === "cierre" ? (
+        <>
+          <TestSendBox url={`/api/admin/events/${event.id}/cierre/test`} body={{}} note="Con datos de ejemplo y «[Prueba]» al comienzo del asunto." />
+          <iframe
+            src={active.src}
+            title="Correo de cierre"
+            style={{ display: "block", width: "100%", maxWidth: 660, height: 1100, marginTop: 16, border: "1px solid #e3e1dc", borderRadius: 12, background: "#fff" }}
+          />
+          <ClosingWhatsApp />
         </>
       ) : active.id === "diploma" ? (
         // The PDF itself where the browser shows PDFs; where it doesn't (a phone), its picture and the link.

@@ -23,6 +23,7 @@ export default function ReviewForm({
   token,
   raffle,
   preview = false,
+  initialRating = 0,
 }: {
   texts: ReviewPageTexts;
   brandName: string;
@@ -31,9 +32,11 @@ export default function ReviewForm({
   token: string;
   raffle: { prizeCount: number; prizeLabel: string; closesLabel: string; open: boolean } | null;
   preview?: boolean;
+  /** Stars already given, from the email's stars (?estrellas=1…5); 0 for none. */
+  initialRating?: number;
 }) {
   const router = useRouter();
-  const [rating, setRating] = useState(0);
+  const [rating, setRating] = useState(initialRating);
   const [hover, setHover] = useState(0);
   const [comment, setComment] = useState("");
   const [handle, setHandle] = useState("");
@@ -122,7 +125,11 @@ export default function ReviewForm({
                 {[1, 2, 3, 4, 5].map((n) => (
                   <button key={n} type="button" className="rv-star" aria-label={`${n} ${n === 1 ? "estrella" : "estrellas"}`} aria-pressed={rating === n} onClick={() => setRating(n)} onMouseEnter={() => setHover(n)}>
                     <svg aria-hidden="true" viewBox="0 0 24 24">
-                      <path fill={n <= shown ? "#f2b01e" : "none"} stroke={n <= shown ? "none" : "#d9c79a"} strokeWidth="1.6" d="M12 2.5l2.9 6.2 6.8.8-5 4.6 1.3 6.7L12 17.5l-6 3.3 1.3-6.7-5-4.6 6.8-.8z" />
+                      <path
+                        style={{ fill: n <= shown ? "var(--rv-star, #f2b01e)" : "none", stroke: n <= shown ? "none" : "var(--rv-star-line, #d9c79a)" }}
+                        strokeWidth="1.6"
+                        d="M12 2.5l2.9 6.2 6.8.8-5 4.6 1.3 6.7L12 17.5l-6 3.3 1.3-6.7-5-4.6 6.8-.8z"
+                      />
                     </svg>
                   </button>
                 ))}

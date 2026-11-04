@@ -9388,3 +9388,74 @@ body:has(.imp.nf) {
     transition: none;
   }
 }
+
+/* Manicuristas Imparables' review page (2026-11-04, app/resena/[token]): Nail Fest's page in the congress's colors —
+   chocolate head, bone ground, gold stars and button — and its faces (Cinzel titles, Manrope text). */
+.rv-imp {
+  --accent: #c9a46a;
+  --accent-secondary: #d2b486;
+  --link: #6e5230;
+  --ink: #141414;
+  --ink-muted: #5e564c;
+  --border: #dcd2c3;
+  --rv-star: #c9a46a;
+  --rv-star-line: #cbbba8;
+  font-family: var(--imp-body), system-ui, sans-serif;
+}
+.rv-imp .rv-page {
+  background: #ede8e1;
+}
+.rv-imp .rv-head {
+  background: #3b2418;
+}
+.rv-imp .rv-head-scrim {
+  background: linear-gradient(180deg, rgba(59, 36, 24, 0.62) 0%, rgba(59, 36, 24, 0.86) 60%, rgba(59, 36, 24, 0.96) 100%);
+}
+.rv-imp .rv-head-glow {
+  background: radial-gradient(circle at 92% 0%, rgba(201, 164, 106, 0.38) 0, rgba(201, 164, 106, 0) 42%),
+    radial-gradient(circle at 0% 100%, rgba(140, 106, 62, 0.42) 0, rgba(140, 106, 62, 0) 38%);
+}
+.rv-imp .rv-eyebrow {
+  color: #d2b486;
+}
+.rv-imp .rv-raffle .rv-eyebrow {
+  color: var(--link);
+}
+.rv-imp .rv-seal,
+.rv-imp .rv-stars-word,
+.rv-imp .rv-check-circle,
+.rv-imp .rv-raffle-icon {
+  color: #3b2418;
+}
+.rv-imp .rv-title {
+  font-weight: 800;
+  letter-spacing: 0;
+}
+.rv-imp .rv-body > :first-child {
+  box-shadow: 0 14px 34px -18px rgba(59, 36, 24, 0.5);
+}
+.rv-imp .rv-card,
+.rv-imp .rv-box-white {
+  background: #f7f3ec;
+}
+.rv-imp .rv-stars,
+.rv-imp .rv-raffle,
+.rv-imp .rv-box-cream {
+  background: #f3e6cc;
+}
+.rv-imp .rv-input,
+.rv-imp .rv-textarea,
+.rv-imp .rv-handle,
+.rv-imp .rv-tile-add {
+  background: #fff;
+}
+.rv-imp .rv-check input {
+  accent-color: #6e5230;
+}
+.rv-imp .rv-cta {
+  color: #141414;
+  box-shadow: 0 12px 28px -12px rgba(59, 36, 24, 0.6);
+}
+.rv-imp .rv-cta:hover:not(:disabled) {
+  background: #b8925a;
+}

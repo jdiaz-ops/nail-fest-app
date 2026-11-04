@@ -16,6 +16,7 @@ export default function ReviewThanks({
   raffleOptIn,
   raffle,
   hasPhoto,
+  instagramCard = true,
 }: {
   texts: ReviewPageTexts;
   brandName: string;
@@ -25,6 +26,8 @@ export default function ReviewThanks({
   raffleOptIn: boolean;
   raffle: { prizeCount: number; prizeLabel: string; closesLabel: string; open: boolean } | null;
   hasPhoto: boolean;
+  /** The Instagram card (Nail Fest's design): not on Manicuristas Imparables' page. */
+  instagramCard?: boolean;
 }) {
   // The seal ("Asistió a <edición>") in bold inside the intro, when the
   // admin's text still carries it.
@@ -73,7 +76,8 @@ export default function ReviewThanks({
           </section>
         )}
 
-        <section className="rv-ig">
+{instagramCard && (
+                  <section className="rv-ig">
           {/* A sketch of the 9:16 story card (api/resenas/<token>/tarjeta
               renders the real one), so the box reads as "a card". */}
           <div className="rv-ig-mini" aria-hidden="true">
@@ -95,6 +99,7 @@ export default function ReviewThanks({
             </a>
           </div>
         </section>
+        )}
 
         <Link href="/" className="rv-back">
           {texts.backLink}
