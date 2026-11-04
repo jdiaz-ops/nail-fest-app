@@ -7,9 +7,9 @@ import type { DiplomaData } from "./diplomaText";
 
 // Manicuristas Imparables' digital diploma (the team, 2026-11-04; the ticket's «Diploma digital con tu nombre»):
 // one A4 page, landscape, to save, print or share — the congress's tiara, «Manicuristas Imparables» as on its cover,
-// «Diploma de participación», her name, what it was and when, its speakers, Nail Fest as who organizes it and the
-// diploma's number (her ticket's code), and between them the brands that support it (the team, 2026-11-04: «4 espacios
-// y logo de las 4 marcas que apoyan»), the cover's «Con el apoyo de». Bone and chocolate with gold, in the page's faces
+// «Diploma de participación», her name, what it was and when, its speakers, Nail Fest as who organizes it and, beside
+// it, the brands that support it (the team, 2026-11-04: «4 espacios y logo de las 4 marcas que apoyan»), the cover's
+// «Con el apoyo de». No number on it (the team, 2026-11-04). Bone and chocolate with gold, in the page's faces
 // (Cinzel, Manrope), so it prints well at home. Served from her page («Tu congreso», /api/diploma/[token]) once the
 // congress is over.
 
@@ -88,7 +88,8 @@ export async function renderDiplomaPdf(data: DiplomaData): Promise<Buffer> {
       size: "A4",
       layout: "landscape",
       margin: 0,
-      info: { Title: `Diploma · ${data.eventName} · ${data.name}`, Author: "Nail Fest", Subject: `${data.eventName}, ${data.date}` },
+      // Her ticket's code stays in the file's details, not on the page.
+      info: { Title: `Diploma · ${data.eventName} · ${data.name}`, Author: "Nail Fest", Subject: `${data.eventName}, ${data.date} · ${data.code}` },
     });
     const chunks: Buffer[] = [];
     doc.on("data", (chunk) => chunks.push(chunk));
@@ -239,18 +240,25 @@ export async function renderDiplomaPdf(data: DiplomaData): Promise<Buffer> {
       paragraph([{ text: `Con las charlas de ${listNames(data.speakers)}.`, font: F.medium }], 9.5, C.soft, 600, said + 27, 14.5);
     }
 
-    // A gold seal under the speakers: the tiara's star and the day.
-    const sealY = 434;
-    doc.circle(W / 2, sealY, 27).lineWidth(1.2).stroke(C.gold);
-    doc.circle(W / 2, sealY, 23.5).lineWidth(0.5).stroke(C.gold);
+    // The footer: who organizes it, the brands that support it, and the gold seal — the tiara's star and the day — in
+    // the corner where the diploma's number was (the team, 2026-11-04: no number on it).
+    const footer = 480;
+    const sealX = W - 92 - 27;
+    const sealY = footer + 33;
+    doc.circle(sealX, sealY, 27).lineWidth(1.2).stroke(C.gold);
+    doc.circle(sealX, sealY, 23.5).lineWidth(0.5).stroke(C.gold);
     doc.save();
-    doc.translate(W / 2 - 95 * 0.54, sealY - 9 - 23 * 0.54).scale(0.54);
+    doc.translate(sealX - 95 * 0.54, sealY - 9 - 23 * 0.54).scale(0.54);
     doc.polygon(...star).fill(gold(80, 8, 110, 38));
     doc.restore();
-    if (data.stamp) centered(data.stamp, F.bold, 5.4, C.bronzeDark, sealY + 11.5, 0.3);
-
-    // The footer, in three: who organizes it, the brands that support it, and the diploma's number.
-    const footer = 480;
+    if (data.stamp) {
+      const stampW = width(data.stamp, F.bold, 5.4, 0.3);
+      doc
+        .font(F.bold)
+        .fontSize(5.4)
+        .fillColor(C.bronzeDark)
+        .text(data.stamp, sealX - stampW / 2 + 0.15, sealY + 11.5 - ascent(F.bold, 5.4), { lineBreak: false, characterSpacing: 0.3 });
+    }
     const label = (text: string, x: number) =>
       doc.font(F.heavy).fontSize(7.5).fillColor(C.soft).text(text, x, footer, { lineBreak: false, characterSpacing: 2.4 });
     label("ORGANIZA", 92);
@@ -283,22 +291,6 @@ export async function renderDiplomaPdf(data: DiplomaData): Promise<Buffer> {
           .text(sponsor.name, x, y + slotH / 2 - ascent(F.bold, 10) / 2 - 1, { width: slotW, align: "center", lineBreak: false });
       });
     }
-
-    const numberLabel = "DIPLOMA Nº";
-    label(numberLabel, W - 92 - width(numberLabel, F.heavy, 7.5, 2.4));
-    const codeW = width(data.code, F.bold, 13, 1.5);
-    doc
-      .font(F.bold)
-      .fontSize(13)
-      .fillColor(C.chocolate)
-      .text(data.code, W - 92 - codeW, footer + 16, { lineBreak: false, characterSpacing: 1.5 });
-    const site = "nailfest.lat";
-    const siteW = width(site, F.medium, 9, 0.4);
-    doc
-      .font(F.medium)
-      .fontSize(9)
-      .fillColor(C.soft)
-      .text(site, W - 92 - siteW, footer + 38, { lineBreak: false, characterSpacing: 0.4 });
 
     doc.end();
   });
