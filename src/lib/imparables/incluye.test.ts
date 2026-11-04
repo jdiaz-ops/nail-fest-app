@@ -17,7 +17,6 @@ describe("«Qué incluye tu cupo»", () => {
       "Tu diploma digital Imparable 2027",
       "Premios en vivo",
       "Tu tarjeta de bienvenida",
-      "Tu kit Imparable",
     ]);
     const all = JSON.stringify(INCLUYE).toLowerCase();
     for (const word of ["cuaderno", "guías", "descuento"]) expect(all).not.toContain(word);

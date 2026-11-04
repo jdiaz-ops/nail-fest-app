@@ -33,13 +33,14 @@ export function ImpLogo({ pre, big, className = "", heading = false }: { pre: st
   );
 }
 
-/** The top of the pages she gets after paying — her recordings, her kit (the team, 2026-11-04): no bar and no welcome,
- * the cover's rays and its mark; under it, whatever the page needs to say first. */
-export function ImpPageTop({ pre, big, children }: { pre: string; big: string; children?: ReactNode }) {
+/** The top of the pages she gets after paying — her recordings, her kit, her «¡Asistiré!» image, her profile photo (the
+ * team, 2026-11-04): no bar and no welcome, the cover's rays and its mark; under it, whatever the page needs to say
+ * first. `heading`: the mark names the page (false where the page has its own title). */
+export function ImpPageTop({ pre, big, heading = true, children }: { pre: string; big: string; heading?: boolean; children?: ReactNode }) {
   return (
     <header className="imp-mc-top">
       <div className="imp-rays" aria-hidden="true" />
-      <ImpLogo pre={pre} big={big} className="imp-mc-logo" heading />
+      <ImpLogo pre={pre} big={big} className="imp-mc-logo" heading={heading} />
       {children}
     </header>
   );

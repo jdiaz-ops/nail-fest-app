@@ -5,6 +5,7 @@ import { parseLandingBlocks } from "@/lib/landingBlocks/types";
 import { asistireShortLink } from "@/lib/imparables/asistire";
 import { sponsorLogosOf } from "@/lib/imparables/blocks";
 import { coverName, eventWhen, kindLine } from "@/lib/imparables/schedule";
+import { ImpPageTop } from "./ImpArt";
 import ImpAsistire from "./ImpAsistire";
 import { MAX_SPONSORS, PILLARS } from "./asistireArt";
 import { cinzel, manrope } from "./fonts";
@@ -27,16 +28,9 @@ export default async function AsistireScreen({ event, waiting = false, token }: 
   return (
     <main className={`imp ${cinzel.variable} ${manrope.variable}`}>
       <div className="imp-co">
-        <header className="imp-co-top">
-          {/* No way back on the pages she gets after paying (the team, 2026-11-04): the mark opens the congress's page. */}
-          <span />
-          <a className="imp-co-mark" href={`/${event.slug}`}>
-            {pre && <span>{pre} </span>}
-            <b>{big}</b>
-          </a>
-          <span />
-        </header>
         <div className="imp-co-main">
+          {/* No bar and no way back on the pages she gets after paying (the team, 2026-11-04): the cover's mark. */}
+          <ImpPageTop pre={pre} big={big} heading={false} />
           {waiting ? (
             <div className="imp-as">
               <h1 className="imp-co-h1">Tu imagen te espera</h1>
