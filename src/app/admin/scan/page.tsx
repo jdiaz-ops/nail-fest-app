@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { renderQrPngDataUrl } from "@/lib/qr";
 import { requirePageUser } from "@/lib/auth/guard";
 import { getOrgSettings } from "@/lib/settings";
+import { staffSeesEvent } from "@/lib/scanEvents";
 import EventsListClient from "./EventsListClient";
 
 export default async function ScanEventsPage() {
@@ -14,10 +15,12 @@ export default async function ScanEventsPage() {
   const [events, orgSettings] = await Promise.all([
     db.event.findMany({
       orderBy: { startsAt: "desc" },
-      select: { id: true, slug: true, name: true, city: true, startsAt: true, endsAt: true },
+      select: { id: true, slug: true, name: true, city: true, startsAt: true, endsAt: true, scheduleDays: true },
     }),
     getOrgSettings(),
   ]);
+  // The door staff (STAFF) never sees past events (the team, 2026-11-05): only the ones coming up and going on.
+  const listed = isAdmin ? events : events.filter((e) => staffSeesEvent(e));
 
   // Only admin sees this — staff already IS the app, there's nothing to
   // "download" from their own point of view. The QR points a phone that
@@ -28,7 +31,8 @@ export default async function ScanEventsPage() {
 
   return (
     <EventsListClient
-      events={events.map((e) => ({ ...e, startsAt: e.startsAt.toISOString(), endsAt: e.endsAt?.toISOString() ?? null }))}
+      events={listed.map((e) => ({ id: e.id, slug: e.slug, name: e.name, city: e.city, startsAt: e.startsAt.toISOString(), endsAt: e.endsAt?.toISOString() ?? null }))}
+      showPast={isAdmin}
       downloadQr={downloadQr}
       downloadUrl={appUrl}
       timezone={orgSettings.timezone}

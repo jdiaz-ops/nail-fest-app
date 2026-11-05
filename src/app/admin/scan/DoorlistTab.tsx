@@ -33,7 +33,7 @@ function codeOfToken(token: string): string {
 const MAX_ROWS = 60;
 
 export default function DoorlistTab() {
-  const { rosterEntries, rosterVersion, submitToken, undoCheckIn, roster } = useScanApp();
+  const { rosterEntries, rosterVersion, submitToken, undoCheckIn, roster, role } = useScanApp();
   const [query, setQuery] = useState("");
   const [busyToken, setBusyToken] = useState<string | null>(null);
   // A checked-in row opens two choices instead of acting at once:
@@ -194,7 +194,8 @@ export default function DoorlistTab() {
       )}
       {roster && matches.length > filtered.length && (
         <p style={{ marginTop: 10, fontSize: 12, color: "#5b5f6b" }}>
-          Mostrando {filtered.length} de {matches.length} — escribe más del nombre, el celular o el código para encontrar a alguien.
+          {/* The door staff: no totals (the team, 2026-11-05). */}
+          {role === "STAFF" ? "Hay más personas" : `Mostrando ${filtered.length} de ${matches.length}`} — escribe más del nombre, el celular o el código para encontrar a alguien.
         </p>
       )}
 

@@ -31,7 +31,7 @@ export default function ScanAppShell({
 }
 
 function ShellHeader() {
-  const { event, timezone, language, isOnline, pendingCount, syncing, roster, downloadingRoster, downloadRoster, syncQueue, scannerLabel, setScannerLabel } =
+  const { event, role, timezone, language, isOnline, pendingCount, syncing, roster, downloadingRoster, downloadRoster, syncQueue, scannerLabel, setScannerLabel } =
     useScanApp();
 
   return (
@@ -59,7 +59,14 @@ function ShellHeader() {
           />
         )}
         <span style={{ marginLeft: "auto", fontSize: 12, color: "#5b5f6b" }}>
-          {downloadingRoster ? "Descargando…" : roster ? `Datos: ${roster.count} · ${relativeTime(roster.downloadedAt)}` : "Sin datos offline"}{" "}
+          {/* The door staff: when, not how many people (the team, 2026-11-05). */}
+          {downloadingRoster
+            ? "Descargando…"
+            : roster
+              ? role === "STAFF"
+                ? `Datos descargados ${relativeTime(roster.downloadedAt)}`
+                : `Datos: ${roster.count} · ${relativeTime(roster.downloadedAt)}`
+              : "Sin datos offline"}{" "}
           <button type="button" onClick={() => downloadRoster(event.id)} disabled={downloadingRoster} style={linkStyle}>
             Actualizar
           </button>

@@ -19,7 +19,9 @@ interface EventRow {
 // event is "upcoming" if it hasn't fully ended yet (its own end date, or
 // its start date for a one-day event with no end set) — same reasoning
 // as the old dropdown's "only list events happening soon" comment, just
-// with a real Past tab instead of just cutting old ones off.
+// with a real Past tab instead of just cutting old ones off. The door
+// staff (STAFF) has no Past tab (the team, 2026-11-05): their list, already
+// without past events (lib/scanEvents.ts), is all theirs.
 function isUpcoming(ev: EventRow): boolean {
   const end = ev.endsAt ? new Date(ev.endsAt) : new Date(ev.startsAt);
   return end.getTime() >= Date.now();
@@ -31,18 +33,21 @@ export default function EventsListClient({
   downloadUrl,
   timezone,
   language,
+  showPast,
 }: {
   events: EventRow[];
   downloadQr: string | null;
   downloadUrl: string;
   timezone: string;
   language: string;
+  showPast: boolean;
 }) {
   const router = useRouter();
   const [tab, setTab] = useState<"upcoming" | "past">("upcoming");
 
-  const upcoming = events.filter(isUpcoming).sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime());
-  const past = events.filter((e) => !isUpcoming(e));
+  const byStart = (a: EventRow, b: EventRow) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime();
+  const upcoming = showPast ? events.filter(isUpcoming).sort(byStart) : [...events].sort(byStart);
+  const past = showPast ? events.filter((e) => !isUpcoming(e)) : [];
   const shown = tab === "upcoming" ? upcoming : past;
 
   return (
@@ -51,27 +56,29 @@ export default function EventsListClient({
         <div style={{ fontWeight: 700, fontSize: 18 }}>Eventos</div>
       </header>
 
-      <div style={{ display: "flex", padding: "12px 16px 0", gap: 8 }}>
-        {(["upcoming", "past"] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            style={{
-              flex: 1,
-              padding: "10px 0",
-              borderRadius: 8,
-              border: "1px solid " + (tab === t ? "#14141c" : "#e3e1dc"),
-              background: tab === t ? "#14141c" : "#fff",
-              color: tab === t ? "#fff" : "#14141c",
-              fontWeight: 600,
-              fontSize: 14,
-              cursor: "pointer",
-            }}
-          >
-            {t === "upcoming" ? "Próximos" : "Pasados"}
-          </button>
-        ))}
-      </div>
+      {showPast && (
+        <div style={{ display: "flex", padding: "12px 16px 0", gap: 8 }}>
+          {(["upcoming", "past"] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              style={{
+                flex: 1,
+                padding: "10px 0",
+                borderRadius: 8,
+                border: "1px solid " + (tab === t ? "#14141c" : "#e3e1dc"),
+                background: tab === t ? "#14141c" : "#fff",
+                color: tab === t ? "#fff" : "#14141c",
+                fontWeight: 600,
+                fontSize: 14,
+                cursor: "pointer",
+              }}
+            >
+              {t === "upcoming" ? "Próximos" : "Pasados"}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div style={{ padding: "16px", maxWidth: 480, margin: "0 auto" }}>
         {shown.length === 0 && (
