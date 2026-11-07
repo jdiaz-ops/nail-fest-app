@@ -10,7 +10,8 @@ import { useRouter } from "next/navigation";
 // lib/broadcastProgress.ts) — the chunk watchdog normally resumes a
 // crashed send by itself. «Detener envío» (2026-11-07) on one going out or
 // scheduled: it stops, and its history stays. For one stopped or sent to a
-// segment, who got it (a CSV) and a segment of the ones it didn't reach.
+// segment, who got it (a CSV), and a segment of the ones it didn't reach or
+// of the ones it did.
 export default function WhatsAppBroadcastRowActions({ id, isStuck, status, hasSegment }: { id: string; isStuck?: boolean; status?: string; hasSegment?: boolean }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -70,6 +71,20 @@ export default function WhatsAppBroadcastRowActions({ id, isStuck, status, hasSe
     router.push("/admin/crm/segments");
   }
 
+  async function handleReached() {
+    if (!confirm("¿Crear un segmento con los que sí la recibieron?")) return;
+    setBusy(true);
+    const res = await fetch(`/api/admin/whatsapp/broadcasts/${id}/recibieron`, { method: "POST" });
+    const body = await res.json().catch(() => ({}));
+    setBusy(false);
+    if (!res.ok) {
+      alert(body?.message ?? "No se pudo crear el segmento. Vuelve a intentarlo.");
+      return;
+    }
+    alert(`Listo: segmento «${body.segmentName}» con las ${body.received.toLocaleString("es-CO")} personas que la recibieron.`);
+    router.push("/admin/crm/segments");
+  }
+
   async function handleDelete() {
     if (!confirm("¿Borrar esta difusión y su historial de envío? Esto no revoca nada ya enviado en WhatsApp.")) return;
     setBusy(true);
@@ -89,6 +104,9 @@ export default function WhatsAppBroadcastRowActions({ id, isStuck, status, hasSe
         <>
           <button type="button" onClick={handleNotReached} disabled={busy} style={{ background: "none", border: "none", color: "#0e6b4c", cursor: "pointer", fontSize: 13, padding: 0, fontWeight: 700 }}>
             {busy ? "Creando…" : "Segmento: no la recibieron"}
+          </button>
+          <button type="button" onClick={handleReached} disabled={busy} style={{ background: "none", border: "none", color: "#0e6b4c", cursor: "pointer", fontSize: 13, padding: 0, fontWeight: 700 }}>
+            {busy ? "Creando…" : "Segmento: la recibieron"}
           </button>
           <a href={`/api/admin/whatsapp/broadcasts/${id}/recibidos-csv`} style={{ fontSize: 13, color: "#0e6b4c" }}>
             Quién la recibió (CSV)
