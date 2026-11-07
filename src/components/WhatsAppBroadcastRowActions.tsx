@@ -9,8 +9,9 @@ import { useRouter } from "next/navigation";
 // shows only for a send that is stuck (see isBroadcastStuck in
 // lib/broadcastProgress.ts) — the chunk watchdog normally resumes a
 // crashed send by itself. «Detener envío» (2026-11-07) on one going out or
-// scheduled: it stops, and its history stays.
-export default function WhatsAppBroadcastRowActions({ id, isStuck, status }: { id: string; isStuck?: boolean; status?: string }) {
+// scheduled: it stops, and its history stays. For one stopped or sent to a
+// segment, who got it (a CSV) and a segment of the ones it didn't reach.
+export default function WhatsAppBroadcastRowActions({ id, isStuck, status, hasSegment }: { id: string; isStuck?: boolean; status?: string; hasSegment?: boolean }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
 
@@ -50,6 +51,25 @@ export default function WhatsAppBroadcastRowActions({ id, isStuck, status }: { i
     router.refresh();
   }
 
+  async function handleNotReached() {
+    if (!confirm("¿Crear un segmento con los que no la recibieron? Tiene las mismas condiciones que el de esta difusión, sin las personas que ya la recibieron.")) return;
+    setBusy(true);
+    const res = await fetch(`/api/admin/whatsapp/broadcasts/${id}/no-recibieron`, { method: "POST" });
+    const body = await res.json().catch(() => ({}));
+    setBusy(false);
+    if (!res.ok) {
+      alert(body?.message ?? "No se pudo crear el segmento. Vuelve a intentarlo.");
+      return;
+    }
+    const missed = body.failed + body.none;
+    alert(
+      `Listo: segmento «${body.segmentName}» con ${missed.toLocaleString("es-CO")} personas que no la recibieron ` +
+        `(${body.failed.toLocaleString("es-CO")} fallaron, ${body.none.toLocaleString("es-CO")} no alcanzaron a recibirla). ` +
+        `Deja fuera a las ${body.received.toLocaleString("es-CO")} que ya la recibieron.`,
+    );
+    router.push("/admin/crm/segments");
+  }
+
   async function handleDelete() {
     if (!confirm("¿Borrar esta difusión y su historial de envío? Esto no revoca nada ya enviado en WhatsApp.")) return;
     setBusy(true);
@@ -59,11 +79,21 @@ export default function WhatsAppBroadcastRowActions({ id, isStuck, status }: { i
   }
 
   return (
-    <div style={{ display: "flex", gap: 12 }}>
+    <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
       {(status === "SENDING" || status === "QUEUED") && (
         <button type="button" onClick={handleStop} disabled={busy} style={{ background: "none", border: "none", color: "#a3212b", cursor: "pointer", fontSize: 13, padding: 0, fontWeight: 700 }}>
           {busy ? "Deteniendo…" : status === "SENDING" ? "Detener envío" : "Anular"}
         </button>
+      )}
+      {hasSegment && (status === "CANCELLED" || status === "SENT") && (
+        <>
+          <button type="button" onClick={handleNotReached} disabled={busy} style={{ background: "none", border: "none", color: "#0e6b4c", cursor: "pointer", fontSize: 13, padding: 0, fontWeight: 700 }}>
+            {busy ? "Creando…" : "Segmento: no la recibieron"}
+          </button>
+          <a href={`/api/admin/whatsapp/broadcasts/${id}/recibidos-csv`} style={{ fontSize: 13, color: "#0e6b4c" }}>
+            Quién la recibió (CSV)
+          </a>
+        </>
       )}
       {isStuck && (
         <button type="button" onClick={handleResume} disabled={busy} style={{ background: "none", border: "none", color: "#0e6b4c", cursor: "pointer", fontSize: 13, padding: 0, fontWeight: 600 }}>

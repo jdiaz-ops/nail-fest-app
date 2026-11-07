@@ -163,7 +163,7 @@ export default async function WhatsAppDifusionesPage() {
                     )}
                   </td>
                   <td style={{ padding: "10px 12px" }}>
-                    <WhatsAppBroadcastRowActions id={b.id} isStuck={isBroadcastStuck(b)} status={b.status} />
+                    <WhatsAppBroadcastRowActions id={b.id} isStuck={isBroadcastStuck(b)} status={b.status} hasSegment={Boolean(b.segmentId)} />
                   </td>
                 </tr>
               );

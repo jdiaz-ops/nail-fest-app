@@ -459,6 +459,36 @@ export async function sendWhatsAppBroadcast(
   return { sent, skippedNoConsent, skippedNoPhone, skippedNoTicket, skippedDuplicatePhone, failed, remaining, backgrounded, locked: false };
 }
 
+/** How this broadcast went for each number (the team, 2026-11-07: who got the
+ * one stopped by mistake, to send the rest the next day): «received» — a
+ * TEMPLATE message that didn't fail —, «failed», or nothing sent to it.
+ * Judged by WhatsApp number like alreadyMessagedInBroadcast (the message
+ * hangs off the phone's one conversation, whichever contact it carries),
+ * for everyone at once. */
+export async function broadcastOutcomes(broadcastId: string): Promise<(person: Pick<Person, "id" | "phone">) => "received" | "failed" | "none"> {
+  const rows = await db.$queryRaw<{ personId: string | null; phone: string; failed: boolean }[]>(Prisma.sql`
+    SELECT c."personId", c.phone, (m.status = 'FAILED'::"WhatsAppMessageStatus") AS failed
+    FROM "WhatsAppMessage" m
+    JOIN "WhatsAppConversation" c ON c.id = m."conversationId"
+    WHERE m."broadcastId" = ${broadcastId}
+      AND m.kind = 'TEMPLATE'::"WhatsAppMessageKind"
+  `);
+  const got = { ids: new Set<string>(), phones: new Set<string>() };
+  const tried = { ids: new Set<string>(), phones: new Set<string>() };
+  for (const row of rows) {
+    const into = row.failed ? tried : got;
+    if (row.personId) into.ids.add(row.personId);
+    const key = phoneKey(row.phone);
+    if (key) into.phones.add(key);
+  }
+  const hit = (set: typeof got, person: Pick<Person, "id" | "phone">) => {
+    if (set.ids.has(person.id)) return true;
+    const key = phoneKey(person.phone);
+    return !!key && set.phones.has(key);
+  };
+  return (person) => (hit(got, person) ? "received" : hit(tried, person) ? "failed" : "none");
+}
+
 /** Stopped from the admin («Detener envío», 2026-11-07): the send goes no further. */
 async function isStopped(broadcastId: string): Promise<boolean> {
   const row = await db.whatsAppBroadcast.findUniqueOrThrow({ where: { id: broadcastId }, select: { status: true } });
