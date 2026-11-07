@@ -12,6 +12,7 @@ import { isBroadcastStuck } from "@/lib/broadcastProgress";
 import { activeEventEmailDesign, eventEmailDesignName, eventEmailDesignOf } from "@/lib/eventEmailDesign";
 import { IMPARABLES_SENDER_NAME, NAIL_FEST_SENDER_NAME, senderNameFor } from "@/lib/brand";
 import BroadcastDesignSwitch from "./BroadcastDesignSwitch";
+import CancelBroadcastButton from "./CancelBroadcastButton";
 import SenderNameField from "../../SenderNameField";
 import { transactionalFromAddress } from "@/lib/email/provider";
 
@@ -22,7 +23,7 @@ const STATUS_STYLE: Record<string, { bg: string; ink: string; label: string }> =
   SENDING: { bg: "#fdf1e6", ink: "#8a5a1f", label: "Enviando…" },
   QUEUED: { bg: "#e6f9f7", ink: "#0b2e2c", label: "Programado" },
   DRAFT: { bg: "#f6f5f2", ink: "#5b5f6b", label: "Borrador" },
-  CANCELLED: { bg: "#fbe9ea", ink: "#a3212b", label: "Cancelado" },
+  CANCELLED: { bg: "#fbe9ea", ink: "#a3212b", label: "Anulado" },
 };
 
 const SCHEDULE_LABEL: Record<string, string> = {
@@ -198,6 +199,14 @@ export default async function EventBroadcastsPage({ params }: { params: { id: st
                       <Link href={`/admin/events/${event.id}/broadcasts/${b.id}/edit`} style={{ fontSize: 13 }}>
                         Editar
                       </Link>
+                    )}
+                    {/* «Anular» (2026-11-07): it won't go out; it stays here as «Anulado». */}
+                    {b.status === "QUEUED" && (
+                      <CancelBroadcastButton
+                        url={`/api/admin/events/${event.id}/broadcasts/${b.id}/anular`}
+                        subject={b.subject}
+                        when={dueAt ? formatDateInTz(dueAt, { dateStyle: "medium", timeStyle: "short" }, orgSettings.timezone, orgSettings.language) : null}
+                      />
                     )}
                     {/* Opens "Nuevo correo" pre-filled with this one's content — see
                         new/page.tsx's own comment. A plain link, no client JS needed
