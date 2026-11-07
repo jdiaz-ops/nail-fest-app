@@ -338,7 +338,12 @@ export async function sendWhatsAppBroadcast(
     // The lock holder's cursor is the truth, not the one this call read
     // before claiming — a continuation that finished a chunk between the
     // read and the claim must not be replayed.
-    const current = await db.whatsAppBroadcast.findUniqueOrThrow({ where: { id: broadcastId }, select: { cursor: true } });
+    const current = await db.whatsAppBroadcast.findUniqueOrThrow({ where: { id: broadcastId }, select: { cursor: true, status: true } });
+    // «Detener envío» (2026-11-07): stopped from the admin — nothing more goes out.
+    if (current.status === "CANCELLED") {
+      await db.whatsAppBroadcast.update({ where: { id: broadcast.id }, data: { lockedUntil: null } });
+      break;
+    }
     if (current.cursor !== cursor) {
       cursor = current.cursor;
       if (cursor >= recipientIds.length) break;
@@ -370,7 +375,15 @@ export async function sendWhatsAppBroadcast(
     // THIS chunk who SENT successfully," used right after for assignLabel.
     const sentPersonIds: string[] = [];
 
+    // How many of this chunk were gone through — all of them, unless the send is stopped in between.
+    let done = chunkIds.length;
+    let stopped = false;
     for (let i = 0; i < chunkIds.length; i += CONCURRENCY) {
+      if (i > 0 && (await isStopped(broadcastId))) {
+        done = i;
+        stopped = true;
+        break;
+      }
       const sub = chunkIds.slice(i, i + CONCURRENCY);
       await Promise.allSettled(
         sub.map(async (personId) => {
@@ -416,11 +429,12 @@ export async function sendWhatsAppBroadcast(
         .catch((err) => console.error("whatsapp broadcast: failed to assign label after chunk", err));
     }
 
-    cursor += chunkIds.length;
+    cursor += done;
     // Chunk done: advance the cursor and hand the lock back in the same
     // write, so the continuation (or a watchdog) can claim it.
     await db.whatsAppBroadcast.update({ where: { id: broadcast.id }, data: { cursor, lockedUntil: null } });
 
+    if (stopped) break; // stopped from the admin: no continuation
     if (cursor >= recipientIds.length) break; // done — falls through to the SENT update below
 
     const messageId = await publishChunkContinuation("whatsapp", broadcastId);
@@ -434,12 +448,21 @@ export async function sendWhatsAppBroadcast(
 
   const remaining = recipientIds.length - cursor;
   if (remaining === 0) {
-    await db.whatsAppBroadcast.update({ where: { id: broadcast.id }, data: { status: "SENT", sentAt: new Date(), lockedUntil: null } });
+    const finished = await db.whatsAppBroadcast.updateMany({
+      where: { id: broadcast.id, status: { not: "CANCELLED" } },
+      data: { status: "SENT", sentAt: new Date(), lockedUntil: null },
+    });
     // Book the automatic retry of whatever failed for a passing reason
-    // (lib/autoRetry.ts) — and the report that goes with it.
-    await scheduleAutoRetry("whatsapp", broadcastId, AUTO_RETRY_DELAYS_SECONDS.whatsapp[1]!);
+    // (lib/autoRetry.ts) — and the report that goes with it. Not for a stopped one.
+    if (finished.count > 0) await scheduleAutoRetry("whatsapp", broadcastId, AUTO_RETRY_DELAYS_SECONDS.whatsapp[1]!);
   }
   return { sent, skippedNoConsent, skippedNoPhone, skippedNoTicket, skippedDuplicatePhone, failed, remaining, backgrounded, locked: false };
+}
+
+/** Stopped from the admin («Detener envío», 2026-11-07): the send goes no further. */
+async function isStopped(broadcastId: string): Promise<boolean> {
+  const row = await db.whatsAppBroadcast.findUniqueOrThrow({ where: { id: broadcastId }, select: { status: true } });
+  return row.status === "CANCELLED";
 }
 
 /** Who among `people` already has a TEMPLATE message (any status but

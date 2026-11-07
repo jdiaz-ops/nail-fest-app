@@ -177,3 +177,28 @@ describe("one message per WhatsApp number", () => {
     expect(sendTemplate.mock.calls.map(([c]) => c.buttonUrlParam)).toEqual(["reg1.sig", "reg3.sig"]);
   });
 });
+
+describe("«Detener envío» (2026-11-07)", () => {
+  it("a send stopped while going out goes no further than the batch already handed over", async () => {
+    state.broadcast = makeBroadcast([], null);
+    state.people = Array.from({ length: 25 }, (_, i) => ({ id: `p${i}`, phone: `+57300${String(1000000 + i)}`, firstName: "Ana" }));
+    // Stopped right as the first batch goes out.
+    sendTemplate.mockImplementation(async () => {
+      state.broadcast!.status = "CANCELLED";
+      return { providerMessageId: "wamid.1" };
+    });
+    const result = await sendWhatsAppBroadcast("b1");
+    expect(sendTemplate).toHaveBeenCalledTimes(10);
+    expect(result.remaining).toBe(15);
+    expect(state.broadcast!.cursor).toBe(10);
+    expect(state.broadcast!.status).toBe("CANCELLED");
+  });
+
+  it("one stopped before its chunk starts sends nothing", async () => {
+    state.broadcast = { ...makeBroadcast([], null), status: "CANCELLED", recipientPersonIds: ["p1", "p2"] };
+    const result = await sendWhatsAppBroadcast("b1");
+    expect(sendTemplate).not.toHaveBeenCalled();
+    expect(result.remaining).toBe(2);
+  });
+});
+

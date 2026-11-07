@@ -21,7 +21,10 @@ const STATUS_STYLE: Record<string, { bg: string; ink: string }> = {
   SENDING: { bg: "#fdf1e6", ink: "#8a5a1f" },
   QUEUED: { bg: "#e7edfb", ink: "#2f4ba8" },
   DRAFT: { bg: "#f6f5f2", ink: "#5b5f6b" },
+  CANCELLED: { bg: "#fbe9ea", ink: "#a3212b" },
 };
+// Stopped from here («Detener envío», 2026-11-07).
+const STATUS_LABEL: Record<string, string> = { CANCELLED: "DETENIDO" };
 
 // One horizontal bar, WhatChimp's own Processed/Delivered/Opened style —
 // `count` out of `total`, with a fixed color per metric.
@@ -124,7 +127,7 @@ export default async function WhatsAppDifusionesPage() {
                   <td style={{ padding: "10px 12px", color: "#5b5f6b" }}>{b.segment?.name ?? "—"}</td>
                   <td style={{ padding: "10px 12px" }}>
                     <span style={{ display: "inline-flex", padding: "4px 12px", borderRadius: 999, fontSize: 12, fontWeight: 600, background: style.bg, color: style.ink }}>
-                      {b.status}
+                      {STATUS_LABEL[b.status] ?? b.status}
                     </span>
                   </td>
                   <td style={{ padding: "10px 12px" }}>
@@ -160,7 +163,7 @@ export default async function WhatsAppDifusionesPage() {
                     )}
                   </td>
                   <td style={{ padding: "10px 12px" }}>
-                    <WhatsAppBroadcastRowActions id={b.id} isStuck={isBroadcastStuck(b)} />
+                    <WhatsAppBroadcastRowActions id={b.id} isStuck={isBroadcastStuck(b)} status={b.status} />
                   </td>
                 </tr>
               );
