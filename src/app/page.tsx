@@ -212,16 +212,8 @@ export default async function HomePage({ searchParams }: { searchParams: Record<
         ) : hub ? (
           // No event announced: the community goes on top.
           <p className="home-hero-soon">Muy pronto anunciamos las próximas fechas.</p>
-        ) : (
-          <>
-            <h1 style={{ fontSize: "clamp(28px, 7vw, 44px)", lineHeight: 1.1, margin: "0 0 12px", fontWeight: 800 }}>
-              Próximamente
-            </h1>
-            <p style={{ fontSize: 16, margin: 0, opacity: 0.9, maxWidth: 460 }}>
-              Todavía no hay una fecha anunciada — vuelve pronto.
-            </p>
-          </>
-        )}
+        ) : // No event announced and no community: the cover alone — no «Próximamente» (the team, 2026-11-09).
+        null}
       </div>
     </main>
 

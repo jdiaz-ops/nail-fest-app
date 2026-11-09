@@ -135,7 +135,7 @@ export default function HomepageEditorForm({
           Próximo evento (automático — se toma del evento publicado más próximo, no se edita aquí)
         </label>
         <p style={{ margin: "0 0 0", fontSize: 14, color: nextEventLabel ? "#17181c" : "#8a8478" }}>
-          {nextEventLabel ?? "Ninguno todavía — la homepage muestra 'Próximamente'."}
+          {nextEventLabel ?? "Ninguno todavía — la homepage muestra solo la portada, sin fecha ni texto."}
         </p>
       </div>
 
