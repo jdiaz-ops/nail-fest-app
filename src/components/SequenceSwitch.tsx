@@ -60,7 +60,7 @@ export default function SequenceSwitch({
         <span style={pill(true)}>Encendida</span>
         <span style={{ fontSize: 14, color: "#5b5f6b", flex: 1 }}>
           {enabledAt ? `Desde el ${new Date(enabledAt).toLocaleDateString("es-CO", { day: "numeric", month: "long", hour: "numeric", minute: "2-digit" })}. ` : ""}
-          Revisa cada 5 minutos quién entra y sale del segmento. Los mensajes salen de 8 a. m. a 9 p. m.
+          Revisa cada hora quién entra y sale del segmento. Los mensajes salen de 8 a. m. a 9 p. m.
         </span>
         <button type="button" disabled={busy} onClick={() => send(false)} style={{ ...secondary, padding: "8px 16px" }}>
           Apagar

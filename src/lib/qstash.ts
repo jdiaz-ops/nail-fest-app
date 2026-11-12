@@ -31,12 +31,12 @@ import { Client, Receiver } from "@upstash/qstash";
 
 /** How far ahead QStash lets us schedule a message (`notBefore`). On the
  * free plan it's 7 days; a publish further out is rejected. Anything
- * beyond this gets armed by the send-due crons (every 5 minutes) once it
+ * beyond this gets armed by the send-due crons (every hour) once it
  * comes within reach (see sendDueEventBroadcasts /
  * sendDueWhatsAppBroadcasts), which also send anything due themselves. */
 export const QSTASH_MAX_DELAY_MS = 7 * 24 * 60 * 60 * 1000;
 
-/** How long the send-due crons (every 5 minutes on Vercel Pro) leave a
+/** How long the send-due crons (every hour) leave a
  * QStash-armed, just-due send to QStash before sending it themselves. */
 export const QSTASH_GRACE_MS = 10 * 60 * 1000;
 

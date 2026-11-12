@@ -142,8 +142,8 @@ export default async function EventBroadcastsPage({ params }: { params: { id: st
                         {b.qstashMessageId
                           ? "Hora exacta programada ✓"
                           : dueAt.getTime() - Date.now() > QSTASH_MAX_DELAY_MS
-                            ? "Sale a esa hora, a más tardar 5 minutos después."
-                            : "Hora exacta pendiente: se confirma en los próximos minutos."}
+                            ? "Sale a esa hora: la hora exacta se programa sola 7 días antes."
+                            : "Hora exacta pendiente: se confirma en la próxima hora."}
                       </div>
                     )}
                   </td>

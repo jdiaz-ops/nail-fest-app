@@ -6,7 +6,7 @@ import { YoutubeError } from "@/lib/library/youtube";
 import { runAutopilot } from "@/lib/library/youtubeAutopilot";
 import { PLAYLISTS_EVERY_MS, fillOrientations, importNewUploads, syncPlaylists } from "@/lib/library/youtubeImport";
 
-// The YouTube autopilot by itself, every ten minutes — declared in
+// The YouTube autopilot by itself, every hour (every ten minutes until 2026-11-12) — declared in
 // vercel.json's `crons`, same auth as every other cron here: the channel's
 // new videos every six hours and its playlists once a day (a clue for
 // Claude), then Claude reviews and publishes the ones

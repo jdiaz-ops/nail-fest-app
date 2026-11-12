@@ -667,15 +667,15 @@ export async function sendDueEventBroadcasts(now: Date = new Date()): Promise<{ 
     const dueAt = resolveDueAt(b, b.event);
     if (!dueAt) continue;
     // Armed on QStash and due only minutes ago: QStash's turn (it fires
-    // on the exact second); this 5-minute cron is the fallback if that
+    // on the exact second); this hourly cron is the fallback if that
     // callback never came. The per-chunk lock and the "already handled"
     // guards make a double start harmless anyway.
     if (b.qstashMessageId && isDue(dueAt, now) && now.getTime() - dueAt.getTime() < QSTASH_GRACE_MS) continue;
     if (!isDue(dueAt, now)) {
       // Not due yet: make sure it has its exact-time ticket. QStash only
       // accepts a delay up to QSTASH_MAX_DELAY_MS, so a send created
-      // weeks ahead can't be armed at creation — this pass (every 5
-      // minutes) arms it once it comes within reach (see
+      // weeks ahead can't be armed at creation — this pass (every
+      // hour) arms it once it comes within reach (see
       // /api/broadcasts/send-scheduled).
       if (!b.qstashMessageId && dueAt.getTime() - now.getTime() <= QSTASH_MAX_DELAY_MS) {
         const qstashMessageId = await scheduleEventBroadcastSend(b.id, dueAt);

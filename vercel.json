@@ -11,15 +11,15 @@
     },
     {
       "path": "/api/broadcasts/send-due",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 * * * *"
     },
     {
       "path": "/api/whatsapp/send-due",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 * * * *"
     },
     {
       "path": "/api/sequences/run",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 * * * *"
     },
     {
       "path": "/api/reports/weekly-briefing",
@@ -31,7 +31,7 @@
     },
     {
       "path": "/api/library/youtube-autopilot",
-      "schedule": "*/10 * * * *"
+      "schedule": "0 * * * *"
     }
   ]
 }
