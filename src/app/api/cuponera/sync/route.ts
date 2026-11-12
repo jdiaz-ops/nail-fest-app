@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { isAuthorizedCronRequest } from "@/lib/cron";
 import { syncCuponera } from "@/lib/cuponera/sync";
 
-// The cuponera's catalog from Marcolini, every hour — declared in
-// vercel.json's `crons`, same auth as every other cron here — so a change
-// in Marcolini shows within the hour; only what changed gets written
+// The cuponera's catalog from Marcolini, once a day at 9 a. m. (every
+// hour until 2026-11-12; Vercel's Hobby plan allows only daily crons) —
+// declared in vercel.json's `crons`, same auth as every other cron here —
+// so a change in Marcolini shows the next morning, or at once with
+// "Sincronizar ahora"; only what changed gets written
 // (lib/cuponera/sync.ts). Not more often: every sync costs Marcolini's
 // database about ten queries, and syncing every minute used up its Prisma
 // Postgres plan (2026-10-22). The admin's "Sincronizar ahora" button uses

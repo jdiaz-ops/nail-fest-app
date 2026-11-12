@@ -142,7 +142,7 @@ export default function LibraryYoutubeImport({ data, instructors }: { data: Yout
     });
 
   /** The autopilot, round after round while the tab is open (it also runs
-   * by itself every hour). */
+   * by itself once a day). */
   async function runPilot() {
     if (running.current) return;
     running.current = true;
@@ -501,18 +501,18 @@ export default function LibraryYoutubeImport({ data, instructors }: { data: Yout
                 )}
               </div>
               <ProgressBar share={reviewedShare} />
-              <p style={{ ...mutedText, fontSize: 12, margin: "6px 0 0" }}>Puedes cerrar esta página: la IA sigue sola cada hora.</p>
+              <p style={{ ...mutedText, fontSize: 12, margin: "6px 0 0" }}>Si cierras esta página, la IA sigue sola una vez al día, en la mañana.</p>
             </div>
           ) : (
             <div>
               {pilot.waiting > 0 ? (
                 <p style={{ fontSize: 13, margin: "0 0 8px" }}>
-                  Faltan {many(pilot.waiting, "video", "videos")} por revisar: la IA sigue sola cada hora, aunque cierres esta página.
+                  Faltan {many(pilot.waiting, "video", "videos")} por revisar: la IA sigue sola una vez al día, en la mañana, aunque cierres esta página.
                 </p>
               ) : pilot.reorderWaiting > 0 ? (
                 <p style={{ fontSize: 13, margin: "0 0 8px" }}>
                   La IA está ordenando {many(pilot.reorderWaiting, "video que ya había publicado", "videos que ya había publicado")}: sus temas, su subcategoría,
-                  sus etiquetas y una descripción corta. Sigue sola cada hora.
+                  sus etiquetas y una descripción corta. Sigue sola una vez al día, en la mañana.
                 </p>
               ) : (
                 <p style={{ fontSize: 13, margin: "0 0 8px" }}>

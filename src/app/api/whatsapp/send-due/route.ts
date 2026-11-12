@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { isAuthorizedCronRequest } from "@/lib/cron";
 import { sendDueWhatsAppBroadcasts } from "@/lib/whatsapp/broadcasts";
 
-// Same cron shape as /api/broadcasts/send-due — every hour, at :00 (see
+// Same cron shape as /api/broadcasts/send-due — once a day, 9 a. m. (see
 // that route's own comment on why, and on the plan constraint).
 // QStash fires an armed send on its exact second; this arms sends as
 // they come within QStash's reach and is the fallback that sends anything

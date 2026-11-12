@@ -143,7 +143,7 @@ export default async function EventBroadcastsPage({ params }: { params: { id: st
                           ? "Hora exacta programada ✓"
                           : dueAt.getTime() - Date.now() > QSTASH_MAX_DELAY_MS
                             ? "Sale a esa hora: la hora exacta se programa sola 7 días antes."
-                            : "Hora exacta pendiente: se confirma en la próxima hora."}
+                            : "Hora exacta pendiente: se programa en el repaso de la mañana."}
                       </div>
                     )}
                   </td>

@@ -114,22 +114,26 @@ as long as `CRON_SECRET` is set (see the env var table above):
 - **`/api/broadcasts/send-due`** — sends every scheduled event broadcast
   (from an event's "Correos del evento" section) whose real send time,
   fixed or relative to the event's own start/end, has arrived.
-- **`/api/library/youtube-autopilot`** — every hour: brings the
+- **`/api/library/youtube-autopilot`** — once a day: brings the
   team's YouTube channel's new uploads (every 6 hours) and lets Claude
   review the waiting ones and publish the ones worth it in the library
   (Editar biblioteca → YouTube → Piloto automático). Needs
   `ANTHROPIC_API_KEY`, or a Claude key pasted in that tab; switched off
   there, it does nothing.
 
-The two `send-due` crons, `/api/sequences/run` and
-`/api/library/youtube-autopilot` run every hour at :00 (`0 * * * *`), with
-`/api/cuponera/sync` — since 2026-11-12, so the database (Neon, which
-scales to zero) sleeps between runs; they were every 5 and 10 minutes.
-QStash still sends each scheduled email or WhatsApp on its exact second:
-these are the fallback. Vercel Pro allows that. The other crons stay
-daily. If the project ever goes back to Hobby, every cron in
-`vercel.json` must be once a day again: Vercel rejects the whole deploy if
-any single entry exceeds what the plan allows (that bit `send-due` once).
+The two `send-due` crons, `/api/sequences/run`,
+`/api/library/youtube-autopilot` and `/api/cuponera/sync` run once a day,
+at 9 a. m. in Bogotá (`0 14 * * *`; Hobby fires them any time in that
+hour) — since 2026-11-12, when the team moved Vercel to Hobby until the
+next Nail Fest. Hobby only allows daily crons, and Vercel rejects the
+whole deploy if any single entry in `vercel.json` runs more often (that
+bit `send-due` twice, the last time on 2026-11-12). On Pro they were every
+5 and 10 minutes, and every hour for the cuponera. QStash still sends each
+scheduled email or WhatsApp on its exact second: these are the fallback,
+now the next morning. `"fluid": true` in `vercel.json` keeps Fluid compute
+on, so the routes with a `maxDuration` up to 300 seconds fit Hobby
+(without Fluid, Hobby's ceiling is 60). Back on Pro, these can run more
+often again.
 
 Every one of these routes still accepts a manual `POST` for on-demand testing without
 waiting for the schedule:

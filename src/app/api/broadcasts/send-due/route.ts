@@ -7,12 +7,12 @@ import { sendDueEventBroadcasts } from "@/lib/broadcasts";
 // see lib/broadcastSchedule.ts) has arrived. POST also works for manual
 // testing: curl -X POST .../api/broadcasts/send-due -H "x-cron-secret: <INTERNAL_CRON_SECRET>"
 //
-// Every hour, at :00 (0 * * * *) in vercel.json, with the other hourly
-// crons — since 2026-11-12, so the database (Neon, which scales to zero)
-// sleeps between runs; it was every 5 minutes. Vercel Pro allows that
-// (Hobby only allows daily ones, and Vercel rejects the whole deploy when
-// any cron in vercel.json exceeds the plan's limit — keep that in mind if
-// the plan ever changes).
+// Once a day, at 9 a. m. in Bogotá (0 14 * * *) in vercel.json, with the
+// other crons that ran every hour — since 2026-11-12, when the team moved
+// Vercel to Hobby until the next Nail Fest: Hobby only allows daily crons
+// (any time in that hour), and Vercel rejects the whole deploy when any
+// cron in vercel.json runs more often than the plan allows. It was every
+// 5 minutes on Pro. Back on Pro, it can run more often again.
 // QStash still fires each armed send on its exact second; this cron arms
 // sends as they come within QStash's 7-day reach and is the fallback that
 // sends anything due whose callback never came.

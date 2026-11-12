@@ -1,5 +1,6 @@
 {
   "buildCommand": "npx prisma generate && npx prisma migrate deploy && NEXT_DEPLOYMENT_ID= npm run build",
+  "fluid": true,
   "crons": [
     {
       "path": "/api/meta/retry",
@@ -11,15 +12,15 @@
     },
     {
       "path": "/api/broadcasts/send-due",
-      "schedule": "0 * * * *"
+      "schedule": "0 14 * * *"
     },
     {
       "path": "/api/whatsapp/send-due",
-      "schedule": "0 * * * *"
+      "schedule": "0 14 * * *"
     },
     {
       "path": "/api/sequences/run",
-      "schedule": "0 * * * *"
+      "schedule": "0 14 * * *"
     },
     {
       "path": "/api/reports/weekly-briefing",
@@ -27,11 +28,11 @@
     },
     {
       "path": "/api/cuponera/sync",
-      "schedule": "0 * * * *"
+      "schedule": "0 14 * * *"
     },
     {
       "path": "/api/library/youtube-autopilot",
-      "schedule": "0 * * * *"
+      "schedule": "0 14 * * *"
     }
   ]
 }

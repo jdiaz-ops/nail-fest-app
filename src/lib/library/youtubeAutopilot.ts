@@ -30,7 +30,7 @@ import { cleanDescription } from "./youtube";
 // kind and instructor, and publishes it; the rest (giveaways, event
 // announcements, vlogs…) stay out with a reason. Every decision shows in
 // the tab and the team can undo it. It runs after «Traer los videos» and
-// every hour (api/library/youtube-autopilot), a few videos per
+// once a day (api/library/youtube-autopilot), a few videos per
 // request, the most viewed first. The videos an earlier version published
 // get their themes, subcategory, tags and description again, once.
 

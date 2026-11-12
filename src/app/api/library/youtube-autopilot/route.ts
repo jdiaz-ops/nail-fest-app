@@ -6,13 +6,13 @@ import { YoutubeError } from "@/lib/library/youtube";
 import { runAutopilot } from "@/lib/library/youtubeAutopilot";
 import { PLAYLISTS_EVERY_MS, fillOrientations, importNewUploads, syncPlaylists } from "@/lib/library/youtubeImport";
 
-// The YouTube autopilot by itself, every hour (every ten minutes until 2026-11-12) — declared in
+// The YouTube autopilot by itself, once a day at 9 a. m. (every ten minutes until 2026-11-12; Vercel's Hobby plan allows only daily crons) — declared in
 // vercel.json's `crons`, same auth as every other cron here: the channel's
 // new videos every six hours and its playlists once a day (a clue for
 // Claude), then Claude reviews and publishes the ones
 // waiting (lib/library/youtubeAutopilot.ts), three requests at the same
-// time — about 24 videos a round, so the channel's first hundreds take a
-// few hours when nobody keeps the tab open. Switched off in the tab, it only
+// time — about 24 videos a round, so the channel's first hundreds take
+// days when nobody keeps the tab open (a round a day). Switched off in the tab, it only
 // asks YouTube the shape (upright or lying) of the videos that don't have it.
 // While the videos are hidden (VIDEOS_HIDDEN), not even that: nothing at all.
 export const dynamic = "force-dynamic";

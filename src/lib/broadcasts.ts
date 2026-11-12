@@ -667,7 +667,7 @@ export async function sendDueEventBroadcasts(now: Date = new Date()): Promise<{ 
     const dueAt = resolveDueAt(b, b.event);
     if (!dueAt) continue;
     // Armed on QStash and due only minutes ago: QStash's turn (it fires
-    // on the exact second); this hourly cron is the fallback if that
+    // on the exact second); this daily cron is the fallback if that
     // callback never came. The per-chunk lock and the "already handled"
     // guards make a double start harmless anyway.
     if (b.qstashMessageId && isDue(dueAt, now) && now.getTime() - dueAt.getTime() < QSTASH_GRACE_MS) continue;

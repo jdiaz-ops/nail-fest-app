@@ -7,7 +7,7 @@ import { sendStep, type StepOutcome } from "./send";
 import { SENDING_HOURS } from "./shared";
 
 // «Secuencias» (2026-10-30): automatic follow-ups for the people of a saved
-// segment — the abandoned carts first — run every hour by
+// segment — the abandoned carts first — run once a day (9 a. m.) by
 // /api/sequences/run, only for the sequences the team turned on:
 //   1. whoever is in the segment and never was in this sequence enters it
 //      now — once: after that, never again;
